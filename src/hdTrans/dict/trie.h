@@ -28,6 +28,7 @@
 #include <string_view>
 #include <vector>
 
+#include "hdTrans/dict/read_guard.h"
 #include "hdTrans/dict/runes.h"
 
 namespace hdTrans::dict {
@@ -41,12 +42,13 @@ public:
         std::span<const uint64_t> terminal;
         std::span<const uint32_t> rank;
         std::size_t keys = 0;
+        ReadGuard guard = {};
     };
 
     Trie() = default;
-    // The arrays must describe a valid trie and outlive it.
+    // The arrays must outlive the trie.
     static Trie FromView(ViewData data);
-    ViewData View() const { return {tree_, zeros_, label_, terminal_, rank_, keys_}; }
+    ViewData View() const { return {tree_, zeros_, label_, terminal_, rank_, keys_, guard_}; }
 
     // Returns key i of the keys a Trie is built from.
     using KeyFunc = std::string_view (*)(const void* context, std::size_t i);
@@ -61,6 +63,7 @@ public:
     std::size_t NodeCount() const { return label_.size(); }
     // Bytes held by the arrays of the trie.
     std::size_t MemoryBytes() const;
+    bool Validate() const;
 
     // The number of key s, or -1.
     int Find(std::string_view s) const;
@@ -92,11 +95,13 @@ private:
     static uint16_t UnitLabel(uint16_t u);
     static uint16_t LabelUnit(uint16_t l);
 
-    bool Bit(std::size_t i) const { return (tree_[i / 64] >> (i % 64)) & 1; }
-    std::size_t Select0(std::size_t k) const;
-    // The position of the first child bit of node n.
-    std::size_t ChildStart(int n) const { return n > 0 ? Select0(static_cast<std::size_t>(n - 1)) + 1 : 0; }
-    int Child(int n, uint16_t label) const;
+    bool Ready() const;
+    bool Bit(std::size_t i, bool& value) const;
+    bool Select0(std::size_t k, std::size_t& position) const;
+    bool Children(int node, std::size_t& start, std::size_t& end, std::size_t& first) const;
+    int Child(int node, uint16_t label) const;
+    int NextNode(int node, char32_t cp) const;
+    int KeyNumber(int node) const;
 
     struct Storage {
         std::vector<uint64_t> tree;
@@ -112,46 +117,62 @@ private:
     std::span<const uint64_t> terminal_;
     std::span<const uint32_t> rank_;
     std::size_t keys_ = 0;
+    ReadGuard guard_ = {};
 };
 
 template <class F>
 void Trie::Prefixes(std::string_view s, F&& f) const {
-    if (label_.empty()) return;
+    if (!Ready() || label_.empty()) return;
     int n = 0;
     for (std::size_t i = 0;;) {
-        if (const int k = KeyAt(n); k >= 0) f(k, i);
+        const int k = KeyNumber(n);
+        if (k < -1) return;
+        if (k >= 0) f(k, i);
         if (i == s.size()) return;
         const auto r = internal::DecodeRuneAt(s.substr(i));
-        if ((n = Next(n, r.cp)) < 0) return;
+        if ((n = NextNode(n, r.cp)) < 0) return;
         i += r.size;
     }
 }
 
 template <class F>
 void Trie::Each(F&& f) const {
-    if (label_.empty()) return;
+    if (!Ready() || label_.empty()) return;
     struct Frame {
-        int node;
-        std::size_t bit;       // the next child bit
-        std::size_t pathSize;  // bytes of the path to node
-        uint16_t high;         // the high surrogate of the edge into node, 0 for none
+        std::size_t next;
+        std::size_t stop;
+        std::size_t pathSize;
+        uint16_t high;
     };
     std::string path;
     std::vector<Frame> stack;
-    if (const int k = KeyAt(0); k >= 0) f(std::string_view(), k);
-    stack.push_back({0, 0, 0, 0});
+    const int rootKey = KeyNumber(0);
+    if (rootKey < -1) return;
+    if (rootKey >= 0) f(std::string_view(), rootKey);
+    std::size_t start, end, first;
+    if (!Children(0, start, end, first)) return;
+    stack.push_back({first, first + end - start, 0, 0});
+    std::size_t visited = 1;
     while (!stack.empty()) {
         Frame& top = stack.back();
-        if (!Bit(top.bit)) {
+        if (top.next == top.stop) {
             stack.pop_back();
             continue;
         }
-        const int c = static_cast<int>(top.bit) - top.node + 1;
-        top.bit++;
+        if (visited++ >= label_.size()) {
+            guard_.Fail();
+            return;
+        }
+        const int c = static_cast<int>(top.next++);
         const uint16_t unit = LabelUnit(label_[static_cast<std::size_t>(c)]);
         const uint16_t parentHigh = top.high;
         path.resize(top.pathSize);
         uint16_t high = 0;
+        if ((parentHigh != 0 && (unit < 0xDC00 || unit >= 0xE000)) ||
+            (parentHigh == 0 && unit >= 0xDC00 && unit < 0xE000)) {
+            guard_.Fail();
+            return;
+        }
         if (parentHigh != 0) {
             text::AppendRune(path, 0x10000 + ((char32_t{parentHigh} - 0xD800) << 10) + (char32_t{unit} - 0xDC00));
         } else if (unit >= 0xD800 && unit < 0xDC00) {
@@ -159,10 +180,15 @@ void Trie::Each(F&& f) const {
         } else {
             text::AppendRune(path, unit);
         }
-        if (high == 0) {
-            if (const int k = KeyAt(c); k >= 0) f(std::string_view(path), k);
+        const int key = KeyNumber(c);
+        if (key < -1) return;
+        if (high == 0 && key >= 0) f(std::string_view(path), key);
+        if (!Children(c, start, end, first)) return;
+        if (high != 0 && (start == end || key >= 0)) {
+            guard_.Fail();
+            return;
         }
-        stack.push_back({c, ChildStart(c), path.size(), high});
+        stack.push_back({first, first + end - start, path.size(), high});
     }
 }
 

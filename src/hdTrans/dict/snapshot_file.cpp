@@ -13,6 +13,7 @@
 #include <mutex>
 #include <system_error>
 #include <unordered_map>
+#include <unordered_set>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -197,7 +198,8 @@ Buffer Manifest(const std::vector<Source>& sources) {
 
 void StorePath(Buffer& b, std::string_view path, const std::vector<std::string>& folders) {
     for (std::size_t i = 0; i < folders.size(); i++) {
-        const std::string prefix = Utf8Of(PathOf(folders[i]));
+        std::string prefix = Utf8Of(PathOf(folders[i]));
+        while (!prefix.empty() && (prefix.back() == '/' || prefix.back() == '\\')) prefix.pop_back();
         if (path.starts_with(prefix) && path.size() > prefix.size() &&
             (path[prefix.size()] == '/' || path[prefix.size()] == '\\')) {
             b.Signed(static_cast<int>(i));
@@ -274,7 +276,9 @@ bool Publish(const std::filesystem::path& from, const std::filesystem::path& to)
 #endif
 }
 
-bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name) {
+bool ValidateImage(std::string_view path, const std::vector<std::string>& folders);
+
+bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name, const std::vector<std::string>& folders) {
     if constexpr (std::endian::native != std::endian::little) return false;
     if (!writer.ok) return false;
     std::vector<Segment> segments;
@@ -341,6 +345,7 @@ bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name
             ok = ok && Crc32c(mapped->Bytes().subspan(static_cast<std::size_t>(offset), static_cast<std::size_t>(segment.length))) == segment.crc;
         }
     }
+    if (ok) ok = ValidateImage(Utf8Of(temp), folders);
     if (ok) ok = Publish(temp, path);
     if (!ok) std::filesystem::remove(temp, ec);
     return ok;
@@ -349,6 +354,9 @@ bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name
 }  // namespace
 
 struct SnapshotStorage {
+    static std::shared_ptr<internal::SnapshotFile> Backing(const Snapshot& s) { return s.backing_; }
+    static LoadResult Read(const std::vector<std::string>& folders, std::string_view path, bool full);
+    static bool RestoreAux(Reader& r, Snapshot& s, std::vector<LoadError>& errors, const std::vector<std::string>& folders);
     static Buffer Aux(const Snapshot& s, const std::vector<LoadError>& errors, const std::vector<std::string>& folders);
     static bool Write(const Snapshot& s, const std::vector<LoadError>& errors, const std::vector<Source>& sources,
                       std::string_view path, const std::vector<std::string>& folders);
@@ -378,7 +386,7 @@ Buffer SnapshotStorage::Aux(const Snapshot& s, const std::vector<LoadError>& err
             b.Text(e.key); b.Text(e.target); b.Text(e.negative);
             b.Number(e.codes ? codeIds.at(e.codes) : std::numeric_limits<uint32_t>::max());
             b.Signed(e.prio); b.Signed(e.file); b.Signed(e.line); b.Signed(e.order);
-            const bool flags[] = {e.name, e.nameLayer, e.kana, e.force, e.hidden, e.honorific, e.end, e.polite, e.stative};
+            const bool flags[] = {e.name, e.nameLayer, e.kana, e.force, e.hidden, e.honorific, e.end, e.polite, e.stative, e.euImperative};
             uint32_t bits = 0;
             for (std::size_t i = 0; i < std::size(flags); i++) if (flags[i]) bits |= uint32_t{1} << i;
             b.Number(bits); b.Number(static_cast<unsigned char>(e.finalClass), 1); b.Number(e.registerLevel, 1);
@@ -433,8 +441,387 @@ bool SnapshotStorage::Write(const Snapshot& s, const std::vector<LoadError>& err
         writer.sections.back().bytes = writer.sections.back().owned;
         writer.Add(kBlob, layer, ByteView(view.blob), view.blob.size(), 1);
     }
-    return WriteImage(writer, s, path);
+    return WriteImage(writer, s, path, folders);
 }
+
+
+namespace {
+
+struct BadResource { std::string path; FileStamp stamp; };
+std::mutex& BadMutex() { static std::mutex mutex; return mutex; }
+std::vector<BadResource>& BadResources() { static std::vector<BadResource> list; return list; }
+
+bool IsBad(std::string_view path, const FileStamp& stamp) {
+    std::lock_guard lock(BadMutex());
+    for (const auto& entry : BadResources()) if (entry.path == path && entry.stamp == stamp) return true;
+    return false;
+}
+
+std::string RestorePath(Reader& r, const std::vector<std::string>& folders) {
+    const int folder = r.Signed();
+    const auto name = r.Text();
+    if (folder == -1) return std::string(name);
+    if (folder < 0 || static_cast<std::size_t>(folder) >= folders.size()) { r.ok = false; return {}; }
+    return Utf8Of(PathOf(folders[static_cast<std::size_t>(folder)]) / PathOf(name));
+}
+
+bool ReadManifest(Bytes bytes, std::vector<Source>& sources, std::size_t folders) {
+    Reader r{bytes};
+    const auto count = r.Count(76);
+    sources.reserve(count);
+    for (std::size_t i = 0; i < count && r.ok; i++) {
+        Source source;
+        source.folder = static_cast<uint32_t>(r.Number());
+        source.relative = r.Text();
+        const auto path = PathOf(source.relative);
+        if (source.folder >= folders || source.relative.empty() || path.has_parent_path() ||
+            path.is_absolute() || source.relative == "." || source.relative == ".." || !source.relative.ends_with(".tsv")) r.ok = false;
+        source.stamp.size = r.Number(8);
+        source.stamp.mtimeNs = static_cast<int64_t>(r.Number(8));
+        source.stamp.identityHigh = r.Number(8); source.stamp.identityLow = r.Number(8);
+        source.stamp.platform = static_cast<uint32_t>(r.Number());
+        const auto digest = r.Take(source.hash.size());
+        if (r.ok) std::copy(digest.begin(), digest.end(), source.hash.begin());
+        sources.push_back(std::move(source));
+    }
+    return r.Done();
+}
+
+Digest ContentIdentity(const std::vector<Source>& sources) {
+    Buffer b;
+    for (const auto& source : sources) { b.Number(source.folder); b.Text(source.relative); b.Raw(source.hash); }
+    return internal::Hash256(b.data);
+}
+
+}  // namespace
+
+namespace internal {
+
+class SnapshotFile {
+public:
+    struct LayerGuard { SnapshotFile* file = nullptr; uint32_t layer = 0; std::atomic<uint8_t> ready{0}; };
+    std::shared_ptr<const MappedFile> mapped;
+    std::string path;
+    FileStamp stamp;
+    std::vector<std::string> folders;
+    std::vector<Section> sections;
+    std::vector<Segment> segments;
+    std::unique_ptr<std::atomic<uint8_t>[]> checked;
+    std::array<LayerGuard, 3> guards;
+    std::array<std::vector<const Codes*>, 3> codeRefs;
+    std::array<std::size_t, 3> keys{};
+    std::vector<Source> sources;
+    std::atomic<bool> bad{false};
+    std::once_flag fallbackOnce;
+    std::shared_ptr<const Snapshot> fallback;
+
+    void Fail() {
+        if (bad.exchange(true, std::memory_order_relaxed)) return;
+        std::lock_guard lock(BadMutex());
+        auto& list = BadResources();
+        if (list.size() == 128) list.erase(list.begin());
+        list.push_back({path, stamp});
+    }
+    const Section* Find(uint32_t kind, uint32_t layer = kNoLayer) const {
+        for (const auto& s : sections) if (s.kind == kind && s.layer == layer) return &s;
+        return nullptr;
+    }
+    Bytes Raw(const Section& s) const {
+        return mapped->Bytes().subspan(static_cast<std::size_t>(s.offset), static_cast<std::size_t>(s.length));
+    }
+    bool EnsureSegment(std::size_t i) {
+        if (bad.load(std::memory_order_relaxed)) return false;
+        if (checked[i].load(std::memory_order_acquire) == 1) return true;
+        const auto& segment = segments[i];
+        const auto& section = sections[segment.section];
+        if (Crc32c(Raw(section).subspan(static_cast<std::size_t>(segment.start), static_cast<std::size_t>(segment.length))) != segment.crc) {
+            Fail(); return false;
+        }
+        checked[i].store(1, std::memory_order_release);
+        return !bad.load(std::memory_order_relaxed);
+    }
+    bool Ensure(const Section& s) {
+        for (std::size_t i = s.first; i < std::size_t{s.first} + s.segments; i++) if (!EnsureSegment(i)) return false;
+        return !bad.load(std::memory_order_relaxed);
+    }
+    bool Range(const void* pointer, std::size_t length) {
+        if (bad.load(std::memory_order_relaxed)) return false;
+        const auto base = reinterpret_cast<uintptr_t>(mapped->Bytes().data());
+        const auto address = reinterpret_cast<uintptr_t>(pointer);
+        if (address < base || address - base > mapped->Bytes().size()) { Fail(); return false; }
+        const auto at = static_cast<std::size_t>(address - base);
+        if (length > mapped->Bytes().size() - at) { Fail(); return false; }
+        for (const auto& s : sections) {
+            if (at < s.offset || at - s.offset > s.length || length > s.length - (at - s.offset)) continue;
+            if (length == 0) return true;
+            const auto lo = (at - static_cast<std::size_t>(s.offset)) / kSegmentSize;
+            const auto hi = (at - static_cast<std::size_t>(s.offset) + length - 1) / kSegmentSize;
+            if (hi >= s.segments) { Fail(); return false; }
+            for (std::size_t i = lo; i <= hi; i++) if (!EnsureSegment(s.first + i)) return false;
+            return true;
+        }
+        Fail(); return false;
+    }
+    bool TrieReady(uint32_t layer) {
+        auto& guard = guards[layer];
+        if (bad.load(std::memory_order_relaxed)) return false;
+        if (guard.ready.load(std::memory_order_acquire)) return true;
+        for (uint32_t kind = kTree; kind <= kRank; kind++) if (!Ensure(*Find(kind, layer))) return false;
+        guard.ready.store(1, std::memory_order_release);
+        return true;
+    }
+    static bool Check(const void* context, const void* pointer, std::size_t size) {
+        auto& guard = *const_cast<LayerGuard*>(static_cast<const LayerGuard*>(context));
+        return pointer ? guard.file->Range(pointer, size) : guard.file->TrieReady(guard.layer);
+    }
+    static void MarkBad(const void* context) {
+        static_cast<const LayerGuard*>(context)->file->Fail();
+    }
+    std::shared_ptr<const Snapshot> Fallback() {
+        std::call_once(fallbackOnce, [&] { fallback = LoadFoldersTsv(folders).snapshot; });
+        return fallback;
+    }
+    template<class T> std::span<const T> Array(uint32_t kind, uint32_t layer) const {
+        const auto* section = Find(kind, layer);
+        const auto bytes = Raw(*section);
+        return {reinterpret_cast<const T*>(bytes.data()), static_cast<std::size_t>(section->count)};
+    }
+    bool Open(std::string_view name, const std::vector<std::string>& dirs) {
+        if constexpr (std::endian::native != std::endian::little) return false;
+        path = name; folders = dirs;
+        if (!ReadStamp(name, stamp) || IsBad(name, stamp)) return false;
+        mapped = MappedFile::Open(name);
+        FileStamp after;
+        if (!mapped || !ReadStamp(name, after) || stamp != after) return false;
+        const auto bytes = mapped->Bytes();
+        if (bytes.size() < kHeaderSize || std::memcmp(bytes.data(), kMagic.data(), 8) != 0 ||
+            Get(bytes, 8, 4) != kFormatVersion || Get(bytes, 12, 4) != kDataVersion ||
+            Get(bytes, 16, 4) != kHeaderSize || Get(bytes, 20, 4) != 0 ||
+            Get(bytes, 24, 8) != bytes.size() || Get(bytes, 32, 8) != kHeaderSize || Get(bytes, 200, 4) != 1) return false;
+        auto header = std::array<std::byte, kHeaderSize>{};
+        std::copy_n(bytes.begin(), kHeaderSize, header.begin());
+        Put(header, 192, 0, 4);
+        if (Crc32c(header) != Get(bytes, 192, 4)) return false;
+        const auto builtin = HexDigest(HDTRANS_BUILTIN_ID), rules = HexDigest(HDTRANS_DATA_ID);
+        if (!std::equal(builtin.begin(), builtin.end(), bytes.begin() + 96) ||
+            !std::equal(rules.begin(), rules.end(), bytes.begin() + 128)) return false;
+        const auto sectionCount = Get(bytes, 40, 4), segmentCount = Get(bytes, 44, 4);
+        if (sectionCount != 27 || segmentCount > (bytes.size() - kHeaderSize) / kDescriptorSize ||
+            sectionCount > (bytes.size() - kHeaderSize) / kDescriptorSize - segmentCount) return false;
+        const auto directorySize = static_cast<std::size_t>((sectionCount + segmentCount) * kDescriptorSize);
+        if (Get(bytes, 48, 8) != kHeaderSize + sectionCount * kDescriptorSize ||
+            Crc32c(bytes.subspan(kHeaderSize, directorySize)) != Get(bytes, 196, 4)) return false;
+        uint64_t end = kHeaderSize + directorySize;
+        uint64_t nextSegment = 0;
+        for (std::size_t i = 0; i < sectionCount; i++) {
+            const auto at = kHeaderSize + i * kDescriptorSize;
+            Section s;
+            s.kind = static_cast<uint32_t>(Get(bytes, at, 4)); s.layer = static_cast<uint32_t>(Get(bytes, at + 4, 4));
+            s.offset = Get(bytes, at + 8, 8); s.length = Get(bytes, at + 16, 8); s.count = Get(bytes, at + 24, 8);
+            s.width = static_cast<uint32_t>(Get(bytes, at + 32, 4)); s.alignment = static_cast<uint32_t>(Get(bytes, at + 36, 4));
+            s.first = static_cast<uint32_t>(Get(bytes, at + 40, 4)); s.segments = static_cast<uint32_t>(Get(bytes, at + 44, 4));
+            const bool metadata = s.kind >= kManifest && s.kind <= kAux && s.layer == kNoLayer;
+            const bool layer = s.kind >= kTree && s.kind <= kBlob && s.layer < 3;
+            const uint32_t width = s.kind == kTree || s.kind == kTerminal ? 8 : s.kind == kLabel ? 2 :
+                                   s.kind == kZeros || s.kind == kRank || s.kind == kStarts || s.kind == kCodeRefs ? 4 : 1;
+            if ((!metadata && !layer) || Find(s.kind, s.layer) || s.width != width || s.alignment != 8 ||
+                s.offset % 8 != 0 || s.offset < end || s.offset > bytes.size() || s.length > bytes.size() - s.offset ||
+                s.count > std::numeric_limits<std::size_t>::max() / width || s.count * width != s.length ||
+                s.first != nextSegment || s.segments > segmentCount - nextSegment ||
+                s.segments != (s.length + kSegmentSize - 1) / kSegmentSize) return false;
+            for (std::size_t reserved = at + 48; reserved < at + kDescriptorSize; reserved++) if (bytes[reserved] != std::byte{0}) return false;
+            nextSegment += s.segments;
+            end = s.offset + s.length;
+            sections.push_back(s);
+        }
+        if (nextSegment != segmentCount || end != bytes.size()) return false;
+        for (std::size_t i = 0; i < segmentCount; i++) {
+            const auto at = kHeaderSize + (static_cast<std::size_t>(sectionCount) + i) * kDescriptorSize;
+            Segment segment;
+            segment.section = static_cast<uint32_t>(Get(bytes, at, 4)); segment.start = Get(bytes, at + 8, 8);
+            segment.length = Get(bytes, at + 16, 8); segment.crc = static_cast<uint32_t>(Get(bytes, at + 24, 4));
+            if (segment.section >= sections.size()) return false;
+            const auto& owner = sections[segment.section];
+            if (i < owner.first || i >= std::size_t{owner.first} + owner.segments ||
+                segment.start != (i - owner.first) * kSegmentSize || segment.start >= owner.length ||
+                segment.length != std::min<uint64_t>(kSegmentSize, owner.length - segment.start)) return false;
+            if (Get(bytes, at + 4, 4) != 0) return false;
+            for (std::size_t reserved = at + 28; reserved < at + kDescriptorSize; reserved++) if (bytes[reserved] != std::byte{0}) return false;
+            segments.push_back(segment);
+        }
+        checked = std::make_unique<std::atomic<uint8_t>[]>(segments.size());
+        for (std::size_t i = 0; i < segments.size(); i++) checked[i].store(0, std::memory_order_relaxed);
+        for (uint32_t layer = 0; layer < 3; layer++) {
+            keys[layer] = static_cast<std::size_t>(Get(bytes, 160 + 8 * layer, 8));
+            if (Get(bytes, 160 + 8 * layer, 8) > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) return false;
+            guards[layer].file = this; guards[layer].layer = layer;
+            for (uint32_t kind = kTree; kind <= kBlob; kind++) if (!Find(kind, layer)) return false;
+        }
+        const auto* manifest = Find(kManifest);
+        if (!manifest || !Find(kCodes) || !Find(kAux) || !Ensure(*manifest) || !ReadManifest(Raw(*manifest), sources, folders.size())) return false;
+        const auto identity = ContentIdentity(sources);
+        return std::equal(identity.begin(), identity.end(), bytes.begin() + 64);
+    }
+};
+
+}  // namespace internal
+
+bool SnapshotStorage::RestoreAux(Reader& r, Snapshot& s, std::vector<LoadError>& errors, const std::vector<std::string>& folders) {
+    const auto hasDictionary = r.Number();
+    if (hasDictionary > 1) return false;
+    s.hasDictionary_ = hasDictionary != 0;
+    auto count = r.Count(24);
+    for (std::size_t i = 0; i < count && r.ok; i++) {
+        LoadError e;
+        e.file = RestorePath(r, folders);
+        const auto kind = r.Number(); e.line = r.Signed(); const auto tsv = r.Number(); e.message = r.Text();
+        if (kind > static_cast<unsigned>(LoadErrorKind::Plain) || tsv > static_cast<unsigned>(TsvErrorKind::EmptyKeyOrId)) return false;
+        e.kind = static_cast<LoadErrorKind>(kind); e.tsv = static_cast<TsvErrorKind>(tsv);
+        errors.push_back(std::move(e));
+    }
+    count = r.Count(8);
+    for (std::size_t i = 0; i < count && r.ok; i++) s.warnings_.push_back(RestorePath(r, folders));
+    count = r.Count(16);
+    for (std::size_t i = 0; i < count && r.ok; i++) {
+        const std::string key(r.Text());
+        Snapshot::Respelling sp;
+        sp.ko = r.Text(); sp.person = r.Text(); const auto mode = r.Number();
+        if (mode > static_cast<unsigned>(Snapshot::Respelling::Mode::AllNouns)) return false;
+        sp.mode = static_cast<Snapshot::Respelling::Mode>(mode);
+        if (!s.places_.emplace(key, std::move(sp)).second) return false;
+    }
+    count = r.Count(16);
+    for (std::size_t i = 0; i < count && r.ok; i++) {
+        File file;
+        file.folder = r.Signed(); file.name = RestorePath(r, folders); file.text = r.Text();
+        if (file.folder < 0 || static_cast<std::size_t>(file.folder) >= folders.size()) return false;
+        s.plain_.push_back(std::move(file));
+    }
+    for (auto* output : {&s.rawPlain_, &s.textPlain_, &s.rawExtraPlain_, &s.textExtraPlain_}) {
+        count = r.Count(38);
+        std::vector<UserEntry> entries;
+        entries.reserve(count);
+        for (std::size_t i = 0; i < count && r.ok; i++) {
+            UserEntry e;
+            e.key = r.Text(); e.target = r.Text(); e.negative = r.Text();
+            const auto code = r.Number();
+            if (code >= s.codes_.Size()) return false;
+            e.codes = s.codes_.At(static_cast<int32_t>(code));
+            e.prio = r.Signed(); e.file = r.Signed(); e.line = r.Signed(); e.order = r.Signed();
+            const auto flags = r.Number();
+            if (flags >= (1 << 10)) return false;
+            e.name = (flags & 1) != 0; e.nameLayer = (flags & 2) != 0; e.kana = (flags & 4) != 0;
+            e.force = (flags & 8) != 0; e.hidden = (flags & 16) != 0; e.honorific = (flags & 32) != 0;
+            e.end = (flags & 64) != 0; e.polite = (flags & 128) != 0; e.stative = (flags & 256) != 0;
+            e.euImperative = (flags & 512) != 0;
+            e.finalClass = static_cast<char>(r.Number(1)); e.registerLevel = static_cast<uint8_t>(r.Number(1));
+            entries.push_back(std::move(e));
+        }
+        if (!r.ok) return false;
+        *output = std::make_unique<const UserText>(std::move(entries));
+    }
+    count = r.Count(8);
+    for (std::size_t i = 0; i < count && r.ok; i++) {
+        std::string key(r.Text());
+        const auto senses = r.Count(19);
+        std::vector<userdict::Sense> list;
+        list.reserve(senses);
+        for (std::size_t j = 0; j < senses && r.ok; j++) {
+            userdict::Sense sense;
+            sense.key = r.Text(); sense.target = r.Text(); sense.classDigit = static_cast<char>(r.Number(1));
+            const auto side = r.Number(1), adjective = r.Number(1);
+            if (side > static_cast<unsigned>(userdict::Side::Sentence) || adjective > 1) return false;
+            sense.side = static_cast<userdict::Side>(side); sense.adjective = adjective != 0; sense.row = r.Signed();
+            const auto triggers = r.Count(4);
+            for (std::size_t k = 0; k < triggers && r.ok; k++) sense.triggers.emplace_back(r.Text());
+            list.push_back(std::move(sense));
+        }
+        if (!s.senses_.emplace(std::move(key), std::move(list)).second) return false;
+    }
+    count = r.Count(52);
+    for (std::size_t i = 0; i < count && r.ok; i++) {
+        const auto id = r.Text();
+        userdict::FamilyRows rows;
+        for (auto& row : rows) row = r.Text();
+        if (!r.ok || id.empty()) return false;
+        std::string restored;
+        if (!s.families_.Generate(id[0], rows, restored).empty() || restored != id) return false;
+    }
+    return r.Done();
+}
+
+LoadResult SnapshotStorage::Read(const std::vector<std::string>& folders, std::string_view path, bool full) {
+    auto file = std::make_shared<internal::SnapshotFile>();
+    if (!file->Open(path, folders)) return {};
+    auto snap = std::shared_ptr<Snapshot>(new Snapshot());
+    snap->backing_ = file;
+    const auto* codeSection = file->Find(kCodes);
+    if (!file->Ensure(*codeSection)) return {};
+    Reader codes{file->Raw(*codeSection)};
+    const auto count = codes.Count(16);
+    for (std::size_t i = 0; i < count && codes.ok; i++) {
+        const auto part = codes.Text(), sem = codes.Text(), gram = codes.Text(), dict = codes.Text();
+        if (!codes.ok || snap->codes_.Intern(part, sem, gram, dict) != static_cast<int32_t>(i)) return {};
+    }
+    if (!codes.Done() || count > static_cast<std::size_t>(std::numeric_limits<int32_t>::max())) return {};
+    for (std::size_t i = 0; i < count; i++) { snap->codes_.SetWithXXX(static_cast<int32_t>(i)); snap->codes_.SetAsPlain(static_cast<int32_t>(i)); }
+    if (snap->codes_.Size() != count) return {};
+    Dict* layers[] = {&snap->base_, &snap->user_, &snap->names_};
+    for (uint32_t layer = 0; layer < 3; layer++) {
+        const auto* refs = file->Find(kCodeRefs, layer);
+        if (!file->Ensure(*refs)) return {};
+        auto& pointers = file->codeRefs[layer];
+        if (refs->count > count) return {};
+        pointers.reserve(static_cast<std::size_t>(refs->count));
+        const auto bytes = file->Raw(*refs);
+        for (std::size_t i = 0; i < refs->count; i++) {
+            const auto code = Get(bytes, 4 * i, 4);
+            if (code >= count) return {};
+            pointers.push_back(snap->codes_.At(static_cast<int32_t>(code)));
+        }
+        Dict::ViewData data;
+        data.keys = {file->Array<uint64_t>(kTree, layer), file->Array<uint32_t>(kZeros, layer), file->Array<uint16_t>(kLabel, layer),
+                     file->Array<uint64_t>(kTerminal, layer), file->Array<uint32_t>(kRank, layer), file->keys[layer]};
+        const auto blob = file->Raw(*file->Find(kBlob, layer));
+        data.blob = {reinterpret_cast<const char*>(blob.data()), blob.size()};
+        data.starts = file->Array<uint32_t>(kStarts, layer); data.codes = pointers;
+        data.guard = {&file->guards[layer], internal::SnapshotFile::Check, internal::SnapshotFile::MarkBad};
+        data.keys.guard = data.guard;
+        *layers[layer] = Dict::FromView(data);
+    }
+    const auto* auxSection = file->Find(kAux);
+    if (!file->Ensure(*auxSection)) return {};
+    Reader aux{file->Raw(*auxSection)};
+    LoadResult loaded;
+    if (!RestoreAux(aux, *snap, loaded.errors, folders)) return {};
+    if (full) {
+        for (const auto& section : file->sections) if (!file->Ensure(section)) return {};
+        for (const auto* layer : layers) if (!layer->Validate()) { file->Fail(); return {}; }
+    }
+    if (file->bad.load(std::memory_order_relaxed)) return {};
+    loaded.snapshot = std::move(snap);
+    return loaded;
+}
+
+namespace {
+
+bool ValidateImage(std::string_view path, const std::vector<std::string>& folders) {
+    const auto loaded = SnapshotStorage::Read(folders, path, true);
+    if (!loaded.snapshot) return false;
+    for (const Dict* layer : {&loaded.snapshot->Base(), loaded.snapshot->User(), loaded.snapshot->Names()}) {
+        if (!layer) continue;
+        std::size_t keys = 0;
+        layer->Each([&](std::string_view, const std::vector<Record>&) { keys++; });
+        if (keys != layer->Len() || !loaded.snapshot->Healthy()) return false;
+    }
+    return true;
+}
+
+}  // namespace
+
+bool Snapshot::Healthy() const { return !backing_ || !backing_->bad.load(std::memory_order_relaxed); }
+std::shared_ptr<const Snapshot> Snapshot::Fallback() const { return Healthy() ? nullptr : backing_->Fallback(); }
+bool Snapshot::Mapped() const { return backing_ != nullptr; }
 
 namespace internal {
 
@@ -462,8 +849,88 @@ bool CompileSnapshot(const std::vector<std::string>& folders, std::string_view o
     return SnapshotStorage::Write(*loaded.snapshot, loaded.errors, sources, outPath, folders);
 }
 
-LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view, bool) {
-    return LoadFoldersTsv(folders);
+namespace {
+
+bool CheckSources(const std::vector<std::string>& folders, const std::vector<Source>& recorded,
+                  std::vector<Source>& current, bool strict, bool& refresh) {
+    if (recorded.size() != current.size()) return false;
+    for (std::size_t i = 0; i < current.size(); i++) {
+        auto& source = current[i];
+        const auto& previous = recorded[i];
+        if (source.folder != previous.folder || source.relative != previous.relative) return false;
+        if (strict || source.stamp != previous.stamp) {
+            if (!HashFile(SourcePath(folders, source), source.hash) || source.hash != previous.hash) return false;
+            FileStamp after;
+            if (!internal::ReadStamp(SourcePath(folders, source), after) || after != source.stamp) return false;
+            refresh = refresh || source.stamp != previous.stamp;
+        } else source.hash = previous.hash;
+    }
+    return true;
+}
+
+std::vector<Source> CachedManifest(const internal::SnapshotFile& file) {
+    const auto index = internal::MappedFile::Open(file.path + ".meta");
+    if (!index) return file.sources;
+    const auto bytes = index->Bytes();
+    if (bytes.size() < 44 || std::memcmp(bytes.data(), "HDMETA\r\n", 8) != 0 ||
+        Crc32c(bytes.first(bytes.size() - 4)) != Get(bytes, bytes.size() - 4, 4)) return file.sources;
+    const auto identity = ContentIdentity(file.sources);
+    if (!std::equal(identity.begin(), identity.end(), bytes.begin() + 8)) return file.sources;
+    std::vector<Source> sources;
+    if (!ReadManifest(bytes.subspan(40, bytes.size() - 44), sources, file.folders.size()) || ContentIdentity(sources) != identity) return file.sources;
+    return sources;
+}
+
+void RefreshManifest(const internal::SnapshotFile& file, const std::vector<Source>& sources) {
+    Buffer b;
+    b.Raw(ByteView("HDMETA\r\n")); b.Raw(ContentIdentity(sources)); b.Raw(Manifest(sources).data);
+    b.Number(Crc32c(b.data));
+    const auto path = PathOf(file.path + ".meta");
+    auto temp = path;
+    static std::atomic<uint64_t> sequence{0};
+    temp += ".tmp." + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
+            "." + std::to_string(sequence.fetch_add(1));
+    std::FILE* f = OpenFile(temp, true);
+    if (!f) return;
+    bool ok = std::fwrite(b.data.data(), 1, b.data.size(), f) == b.data.size();
+    if (std::fclose(f) != 0) ok = false;
+    if (ok) ok = Publish(temp, path);
+    if (!ok) { std::error_code ec; std::filesystem::remove(temp, ec); }
+}
+
+}  // namespace
+
+LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify) {
+    const char* mode = std::getenv("HDTRANS_SNAPSHOT");
+    if (mode && std::string_view(mode) == "off") return LoadFoldersTsv(folders);
+    const char* strict = std::getenv("HDTRANS_VERIFY_DICTS");
+    verify = verify || (strict && std::string_view(strict) == "1");
+    std::vector<Source> sources;
+    if (!ListSources(folders, sources, false)) return LoadFoldersTsv(folders);
+    const auto path = internal::SnapshotPath(folders, cacheDir);
+    if (!path.empty()) {
+        auto loaded = SnapshotStorage::Read(folders, path, verify);
+        if (loaded.snapshot) {
+            auto& file = *SnapshotStorage::Backing(*loaded.snapshot);
+            bool refresh = false;
+            if (CheckSources(folders, CachedManifest(file), sources, verify, refresh)) {
+                if (refresh) RefreshManifest(file, sources);
+                return loaded;
+            }
+        }
+    }
+    sources.clear();
+    bool write = !path.empty() && ListSources(folders, sources, true);
+    auto loaded = LoadFoldersTsv(folders);
+    if (loaded.snapshot && write) {
+        std::vector<Source> after;
+        write = ListSources(folders, after, false) && after.size() == sources.size();
+        for (std::size_t i = 0; write && i < sources.size(); i++) {
+            write = sources[i].folder == after[i].folder && sources[i].relative == after[i].relative && sources[i].stamp == after[i].stamp;
+        }
+        if (write) SnapshotStorage::Write(*loaded.snapshot, loaded.errors, sources, path, folders);
+    }
+    return loaded;
 }
 
 }  // namespace hdTrans::dict

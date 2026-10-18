@@ -4,6 +4,7 @@
 //   -each                 a new session for every line
 //   -raw                  translate each line with the word pipeline only
 //   -reference            disable translation improvements
+//   -verify-dicts         verify source hashes and every cache segment
 //   -why                  write word choices and shadow scores to stderr
 //   -select-shadow        score shortest targets without changing the translation
 //   -in FILE              read the input from FILE
@@ -105,6 +106,7 @@ int main(int argc, char** argv) {
     bool why = false;
     bool selectShadow = false;
     bool reference = false;
+    bool verifyDicts = false;
     for (int i = 1; i < argc; i++) {
         const char* a = argv[i];
         if (!std::strcmp(a, "-dicts") && i + 1 < argc) dicts = argv[++i];
@@ -112,10 +114,11 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-raw")) raw = true;
         else if (!std::strcmp(a, "-each")) each = true;
         else if (!std::strcmp(a, "-reference")) reference = true;
+        else if (!std::strcmp(a, "-verify-dicts")) verifyDicts = true;
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-why] [-select-shadow] [-in FILE]\n");
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-verify-dicts] [-why] [-select-shadow] [-in FILE]\n");
             return 2;
         }
     }
@@ -123,7 +126,7 @@ int main(int argc, char** argv) {
     if (why) std::setvbuf(stderr, nullptr, _IOFBF, 1 << 16);
 
     hdTrans::Engine engine(reference);
-    if (!engine.Open(SplitComma(dicts))) {
+    if (!engine.Open(SplitComma(dicts), verifyDicts)) {
         std::fprintf(stderr, "hdtrans: no dictionary loaded from %s\n", dicts.c_str());
         return 1;
     }

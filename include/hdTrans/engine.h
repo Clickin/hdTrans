@@ -26,7 +26,7 @@ public:
 
     // Loads the folders in order; later folders override earlier ones. Returns false when
     // no dictionary could be loaded; the dictionaries loaded before stay.
-    bool Open(const std::vector<std::string>& dirs);
+    bool Open(const std::vector<std::string>& dirs, bool verifyDicts = false);
 
     // Reloads the folders given to Open and swaps the new dictionaries in. Sessions keep
     // translating with the dictionaries they started with. Returns false when the load

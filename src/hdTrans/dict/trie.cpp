@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <limits>
 
 namespace hdTrans::dict {
 
@@ -197,6 +198,7 @@ Trie Trie::FromView(ViewData data) {
     t.terminal_ = data.terminal;
     t.rank_ = data.rank;
     t.keys_ = data.keys;
+    t.guard_ = data.guard;
     return t;
 }
 
@@ -205,29 +207,71 @@ std::size_t Trie::MemoryBytes() const {
            terminal_.size() * sizeof(terminal_[0]) + rank_.size() * sizeof(rank_[0]);
 }
 
-std::size_t Trie::Select0(std::size_t k) const {
+bool Trie::Ready() const {
+    if (!guard_.Check()) return guard_.Fail();
+    const std::size_t n = label_.size();
+    if (n == 0) {
+        if (!tree_.empty() || !zeros_.empty() || !terminal_.empty() || !rank_.empty() || keys_ != 0)
+            return guard_.Fail();
+        return true;
+    }
+    if (n > static_cast<std::size_t>(std::numeric_limits<int>::max()) || keys_ > n ||
+        tree_.size() != n / 32 + (n % 32 != 0) || zeros_.size() != (n + kZeroSample - 1) / kZeroSample ||
+        terminal_.size() != n / 64 + 1 || rank_.size() != terminal_.size()) return guard_.Fail();
+    return true;
+}
+
+bool Trie::Bit(std::size_t i, bool& value) const {
+    if (label_.empty() || i >= 2 * label_.size() - 1 || i / 64 >= tree_.size()) return guard_.Fail();
+    value = ((tree_[i / 64] >> (i % 64)) & 1) != 0;
+    return true;
+}
+
+bool Trie::Select0(std::size_t k, std::size_t& position) const {
+    if (k >= label_.size() || k / kZeroSample >= zeros_.size()) return guard_.Fail();
+    const std::size_t bits = 2 * label_.size() - 1;
     const std::size_t p = zeros_[k / kZeroSample];
+    bool bit;
+    if (!Bit(p, bit)) return false;
+    if (bit) return guard_.Fail();
     std::size_t w = p / 64;
     uint64_t x = ~tree_[w] & ~((uint64_t{1} << (p % 64)) - 1);
     k %= kZeroSample;
-    for (auto c = static_cast<std::size_t>(std::popcount(x)); k >= c; c = static_cast<std::size_t>(std::popcount(x))) {
-        k -= c;
-        x = ~tree_[++w];
+    for (;;) {
+        if (bits - w * 64 < 64) x &= (uint64_t{1} << (bits - w * 64)) - 1;
+        const auto count = static_cast<std::size_t>(std::popcount(x));
+        if (k < count) break;
+        k -= count;
+        if (++w >= tree_.size() || w * 64 >= bits) return guard_.Fail();
+        x = ~tree_[w];
     }
     for (; k > 0; k--) x &= x - 1;
-    return w * 64 + static_cast<std::size_t>(std::countr_zero(x));
+    position = w * 64 + static_cast<std::size_t>(std::countr_zero(x));
+    return true;
 }
 
-int Trie::Child(int n, uint16_t label) const {
-    const std::size_t start = ChildStart(n);
-    // The 0 bit ending the children is usually in the word of start.
-    std::size_t end = start;
-    if (const uint64_t x = ~tree_[start / 64] >> (start % 64); x != 0) {
-        end += static_cast<std::size_t>(std::countr_zero(x));
-    } else {
-        end = Select0(static_cast<std::size_t>(n));
+bool Trie::Children(int node, std::size_t& start, std::size_t& end, std::size_t& first) const {
+    if (node < 0 || static_cast<std::size_t>(node) >= label_.size()) return guard_.Fail();
+    const auto n = static_cast<std::size_t>(node);
+    start = 0;
+    if (n > 0) {
+        if (!Select0(n - 1, start)) return false;
+        start++;
     }
-    const std::size_t first = start - static_cast<std::size_t>(n) + 1;
+    bool bit;
+    if (!Bit(start, bit)) return false;
+    const uint64_t x = ~tree_[start / 64] >> (start % 64);
+    if (x != 0) end = start + static_cast<std::size_t>(std::countr_zero(x));
+    else if (!Select0(n, end)) return false;
+    if (end < start || end >= 2 * label_.size() - 1 || start < n) return guard_.Fail();
+    first = start - n + 1;
+    if (first <= n || first > label_.size() || end - start > label_.size() - first) return guard_.Fail();
+    return true;
+}
+
+int Trie::Child(int node, uint16_t label) const {
+    std::size_t start, end, first;
+    if (!Children(node, start, end, first)) return -1;
     const uint16_t* begin = label_.data() + first;
     const uint16_t* stop = begin + (end - start);
     const uint16_t* it = std::lower_bound(begin, stop, label);
@@ -235,31 +279,91 @@ int Trie::Child(int n, uint16_t label) const {
     return static_cast<int>(it - label_.data());
 }
 
-int Trie::Next(int node, char32_t cp) const {
+int Trie::NextNode(int node, char32_t cp) const {
     if (label_.empty()) return -1;
+    if (cp > 0x10FFFF) {
+        guard_.Fail();
+        return -1;
+    }
     if (cp < 0x10000) return Child(node, UnitLabel(static_cast<uint16_t>(cp)));
     if ((node = Child(node, UnitLabel(HighSurrogate(cp)))) < 0) return -1;
     return Child(node, UnitLabel(LowSurrogate(cp)));
 }
 
-int Trie::KeyAt(int node) const {
+int Trie::Next(int node, char32_t cp) const {
+    return Ready() ? NextNode(node, cp) : -1;
+}
+
+int Trie::KeyNumber(int node) const {
     if (label_.empty()) return -1;
+    if (node < 0 || static_cast<std::size_t>(node) >= label_.size()) {
+        guard_.Fail();
+        return -2;
+    }
     const auto n = static_cast<std::size_t>(node);
     const uint64_t x = terminal_[n / 64];
     const uint64_t bit = uint64_t{1} << (n % 64);
     if ((x & bit) == 0) return -1;
-    return static_cast<int>(rank_[n / 64]) + std::popcount(x & (bit - 1));
+    const auto before = static_cast<std::size_t>(rank_[n / 64]);
+    const auto within = static_cast<std::size_t>(std::popcount(x & (bit - 1)));
+    if (before >= keys_ || within >= keys_ - before) {
+        guard_.Fail();
+        return -2;
+    }
+    return static_cast<int>(before + within);
+}
+
+int Trie::KeyAt(int node) const {
+    if (!Ready()) return -1;
+    const int key = KeyNumber(node);
+    return key >= 0 ? key : -1;
+}
+
+bool Trie::Validate() const {
+    if (!Ready()) return false;
+    const std::size_t n = label_.size();
+    if (n == 0) return true;
+    if (label_[0] != 0) return guard_.Fail();
+    const std::size_t bits = 2 * n - 1;
+    if ((tree_.back() >> (bits % 64)) != 0) return guard_.Fail();
+    std::size_t at = 0, child = 1;
+    for (std::size_t node = 0; node < n; node++) {
+        if (node >= child) return guard_.Fail();
+        const uint16_t parentUnit = LabelUnit(label_[node]);
+        const bool high = node != 0 && parentUnit >= 0xD800 && parentUnit < 0xDC00;
+        const std::size_t first = child;
+        while (at < bits && ((tree_[at / 64] >> (at % 64)) & 1) != 0) {
+            if (child >= n || (child > first && label_[child - 1] >= label_[child])) return guard_.Fail();
+            const uint16_t unit = LabelUnit(label_[child]);
+            if (high != (unit >= 0xDC00 && unit < 0xE000)) return guard_.Fail();
+            child++;
+            at++;
+        }
+        if (at >= bits || (node % kZeroSample == 0 && zeros_[node / kZeroSample] != at)) return guard_.Fail();
+        if (high && (child == first || ((terminal_[node / 64] >> (node % 64)) & 1) != 0)) return guard_.Fail();
+        at++;
+    }
+    if (at != bits || child != n) return guard_.Fail();
+    std::size_t keys = 0;
+    for (std::size_t w = 0; w < terminal_.size(); w++) {
+        if (rank_[w] != keys) return guard_.Fail();
+        const std::size_t remaining = n - w * 64;
+        if (remaining < 64 && (terminal_[w] >> remaining) != 0) return guard_.Fail();
+        keys += static_cast<std::size_t>(std::popcount(terminal_[w]));
+    }
+    return keys == keys_ ? true : guard_.Fail();
 }
 
 int Trie::Find(std::string_view s) const {
-    if (label_.empty()) return -1;
+    if (!Ready() || label_.empty()) return -1;
     int n = 0;
     while (!s.empty()) {
         const auto r = internal::DecodeRuneAt(s);
-        if ((n = Next(n, r.cp)) < 0) return -1;
+        if ((n = NextNode(n, r.cp)) < 0) return -1;
         s.remove_prefix(r.size);
     }
-    return KeyAt(n);
+    const int key = KeyNumber(n);
+    return key >= 0 ? key : -1;
 }
 
 Trie::Match Trie::LongestPrefix(std::string_view s) const {

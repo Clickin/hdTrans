@@ -222,6 +222,10 @@ public:
 
     // Bytes held by the snapshot, the texts of the plain files included.
     std::size_t MemoryBytes() const;
+    bool Mapped() const;
+    bool Healthy() const;
+    // The editable-file generation used when a mapped resource fails validation.
+    std::shared_ptr<const Snapshot> Fallback() const;
 
 private:
     friend LoadResult Load(std::vector<File> files);
@@ -242,6 +246,8 @@ private:
 
     Snapshot() = default;
 
+    Candidates GetWordInfoImpl(std::string_view text, LookupMode mode, const LookupContext& ctx) const;
+    std::vector<Candidate> RetrieveRecordsImpl(std::string_view key, LookupMode mode) const;
     const Respelling* Place(std::string_view key) const;
     std::string_view Respelled(const Respelling* sp, const KeySet* persons, std::string_view key, const Record& r) const;
     void NameEntries(std::string_view text, LookupMode mode, const LookupContext& ctx,
