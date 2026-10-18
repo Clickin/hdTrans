@@ -15,9 +15,29 @@
 namespace hdTrans::word {
 
 class Worker;
+struct SessionSenses;
+
+struct Improvements {
+    bool documentSenses = true;
+
+    static Improvements Reference() {
+        Improvements improvements;
+        improvements.documentSenses = false;
+        return improvements;
+    }
+};
 
 // The switches the word stage reads.
 struct Settings {
+    Improvements improvements;
+    SessionSenses* sessionSenses = nullptr;
+
+    static Settings Reference() {
+        Settings settings;
+        settings.improvements = Improvements::Reference();
+        return settings;
+    }
+
     // Text input: the word choices and lookup filters of the text path apply.
     bool text = false;
     // The preferTerminal pass of the sentence passes is on.

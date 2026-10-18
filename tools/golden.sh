@@ -16,7 +16,7 @@ for in in "$golden"/*.in; do
     name=${in##*/}; name=${name%.in}
     flag=""
     case $name in *.raw) flag=-raw ;; *.each) flag=-each ;; esac
-    "$cli" -dicts "$dicts" $flag -in "$in" > "$golden/$name.actual" || status=1
+    "$cli" -reference -dicts "$dicts" $flag -in "$in" > "$golden/$name.actual" || status=1
     n=$(diff "$golden/$name.expected" "$golden/$name.actual" | grep -c '^<' || true)
     echo "$name: $n differing lines of $(wc -l < "$golden/$name.expected")"
     [ "$n" -eq 0 ] || status=1

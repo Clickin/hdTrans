@@ -292,6 +292,8 @@ void RunSet(const std::string& set, const std::vector<std::string>& lines, bool 
         hdtest::Fail(__FILE__, __LINE__, "no stage records of " + set);
         return;
     }
+    internal::TranslationOptions options;
+    options.reference = true;
     Collector c;
     const internal::StageObserver observer = ObserverFor(c);
     const dict::Snapshot& snap = *Dictionaries();
@@ -302,16 +304,16 @@ void RunSet(const std::string& set, const std::vector<std::string>& lines, bool 
     if (!each) {
         internal::Memory memory;
         c.crs = crs;
-        internal::TranslateDocument(snap, *generated, lines, memory, observer);
+        internal::TranslateDocument(snap, *generated, lines, memory, observer, options);
     } else {
         for (size_t i = 0; i < lines.size(); i++) {
             c.caseBase = static_cast<int>(i);
             c.crs = {crs[i]};
             if (raw) {
-                internal::TranslateRawLine(snap, *generated, lines[i], observer);
+                internal::TranslateRawLine(snap, *generated, lines[i], observer, options);
             } else {
                 internal::Memory fresh;
-                internal::TranslateDocument(snap, *generated, std::vector<std::string>{lines[i]}, fresh, observer);
+                internal::TranslateDocument(snap, *generated, std::vector<std::string>{lines[i]}, fresh, observer, options);
             }
         }
     }

@@ -80,7 +80,7 @@ output::Settings ComposeSettings(bool text) {
 }
 
 word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions& options) {
-    word::Settings s;
+    word::Settings s = options.reference ? word::Settings::Reference() : word::Settings{};
     s.text = text;
     s.terminal = text;
     s.verse = verse;

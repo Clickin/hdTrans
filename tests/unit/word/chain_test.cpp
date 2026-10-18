@@ -29,7 +29,7 @@ std::string RunChain(const std::vector<int>& spans, std::initializer_list<Step> 
     tokens.tokens.resize(spans.size());
     for (std::size_t i = 0; i < spans.size(); i++) tokens.tokens[i].span = spans[i];
     word::Arena arena;
-    word::Worker worker(tokens, *snapshot, dict::LookupContext{}, word::Settings{}, arena, word::LookupObserver{});
+    word::Worker worker(tokens, *snapshot, dict::LookupContext{}, word::Settings::Reference(), arena, word::LookupObserver{});
     std::deque<word::Item> items;
     word::Chain chain;
     std::string out;

@@ -40,7 +40,7 @@ HD_TEST(validity_match_dictionary) {
     const auto snapshot = dict::Load({base}).snapshot;
     tokenizer::Tokens tokens;
     word::Arena arena;
-    word::Worker worker(tokens, *snapshot, dict::LookupContext{}, word::Settings{}, arena, word::LookupObserver{});
+    word::Worker worker(tokens, *snapshot, dict::LookupContext{}, word::Settings::Reference(), arena, word::LookupObserver{});
     struct Case {
         std::string_view following, source;
         char first, second;

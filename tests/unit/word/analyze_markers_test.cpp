@@ -32,7 +32,7 @@ std::vector<std::string> MarkerRecords(const std::string& text, tokenizer::Token
     tokenizer::TokenizeSpans(pieces, false, tokens);
     word::Arena arena;
     const auto snapshot = SmallDictionary();
-    word::Analyze(tokens, *snapshot, dict::LookupContext{}, word::Settings{}, arena, analysis);
+    word::Analyze(tokens, *snapshot, dict::LookupContext{}, word::Settings::Reference(), arena, analysis);
     std::vector<std::string> out;
     for (std::size_t s = 0; s < analysis.sentences.size(); s++) {
         std::vector<std::string> all;

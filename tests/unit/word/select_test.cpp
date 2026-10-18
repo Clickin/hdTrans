@@ -30,7 +30,7 @@ struct SelectLine {
     rules::Program program;
     word::Flusher flusher;
 
-    explicit SelectLine(const dict::Snapshot& snapshot, word::Settings settings = {})
+    explicit SelectLine(const dict::Snapshot& snapshot, word::Settings settings = word::Settings::Reference())
         : worker(tokens, snapshot, {}, settings, arena, {}),
           flusher{worker, program, snapshot.OutputFamilies()} {}
 
@@ -91,7 +91,7 @@ int JotScore(const word::Item& it, int candidate, const word::SelectContext& con
 HD_TEST(word_select_empty_scorers) {
     const auto snapshot = Dictionary();
     HD_REQUIRE(snapshot != nullptr);
-    word::Settings settings;
+    word::Settings settings = word::Settings::Reference();
     HD_CHECK(settings.scorers.empty());
     HD_CHECK(!settings.selectShadow);
     HD_CHECK(!settings.selectRules);
@@ -129,7 +129,7 @@ HD_TEST(word_select_eligible_layers) {
     HD_REQUIRE(snapshot != nullptr);
     for (const Case& c : cases) {
         for (bool rules : {false, true}) {
-            word::Settings settings;
+            word::Settings settings = word::Settings::Reference();
             settings.scorers = scorers;
             settings.selectRules = rules;
             SelectLine line(*snapshot, settings);
@@ -153,7 +153,7 @@ HD_TEST(word_select_senses_run_first) {
     for (bool triggered : {false, true}) {
         for (bool matching : {false, true}) {
             for (bool scoring : {false, true}) {
-                word::Settings settings;
+                word::Settings settings = word::Settings::Reference();
                 if (scoring) settings.scorers = scorers;
                 settings.selectRules = true;
                 SelectLine line(*snapshot, settings);
@@ -194,7 +194,7 @@ HD_TEST(word_select_ties) {
     const auto snapshot = Dictionary();
     HD_REQUIRE(snapshot != nullptr);
     for (const Case& c : cases) {
-        word::Settings settings;
+        word::Settings settings = word::Settings::Reference();
         settings.scorers = scorers;
         SelectLine line(*snapshot, settings);
         word::Item& it = line.Add("人気", c.candidates, {word::Provenance::Digit, 23}, c.current);
@@ -224,7 +224,7 @@ HD_TEST(word_select_scorer_order) {
     const auto snapshot = Dictionary();
     HD_REQUIRE(snapshot != nullptr);
     for (const Case& c : cases) {
-        word::Settings settings;
+        word::Settings settings = word::Settings::Reference();
         settings.scorers = c.scorers;
         SelectLine line(*snapshot, settings);
         word::Item& it = line.Add("人気", {{"유명세"}, {"인기"}, {"명성"}});
@@ -240,7 +240,7 @@ HD_TEST(word_select_shadow_all_scorers_without_mutation) {
     };
     const auto snapshot = Dictionary();
     HD_REQUIRE(snapshot != nullptr);
-    word::Settings settings;
+    word::Settings settings = word::Settings::Reference();
     settings.scorers = scorers;
     settings.selectShadow = true;
     SelectLine line(*snapshot, settings);
@@ -305,7 +305,7 @@ HD_TEST(word_select_shadow_blocked_recommendations) {
     HD_REQUIRE(snapshot != nullptr);
     for (word::Provenance layer : layers) {
         for (bool rules : {false, true}) {
-            word::Settings settings;
+            word::Settings settings = word::Settings::Reference();
             settings.scorers = scorers;
             settings.selectShadow = true;
             settings.selectRules = rules;
@@ -344,7 +344,7 @@ HD_TEST(word_select_skips_fixed_invalid_and_small_groups) {
     HD_REQUIRE(snapshot != nullptr);
     for (const Case& c : cases) {
         for (bool shadow : {false, true}) {
-            word::Settings settings;
+            word::Settings settings = word::Settings::Reference();
             settings.scorers = scorers;
             settings.selectShadow = shadow;
             settings.selectRules = true;
@@ -366,7 +366,7 @@ HD_TEST(word_select_same_class_digit_only) {
     HD_REQUIRE(snapshot != nullptr);
     for (bool shadow : {false, true}) {
         for (bool compatible : {false, true}) {
-            word::Settings settings;
+            word::Settings settings = word::Settings::Reference();
             settings.scorers = scorers;
             settings.selectShadow = shadow;
             SelectLine line(*snapshot, settings);

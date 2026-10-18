@@ -30,7 +30,7 @@ struct AnalyzedLine {
     word::Arena arena;
     word::Analysis analysis;
 
-    bool Analyze(std::string_view text, const dict::Snapshot& snapshot, word::Settings settings = {},
+    bool Analyze(std::string_view text, const dict::Snapshot& snapshot, word::Settings settings = word::Settings::Reference(),
                  dict::LookupContext lookup = {}) {
         tokenizer::Tokenize(text, tokens);
         word::Analyze(tokens, snapshot, lookup, settings, arena, analysis);
@@ -176,7 +176,7 @@ HD_TEST(word_provenance_senses_override_rule) {
         HD_REQUIRE(snapshot != nullptr);
         for (bool full : {false, true}) {
             AnalyzedLine line;
-            word::Settings settings;
+            word::Settings settings = word::Settings::Reference();
             settings.text = true;
             HD_REQUIRE(line.Analyze(c.text, *snapshot, settings));
             word::Item* it = line.Find("声");
@@ -208,7 +208,7 @@ HD_TEST(word_provenance_fixed_ignores_senses) {
     HD_REQUIRE(internal::RulesLoaded());
     for (bool full : {false, true}) {
         AnalyzedLine line;
-        word::Settings settings;
+        word::Settings settings = word::Settings::Reference();
         settings.text = true;
         dict::LookupContext lookup;
         lookup.plain = &snapshot->Plain();
@@ -287,7 +287,7 @@ HD_TEST(word_provenance_pool_reuse) {
     HD_REQUIRE(snapshot != nullptr);
     HD_REQUIRE(internal::RulesLoaded());
     AnalyzedLine line;
-    word::Settings settings;
+    word::Settings settings = word::Settings::Reference();
     settings.text = true;
     HD_REQUIRE(line.Analyze("声。", *snapshot, settings));
     word::Item* first = line.Find("声");

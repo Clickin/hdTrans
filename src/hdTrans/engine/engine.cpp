@@ -45,6 +45,8 @@ std::shared_ptr<Generated> NewGenerated(const dict::Snapshot& snap) {
 }
 
 struct Access {
+    static bool Reference(const Engine& e) { return e.reference_; }
+
     static void Current(const Engine& e, std::shared_ptr<const dict::Snapshot>& snap,
                         std::shared_ptr<Generated>& generated) {
         std::lock_guard<std::mutex> lock(e.mu_);
@@ -91,7 +93,9 @@ std::shared_ptr<const dict::Snapshot> Engine::Dictionaries() const {
     return snapshot_;
 }
 
-Session::Session(const Engine& engine) : engine_(engine), state_(std::make_unique<internal::SessionState>()) {
+Session::Session(const Engine& engine, bool reference)
+    : engine_(engine), reference_(engine.reference_ || reference),
+      state_(std::make_unique<internal::SessionState>()) {
     std::lock_guard<std::mutex> lock(engine.mu_);
     snapshot_ = engine.snapshot_;
     generated_ = engine.generated_;
@@ -110,6 +114,7 @@ std::string Session::Translate(std::string_view text) {
         start = end + 1;
     }
     internal::TranslationOptions options;
+    options.reference = reference_;
     options.selectShadow = selectShadow_;
     const std::vector<std::string> translated =
         internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, {}, options);
@@ -137,7 +142,9 @@ std::string TranslateRaw(const Engine& e, std::string_view line) {
     std::shared_ptr<Generated> generated;
     Access::Current(e, snap, generated);
     if (!snap) return {};
-    return TranslateRawLine(*snap, *generated, line, {});
+    TranslationOptions options;
+    options.reference = Access::Reference(e);
+    return TranslateRawLine(*snap, *generated, line, {}, options);
 }
 
 }  // namespace internal

@@ -101,6 +101,7 @@ HD_TEST(select_shadow_golden) {
     HD_REQUIRE(!inputs.empty());
     const word::Scorer scorers[] = {{"shortest-target", word::ShortestTargetScore}};
     internal::TranslationOptions options;
+    options.reference = true;
     options.scorers = scorers;
     options.selectShadow = true;
     SelectStats stats;
@@ -138,7 +139,7 @@ HD_TEST(engine_session_select_shadow) {
         std::printf("skip engine_session_select_shadow: no HDTRANS_GOLDEN\n");
         return;
     }
-    Engine engine;
+    Engine engine(true);
     HD_REQUIRE(engine.Open({DictsDir(golden)}));
     const std::string input = "今日はいい天気ですね。\n彼は静かに頷いた。\n";
     Session plain(engine), shadow(engine);

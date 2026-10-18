@@ -3,6 +3,7 @@
 //   -dicts DIR[,DIR...]   dictionary folders in load order (default: dicts/base next to the executable)
 //   -each                 a new session for every line
 //   -raw                  translate each line with the word pipeline only
+//   -reference            disable translation improvements
 //   -why                  write word choices and shadow scores to stderr
 //   -select-shadow        score shortest targets without changing the translation
 //   -in FILE              read the input from FILE
@@ -103,23 +104,25 @@ int main(int argc, char** argv) {
     bool each = false;
     bool why = false;
     bool selectShadow = false;
+    bool reference = false;
     for (int i = 1; i < argc; i++) {
         const char* a = argv[i];
         if (!std::strcmp(a, "-dicts") && i + 1 < argc) dicts = argv[++i];
         else if (!std::strcmp(a, "-in") && i + 1 < argc) inPath = argv[++i];
         else if (!std::strcmp(a, "-raw")) raw = true;
         else if (!std::strcmp(a, "-each")) each = true;
+        else if (!std::strcmp(a, "-reference")) reference = true;
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-why] [-select-shadow] [-in FILE]\n");
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-why] [-select-shadow] [-in FILE]\n");
             return 2;
         }
     }
 
     if (why) std::setvbuf(stderr, nullptr, _IOFBF, 1 << 16);
 
-    hdTrans::Engine engine;
+    hdTrans::Engine engine(reference);
     if (!engine.Open(SplitComma(dicts))) {
         std::fprintf(stderr, "hdtrans: no dictionary loaded from %s\n", dicts.c_str());
         return 1;
@@ -141,6 +144,7 @@ int main(int argc, char** argv) {
     const auto generated = hdTrans::internal::NewGenerated(*snapshot);
     const hdTrans::word::Scorer diagnosticScorers[] = {{"shortest-target", hdTrans::word::ShortestTargetScore}};
     hdTrans::internal::TranslationOptions options;
+    options.reference = reference;
     if (selectShadow) {
         options.scorers = diagnosticScorers;
         options.selectShadow = true;

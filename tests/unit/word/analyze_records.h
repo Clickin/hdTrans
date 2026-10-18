@@ -86,7 +86,7 @@ struct Environment {
     int entries = -1;
     dict::Strategy strategy = dict::Strategy::LongestMatch;
     std::string prior;
-    word::Settings settings;
+    word::Settings settings = word::Settings::Reference();
     dict::KeySet confirmed, persons;
     dict::LookupContext lookup;
 };

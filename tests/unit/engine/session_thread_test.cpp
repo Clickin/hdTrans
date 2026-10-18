@@ -28,7 +28,7 @@ HD_TEST(engine_session_threads) {
         std::printf("skip engine_session_threads: no dictionaries (HDTRANS_DICTS)\n");
         return;
     }
-    hdTrans::Engine engine;
+    hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     const std::string text = "今日はいい天気ですね。\n「ごめんね、待った？」\n彼は静かに頷いた。\n";
 
@@ -89,7 +89,7 @@ HD_TEST(engine_session_threads_stress) {
         if (end == std::string::npos) break;
         start = end + 1;
     }
-    hdTrans::Engine engine;
+    hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     auto translateAll = [&engine, &lines] {
         std::vector<std::string> out;
@@ -120,7 +120,7 @@ HD_TEST(engine_session_threads_stress) {
 HD_TEST(engine_session_call_context) {
     const std::string dicts = DictsDir();
     if (dicts.empty()) return;
-    hdTrans::Engine engine;
+    hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     struct Case {
         std::vector<std::string> lines;
@@ -169,7 +169,7 @@ HD_TEST(engine_session_call_context) {
 HD_TEST(engine_session_memory_window) {
     const std::string dicts = DictsDir();
     if (dicts.empty()) return;
-    hdTrans::Engine engine;
+    hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     hdTrans::Session session(engine);
     session.Translate("「あたしが行くわよ」");

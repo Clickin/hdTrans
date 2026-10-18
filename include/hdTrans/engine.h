@@ -21,6 +21,9 @@ struct SessionState;
 // The loaded dictionaries. Shared by any number of sessions and threads.
 class Engine {
 public:
+    // Reference mode disables translation improvements. Sessions inherit it.
+    explicit Engine(bool reference = false) : reference_(reference) {}
+
     // Loads the folders in order; later folders override earlier ones. Returns false when
     // no dictionary could be loaded; the dictionaries loaded before stay.
     bool Open(const std::vector<std::string>& dirs);
@@ -38,6 +41,7 @@ public:
 private:
     friend class Session;
     friend struct internal::Access;
+    const bool reference_;
     mutable std::mutex mu_;
     std::vector<std::string> dirs_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
@@ -51,7 +55,7 @@ private:
 // reset.
 class Session {
 public:
-    explicit Session(const Engine& engine);
+    explicit Session(const Engine& engine, bool reference = false);
     ~Session();
     Session(const Session&) = delete;
     Session& operator=(const Session&) = delete;
@@ -67,6 +71,7 @@ public:
 
 private:
     const Engine& engine_;
+    const bool reference_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;
     std::unique_ptr<internal::SessionState> state_;
