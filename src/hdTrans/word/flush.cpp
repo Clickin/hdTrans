@@ -22,7 +22,11 @@ void Flush(Flusher& f) {
         NegativeCopula(f);
         SubjectBeforeGa(f);
         SubjectNo(f);
+        VerseTe(f);
         TeRequest(f);
+        ResultState(f);
+        NotYet(f);
+        SeeAnd(f);
         TeSequence(f);
     }
     if (f.w.settings.terminal) PreferTerminal(f);

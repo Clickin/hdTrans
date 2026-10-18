@@ -46,6 +46,8 @@ void TakeTarget(Item* it, char cls, std::string_view target);
 bool SelectLemma(Flusher& f, Item* it, std::string_view lemma);
 bool SelectLemmaPrefix(Flusher& f, Item* it, std::string_view prefix);
 bool Thing(std::string_view attr);
+// The dictionary form of entry slot of it (an empty string for no entry).
+std::string ItemLemma(Flusher& f, const Item* it, int slot);
 bool Person(std::string_view attr);
 
 // Text-path grammar (grammar.cpp).
@@ -60,6 +62,10 @@ void SubjectNo(Flusher& f);
 // Text-path て forms (connective.cpp). UtteranceEnd reports an item followed by the end
 // of the utterance (closing punctuation, a pause or the end of the chunk).
 void TeRequest(Flusher& f);
+void VerseTe(Flusher& f);
+void ResultState(Flusher& f);
+void NotYet(Flusher& f);
+void SeeAnd(Flusher& f);
 void TeSequence(Flusher& f);
 bool UtteranceEnd(const Worker& w, const Item* it);
 

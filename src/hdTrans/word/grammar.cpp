@@ -184,6 +184,10 @@ bool NegativeStart(std::string_view text) {
 }  // namespace
 
 // Dictionary attributes of a thing: some, none of them a person, an animal or a god.
+std::string ItemLemma(Flusher& f, const Item* it, int slot) {
+    return output::Lemma(it->EntryText(slot), f.families);
+}
+
 bool Thing(std::string_view attr) {
     if (attr.empty()) return false;
     constexpr std::string_view kPersons = "VHn VQw VQm VGn VAm QPN QNP";
@@ -338,6 +342,117 @@ void SubjectNo(Flusher& f) {
                 if (Entry* e = p->group->At(p->selected)) e->dst = std::string(subject);
             }
         }
+    }
+}
+
+namespace {
+
+// Stems of the verbs of resultState whose ている is a state, read without an object.
+constexpr std::string_view kResultVerbs[] = {
+    "濡れ", "座", "立", "残", "入", "生き", "落ち", "似", "疲れ", "並", "変わ", "繋が", "離れ", "揃", "空", "終わ", "整",
+    "載", "止ま", "倒れ", "集ま", "壊れ", "閉ま", "浮か", "隠れ", "広が", "固ま", "戻", "浮", "減", "溜ま", "潜", "掛か",
+    "混じ", "死", "太", "痩せ", "決ま", "開", "閉じ", "腫れ", "枯れ", "割れ", "汚れ", "曲が", "折れ", "破れ", "崩れ", "乾",
+    "冷え", "腐", "詰ま", "埋ま", "刺さ", "慣れ", "晴れ", "曇", "凍", "外れ", "取れ", "引きこも", "引き籠も", "惚れ", "ハマ",
+    "はま", "嵌ま", "突っ伏", "埋もれ", "腰を下ろ", "落ち着", "腰かけ", "腰掛け", "済", "な", "埋め尽くされ", "覚め",
+};
+
+// Verbal nouns whose されている is a state.
+constexpr std::string_view kResultNouns[] = {
+    "舗装", "設置", "固定", "封印", "整備", "保存", "記載", "記録", "配置", "装備", "収納", "展示", "包装", "印刷", "登録",
+    "接続", "密閉", "施錠", "武装", "装飾", "彫刻", "刻印", "整頓", "固定化",
+};
+
+// Stems of the passive verbs whose ている is a state.
+constexpr std::string_view kResultPassives[] = {
+    "並べ", "置", "囲", "覆", "積", "飾", "掛け", "盛", "刻", "書", "貼", "吊", "敷", "張", "描", "記", "包", "詰め",
+    "閉じ込め", "埋め", "刺", "縛", "隠", "残", "向け", "付け", "込め", "組", "建て", "植え", "収め", "閉ざ", "塗", "彫",
+    "繋", "結", "束ね", "挟", "重ね", "据え", "閉め", "開け", "括り付け", "縛り付け",
+};
+
+// The adverbs of gradual change before a ている of なる (a progression).
+constexpr std::string_view kGradualAdverbs[] = {
+    "次第", "徐々", "どんどん", "だんだん", "段々", "ますます", "益々", "日に日に", "少しずつ", "みるみる",
+};
+
+// Stems of the verbs of noticing or remembering that take 못하다 (notYet).
+constexpr std::string_view kNotYetVerbs[] = {"気づ", "気付", "気がつ", "気が付", "覚え"};
+
+// Whether an adverb of gradual change stands before it in its sentence.
+bool GradualBefore(const Item* it) {
+    for (const Item* p = it->prev; p != nullptr; p = p->prev) {
+        for (const std::string_view a : kGradualAdverbs) {
+            if (p->group->surface.starts_with(a)) return true;
+        }
+    }
+    return false;
+}
+
+// The particles and punctuation of seeAnd (before the 見る て they do not change).
+constexpr std::string_view kSeeAndFollowers = " は も を が の に と で や か よ ね な ";
+
+}  // namespace
+
+void ResultState(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        if (!it->detail->Yougo() || it->DirectIndex() < 0) continue;
+        const std::string_view stem = it->group->surface;
+        const char c1 = At(it->Code(it->selected), 1);
+        const bool object = c1 >= '3' && c1 <= '6';
+        if (stem == "な" && GradualBefore(it)) continue;
+        const bool nounPassive = stem == "され" && it->prev != nullptr && InSet(kResultNouns, it->prev->group->surface);
+        const bool state = (it->detail->record == 0 && !it->lexical && (InSet(kResultVerbs, stem) || nounPassive) && !object) ||
+                           ((it->detail->record == 1 || it->lexical) && InSet(kResultPassives, stem));
+        if (!state) continue;
+        Entry* e = it->DirectEntry(it->DirectIndex());
+        if (e == nullptr) continue;
+        const std::string lemma = output::Lemma(e->dst, f.families);
+        if (!lemma.starts_with("1고")) continue;
+        const std::string_view rest = std::string_view(lemma).substr(std::string_view("1고").size());
+        if (rest.starts_with(" 있") || (rest.empty() && it->next != nullptr && ItemLemma(f, it->next, it->next->selected).starts_with("있"))) {
+            e->dst = "6" + std::string(rest);
+        }
+    }
+}
+
+void NotYet(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        Item* n = it->next;
+        if (n == nullptr || !it->detail->Yougo() || it->DirectIndex() < 0) continue;
+        const Entry* direct = it->DirectEntry(it->DirectIndex());
+        if (direct == nullptr || direct->dst != std::string("1") + std::string(kKoJi) || n->group->surface != "いな" ||
+            ItemLemma(f, n, n->selected) != "않다" || !std::any_of(std::begin(kNotYetVerbs), std::end(kNotYetVerbs),
+                                                                    [&](std::string_view v) { return it->group->surface.ends_with(v); })) {
+            continue;
+        }
+        output::Conjugated target = output::Conjugating("못하다", '$', "", f.families);
+        if (Entry* e = n->group->At(n->selected)) e->dst = target.target;
+        Entry* d = n->DirectEntry(n->DirectIndex());
+        if (d == nullptr) continue;
+        for (const std::string_view form : {std::string_view("1는다"), std::string_view("1다")}) {
+            if (d->dst.starts_with(form)) {
+                d->dst = "4다" + d->dst.substr(form.size());
+                break;
+            }
+        }
+    }
+}
+
+void SeeAnd(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        if (!it->detail->Yougo() || it->DirectIndex() < 0 || ItemLemma(f, it, it->selected) != "보다" ||
+            !it->group->surface.ends_with("見") || it->DirectSurface() != "て") {
+            continue;
+        }
+        Entry* e = it->DirectEntry(it->DirectIndex());
+        if (e == nullptr || e->dst != "6" || it->prev == nullptr || it->prev->group->surface != "を") continue;
+        if (UtteranceEnd(f.w, it) && !From(it->text, it->start + it->length).starts_with(kJaComma)) continue;
+        if (const Item* n = it->next; n != nullptr) {
+            const std::string_view next = n->group->surface;
+            bool stop = next.starts_with("」") || next.starts_with("』");
+            for (const std::string_view a : kTeAuxiliaries) stop = stop || next.starts_with(a);
+            if (stop || Has(kSeeAndFollowers, " " + std::string(next) + " ")) continue;
+        }
+        e->dst = "1고";
     }
 }
 
