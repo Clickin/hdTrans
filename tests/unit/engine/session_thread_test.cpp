@@ -259,3 +259,15 @@ HD_TEST(engine_reference_session_builtin_isolation) {
     HD_CHECK_EQ(reference.Translate("がぼっ！"), "가봇!");
     HD_CHECK_EQ(improved.Translate("がぼっ！"), "커헉!");
 }
+
+HD_TEST(engine_reference_session_cleanup_isolation) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine engine;
+    HD_REQUIRE(engine.Open({dicts}));
+    hdTrans::Session improved(engine);
+    hdTrans::Session reference(engine, true);
+    HD_CHECK_EQ(improved.Translate("何度も言った"), "몇 번이나 말했다");
+    HD_CHECK_EQ(reference.Translate("何度も言った"), "몇번이나 말했다");
+    HD_CHECK_EQ(improved.Translate("몇번"), "몇번");
+}

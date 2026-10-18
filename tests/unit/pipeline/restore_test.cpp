@@ -211,3 +211,18 @@ HD_TEST(pipeline_restore) {
         HD_CHECK_EQ(pipeline::Restore(cleaned, typed, true), std::string("「푸, 푸풋」"));
     }
 }
+
+HD_TEST(pipeline_literal_cleanup) {
+    const struct { const char* in; const char* want; } cases[] = {
+        {"몇번 몇년 몇일", "몇 번 몇 년 며칠"},
+        {"아펐고 괴로왔어", "아팠고 괴로웠어"},
+        {"고 싶다라고 했었었다", "고 싶다고 했었다"},
+        {"안되 제안되 고안된 감안되", "안되 제안되 고안된 감안되"},
+        {"몇번몇번", "몇 번몇 번"},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(pipeline::KoreanCleanup(c.in), std::string(c.want));
+    const Pieces typed{{"何度も"}, {"몇번", SpanWord}};
+    const Pieces translated{{"몇번"}, {"몇번", SpanWord}};
+    HD_CHECK_EQ(pipeline::RestoreAll(translated, typed, true, true).line, "몇 번몇번");
+    HD_CHECK_EQ(pipeline::RestoreAll(translated, typed, true).line, "몇번몇번");
+}

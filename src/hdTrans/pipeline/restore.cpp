@@ -5,6 +5,8 @@
 #include <string_view>
 #include <vector>
 
+#include "hdTrans/dict/builtin.h"
+#include "hdTrans/dict/tsv.h"
 #include "hdTrans/text/hangul.h"
 #include "hdTrans/text/kana.h"
 #include "hdTrans/text/utf8.h"
@@ -266,6 +268,36 @@ std::string KoreanForms(std::string_view s) {
     return out;
 }
 
+std::string KoreanCleanup(std::string_view s) {
+    static const auto rows = [] {
+        std::vector<std::pair<std::string, std::string>> pairs;
+        const std::string table = dict::ExtraBuiltinText("cleanup.tsv");
+        dict::TsvReader reader(table, "//");
+        while (reader.Next()) {
+            const auto& f = reader.Fields();
+            if (f.size() >= 2 && !f[0].empty()) pairs.emplace_back(f[0], f[1]);
+        }
+        return pairs;
+    }();
+    std::string out;
+    out.reserve(s.size());
+    while (!s.empty()) {
+        bool matched = false;
+        for (const auto& [from, to] : rows) {
+            if (!s.starts_with(from)) continue;
+            out += to;
+            s.remove_prefix(from.size());
+            matched = true;
+            break;
+        }
+        if (!matched) {
+            out += s.front();
+            s.remove_prefix(1);
+        }
+    }
+    return out;
+}
+
 std::string WriteDropped(std::string_view s) {
     const std::u32string rs = Runes(s);
     bool any = false;
@@ -311,11 +343,14 @@ std::string WriteStutters(std::string_view s) {
     return Utf8(out);
 }
 
-RestoreSteps RestoreAll(const Pieces& cleaned, const Pieces& typed, bool keepBrackets) {
+RestoreSteps RestoreAll(const Pieces& cleaned, const Pieces& typed, bool keepBrackets, bool literalCleanup) {
     RestoreSteps st;
     st.spaced = DropAddedSpaces(typed, cleaned);
     st.bracketed = keepBrackets ? RestoreBrackets(typed, st.spaced) : st.spaced;
-    st.korean = MapText(st.bracketed, KoreanForms);
+    st.korean = MapText(st.bracketed, [literalCleanup](std::string_view s) {
+        const std::string korean = KoreanForms(s);
+        return literalCleanup ? KoreanCleanup(korean) : korean;
+    });
     st.line = WriteStutters(WriteDropped(output::String(st.korean)));
     return st;
 }

@@ -13,14 +13,15 @@ namespace hdTrans::pipeline {
 struct RestoreSteps {
     output::Pieces spaced;     // DropAddedSpaces
     output::Pieces bracketed;  // RestoreBrackets; equal to spaced without keepBrackets
-    output::Pieces korean;     // KoreanForms on each text piece
+    output::Pieces korean;     // KoreanForms and optional spelling replacements on text pieces
     std::string line;          // WriteStutters(WriteDropped(String(korean)))
 };
 
 // cleaned is the output of the cleanup, typed the pieces of the line as the protected
 // span cut and the katakana rewrites leave them (before ｢｣ become 「」). With
 // keepBrackets the brackets are written as typed (RestoreBrackets).
-RestoreSteps RestoreAll(const output::Pieces& cleaned, const output::Pieces& typed, bool keepBrackets);
+RestoreSteps RestoreAll(const output::Pieces& cleaned, const output::Pieces& typed, bool keepBrackets,
+                        bool literalCleanup = false);
 
 // The output line: RestoreAll(...).line.
 std::string Restore(const output::Pieces& cleaned, const output::Pieces& typed, bool keepBrackets);
@@ -41,6 +42,9 @@ output::Pieces RestoreBrackets(const output::Pieces& typed, const output::Pieces
 // opening “ that follows anything but whitespace or an opening bracket
 // (제일의“문제아” -> 제일의 “문제아”).
 std::string KoreanForms(std::string_view s);
+
+// Literal spelling replacements; the first matching row wins and is not scanned again.
+std::string KoreanCleanup(std::string_view s);
 
 // Each run of kana that the composer shifted by DropShift (kana the translation does
 // not render) written in Hangul as heard (internal::ReadKana).

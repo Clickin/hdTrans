@@ -159,7 +159,8 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
     }
     const output::Pieces cleaned = output::Cleanup(sentences);
     if (observer.cleaned) observer.cleaned(observer.context, cleaned);
-    const pipeline::RestoreSteps steps = pipeline::RestoreAll(cleaned, typed, /*keepBrackets=*/true);
+    const pipeline::RestoreSteps steps = pipeline::RestoreAll(cleaned, typed, /*keepBrackets=*/true,
+                                                              !options.reference && options.wordImprovements.literalCleanup);
     if (observer.restored) observer.restored(observer.context, steps);
     return steps.line;
 }
