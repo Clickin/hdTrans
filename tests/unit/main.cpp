@@ -5,6 +5,7 @@
 #include <cstring>
 #include <filesystem>
 #include <map>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -67,10 +68,38 @@ bool ListCache(const fs::path& root, CacheListing& out) {
     return !ec;
 }
 
+bool EnvironmentPresent(const char* name) {
+#ifdef _WIN32
+    const std::wstring wideName(name, name + std::strlen(name));
+    SetLastError(ERROR_SUCCESS);
+    GetEnvironmentVariableW(wideName.c_str(), nullptr, 0);
+    return GetLastError() != ERROR_ENVVAR_NOT_FOUND;
+#else
+    return std::getenv(name) != nullptr;
+#endif
+}
+
+bool SetEnvironmentPath(const char* name, const fs::path* value) {
+#ifdef _WIN32
+    const std::wstring wideName(name, name + std::strlen(name));
+    if (_wputenv_s(wideName.c_str(), value == nullptr ? L"" : value->c_str()) != 0) return false;
+    return SetEnvironmentVariableW(wideName.c_str(), value == nullptr ? nullptr : value->c_str()) != 0;
+#else
+    return (value == nullptr ? unsetenv(name) : setenv(name, value->c_str(), 1)) == 0;
+#endif
+}
+
+struct SavedVariable {
+    const char* name;
+    fs::path value;
+    bool present;
+};
+
 struct CacheGuard {
     fs::path real = UserCache();
     fs::path temporary;
     CacheListing before;
+    std::vector<SavedVariable> saved;
     bool initialized = false;
     bool watchReal = true;
 
@@ -85,36 +114,35 @@ struct CacheGuard {
             watchReal = canonicalReal != canonicalRequested;
         }
         if (watchReal && !ListCache(real, before)) return false;
-#ifdef _WIN32
-        if (_wputenv_s(L"HDTRANS_SNAPSHOT", L"") != 0 || _wputenv_s(L"HDTRANS_VERIFY_DICTS", L"") != 0) return false;
-        SetLastError(ERROR_SUCCESS);
-        GetEnvironmentVariableW(L"HDTRANS_CACHE_DIR", nullptr, 0);
-        const bool supplied = GetLastError() != ERROR_ENVVAR_NOT_FOUND;
-#else
-        if (unsetenv("HDTRANS_SNAPSHOT") != 0 || unsetenv("HDTRANS_VERIFY_DICTS") != 0) return false;
-        const bool supplied = std::getenv("HDTRANS_CACHE_DIR") != nullptr;
-#endif
-        if (!supplied) {
-            std::error_code ec;
-            const auto base = fs::temp_directory_path(ec);
-            if (ec) return false;
-            const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
-            for (int i = 0; i < 100; ++i) {
-                const auto candidate = base / ("hdtrans-tests-" + std::to_string(stamp) + "-" + std::to_string(i));
-                if (fs::create_directory(candidate, ec)) { temporary = candidate; break; }
-                if (ec) return false;
-            }
-            if (temporary.empty()) return false;
-#ifndef _WIN32
-            fs::permissions(temporary, fs::perms::owner_all, fs::perm_options::replace, ec);
-            if (ec) return false;
-#endif
-#ifdef _WIN32
-            if (_wputenv_s(L"HDTRANS_CACHE_DIR", temporary.c_str()) != 0) return false;
-#else
-            if (setenv("HDTRANS_CACHE_DIR", temporary.c_str(), 1) != 0) return false;
-#endif
+        for (const char* name : {"HOME", "LOCALAPPDATA", "XDG_CACHE_HOME", "HDTRANS_CACHE_DIR", "HDTRANS_SNAPSHOT", "HDTRANS_VERIFY_DICTS"}) {
+            saved.push_back({name, EnvironmentPath(name), EnvironmentPresent(name)});
         }
+        const bool supplied = EnvironmentPresent("HDTRANS_CACHE_DIR");
+        std::error_code ec;
+        const auto base = fs::temp_directory_path(ec);
+        if (ec) return false;
+        const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+        for (int i = 0; i < 100; ++i) {
+            const auto candidate = base / ("hdtrans-tests-" + std::to_string(stamp) + "-" + std::to_string(i));
+            if (fs::create_directory(candidate, ec)) { temporary = candidate; break; }
+            if (ec) return false;
+        }
+        if (temporary.empty()) return false;
+#ifndef _WIN32
+        fs::permissions(temporary, fs::perms::owner_all, fs::perm_options::replace, ec);
+        if (ec) return false;
+#endif
+        const char* names[] = {"HOME", "LOCALAPPDATA", "XDG_CACHE_HOME"};
+        const char* folders[] = {"home", "local", "xdg"};
+        for (size_t i = 0; i < 3; ++i) {
+            const auto path = temporary / folders[i];
+            if (!fs::create_directory(path, ec) || ec || !SetEnvironmentPath(names[i], &path)) return false;
+        }
+        if (!supplied) {
+            const auto cache = temporary / "cache";
+            if (!fs::create_directory(cache, ec) || ec || !SetEnvironmentPath("HDTRANS_CACHE_DIR", &cache)) return false;
+        }
+        if (!SetEnvironmentPath("HDTRANS_SNAPSHOT", nullptr) || !SetEnvironmentPath("HDTRANS_VERIFY_DICTS", nullptr)) return false;
         initialized = true;
         return true;
     }
@@ -122,17 +150,35 @@ struct CacheGuard {
     bool Unchanged() const {
         if (!watchReal) return true;
         CacheListing after;
-        return ListCache(real, after) && after == before;
+        if (!ListCache(real, after)) {
+            std::fprintf(stderr, "cannot inspect per-user cache after the run\n");
+            return false;
+        }
+        if (after == before) return true;
+        int shown = 0;
+        for (const auto& [path, metadata] : before) {
+            const auto found = after.find(path);
+            if ((found == after.end() || found->second != metadata) && shown++ < 10) {
+                std::fprintf(stderr, "cache entry changed: %s; mtime ticks %lld -> %lld\n", path.string().c_str(),
+                             static_cast<long long>(metadata.second.time_since_epoch().count()),
+                             found == after.end() ? 0LL : static_cast<long long>(found->second.second.time_since_epoch().count()));
+            }
+        }
+        for (const auto& [path, metadata] : after) {
+            if (!before.contains(path) && shown++ < 10) {
+                std::fprintf(stderr, "cache entry added: %s; mtime ticks %lld\n", path.string().c_str(),
+                             static_cast<long long>(metadata.second.time_since_epoch().count()));
+            }
+        }
+        return false;
     }
 
     ~CacheGuard() {
         bool ok = !initialized || Unchanged();
+        for (auto it = saved.rbegin(); it != saved.rend(); ++it) {
+            ok = SetEnvironmentPath(it->name, it->present ? &it->value : nullptr) && ok;
+        }
         if (!temporary.empty()) {
-#ifdef _WIN32
-            ok = _wputenv_s(L"HDTRANS_CACHE_DIR", L"") == 0 && ok;
-#else
-            ok = unsetenv("HDTRANS_CACHE_DIR") == 0 && ok;
-#endif
             std::error_code ec;
             fs::remove_all(temporary, ec);
             ok = !ec && ok;
