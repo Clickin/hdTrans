@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -111,8 +112,11 @@ private:
     std::string PrefixForm(std::string_view x);
 
     const dict::Snapshot* snap_;
-    std::map<std::string, std::string> readings_;       // readings tables: surface to reading or Hangul
-    std::map<std::string, std::string> fixed_;          // plain-dictionary names and their renderings
+    struct Tables {
+        std::map<std::string, std::string> readings;  // surface to reading or Hangul
+        std::map<std::string, std::string> fixed;     // plain-dictionary name renderings
+    };
+    std::shared_ptr<Tables> tables_;
     std::map<std::string, int> labels_;                 // script-format labels
     std::map<std::string, int> prefixes_;               // line-start labels of plain-text forms
     std::map<std::string, std::string> actors_;         // script actor variables

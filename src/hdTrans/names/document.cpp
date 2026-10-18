@@ -45,22 +45,6 @@ std::string_view BaseName(std::string_view path) {
     return slash == std::string_view::npos ? path : path.substr(slash + 1);
 }
 
-// The plain entries of the snapshot's text path, split where the plain dictionaries start:
-// the kana spellings, endings and phrases come first (file numbers below 0), then the
-// entries of the plain dictionaries (file numbers from 0).
-struct PlainParts {
-    std::vector<dict::UserEntry> lists;    // kana, endings, phrases and patterns
-    std::vector<dict::UserEntry> dicts;    // the plain dictionaries
-};
-
-PlainParts SplitPlain(const dict::Snapshot& snap) {
-    PlainParts out;
-    for (const dict::UserEntry& e : snap.TextPlain().Entries()) {
-        (e.file < 0 ? out.lists : out.dicts).push_back(e);
-    }
-    return out;
-}
-
 // The codes of the entries compiled into codes get their with-XXX and plain views, as the
 // snapshot's own codes do.
 void FinishCodes(dict::CodeTable& codes) {
@@ -114,6 +98,23 @@ std::optional<std::string> WholeLineOf(const std::map<std::string, std::string>&
 
 }  // namespace
 
+struct DocumentData {
+    explicit DocumentData(const dict::Snapshot& snap) : registry(&snap), wholeLines(WholeLineRows()) {
+        for (const dict::File& f : snap.PlainFiles()) {
+            if (BaseName(f.name) == "readings.tsv") registry.LoadReadings(f.text);
+        }
+        for (const dict::UserEntry& e : snap.TextPlain().Entries()) {
+            if (e.file < 0) continue;
+            dictKeys.insert(e.key);
+            if (e.name) registry.SetName(e.key, e.target);
+        }
+    }
+
+    names::Registry registry;
+    dict::KeySet dictKeys;
+    std::map<std::string, std::string> wholeLines;
+};
+
 namespace internal {
 
 std::set<std::string> VerseLines(std::span<const std::string> lines) {
@@ -154,15 +155,10 @@ std::vector<std::string> CuedNames(const dict::Snapshot& snap, std::string_view 
 std::unique_ptr<DocumentContext> BuildDocument(const dict::Snapshot& snap, std::span<const std::string> lines) {
     auto doc = std::make_unique<DocumentContext>();
     doc->snap = &snap;
+    doc->data = &snap.DocumentData();
     doc->codes = std::make_unique<dict::CodeTable>();
-    doc->registry = std::make_unique<names::Registry>(&snap);
+    doc->registry = std::make_unique<names::Registry>(doc->data->registry);
     names::Registry& r = *doc->registry;
-    for (const dict::File& f : snap.PlainFiles()) {
-        if (BaseName(f.name) == "readings.tsv") r.LoadReadings(f.text);
-    }
-    for (const dict::UserEntry& e : snap.TextPlain().Entries()) {
-        if (e.file >= 0 && e.name) r.SetName(e.key, e.target);
-    }
     for (const std::string& line : lines) r.Add(line);
 
     doc->registryKey = r.Key();
@@ -201,7 +197,6 @@ std::unique_ptr<DocumentContext> BuildDocument(const dict::Snapshot& snap, std::
     doc->extra = userdict::Parse(registryDict, -1, ctx).entries;
     for (dict::UserEntry& e : userdict::Parse(doc->historical, -1, ctx).entries) doc->extra.push_back(std::move(e));
     FinishCodes(*doc->codes);
-    doc->wholeLines = WholeLineRows();
     return doc;
 }
 
@@ -224,7 +219,7 @@ LineFacts ReadLine(DocumentContext& doc, std::string_view line) {
     std::sort(facts.skip.begin(), facts.skip.end());
     facts.persons = internal::PersonPlaces(*doc.snap, facts.text, doc.registry.get(), &doc.persons_);
     std::sort(facts.persons.begin(), facts.persons.end());
-    facts.wholeLine = WholeLineOf(doc.wholeLines, facts.text);
+    facts.wholeLine = WholeLineOf(doc.data->wholeLines, facts.text);
     facts.verse = doc.verseLines.count(std::string(line)) > 0;
     return facts;
 }
@@ -238,15 +233,12 @@ LineLookup LookupOf(DocumentContext& doc, const LineFacts& facts) {
     }
     auto found = doc.plainByKey.find(key);
     if (found == doc.plainByKey.end()) {
-        const PlainParts plain = SplitPlain(*doc.snap);
-        dict::KeySet omit(facts.skip.begin(), facts.skip.end());
-        for (const dict::UserEntry& e : plain.dicts) omit.insert(e.key);
-        std::vector<dict::UserEntry> entries = plain.lists;
+        std::vector<dict::UserEntry> entries;
         for (const dict::UserEntry& e : doc.extra) {
-            if (omit.count(e.key) == 0) entries.push_back(e);
+            if (!doc.data->dictKeys.contains(e.key) &&
+                !std::binary_search(facts.skip.begin(), facts.skip.end(), e.key)) entries.push_back(e);
         }
-        entries.insert(entries.end(), plain.dicts.begin(), plain.dicts.end());
-        found = doc.plainByKey.emplace(key, std::make_unique<dict::UserText>(std::move(entries))).first;
+        found = doc.plainByKey.emplace(key, std::make_unique<dict::UserText>(doc.snap->TextPlain(), std::move(entries))).first;
     }
     out.plain = found->second.get();
     for (const std::string& t : doc.accepted) {
@@ -268,3 +260,14 @@ LineContext ContextOf(const DocumentContext& doc, const LineLookup& lookup) {
 }
 
 }  // namespace hdTrans::pipeline
+
+namespace hdTrans::dict {
+
+const pipeline::DocumentData& Snapshot::DocumentData() const {
+    std::call_once(documentOnce_, [this] {
+        documentData_ = std::make_shared<const pipeline::DocumentData>(*this);
+    });
+    return *documentData_;
+}
+
+}  // namespace hdTrans::dict

@@ -28,6 +28,7 @@ struct DocumentContext {
     DocumentContext& operator=(const DocumentContext&) = delete;
 
     const dict::Snapshot* snap = nullptr;
+    const struct DocumentData* data = nullptr;
     // The registry key (the CTX record doc.key).
     std::string registryKey;
     // The key the document is identified by: the registry key with the female, persons,
@@ -48,7 +49,6 @@ struct DocumentContext {
     std::vector<dict::UserEntry> extra;
     // The lookups' plain lists by their skip key, built on first use.
     std::map<std::string, std::unique_ptr<dict::UserText>> plainByKey;
-    std::map<std::string, std::string> wholeLines;  // lines.tsv: JP to KR
 };
 
 // The facts of one line of a document.

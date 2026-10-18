@@ -73,11 +73,11 @@ std::string Registry::RenderName(std::string_view t, const Name& n) {
 
 std::string Registry::RenderPart(std::string_view t) {
     const std::string key(t);
-    if (const auto f = fixed_.find(key); f != fixed_.end() && !f->second.empty()) return f->second;
+    if (const auto f = tables_->fixed.find(key); f != tables_->fixed.end() && !f->second.empty()) return f->second;
     if (const auto r = reading_.find(key); r != reading_.end() && !r->second.empty()) {
         return text::FromKana(r->second, preset);
     }
-    if (const auto v = readings_.find(key); v != readings_.end() && !v->second.empty()) {
+    if (const auto v = tables_->readings.find(key); v != tables_->readings.end() && !v->second.empty()) {
         if (IsKanaText(v->second)) return text::FromKana(v->second, preset);
         return v->second;
     }

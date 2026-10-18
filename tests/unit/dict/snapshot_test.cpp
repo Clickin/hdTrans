@@ -264,6 +264,147 @@ HD_TEST(SnapshotKeysAndUserDictionary) {
                 "[犬] 멍멍이 N110|||GN r0 id0 plain");
 }
 
+HD_TEST(UserTextSparseOverlay) {
+    CodeTable table;
+    auto add = [&table](std::vector<UserEntry>& entries, std::string key, std::string target, std::string_view part,
+                        int file, int line, int prio = 0, int order = 0) -> UserEntry& {
+        entries.push_back(Entry(table, std::move(key), std::move(target), part, line));
+        UserEntry& e = entries.back();
+        e.file = file;
+        e.prio = prio;
+        e.order = order;
+        return e;
+    };
+    std::vector<UserEntry> baseEntries;
+    add(baseEntries, "学", "학", "N110", 0, 1);
+    add(baseEntries, "学生", "학생", "N110", 0, 2, 9);
+    add(baseEntries, "学生", "배우다", "M428", 0, 3);
+    add(baseEntries, "学生", "생도", "N110", 0, 4);
+    add(baseEntries, "学生会", "학생회", "N110", 0, 5);
+    add(baseEntries, "行", "줄", "N110", 0, 1);
+    add(baseEntries, "行", "행차", "E300", 1, 9);
+    add(baseEntries, "行", "걷다", "M428", 1, 3, 0, 1);
+    add(baseEntries, "行", "가다", "M428", 1, 3);
+    add(baseEntries, "行", "다니다", "M428", 1, 3, 0, 1);
+    add(baseEntries, "あい", "사랑", "N110", -2, 1).kana = true;
+    add(baseEntries, "あい", "아끼다", "M428", -2, 2).kana = true;
+    add(baseEntries, "", "다", "S5A0", 0, 1).end = true;
+    add(baseEntries, "", "네", "S5A0", 0, 2).registerLevel = 1;
+    add(baseEntries, "", "어요", "S5A0", 0, 3).polite = true;
+    add(baseEntries, "", "다네", "S5A0", 0, 4).stative = true;
+    add(baseEntries, "", "게", "T5A0", 0, 5);
+    add(baseEntries, "", "이고", "U5I1", 0, 6);
+    add(baseEntries, "さん", "씨", "N110", 0, 1).honorific = true;
+    add(baseEntries, "さま", "님", "N110", 0, 2).honorific = true;
+    add(baseEntries, "さん方", "여러분", "N110", 0, 3).honorific = true;
+
+    std::vector<UserEntry> extraEntries;
+    add(extraEntries, "学生", "학우", "N110", 1, 1);
+    add(extraEntries, "学生", "학도", "N110", 1, 2);
+    add(extraEntries, "学生会館", "학생회관", "N110", 1, 3);
+    add(extraEntries, "行", "오다", "M428", 1, 3, 0, 1);
+    add(extraEntries, "行", "앞서다", "N130", 0, 20, 2);
+    add(extraEntries, "あい", "애정", "N110", -1, 1);
+    add(extraEntries, "あいさつ", "인사", "N110", -1, 2);
+    add(extraEntries, "", "는다", "S5A0", 1, 1).end = true;
+    add(extraEntries, "た", "었다", "S5A0", -1, 3);
+    add(extraEntries, "", "무시", "N110", 1, 4);
+    add(extraEntries, "学生会", "숨김", "N110", 9, 1).hidden = true;
+    add(extraEntries, "学生", "제외", "N110", 9, 2).codes = nullptr;
+    add(extraEntries, "さん", "선생", "N110", -1, 1, 9).honorific = true;
+    add(extraEntries, "さん", "씨께", "N110", -2, 2).honorific = true;
+    add(extraEntries, "さん方々", "여러분께", "N110", -1, 3).honorific = true;
+
+    const UserText base(baseEntries);
+    const UserText overlay(base, extraEntries);
+    const UserText unchanged(base, {});
+    std::vector<UserEntry> allEntries = baseEntries;
+    allEntries.insert(allEntries.end(), extraEntries.begin(), extraEntries.end());
+    const UserText flattened(std::move(allEntries));
+    HD_CHECK_EQ(base.Len(), size_t{18});
+    HD_CHECK_EQ(overlay.Len(), flattened.Len());
+    HD_CHECK_EQ(overlay.Len(), size_t{23});
+    HD_CHECK_EQ(unchanged.Len(), base.Len());
+    HD_CHECK_EQ(overlay.Entries().size(), extraEntries.size());
+
+    auto targets = [](const std::vector<const UserEntry*>& entries) {
+        std::string s;
+        for (const UserEntry* e : entries) s += (s.empty() ? "" : " | ") + e->target;
+        return s;
+    };
+    struct SearchCase {
+        std::string_view text;
+        LookupMode mode;
+        const char* targets;
+    };
+    const SearchCase searches[] = {
+        {"学生会館です", LookupMode::General, "학생회관 | 학생회 | 학우 | 학도 | 배우다 | 학"},
+        {"学生です", LookupMode::General, "학우 | 학도 | 배우다 | 학"},
+        {"学ぶ", LookupMode::General, "학"},
+        {"行く", LookupMode::General, "앞서다 | 가다 | 걷다 | 다니다 | 오다 | 행차 | 줄"},
+        {"あいさつする", LookupMode::General, "인사 | 애정 | 아끼다"},
+        {"あい", LookupMode::General, "애정 | 아끼다"},
+        {"", LookupMode::General, ""},
+        {"", LookupMode::VerbEnding, "는다 | 네 | 어요 | 다네"},
+        {"", LookupMode::AdjectiveEnding, "게"},
+        {"", LookupMode::AdjectivalNounEnding, "이고"},
+        {"", LookupMode::PrefixVerb, ""},
+        {"た後", LookupMode::VerbEnding, "었다"},
+        {"た後", LookupMode::General, ""},
+        {"学生です", LookupMode::VerbEnding, ""},
+        {"さん方々へ", LookupMode::General, ""},
+        {"猫", LookupMode::General, ""},
+    };
+    for (const SearchCase& c : searches) {
+        const auto actual = overlay.Search(c.text, c.mode);
+        const auto expected = flattened.Search(c.text, c.mode);
+        HD_CHECK_EQ(targets(expected), c.targets);
+        HD_CHECK_EQ(targets(actual), targets(expected));
+        HD_CHECK_EQ(targets(unchanged.Search(c.text, c.mode)), targets(base.Search(c.text, c.mode)));
+        HD_REQUIRE(actual.size() == expected.size());
+        for (size_t i = 0; i < actual.size(); ++i) {
+            HD_CHECK_EQ(actual[i]->key, expected[i]->key);
+            HD_CHECK(actual[i]->codes == expected[i]->codes);
+            HD_CHECK_EQ(actual[i]->prio, expected[i]->prio);
+            HD_CHECK_EQ(actual[i]->file, expected[i]->file);
+            HD_CHECK_EQ(actual[i]->line, expected[i]->line);
+            HD_CHECK_EQ(actual[i]->order, expected[i]->order);
+            HD_CHECK_EQ(actual[i]->kana, expected[i]->kana);
+            HD_CHECK_EQ(actual[i]->end, expected[i]->end);
+            HD_CHECK_EQ(actual[i]->registerLevel, expected[i]->registerLevel);
+            HD_CHECK_EQ(actual[i]->polite, expected[i]->polite);
+            HD_CHECK_EQ(actual[i]->stative, expected[i]->stative);
+        }
+    }
+    HD_CHECK_EQ(targets(base.Search("学生です", LookupMode::General)), "학생 | 배우다 | 생도 | 학");
+
+    struct HonorificCase {
+        std::string_view text;
+        const char* target;
+    };
+    const HonorificCase honorifics[] = {
+        {"さんへ", "씨께"},
+        {"さん方へ", "여러분"},
+        {"さん方々へ", "여러분께"},
+        {"さまへ", "님"},
+        {"猫", ""},
+        {"", ""},
+    };
+    for (const HonorificCase& c : honorifics) {
+        const UserEntry* actual = overlay.Honorific(c.text);
+        const UserEntry* expected = flattened.Honorific(c.text);
+        HD_CHECK_EQ(actual != nullptr, expected != nullptr);
+        HD_CHECK_EQ(actual ? actual->target : "", c.target);
+        if (actual && expected) {
+            HD_CHECK_EQ(actual->key, expected->key);
+            HD_CHECK_EQ(actual->target, expected->target);
+        }
+        HD_CHECK(unchanged.Honorific(c.text) == base.Honorific(c.text));
+    }
+    HD_REQUIRE(base.Honorific("さんへ") != nullptr);
+    HD_CHECK_EQ(base.Honorific("さんへ")->target, "씨");
+}
+
 HD_TEST(SnapshotStrategies) {
     std::vector<File> files;
     files.push_back(MakeFile("base.tsv", kHeader + "犬\t견\tN110\t\t\tGN\t1\n犬小屋\t개집\tN110\t\t\tGN\t2\n"));

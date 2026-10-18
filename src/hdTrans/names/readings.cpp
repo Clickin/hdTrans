@@ -49,6 +49,7 @@ void AddBuiltinReadings(std::map<std::string, std::string>& readings) {
 
 bool Registry::LoadReadings(std::string_view text) {
     scoresValid_ = false;
+    if (tables_.use_count() != 1) tables_ = std::make_shared<Tables>(*tables_);
     if (text.starts_with("\xEF\xBB\xBF")) text.remove_prefix(3);
     bool ok = true;
     while (!text.empty()) {
@@ -71,7 +72,7 @@ bool Registry::LoadReadings(std::string_view text) {
             ok = false;
             continue;
         }
-        readings_[std::string(jp)] = std::string(value);
+        tables_->readings[std::string(jp)] = std::string(value);
     }
     return ok;
 }

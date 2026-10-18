@@ -79,14 +79,15 @@ std::vector<std::string> ChainParts(std::string_view s) {
 
 }  // namespace
 
-Registry::Registry(const dict::Snapshot* snap) : snap_(snap) {
-    internal::AddBuiltinReadings(readings_);
+Registry::Registry(const dict::Snapshot* snap) : snap_(snap), tables_(std::make_shared<Tables>()) {
+    internal::AddBuiltinReadings(tables_->readings);
 }
 
 void Registry::SetName(std::string_view t, std::string_view kr) {
     if (!t.empty() && IsHangulText(kr)) {
         scoresValid_ = false;
-        fixed_[std::string(t)] = std::string(kr);
+        if (tables_.use_count() != 1) tables_ = std::make_shared<Tables>(*tables_);
+        tables_->fixed[std::string(t)] = std::string(kr);
     }
 }
 
@@ -214,8 +215,8 @@ const std::map<std::string, Name>& Registry::Accepted() {
         n.person = true;
     }
     for (const auto& [t, c] : runs_) {
-        const auto rd = readings_.find(t);
-        if (rd != readings_.end() && !rd->second.empty() && RuneCount(t) >= 2 && Flags(t).records == 0) {
+        const auto rd = tables_->readings.find(t);
+        if (rd != tables_->readings.end() && !rd->second.empty() && RuneCount(t) >= 2 && Flags(t).records == 0) {
             all[t].score += static_cast<double>(std::min(c, 2));
         }
     }
@@ -223,7 +224,7 @@ const std::map<std::string, Name>& Registry::Accepted() {
     for (const auto& [t, n] : all) {
         if (n.score >= kThreshold) att.insert(t);
     }
-    for (const auto& [t, kr] : fixed_) att.insert(t);
+    for (const auto& [t, kr] : tables_->fixed) att.insert(t);
     for (const auto& [x, c] : hon_) {
         (void)c;
         if (att.count(x) || RuneCount(x) < 2 || !AllRunes(x, IsKatakana) || Flags(x).role) continue;
@@ -395,8 +396,8 @@ void Registry::SplitReading(const std::string& x, const std::string& y, const st
     auto known = [&](const std::string& part) -> std::string {
         const auto r = reading_.find(part);
         if (r != reading_.end() && !r->second.empty()) return text::FromKana(r->second, preset);
-        const auto v = readings_.find(part);
-        if (v != readings_.end() && !v->second.empty()) {
+        const auto v = tables_->readings.find(part);
+        if (v != tables_->readings.end() && !v->second.empty()) {
             if (IsKanaText(v->second)) return text::FromKana(v->second, preset);
             return v->second;
         }

@@ -61,14 +61,38 @@ UserText::UserText(std::vector<UserEntry> entries) : entries_(std::move(entries)
     }
 }
 
+UserText::UserText(const UserText& base, std::vector<UserEntry> entries) : UserText(std::move(entries)) {
+    base_ = &base;
+    maxKey_ = std::max(maxKey_, base.maxKey_);
+    for (auto& [key, list] : byKey_) {
+        const auto it = base.byKey_.find(key);
+        if (it == base.byKey_.end()) continue;
+        list.insert(list.begin(), it->second.begin(), it->second.end());
+        const auto all = list;
+        std::erase_if(list, [&all](const UserEntry* e) {
+            return std::any_of(all.begin(), all.end(), [e](const UserEntry* f) {
+                return f->file > e->file && f->codes->partText == e->codes->partText &&
+                       f->registerLevel == e->registerLevel && f->polite == e->polite && f->stative == e->stative;
+            });
+        });
+        std::stable_sort(list.begin(), list.end(), EntryBefore);
+    }
+}
+
 std::size_t UserText::Len() const {
-    std::size_t n = 0;
-    for (const auto& [key, list] : byKey_) n += list.size();
+    std::size_t n = base_ ? base_->Len() : 0;
+    for (const auto& [key, list] : byKey_) {
+        n += list.size();
+        if (base_) {
+            const auto it = base_->byKey_.find(key);
+            if (it != base_->byKey_.end()) n -= it->second.size();
+        }
+    }
     return n;
 }
 
 const UserEntry* UserText::Honorific(std::string_view text) const {
-    const UserEntry* best = nullptr;
+    const UserEntry* best = base_ ? base_->Honorific(text) : nullptr;
     for (const UserEntry* e : honorifics_) {
         if (text.starts_with(e->key) && (!best || e->key.size() >= best->key.size())) best = e;
     }
@@ -77,7 +101,7 @@ const UserEntry* UserText::Honorific(std::string_view text) const {
 
 std::vector<const UserEntry*> UserText::Search(std::string_view text, LookupMode mode) const {
     std::vector<const UserEntry*> out;
-    if (byKey_.empty()) return out;
+    if (byKey_.empty()) return base_ ? base_->Search(text, mode) : out;
     std::vector<std::size_t> ends;
     if (text.empty()) ends.push_back(0);
     for (std::size_t i = 0; i < text.size() && i < maxKey_;) {
@@ -85,9 +109,15 @@ std::vector<const UserEntry*> UserText::Search(std::string_view text, LookupMode
         ends.push_back(i);
     }
     for (std::size_t k = ends.size(); k-- > 0;) {
-        const auto it = byKey_.find(text.substr(0, ends[k]));
-        if (it == byKey_.end()) continue;
-        for (const UserEntry* e : it->second) {
+        const std::string_view key = text.substr(0, ends[k]);
+        const auto it = byKey_.find(key);
+        const std::vector<const UserEntry*>* list = it == byKey_.end() ? nullptr : &it->second;
+        if (list == nullptr && base_) {
+            const auto inherited = base_->byKey_.find(key);
+            if (inherited != base_->byKey_.end()) list = &inherited->second;
+        }
+        if (list == nullptr) continue;
+        for (const UserEntry* e : *list) {
             if (AcceptsTag(mode, e->Part().Tag())) out.push_back(e);
         }
     }

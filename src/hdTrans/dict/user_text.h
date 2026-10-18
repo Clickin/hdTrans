@@ -92,12 +92,14 @@ public:
     // dropped, and so is an entry when a later source has one with the same key,
     // part code, register, polite and stative.
     explicit UserText(std::vector<UserEntry> entries);
+    // Indexes only the changed keys; base and its entry codes must outlive this index.
+    UserText(const UserText& base, std::vector<UserEntry> entries);
     UserText(const UserText&) = delete;
     UserText& operator=(const UserText&) = delete;
 
     // The number of indexed lookup entries.
     std::size_t Len() const;
-    // The entries as given.
+    // The entries supplied to this index, without the base entries of an overlay.
     const std::vector<UserEntry>& Entries() const { return entries_; }
     // The honorific row with the longest key that prefixes text, the one loaded last
     // among equal keys, or null.
@@ -108,6 +110,7 @@ public:
     std::vector<const UserEntry*> Search(std::string_view text, LookupMode mode) const;
 
 private:
+    const UserText* base_ = nullptr;
     std::vector<UserEntry> entries_;
     std::unordered_map<std::string, std::vector<const UserEntry*>, StringHash, std::equal_to<>> byKey_;
     std::size_t maxKey_ = 0;

@@ -256,3 +256,22 @@ HD_TEST(names_given_split) {
         HD_CHECK(std::find(names.begin(), names.end(), given) == names.end());
     }
 }
+
+HD_TEST(names_shared_tables) {
+    names::Registry seed(nullptr);
+    HD_REQUIRE(seed.LoadReadings("風音\tかざね\n"));
+    seed.SetName("風音", "카자네");
+    names::Registry first = seed;
+    names::Registry second = seed;
+    first.Add("|風音《かざね》");
+    second.Add("|風音《かざね》");
+    HD_CHECK_EQ(first.Render("風音"), "카자네");
+    HD_CHECK_EQ(first.Key(), second.Key());
+    const std::string key = second.Key();
+    first.SetName("風音", "카논");
+    HD_CHECK_EQ(first.Render("風音"), "카논");
+    HD_CHECK_EQ(second.Key(), key);
+    HD_REQUIRE(first.LoadReadings("風音\tかのん\n"));
+    seed.Add("|風音《かざね》");
+    HD_CHECK_EQ(seed.Key(), key);
+}

@@ -36,6 +36,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -49,6 +50,10 @@
 #include "hdTrans/output/families.h"
 #include "hdTrans/userdict/conjugating.h"
 #include "hdTrans/userdict/sense.h"
+
+namespace hdTrans::pipeline {
+struct DocumentData;
+}
 
 namespace hdTrans::dict {
 
@@ -160,6 +165,8 @@ public:
     // The plain entries of the text path: the kana spellings, the builtin endings,
     // phrases and patterns, then the entries of the plain dictionaries.
     const UserText& TextPlain() const { return *textPlain_; }
+    // The shared dictionary data used to build document contexts.
+    const pipeline::DocumentData& DocumentData() const;
     // The builtin sense table.
     const userdict::SenseTable& Senses() const { return senses_; }
     // The marker families that the conjugating plain entries and senses use beyond
@@ -248,6 +255,8 @@ private:
     mutable output::Families outputFamilies_;
     std::unique_ptr<const UserText> rawPlain_, textPlain_;
     userdict::SenseTable senses_;
+    mutable std::once_flag documentOnce_;
+    mutable std::shared_ptr<const pipeline::DocumentData> documentData_;
 };
 
 }  // namespace hdTrans::dict
