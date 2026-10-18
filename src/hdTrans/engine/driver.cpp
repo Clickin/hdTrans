@@ -79,25 +79,26 @@ output::Settings ComposeSettings(bool text) {
     return s;
 }
 
-word::Settings AnalysisSettings(bool text) {
+word::Settings AnalysisSettings(bool text, bool verse) {
     word::Settings s;
     s.text = text;
     s.terminal = text;
+    s.verse = verse;
     return s;
 }
 
 // Translates one chunk: its tokens, the word analysis, then per sentence the resolve stage
 // and the compose stage. The sentences are appended to out with the chunk index.
 void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& lookup, const output::Pieces& chunk,
-                    int index, bool text, Scratch& s, Generated& generated, const StageObserver& observer,
-                    std::vector<output::Sentence>& out) {
+                    int index, bool text, bool verse, Scratch& s, Generated& generated,
+                    const StageObserver& observer, std::vector<output::Sentence>& out) {
     s.texts.clear();
     const std::vector<tokenizer::Piece> pieces = TokenizerPieces(chunk);
     tokenizer::TokenizeSpans(pieces, text, s.tokens);
     if (observer.tokens) observer.tokens(observer.context, index, s.tokens);
 
     word::Analysis analysis;
-    const word::Settings settings = AnalysisSettings(text);
+    const word::Settings settings = AnalysisSettings(text, verse);
     word::Analyze(s.tokens, snap, lookup, settings, s.arena, analysis);
     if (observer.analysis) observer.analysis(observer.context, index, s.tokens, analysis);
 
@@ -146,7 +147,8 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
     std::vector<output::Sentence> sentences;
     for (std::size_t i = 0; i < chunks.size(); i++) {
         if (observer.pieces) observer.pieces(observer.context, "CH", static_cast<int>(i), chunks[i]);
-        TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, s, generated, observer, sentences);
+        TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, facts.verse, s, generated, observer,
+                       sentences);
     }
     const output::Pieces cleaned = output::Cleanup(sentences);
     if (observer.cleaned) observer.cleaned(observer.context, cleaned);
@@ -188,7 +190,7 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
     std::vector<output::Sentence> sentences;
     dict::LookupContext lookup;
     lookup.plain = &snap.Plain();
-    TranslateChunk(snap, lookup, chunk, 0, false, s, generated, observer, sentences);
+    TranslateChunk(snap, lookup, chunk, 0, false, false, s, generated, observer, sentences);
     output::Pieces result;
     for (const output::Sentence& sentence : sentences) output::Append(result, sentence.pieces);
     return output::String(result);
