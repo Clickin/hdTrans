@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <limits>
 #include <mutex>
+#include <optional>
 #include <system_error>
 #include <unordered_map>
 #include <unordered_set>
@@ -52,6 +53,46 @@ std::filesystem::path PathOf(std::string_view s) {
 std::string Utf8Of(const std::filesystem::path& p) {
     const auto s = p.u8string();
     return {reinterpret_cast<const char*>(s.data()), s.size()};
+}
+
+std::optional<std::string> EnvironmentPath(const char* name) {
+#ifdef _WIN32
+    const auto variable = PathOf(name);
+    SetLastError(ERROR_SUCCESS);
+    const auto size = GetEnvironmentVariableW(variable.c_str(), nullptr, 0);
+    if (!size) return GetLastError() == ERROR_ENVVAR_NOT_FOUND ? std::nullopt : std::optional<std::string>("");
+    if (size > static_cast<DWORD>(std::numeric_limits<int>::max())) return std::string();
+    std::wstring value(size, L'\0');
+    const auto length = GetEnvironmentVariableW(variable.c_str(), value.data(), size);
+    if (!length || length >= size) return std::string();
+    const int count = static_cast<int>(length);
+    const int bytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, value.data(), count, nullptr, 0, nullptr, nullptr);
+    if (bytes <= 0) return std::string();
+    std::string text(static_cast<std::size_t>(bytes), '\0');
+    if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, value.data(), count,
+                            text.data(), bytes, nullptr, nullptr) != bytes) return std::string();
+    return text;
+#else
+    const char* value = std::getenv(name);
+    return value ? std::optional<std::string>(value) : std::nullopt;
+#endif
+}
+
+std::string DefaultCacheDirectory() {
+#ifdef _WIN32
+    const auto home = EnvironmentPath("LOCALAPPDATA");
+    constexpr auto suffix = "hdtrans/cache";
+#elif defined(__APPLE__)
+    const auto home = EnvironmentPath("HOME");
+    constexpr auto suffix = "Library/Caches/hdtrans";
+#else
+    if (const auto xdg = EnvironmentPath("XDG_CACHE_HOME"); xdg && !xdg->empty()) {
+        return SafePath(*xdg) ? Utf8Of(PathOf(*xdg) / "hdtrans") : std::string();
+    }
+    const auto home = EnvironmentPath("HOME");
+    constexpr auto suffix = ".cache/hdtrans";
+#endif
+    return home && !home->empty() && SafePath(*home) ? Utf8Of(PathOf(*home) / suffix) : std::string();
 }
 
 std::FILE* OpenFile(const std::filesystem::path& path, bool write) {
@@ -833,13 +874,22 @@ bool Snapshot::Mapped() const { return backing_ != nullptr; }
 namespace internal {
 
 std::string SnapshotPath(const std::vector<std::string>& folders, std::string_view cacheDir) {
-    if (folders.empty() || !SafePath(cacheDir)) return {};
-    for (const auto& folder : folders) if (!SafePath(folder)) return {};
+    const auto overrideDir = EnvironmentPath("HDTRANS_CACHE_DIR");
+    if (overrideDir && overrideDir->empty()) return {};
+    const auto dir = !cacheDir.empty() ? std::string(cacheDir) : overrideDir ? *overrideDir : DefaultCacheDirectory();
+    if (folders.empty() || dir.empty() || !SafePath(dir)) return {};
     Buffer key;
-    for (const auto& folder : folders) key.Text(folder);
+    key.Number(kDataVersion);
+    for (const auto& folder : folders) {
+        if (!SafePath(folder)) return {};
+        std::error_code ec;
+        auto absolute = std::filesystem::absolute(PathOf(folder), ec).lexically_normal();
+        if (ec) return {};
+        if (!absolute.has_filename() && absolute != absolute.root_path()) absolute = absolute.parent_path();
+        key.Text(Utf8Of(absolute));
+    }
     const auto hash = Hash256(key.data);
-    const auto dir = cacheDir.empty() ? PathOf(folders.front()) / ".hdsnap" : PathOf(cacheDir);
-    return Utf8Of(dir / (Hex(hash) + ".hdsnap"));
+    return Utf8Of(PathOf(dir) / (Hex(hash) + ".hdsnap"));
 }
 
 }  // namespace internal
@@ -916,22 +966,20 @@ LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view
     if (mode && std::string_view(mode) == "off") return LoadFoldersTsv(folders);
     const char* strict = std::getenv("HDTRANS_VERIFY_DICTS");
     verify = verify || (strict && std::string_view(strict) == "1");
+    const auto path = internal::SnapshotPath(folders, cacheDir);
+    if (path.empty()) return LoadFoldersTsv(folders);
     std::vector<Source> sources;
     if (!ListSources(folders, sources, false)) return LoadFoldersTsv(folders);
-    const auto path = internal::SnapshotPath(folders, cacheDir);
-    if (!path.empty()) {
-        auto loaded = SnapshotStorage::Read(folders, path, verify);
-        if (loaded.snapshot) {
-            auto& file = *SnapshotStorage::Backing(*loaded.snapshot);
-            bool refresh = false;
-            if (CheckSources(folders, CachedManifest(file), sources, verify, refresh)) {
-                if (refresh) RefreshManifest(file, sources);
-                return loaded;
-            }
+    if (auto cached = SnapshotStorage::Read(folders, path, verify); cached.snapshot) {
+        auto& file = *SnapshotStorage::Backing(*cached.snapshot);
+        bool refresh = false;
+        if (CheckSources(folders, CachedManifest(file), sources, verify, refresh)) {
+            if (refresh) RefreshManifest(file, sources);
+            return cached;
         }
     }
     sources.clear();
-    bool write = !path.empty() && ListSources(folders, sources, true);
+    bool write = ListSources(folders, sources, true);
     auto loaded = LoadFoldersTsv(folders);
     if (loaded.snapshot && write) {
         std::vector<Source> after;

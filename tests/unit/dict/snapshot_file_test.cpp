@@ -1,6 +1,7 @@
 #include "hdTrans/dict/snapshot_file.h"
 
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -10,6 +11,10 @@
 #include <string>
 #include <tuple>
 #include <system_error>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include "hdTrans/dict/mapped_file.h"
 #include "hdTrans/dict/integrity.h"
@@ -53,9 +58,9 @@ HD_TEST(SnapshotFileWriter) {
     HD_CHECK(bytes[12] == std::byte{1});
     HD_CHECK(!hdTrans::dict::CompileSnapshot({temp.File("absent")}, temp.File("bad.hdsnap")));
     HD_CHECK(!std::filesystem::exists(temp.path / "bad.hdsnap"));
-    const auto cache = hdTrans::dict::internal::SnapshotPath({FixtureFolder()});
+    const auto cache = hdTrans::dict::internal::SnapshotPath({FixtureFolder()}, temp.File("cache"));
     HD_CHECK(cache.find(".hdsnap") != std::string::npos);
-    HD_CHECK(cache != hdTrans::dict::internal::SnapshotPath({FixtureFolder(), FixtureFolder()}));
+    HD_CHECK(cache != hdTrans::dict::internal::SnapshotPath({FixtureFolder(), FixtureFolder()}, temp.File("cache")));
 }
 
 HD_TEST(SnapshotFileRoundTrip) {
@@ -116,6 +121,53 @@ std::filesystem::path Utf8Path(std::string_view text) {
     return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(text.data()), text.size()));
 }
 
+struct ScopedEnvironment {
+#ifdef _WIN32
+    std::wstring name, previous;
+#else
+    std::string name, previous;
+#endif
+    bool present = false;
+
+    ScopedEnvironment(const char* key, const char* value) {
+#ifdef _WIN32
+        name = Utf8Path(key).native();
+        SetLastError(ERROR_SUCCESS);
+        const auto size = GetEnvironmentVariableW(name.c_str(), nullptr, 0);
+        present = size != 0 || GetLastError() != ERROR_ENVVAR_NOT_FOUND;
+        if (size) {
+            previous.resize(size);
+            const auto length = GetEnvironmentVariableW(name.c_str(), previous.data(), size);
+            previous.resize(length);
+        }
+#else
+        name = key;
+        const char* old = std::getenv(key);
+        present = old != nullptr;
+        if (old) previous = old;
+#endif
+        Set(value);
+    }
+
+    void Set(const char* value) const {
+#ifdef _WIN32
+        const bool ok = SetEnvironmentVariableW(name.c_str(), value ? Utf8Path(value).c_str() : nullptr) != 0;
+        HD_CHECK(ok || (!value && GetLastError() == ERROR_ENVVAR_NOT_FOUND));
+#else
+        HD_CHECK((value ? setenv(name.c_str(), value, 1) : unsetenv(name.c_str())) == 0);
+#endif
+    }
+
+    ~ScopedEnvironment() {
+#ifdef _WIN32
+        SetEnvironmentVariableW(name.c_str(), present ? previous.c_str() : nullptr);
+#else
+        if (present) setenv(name.c_str(), previous.c_str(), 1);
+        else unsetenv(name.c_str());
+#endif
+    }
+};
+
 bool WriteText(const std::filesystem::path& path, std::string_view text) {
     std::ofstream f(path, std::ios::binary | std::ios::trunc);
     f.write(text.data(), static_cast<std::streamsize>(text.size()));
@@ -157,42 +209,150 @@ std::string TargetOf(const hdTrans::dict::Snapshot& snap, std::string_view key) 
 
 }  // namespace
 
+HD_TEST(SnapshotCachePathNormalization) {
+    TempFolder temp;
+    const auto cache = temp.File("cache");
+    const auto folder = temp.File("dict");
+    const auto path = hdTrans::dict::internal::SnapshotPath({folder}, cache);
+    HD_REQUIRE(!path.empty());
+    HD_CHECK_EQ(path, hdTrans::dict::internal::SnapshotPath({folder + "/./child/../"}, cache));
+    std::error_code ec;
+    const auto absolute = (std::filesystem::current_path(ec) / "dict").u8string();
+    HD_REQUIRE(!ec);
+    HD_CHECK_EQ(hdTrans::dict::internal::SnapshotPath({"dict"}, cache),
+                hdTrans::dict::internal::SnapshotPath(
+                    {{reinterpret_cast<const char*>(absolute.data()), absolute.size()}}, cache));
+    const auto other = temp.File("other/dict");
+    HD_CHECK(path != hdTrans::dict::internal::SnapshotPath({other}, cache));
+    HD_CHECK(hdTrans::dict::internal::SnapshotPath({folder, other}, cache) !=
+             hdTrans::dict::internal::SnapshotPath({other, folder}, cache));
+}
+
+HD_TEST(SnapshotDefaultCacheLocation) {
+    TempFolder temp;
+    ScopedEnvironment overrideDir("HDTRANS_CACHE_DIR", nullptr);
+    ScopedEnvironment home("HOME", temp.File("home").c_str());
+    ScopedEnvironment local("LOCALAPPDATA", temp.File("local").c_str());
+    ScopedEnvironment xdg("XDG_CACHE_HOME", nullptr);
+#ifdef _WIN32
+    const auto cache = temp.File("local/hdtrans/cache");
+#elif defined(__APPLE__)
+    const auto cache = temp.File("home/Library/Caches/hdtrans");
+#else
+    const auto cache = temp.File("home/.cache/hdtrans");
+#endif
+    std::error_code ec;
+    const auto dict = temp.File("dict");
+    std::filesystem::create_directory(Utf8Path(dict), ec);
+    HD_REQUIRE(!ec);
+    HD_REQUIRE(WriteText(Utf8Path(dict) / "base.tsv", "key\tko\tpos\tid\n猫\t고양이\tN110\t1\n"));
+    const std::vector<std::string> folders{dict};
+    const auto path = hdTrans::dict::internal::SnapshotPath(folders);
+    HD_CHECK_EQ(path, hdTrans::dict::internal::SnapshotPath(folders, cache));
+    const auto built = hdTrans::dict::LoadFolders(folders);
+    HD_REQUIRE(built.snapshot != nullptr);
+    HD_REQUIRE(std::filesystem::exists(Utf8Path(path)));
+    const auto loaded = hdTrans::dict::LoadFolders(folders);
+    HD_REQUIRE(loaded.snapshot != nullptr && loaded.snapshot->Mapped());
+    for (const auto& entry : std::filesystem::directory_iterator(Utf8Path(dict))) {
+        HD_CHECK(entry.path().filename() == "base.tsv");
+    }
+
+    const auto bytes = ReadBytes(path);
+    const auto time = std::filesystem::last_write_time(Utf8Path(path));
+    overrideDir.Set("");
+    HD_CHECK(hdTrans::dict::internal::SnapshotPath(folders).empty());
+    const auto disabled = hdTrans::dict::LoadFolders(folders);
+    HD_REQUIRE(disabled.snapshot != nullptr);
+    HD_CHECK(!disabled.snapshot->Mapped());
+    HD_CHECK(ReadBytes(path) == bytes);
+    HD_CHECK(std::filesystem::last_write_time(Utf8Path(path)) == time);
+    HD_CHECK(!std::filesystem::exists(Utf8Path(dict) / ".hdsnap"));
+
+    overrideDir.Set(nullptr);
+#if !defined(_WIN32) && !defined(__APPLE__)
+    xdg.Set(temp.File("xdg").c_str());
+    HD_CHECK_EQ(hdTrans::dict::internal::SnapshotPath(folders),
+                hdTrans::dict::internal::SnapshotPath(folders, temp.File("xdg/hdtrans")));
+    xdg.Set("");
+    HD_CHECK_EQ(path, hdTrans::dict::internal::SnapshotPath(folders));
+#endif
+    home.Set(nullptr);
+    local.Set(nullptr);
+    HD_CHECK(hdTrans::dict::internal::SnapshotPath(folders).empty());
+}
+
+HD_TEST(SnapshotCacheEnvironmentOverride) {
+    TempFolder temp;
+    const auto cache = temp.File("cache");
+    ScopedEnvironment overrideDir("HDTRANS_CACHE_DIR", cache.c_str());
+    const std::vector<std::string> folders{temp.File("")};
+    HD_REQUIRE(WriteText(temp.path / "base.tsv", "key\tko\tpos\tid\n猫\t고양이\tN110\t1\n"));
+    const auto path = hdTrans::dict::internal::SnapshotPath(folders);
+    HD_CHECK_EQ(path, hdTrans::dict::internal::SnapshotPath(folders, cache));
+    const auto built = hdTrans::dict::LoadFolders(folders);
+    HD_REQUIRE(built.snapshot != nullptr);
+    HD_REQUIRE(std::filesystem::exists(Utf8Path(path)));
+    const auto loaded = hdTrans::dict::LoadFolders(folders);
+    HD_REQUIRE(loaded.snapshot != nullptr && loaded.snapshot->Mapped());
+    HD_CHECK(!std::filesystem::exists(temp.path / ".hdsnap"));
+
+    const auto explicitDir = temp.File(".hdsnap");
+    const auto explicitPath = hdTrans::dict::internal::SnapshotPath(folders, explicitDir);
+    HD_CHECK(Utf8Path(explicitPath).parent_path() == Utf8Path(explicitDir));
+    const auto explicitBuild = hdTrans::dict::LoadFolders(folders, explicitDir);
+    HD_REQUIRE(explicitBuild.snapshot != nullptr);
+    HD_REQUIRE(std::filesystem::exists(Utf8Path(explicitPath)));
+    const auto explicitLoad = hdTrans::dict::LoadFolders(folders, explicitDir);
+    HD_REQUIRE(explicitLoad.snapshot != nullptr);
+    HD_CHECK(explicitLoad.snapshot->Mapped());
+    overrideDir.Set("");
+    const auto disabled = hdTrans::dict::LoadFolders(folders);
+    HD_REQUIRE(disabled.snapshot != nullptr);
+    HD_CHECK(!disabled.snapshot->Mapped());
+    HD_CHECK(hdTrans::dict::internal::SnapshotPath(folders, explicitDir).empty());
+    const auto explicitDisabled = hdTrans::dict::LoadFolders(folders, explicitDir);
+    HD_REQUIRE(explicitDisabled.snapshot != nullptr);
+    HD_CHECK(!explicitDisabled.snapshot->Mapped());
+}
+
 HD_TEST(SnapshotSourceInvalidation) {
     TempFolder temp;
+    const auto cache = temp.File("cache");
     const auto base = temp.path / "base.tsv";
     const std::string header = "key\tko\tpos\tid\n";
     HD_REQUIRE(WriteText(base, header + "猫\t고양이\tN110\t1\n"));
     const std::vector<std::string> folders{temp.File("")};
-    const auto built = hdTrans::dict::LoadFolders(folders);
+    const auto built = hdTrans::dict::LoadFolders(folders, cache);
     HD_REQUIRE(built.snapshot != nullptr);
-    const auto cached = hdTrans::dict::LoadFolders(folders, {}, true);
+    const auto cached = hdTrans::dict::LoadFolders(folders, cache, true);
     HD_REQUIRE(cached.snapshot != nullptr && cached.snapshot->Mapped());
     const auto time = std::filesystem::last_write_time(base);
     HD_REQUIRE(WriteText(base, header + "猫\t야옹이\tN110\t1\n"));
     std::filesystem::last_write_time(base, time);
     // Strict verification detects changed bytes even when all file metadata match.
-    const auto changed = hdTrans::dict::LoadFolders(folders, {}, true);
+    const auto changed = hdTrans::dict::LoadFolders(folders, cache, true);
     HD_REQUIRE(changed.snapshot != nullptr);
     HD_CHECK(!changed.snapshot->Mapped());
     HD_CHECK_EQ(TargetOf(*changed.snapshot, "猫"), "야옹이");
-    const auto current = hdTrans::dict::LoadFolders(folders, {}, true);
+    const auto current = hdTrans::dict::LoadFolders(folders, cache, true);
     HD_REQUIRE(current.snapshot != nullptr && current.snapshot->Mapped());
     std::filesystem::last_write_time(base, time + std::chrono::seconds(2));
-    const auto touched = hdTrans::dict::LoadFolders(folders);
+    const auto touched = hdTrans::dict::LoadFolders(folders, cache);
     HD_REQUIRE(touched.snapshot != nullptr);
     HD_CHECK(touched.snapshot->Mapped());
-    const auto path = hdTrans::dict::internal::SnapshotPath(folders);
+    const auto path = hdTrans::dict::internal::SnapshotPath(folders, cache);
     HD_CHECK(std::filesystem::exists(Utf8Path(path + ".meta")));
-    const auto again = hdTrans::dict::LoadFolders(folders);
+    const auto again = hdTrans::dict::LoadFolders(folders, cache);
     HD_REQUIRE(again.snapshot != nullptr);
     HD_CHECK(again.snapshot->Mapped());
     HD_REQUIRE(WriteText(temp.path / "more.tsv", header + "犬\t개\tN110\t2\n"));
-    const auto added = hdTrans::dict::LoadFolders(folders, {}, true);
+    const auto added = hdTrans::dict::LoadFolders(folders, cache, true);
     HD_REQUIRE(added.snapshot != nullptr);
     HD_CHECK(!added.snapshot->Mapped());
     HD_CHECK_EQ(TargetOf(*added.snapshot, "犬"), "개");
     std::filesystem::remove(temp.path / "more.tsv");
-    const auto removed = hdTrans::dict::LoadFolders(folders, {}, true);
+    const auto removed = hdTrans::dict::LoadFolders(folders, cache, true);
     HD_REQUIRE(removed.snapshot != nullptr);
     HD_CHECK(!removed.snapshot->Mapped());
     HD_CHECK_EQ(removed.snapshot->Base().Len(), size_t{1});
@@ -275,6 +435,21 @@ HD_TEST(SnapshotCacheErrorsAreOptional) {
     HD_REQUIRE(loaded.snapshot != nullptr);
     HD_CHECK(!loaded.snapshot->Mapped());
     HD_CHECK(loaded.snapshot->Healthy());
+    ScopedEnvironment overrideDir("HDTRANS_CACHE_DIR", blocked.c_str());
+    const auto fallback = hdTrans::dict::LoadFolders({FixtureFolder()});
+    HD_REQUIRE(fallback.snapshot != nullptr);
+    HD_CHECK(!fallback.snapshot->Mapped());
+    HD_CHECK(fallback.snapshot->Healthy());
+    HD_CHECK_EQ(fallback.errors.size(), loaded.errors.size());
+    HD_CHECK_EQ(fallback.snapshot->Base().Len(), loaded.snapshot->Base().Len());
+#ifdef _WIN32
+    const wchar_t invalidValue[] = {static_cast<wchar_t>(0xd800), L'\0'};
+    HD_REQUIRE(SetEnvironmentVariableW(L"HDTRANS_CACHE_DIR", invalidValue) != 0);
+    HD_CHECK(hdTrans::dict::internal::SnapshotPath({FixtureFolder()}).empty());
+    const auto invalidEnvironment = hdTrans::dict::LoadFolders({FixtureFolder()});
+    HD_REQUIRE(invalidEnvironment.snapshot != nullptr);
+    HD_CHECK(!invalidEnvironment.snapshot->Mapped());
+#endif
     const std::string invalid(1, static_cast<char>(0xff));
     const auto bad = hdTrans::dict::LoadFolders({invalid});
     HD_CHECK(bad.snapshot == nullptr);
