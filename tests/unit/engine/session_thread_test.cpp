@@ -1,6 +1,6 @@
 // Sessions of one Engine translating on several threads at once, with a Reload while they
 // translate. Every thread must produce the same output for the same text, and the output
-// must match a single-threaded run. Skipped without dictionaries.
+// must match a single-threaded run.
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -16,6 +16,12 @@
 #include "hdTrans/engine/raw.h"
 #include "hdTrans/text/lines.h"
 #include "hdtest.h"
+
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
+#define HDTRANS_TEST_INSTRUMENTED 1
+#endif
+#endif
 
 namespace {
 
@@ -40,10 +46,8 @@ std::vector<std::string> RebuiltTranslation(const hdTrans::dict::Snapshot& snap,
 HD_TEST(engine_session_threads) {
     const std::string dicts = DictsDir();
     std::error_code ec;
-    if (dicts.empty() || !std::filesystem::exists(dicts, ec)) {
-        std::printf("skip engine_session_threads: no dictionaries (HDTRANS_DICTS)\n");
-        return;
-    }
+    HD_REQUIRE(!dicts.empty());
+    HD_REQUIRE(std::filesystem::exists(dicts, ec));
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     const std::string text = "今日はいい天気ですね。\n「ごめんね、待った？」\n彼は静かに頷いた。\n";
@@ -81,19 +85,14 @@ HD_TEST(engine_session_threads) {
 }
 
 // Four threads, each translating the first 1000 lines of corpus2.each one session per line,
-// against the output of one thread. Skipped without the expectation set.
+// against the output of one thread.
 HD_TEST(engine_session_threads_stress) {
     const char* golden = std::getenv("HDTRANS_GOLDEN");
     const std::string dicts = DictsDir();
-    if (golden == nullptr || *golden == 0 || dicts.empty()) {
-        std::printf("skip engine_session_threads_stress: no HDTRANS_GOLDEN\n");
-        return;
-    }
+    HD_REQUIRE(golden != nullptr && *golden != 0);
+    HD_REQUIRE(!dicts.empty());
     std::FILE* f = std::fopen((std::string(golden) + "/corpus2.each.in").c_str(), "rb");
-    if (f == nullptr) {
-        std::printf("skip engine_session_threads_stress: no corpus2.each.in\n");
-        return;
-    }
+    HD_REQUIRE(f != nullptr);
     std::string text;
     char buf[1 << 14];
     for (size_t n; (n = std::fread(buf, 1, sizeof buf, f)) > 0;) text.append(buf, n);
@@ -135,7 +134,7 @@ HD_TEST(engine_session_threads_stress) {
 
 HD_TEST(engine_session_call_context) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     struct Case {
@@ -184,7 +183,7 @@ HD_TEST(engine_session_call_context) {
 
 HD_TEST(engine_session_memory_window) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     hdTrans::Session session(engine);
@@ -200,7 +199,7 @@ HD_TEST(engine_session_memory_window) {
 
 HD_TEST(engine_reference_mode) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine improved;
     hdTrans::Engine reference(true);
     HD_REQUIRE(improved.Open({dicts}));
@@ -232,7 +231,7 @@ namespace {
 void CheckWordImprovement(bool hdTrans::word::Improvements::* flag, const std::string& text,
                           const std::string& reference, const std::string& improved) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     const auto snap = engine.Dictionaries();
@@ -262,7 +261,7 @@ HD_TEST(engine_forward_terminal) {
 
 HD_TEST(engine_reference_session_builtin_isolation) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine engine;
     HD_REQUIRE(engine.Open({dicts}));
     hdTrans::Session improved(engine);
@@ -276,7 +275,7 @@ HD_TEST(engine_reference_session_builtin_isolation) {
 
 HD_TEST(engine_reference_session_cleanup_isolation) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine engine;
     HD_REQUIRE(engine.Open({dicts}));
     hdTrans::Session improved(engine);
@@ -288,7 +287,7 @@ HD_TEST(engine_reference_session_cleanup_isolation) {
 
 HD_TEST(engine_causative_passive) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine engine;
     HD_REQUIRE(engine.Open({dicts}));
     const struct { const char* in; const char* want; } cases[] = {
@@ -306,7 +305,7 @@ HD_TEST(engine_causative_passive) {
 
 HD_TEST(engine_session_incremental_history) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     hdTrans::Session session(engine);
@@ -316,7 +315,7 @@ HD_TEST(engine_session_incremental_history) {
     HD_CHECK_EQ(session.Translate("光が来た。"), "빛이 왔다.");
 
     const char* golden = std::getenv("HDTRANS_GOLDEN");
-    if (golden == nullptr || *golden == 0) return;
+    HD_REQUIRE(golden != nullptr && *golden != 0);
     std::ifstream input(std::string(golden) + "/corpus2.each.in", std::ios::binary);
     HD_REQUIRE(input.good());
     std::string history, line;
@@ -335,11 +334,16 @@ HD_TEST(engine_session_incremental_history) {
     }
     std::sort(times.begin(), times.end());
     std::printf("session after 2048 lines: median %.3f ms, max %.3f ms\n", times[times.size() / 2], times.back());
+#if defined(NDEBUG) && !defined(HDTRANS_TEST_INSTRUMENTED) && !defined(__SANITIZE_ADDRESS__) && !defined(__SANITIZE_THREAD__)
+    HD_CHECK(times[times.size() / 2] < 20.0);
+#else
+    std::printf("session timing assertion inactive: Debug or sanitizer build\n");
+#endif
 }
 
 HD_TEST(engine_session_memory_bytes) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     const auto snap = engine.Dictionaries();
@@ -358,7 +362,7 @@ HD_TEST(engine_session_memory_bytes) {
 
 HD_TEST(engine_megabyte_line) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    HD_REQUIRE(!dicts.empty());
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     std::string line;
