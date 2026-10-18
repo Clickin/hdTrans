@@ -2,8 +2,7 @@
 // path, the CH pieces of each chunk on the text path), the lookup environment of each
 // chunk (ENV: plain entries, strategy, prior dictionary, confirmed and person keys,
 // settings) and the expected LK/LKC records of the token loop and CM/L/LC/LD records
-// of each sentence. The dictionaries are $HDTRANS_DICTS (default
-// $HDTRANS_GOLDEN/dicts/base). Skipped when the set is absent.
+// of each sentence. The dictionaries are $HDTRANS_DICTS. Skipped when the set is absent.
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -19,23 +18,16 @@
 #include "hdTrans/word/analyze.h"
 #include "hdTrans/word/worker.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "word/analyze_records.h"
 
 using namespace hdTrans;
 
 namespace {
 
-std::string GoldenDir() {
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) return g;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../hdtrans-golden";
-}
+using hdtest::GoldenDir;
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    return GoldenDir() + "/dicts/base";
-}
+using hdtest::DictsDir;
 
 // The analyze fixtures, empty when absent or incomplete (complete once MANIFEST exists).
 std::string FixtureDir() {
@@ -66,6 +58,9 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
         hdtest::Fail(__FILE__, __LINE__, "cannot read " + set);
         return;
     }
+    const auto before = totals.records;
+    const auto expectedCounts = hdtest::RecordCounts(data);
+    const auto chunksBefore = totals.chunks;
     const dict::Snapshot* snapshot = Dictionaries();
     tokenizer::Tokens tokens;
     word::Arena arena;
@@ -103,13 +98,21 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
         }
     };
     analyzetest::ForEachChunk(data, chunk, finish);
+    HD_CHECK_EQ(totals.chunks - chunksBefore, static_cast<long long>(hdtest::CountRecords(data, "ENV")));
+    for (const char* tag : {"LK", "LKC", "CM", "L", "LC", "LD", "LX"}) {
+        const auto old = before.find(tag);
+        const auto want = expectedCounts.find(tag);
+        HD_CHECK_EQ(totals.records[tag] - (old == before.end() ? 0 : old->second),
+                    static_cast<long long>(want == expectedCounts.end() ? 0 : want->second));
+    }
 }
 
 void RunSets(const char* name, bool (*select)(const std::string&)) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dir = FixtureDir();
     if (dir.empty() || Dictionaries() == nullptr) {
-        std::printf("skip %s: no analyze fixtures (HDTRANS_GOLDEN/analyze/MANIFEST) or dictionaries\n", name);
-        return;
+        HD_SKIP("no analyze fixtures (HDTRANS_GOLDEN/analyze/MANIFEST) or dictionaries");
     }
     std::vector<std::string> sets;
     std::error_code ec;
@@ -121,6 +124,7 @@ void RunSets(const char* name, bool (*select)(const std::string&)) {
         }
     }
     std::sort(sets.begin(), sets.end());
+    HD_REQUIRE(!ec);
     HD_REQUIRE(!sets.empty());
     analyzetest::Environments envs(dir);
     Totals totals;
@@ -132,19 +136,29 @@ void RunSets(const char* name, bool (*select)(const std::string&)) {
         differing += d;
         std::printf("  %-4s %10lld records, %lld differing\n", tag.c_str(), n, d);
     }
+    HD_CHECK(totals.chunks > 0);
     HD_CHECK_EQ(differing, 0LL);
 }
 
 }  // namespace
 
 HD_TEST(analyze_golden_raw) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/analyze/"));
     RunSets("analyze_golden_raw", [](const std::string& s) { return s == "corpus.raw"; });
 }
 
 HD_TEST(analyze_golden_each) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/analyze/"));
     RunSets("analyze_golden_each", [](const std::string& s) { return s == "corpus2.each"; });
 }
 
 HD_TEST(analyze_golden_docs) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/analyze/"));
     RunSets("analyze_golden_docs", [](const std::string& s) { return s.starts_with("doc-"); });
 }

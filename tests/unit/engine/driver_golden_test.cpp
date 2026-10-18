@@ -1,14 +1,11 @@
 // The driver against the stage records of the expectation sets. Every line of a set is
 // translated by the driver with the stage observer; the records it makes are compared
 // with $HDTRANS_GOLDEN/stages/<set>.<TAG>.tsv, by record tag and line.
-//   - N, SN, P, CH, T and the word analysis (L, LC, LD) are gated: they must be equal.
-//   - The chain after resolve (S), the sentence output (K), the cleanup (C), the restore
-//     steps (R1-R3) and the output line (OUT) are compared per line. A line that differs
-//     is counted under the first of these stages that differs, so a cause shows in the
-//     stage it starts in. These are printed, not gated.
+// All observed stages are gated. A line that differs is also counted under its first
+// differing stage, so a cause shows in the stage it starts in.
 // Sets: corpus.raw (the raw path: T, L, S, K), corpus2.each (a session per line) and the
-// doc-* and x-* sets (one document each). Dictionaries: $HDTRANS_DICTS (default
-// $HDTRANS_GOLDEN/dicts/base). Skipped when the stages MANIFEST is absent. With
+// doc-* and x-* sets (one document each). Dictionaries: $HDTRANS_DICTS.
+// Skipped when the stages MANIFEST is absent. With
 // HDTRANS_DRIVER_DUMP set to a directory, the records made are written there as
 // <set>.<TAG>.got.tsv.
 #include <algorithm>
@@ -25,6 +22,7 @@
 #include "hdTrans/engine/driver.h"
 #include "hdTrans/engine/glue.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "output/stage_records.h"
 #include "word/analyze_records.h"
 
@@ -33,17 +31,9 @@ using namespace stagerecords;
 
 namespace {
 
-std::string GoldenRoot() {
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) return g;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../hdtrans-golden";
-}
+using hdtest::GoldenDir;
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    return GoldenRoot() + "/dicts/base";
-}
+using hdtest::DictsDir;
 
 const dict::Snapshot* Dictionaries() {
     static std::shared_ptr<const dict::Snapshot> snapshot = [] {
@@ -213,10 +203,13 @@ int HeaderKey(std::string_view header) {
 // of a sentence) and the lookup records are not compared.
 Records LoadGolden(const std::string& set, const std::vector<const char*>& files) {
     Records golden;
-    const std::string dir = GoldenRoot() + "/stages/";
+    const std::string dir = GoldenDir() + "/stages/";
     for (const char* file : files) {
         std::string text;
-        if (!ReadFile(dir + set + "." + file + ".tsv", text)) continue;
+        if (!ReadFile(dir + set + "." + file + ".tsv", text)) {
+            hdtest::Fail(__FILE__, __LINE__, "missing stage file: " + set + "." + file);
+            return {};
+        }
         for (const Block& b : Blocks(text)) {
             const int key = HeaderKey(b.header);
             if (key < 0) continue;
@@ -225,6 +218,12 @@ Records LoadGolden(const std::string& set, const std::vector<const char*>& files
                 if (tag == "K0" || tag == "LK" || tag == "LKC") continue;
                 golden[tag][key].push_back(std::string(r));
             }
+        }
+        for (const auto& [tag, expected] : hdtest::RecordCounts(text)) {
+            if (tag == "K0" || tag == "LK" || tag == "LKC") continue;
+            size_t loaded = 0;
+            for (const auto& [key, records] : golden[tag]) loaded += records.size();
+            HD_CHECK_EQ(loaded, expected);
         }
     }
     return golden;
@@ -244,6 +243,7 @@ bool Differs(const std::string& tag, const std::vector<std::string>& got, const 
         }
         const auto gf = Split(got[i], '\t');
         const auto wf = Split(want[i], '\t');
+        if (gf.size() != 27 || wf.size() != 27) return true;
         for (size_t c = 0; c < std::min(gf.size(), wf.size()) && c < 27; c++) {
             if (c == 13) continue;
             std::string_view a = gf[c], b = wf[c];
@@ -262,7 +262,7 @@ bool Differs(const std::string& tag, const std::vector<std::string>& got, const 
 const std::vector<std::string> kLineStages = {"S", "K", "C", "R1", "R2", "R3", "OUT"};
 
 struct Totals {
-    std::map<std::string, long long> records, differing;  // gated tags
+    std::map<std::string, long long> records, differing;
     std::map<std::string, long long> firstStage;          // lines by their first differing stage
     long long lines = 0, identical = 0;
     std::map<size_t, long long> sColumns;
@@ -342,15 +342,27 @@ void RunSet(const std::string& set, const std::vector<std::string>& lines, bool 
         const auto i = t->second.find(k);
         return i == t->second.end() ? none : i->second;
     };
-    auto isLineStage = [](const std::string& tag) {
-        return std::find(kLineStages.begin(), kLineStages.end(), tag) != kLineStages.end();
-    };
+    std::vector<int> expectedKeys;
+    for (const auto& [tag, byLine] : golden) {
+        for (const auto& [key, records] : byLine) expectedKeys.push_back(key);
+    }
+    std::sort(expectedKeys.begin(), expectedKeys.end());
+    expectedKeys.erase(std::unique(expectedKeys.begin(), expectedKeys.end()), expectedKeys.end());
+    HD_CHECK_EQ(keys.size(), expectedKeys.size());
+    std::string inputRecords;
+    HD_REQUIRE(ReadFile(GoldenDir() + "/stages/" + set + ".IN.tsv", inputRecords));
+    HD_CHECK_EQ(lines.size(), hdtest::CountRecords(inputRecords, "IN"));
+    for (const auto& [tag, byLine] : golden) {
+        size_t expected = 0, compared = 0;
+        for (const auto& [key, records] : byLine) expected += records.size();
+        for (int key : keys) compared += list(golden, tag, key).size();
+        HD_CHECK_EQ(compared, expected);
+    }
     for (const int k : keys) {
         std::string first;
         for (const std::string& tag : tags) {
             const auto& g = list(c.records, tag, k);
             const auto& w = list(golden, tag, k);
-            if (isLineStage(tag)) continue;
             totals.records[tag] += static_cast<long long>(w.size());
             if (Differs(tag, g, w, totals.sColumns)) totals.differing[tag]++;
         }
@@ -388,25 +400,27 @@ std::vector<std::string> SplitLines(const std::string& text, bool keepTrailing) 
 }  // namespace
 
 HD_TEST(engine_driver_golden) {
-    const std::string golden = GoldenRoot();
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
+    const std::string golden = GoldenDir();
     std::error_code ec;
     if (!std::filesystem::exists(golden + "/stages/MANIFEST", ec) || Dictionaries() == nullptr) {
-        std::printf("skip engine_driver_golden: no %s/stages/MANIFEST or dictionaries\n", golden.c_str());
-        return;
+        HD_SKIP(std::string("no ") + golden + "/stages/MANIFEST or dictionaries");
     }
-    std::vector<std::string> sets;
-    for (std::filesystem::directory_iterator it(golden, ec), end; !ec && it != end; it.increment(ec)) {
-        const std::string name = it->path().filename().string();
-        if (name.size() > 3 && name.ends_with(".in")) sets.push_back(name.substr(0, name.size() - 3));
-    }
-    std::sort(sets.begin(), sets.end());
+    const auto sets = hdtest::ManifestSets(golden + "/stages/", ".S.tsv");
     HD_REQUIRE(!sets.empty());
+    bool rawRan = false, eachRan = false, docRan = false, extraRan = false;
 
     Totals totals;
     for (const std::string& set : sets) {
         if (set != "corpus.raw" && set != "corpus2.each" && !set.starts_with("doc-") && !set.starts_with("x-")) continue;
         std::string text;
-        if (!ReadFile(golden + "/" + set + ".in", text)) continue;
+        HD_REQUIRE(ReadFile(golden + "/" + set + ".in", text));
+        rawRan = rawRan || set == "corpus.raw";
+        eachRan = eachRan || set == "corpus2.each";
+        docRan = docRan || set.starts_with("doc-");
+        extraRan = extraRan || set.starts_with("x-");
         const bool raw = set == "corpus.raw";
         const bool each = set == "corpus2.each";
         std::vector<std::string> lines = SplitLines(text, !raw && !each);
@@ -422,5 +436,10 @@ HD_TEST(engine_driver_golden) {
                 totals.identical);
     for (const auto& [stage, n] : totals.firstStage) std::printf("  first differing stage %-4s %lld lines\n", stage.c_str(), n);
     for (const auto& [col, n] : totals.sColumns) std::printf("  S column %zu differs in %lld records\n", col, n);
+    HD_CHECK(rawRan && eachRan && docRan && extraRan);
+    for (const char* tag : {"T", "L", "N", "P", "S", "K", "C", "R1", "R2", "R3", "OUT"}) {
+        HD_CHECK(totals.records[tag] > 0);
+    }
+    HD_CHECK_EQ(totals.identical, totals.lines);
     HD_CHECK_EQ(gated, 0LL);
 }

@@ -6,13 +6,8 @@
 // lemma, marker, class, target, error) replayed in order, and must equal its rows (G).
 // Skipped when the stages folder or its MANIFEST is absent.
 //
-// Compose reads item fields beyond the 18 columns of S: entry 0 (part code, grammar
-// attributes, target), the fixed flag, the ending surface and length, whether the ending
-// group comes from a plain dictionary, and whether another entry holds Hangul (columns
-// 20-27). Without them they are taken from the L records of the chain before the
-// resolve passes where the item is unchanged, and the records are counted but not
-// checked. The Wa of the chain tail that turns a following wide space into a space is
-// read from the L records.
+// S records must include the compose fields (columns 20-27). The Wa attribute of
+// the chain tail is read from L records.
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -28,6 +23,7 @@
 #include "hdTrans/output/text.h"
 #include "hdTrans/tokenizer/tokenize.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "stage_records.h"
 
 using namespace hdTrans;
@@ -237,6 +233,7 @@ void Compare(const std::string& set, std::string_view header, const std::vector<
 long long ReplayFamilies(const std::string& path, Families& generated, long long& calls) {
     std::string file;
     if (!ReadFile(path, file)) return -1;
+    const auto callsBefore = calls;
     long long differing = 0;
     std::vector<std::pair<std::string, std::string>> rows;
     for (const auto line : Split(file, '\n')) {
@@ -268,6 +265,10 @@ long long ReplayFamilies(const std::string& path, Families& generated, long long
                                                  " want " + row);
         }
     }
+    HD_CHECK_EQ(static_cast<size_t>(calls - callsBefore), hdtest::CountRecords(file, "C"));
+    HD_CHECK_EQ(rows.size(), hdtest::CountRecords(file, "G"));
+    HD_CHECK_EQ(static_cast<size_t>(calls - callsBefore) + rows.size(), hdtest::LineCount(file));
+    HD_CHECK(!file.empty());
     if (nonEmpty != wantNonEmpty) differing++;
     return differing;
 }
@@ -275,12 +276,13 @@ long long ReplayFamilies(const std::string& path, Families& generated, long long
 }  // namespace
 
 HD_TEST(output_compose_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string golden = GoldenDir();
     const std::string dir = golden + "/stages/";
     std::error_code ec;
     if (!std::filesystem::exists(dir + "MANIFEST", ec)) {
-        std::printf("skip output_compose_golden: no %sMANIFEST\n", dir.c_str());
-        return;
+        HD_SKIP(std::string("no ") + dir + "MANIFEST");
     }
     std::vector<std::string> sets;
     for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
@@ -288,6 +290,7 @@ HD_TEST(output_compose_golden) {
         if (name.size() > 6 && name.ends_with(".S.tsv")) sets.push_back(name.substr(0, name.size() - 6));
     }
     std::sort(sets.begin(), sets.end());
+    HD_REQUIRE(!ec);
     HD_REQUIRE(!sets.empty());
 
     Counts total;
@@ -295,7 +298,7 @@ HD_TEST(output_compose_golden) {
     double corpus2Seconds = 0;
     long long corpus2Sentences = 0;
     int shown = 0;
-    bool extended = false;  // the S records carry the compose fields
+    bool extended = true;  // the S records carry the compose fields
     Composer composer;
     composer.record = true;
     tokenizer::Tokens tokens;
@@ -327,6 +330,7 @@ HD_TEST(output_compose_golden) {
         settings.cleanup = !raw;
         settings.text = !raw;
         Counts n;
+        size_t selectedRecords = 0;
         for (size_t b = 0; b < sBlocks.size(); b++) {
             BlockRecords rec;
             ReadChain(lBlocks[b].records, rec);
@@ -392,9 +396,11 @@ HD_TEST(output_compose_golden) {
                 const auto sel = rec.selected.find(key);
                 const size_t count = sel == rec.selected.end() ? 0 : sel->second.size();
                 items.resize(count);
+                selectedRecords += count;
                 for (size_t k = 0; k < count; k++) {
+                    HD_REQUIRE(Split(sel->second[k], '\t').size() >= 27);
                     FillItem(sel->second[k], chain, items[k]);
-                    extended = extended || Split(sel->second[k], '\t').size() >= 27;
+                    extended = extended && Split(sel->second[k], '\t').size() >= 27;
                 }
 
                 const auto start = std::chrono::steady_clock::now();
@@ -417,10 +423,13 @@ HD_TEST(output_compose_golden) {
                     got.push_back("K\t" + cs + "\t" + std::to_string(p) + "\t" +
                                   std::to_string(static_cast<int>(out[p].span)) + "\t" + EscapeStageText(out[p].text));
                 }
-                if (!extended) shown = 13;  // differences are expected; not shown
                 Compare(set, sBlocks[b].header, got, rec.composed[key], n, shown);
             }
         }
+        HD_CHECK_EQ(selectedRecords, hdtest::CountRecords(sFile, "S"));
+        HD_CHECK_EQ(static_cast<size_t>(n.iRecords), hdtest::CountRecords(iFile, "I"));
+        HD_CHECK_EQ(static_cast<size_t>(n.k0Records), hdtest::CountRecords(kFile, "K0"));
+        HD_CHECK_EQ(static_cast<size_t>(n.kRecords), hdtest::CountRecords(kFile, "K"));
         std::printf("output_compose_golden %s: %lld sentences, I %lld/%lld, K0 %lld/%lld, K %lld/%lld differing, "
                     "compose %.3f s\n",
                     set.c_str(), n.sentences, n.iDiffering, n.iRecords, n.k0Differing, n.k0Records, n.kDiffering,
@@ -442,10 +451,9 @@ HD_TEST(output_compose_golden) {
                 sets.size(), total.sentences, total.iRecords, total.iDiffering, total.k0Records, total.k0Differing,
                 total.kRecords, total.kDiffering, familyCalls, familyDiffering, corpus2Sentences, corpus2Seconds);
     HD_CHECK_EQ(familyDiffering, 0LL);
-    if (!extended) {
-        std::printf("output_compose_golden: the S records lack the compose fields (columns 20-27); records not checked\n");
-        return;
-    }
+    HD_REQUIRE(extended);
+    HD_CHECK(total.sentences > 0);
+    HD_CHECK(total.iRecords > 0 && total.k0Records > 0 && total.kRecords > 0);
     HD_CHECK_EQ(total.iDiffering, 0LL);
     HD_CHECK_EQ(total.k0Differing, 0LL);
     HD_CHECK_EQ(total.kDiffering, 0LL);
