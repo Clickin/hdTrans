@@ -3,6 +3,8 @@
 // Calls are thread-safe, not reentrant; finish all calls before unloading the DLL.
 #include <windows.h>
 
+#include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <cstring>
 #include <memory>
@@ -37,9 +39,29 @@ constexpr UINT kShiftJis = 932;
 constexpr UINT kCp949 = 949;
 
 std::mutex g_mutex;
+std::condition_variable g_adminsDone;
+std::atomic<unsigned> g_waitingAdmins{0};
 std::uint64_t g_generation = 0;
+std::vector<std::string> g_dirs;
 std::unique_ptr<hdTrans::Engine> g_engine;
 std::unique_ptr<hdTrans::Session> g_session;
+
+// Queued state changes run before new translations.
+class AdminLock {
+public:
+    AdminLock() : lock_(g_mutex, std::defer_lock) {
+        ++g_waitingAdmins;
+        lock_.lock();
+    }
+    ~AdminLock() {
+        --g_waitingAdmins;
+        lock_.unlock();
+        g_adminsDone.notify_all();
+    }
+
+private:
+    std::unique_lock<std::mutex> lock_;
+};
 
 std::string TranslateUtf8(const std::string& text) { return g_session ? g_session->Translate(text) : std::string(); }
 
@@ -73,20 +95,22 @@ std::vector<std::string> DictDirs() {
 
 extern "C" {
 
-// Terminate or a successful concurrent Initialize cancels a pending load (returns 0).
+// Terminate, Initialize or Reload can cancel a pending load (returns 0).
 int __stdcall J2K_Initialize(char* /*dicPath*/) {
     std::uint64_t generation;
     {
-        std::lock_guard<std::mutex> lock(g_mutex);
+        AdminLock lock;
         if (g_engine) return 1;
         generation = g_generation;
     }
+    auto dirs = DictDirs();
     auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
-    if (!e->Open(DictDirs())) return 0;
-    std::lock_guard<std::mutex> lock(g_mutex);
+    if (!e->Open(dirs)) return 0;
+    AdminLock lock;
     if (generation != g_generation) return 0;
     g_engine = std::move(e);
     g_session = std::make_unique<hdTrans::Session>(*g_engine);
+    g_dirs = std::move(dirs);
     ++g_generation;
     return 1;
 }
@@ -94,15 +118,17 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
 int __stdcall J2K_InitializeEx(char* dicPath, char* /*mainDir*/) { return J2K_Initialize(dicPath); }
 
 int __stdcall J2K_Terminate() {
-    std::lock_guard<std::mutex> lock(g_mutex);
+    AdminLock lock;
     ++g_generation;
     g_session.reset();
     g_engine.reset();
+    g_dirs.clear();
     return 1;
 }
 
 char* __stdcall J2K_TranslateMMNT(HWND /*hWnd*/, char* text) {
-    std::lock_guard<std::mutex> lock(g_mutex);
+    std::unique_lock<std::mutex> lock(g_mutex);
+    g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
     if (!g_engine || !text) return nullptr;
     const std::string utf8 = Utf8FromWide(Widen(kShiftJis, text, static_cast<int>(std::strlen(text))));
     const std::wstring w = WideFromUtf8(TranslateUtf8(utf8));
@@ -110,7 +136,8 @@ char* __stdcall J2K_TranslateMMNT(HWND /*hWnd*/, char* text) {
 }
 
 wchar_t* __stdcall J2K_TranslateMMNTW(HWND /*hWnd*/, const wchar_t* text) {
-    std::lock_guard<std::mutex> lock(g_mutex);
+    std::unique_lock<std::mutex> lock(g_mutex);
+    g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
     if (!g_engine || !text) return nullptr;
     const std::string utf8 = Narrow(CP_UTF8, text, static_cast<int>(std::wcslen(text)));
     return Block(WideFromUtf8(TranslateUtf8(utf8)));
@@ -127,10 +154,22 @@ void __stdcall J2K_FreeMem(void* block) {
 
 int __stdcall J2K_StopTranslation(void* /*target*/) { return 1; }
 void __stdcall J2K_ReloadUserDict() {
-    std::lock_guard<std::mutex> lock(g_mutex);
-    if (!g_engine) return;
-    g_engine->Reload();
-    g_session->Reset();
+    std::uint64_t generation;
+    std::vector<std::string> dirs;
+    {
+        AdminLock lock;
+        if (!g_engine) return;
+        generation = g_generation;
+        dirs = g_dirs;
+    }
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
+    if (!e->Open(dirs)) return;
+    AdminLock lock;
+    if (generation != g_generation) return;
+    g_session.reset();
+    g_engine = std::move(e);
+    g_session = std::make_unique<hdTrans::Session>(*g_engine);
+    ++g_generation;
 }
 void __stdcall J2K_SetField(int) {}
 void __stdcall J2K_SetHnj2han(int) {}

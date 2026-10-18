@@ -21,7 +21,7 @@ extern "C" {
 
 /* Loads the dictionary folders listed in dirs (NUL-separated, double NUL at the end),
  * later folders overriding earlier ones. Returns 0, or -1 when no dictionary loads or
- * a concurrent Terminate or successful Initialize cancels this load. */
+ * a concurrent Terminate, successful Initialize or successful Reload cancels this load. */
 HDTRANS_API int hdTrans_Initialize(const char* dirs);
 
 /* Releases the session and dictionaries. Repeated calls are harmless; Initialize may be called again. */
