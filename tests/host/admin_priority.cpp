@@ -44,7 +44,7 @@ private:
 
 int main(int argc, char** argv) {
     if (argc != 2) return 2;
-    std::setvbuf(stdout, nullptr, _IOLBF, 0);
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
     std::string dirs(argv[1]);
     dirs.append(2, '\0');
     if (hdTrans_Initialize(dirs.c_str()) != 0) {
