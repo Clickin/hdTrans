@@ -64,7 +64,8 @@ bool EndsClause(const Item* it) {
 }  // namespace
 
 void PreferTerminal(Flusher& f) {
-    for (Item* it = f.w.chain.tail; it != nullptr; it = it->prev) {
+    const bool forward = f.w.settings.improvements.forwardTerminal;
+    for (Item* it = forward ? f.w.chain.head : f.w.chain.tail; it != nullptr; it = forward ? it->next : it->prev) {
         if (it->DirectIndex() < 0 || OwnedGroup(it->DirectGroup()) || !Has(it->EntryText(it->selected), "@")) continue;
         const char cls = At(it->Code(it->selected), 0);
         const std::string_view text = it->DirectText(it->DirectIndex());

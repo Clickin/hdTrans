@@ -240,3 +240,8 @@ HD_TEST(engine_per_level_retries) {
     CheckWordImprovement(&hdTrans::word::Improvements::perLevelRetries, "（独り言）しなきゃにゃ",
                           "(혼잣말) 하지 않으면", "(혼잣말) 인");
 }
+
+HD_TEST(engine_forward_terminal) {
+    CheckWordImprovement(&hdTrans::word::Improvements::forwardTerminal, "食べたい、食べたい、食べたーい！",
+                          "먹고 싶다, 먹고 싶다, 먹고 싶다!", "먹고 싶은, 먹고 싶다, 먹고 싶다!");
+}

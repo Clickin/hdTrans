@@ -281,6 +281,7 @@ HD_TEST(word_improvements_reference) {
     HD_CHECK(!settings.improvements.nonterminalBoundary);
     HD_CHECK(!settings.improvements.tailLengthCheck);
     HD_CHECK(!settings.improvements.preparedNextToken);
+    HD_CHECK(!settings.improvements.forwardTerminal);
     HD_CHECK(settings.sessionSenses == nullptr);
     HD_CHECK(word::Settings{}.improvements.documentSenses);
     HD_CHECK(word::Settings{}.improvements.desireWindow);
