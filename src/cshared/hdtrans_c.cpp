@@ -57,7 +57,9 @@ int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
 int hdTrans_Reload(void) {
     std::lock_guard<std::mutex> lock(g_mutex);
     if (!g_engine) return -1;
-    return g_engine->Reload() ? 0 : -1;
+    const bool ok = g_engine->Reload();
+    g_session->Reset();
+    return ok ? 0 : -1;
 }
 
 void hdTrans_FreeMem(void* p) { std::free(p); }

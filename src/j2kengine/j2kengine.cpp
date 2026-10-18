@@ -107,7 +107,9 @@ void __stdcall J2K_FreeMem(void* block) {
 
 int __stdcall J2K_StopTranslation(void* /*target*/) { return 1; }
 void __stdcall J2K_ReloadUserDict() {
-    if (g_engine) g_engine->Reload();
+    if (!g_engine) return;
+    g_engine->Reload();
+    g_session->Reset();
 }
 void __stdcall J2K_SetField(int) {}
 void __stdcall J2K_SetHnj2han(int) {}
