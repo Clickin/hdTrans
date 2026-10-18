@@ -18,7 +18,7 @@ class Worker;
 struct SessionSenses;
 
 struct Improvements {
-    bool documentSenses = true;
+    bool documentSenses = false;
     bool desireWindow = true;
     bool expandedGroups = true;
     bool semanticAlternatives = true;
