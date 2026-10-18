@@ -413,3 +413,28 @@ HD_TEST(word_select_shortest_target_counts_scalars_without_mutation) {
     CheckChoice(it.directChoice, word::Provenance::None);
     HD_CHECK(it.shadowChoices.empty());
 }
+
+HD_TEST(word_neighbour_candidate_slots) {
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    for (bool preserve : {false, true}) {
+        word::Settings settings = word::Settings::Reference();
+        settings.improvements.preserveNeighbourSlots = preserve;
+        SelectLine line(*snapshot, settings);
+        auto& left = line.Add("普通", {{"보통"}});
+        auto& right = line.Add("名前", {{"이름"}});
+        left.compDI = 0;
+        left.compUmiDI = 3;
+        right.compDI = 2;
+        right.compUmiDI = 4;
+        HD_CHECK(left.GetObject(1) == &right);
+        HD_CHECK_EQ(right.compDI, preserve ? 2 : -1);
+        HD_CHECK_EQ(right.compUmiDI, preserve ? 4 : -1);
+        HD_CHECK(left.GetObject(0) == &left);
+        HD_CHECK_EQ(left.compDI, 0);
+        HD_CHECK_EQ(left.compUmiDI, 3);
+        HD_CHECK(right.GetObject(-1) == &left);
+        HD_CHECK_EQ(left.compDI, preserve ? 0 : -1);
+        HD_CHECK_EQ(left.compUmiDI, preserve ? 3 : -1);
+    }
+}

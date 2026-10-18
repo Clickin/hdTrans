@@ -22,6 +22,7 @@ struct Improvements {
     bool desireWindow = true;
     bool expandedGroups = true;
     bool semanticAlternatives = true;
+    bool preserveNeighbourSlots = false;
 
     static Improvements Reference() {
         Improvements improvements;
@@ -29,6 +30,7 @@ struct Improvements {
         improvements.desireWindow = false;
         improvements.expandedGroups = false;
         improvements.semanticAlternatives = false;
+        improvements.preserveNeighbourSlots = false;
         return improvements;
     }
 };

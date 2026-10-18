@@ -226,7 +226,7 @@ Item* Item::Object(int delta) {
             }
         }
     }
-    if (item != nullptr) {
+    if (item != nullptr && !w->settings.improvements.preserveNeighbourSlots) {
         if (delta != 0) {
             item->compDI = -1;
             item->compUmiDI = -1;
