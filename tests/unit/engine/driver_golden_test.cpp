@@ -1,10 +1,16 @@
-// The driver against the stage records of the expectation sets: every line of a set is
-// translated by the driver with the stage observer, and the records it makes are compared
-// with $HDTRANS_GOLDEN/stages/<set>.<TAG>.tsv: N, SN, P (with CH), T and L (the word
-// analysis, before resolve) must be equal; S (the chain after resolve) is compared per
-// column and printed. Sets: corpus.raw (the raw path), corpus2.each (a session per line)
-// and the doc-* and x-* sets (one document each). Dictionaries: $HDTRANS_DICTS (default
-// $HDTRANS_GOLDEN/dicts/base). Skipped when the stages MANIFEST is absent.
+// The driver against the stage records of the expectation sets. Every line of a set is
+// translated by the driver with the stage observer; the records it makes are compared
+// with $HDTRANS_GOLDEN/stages/<set>.<TAG>.tsv, by record tag and line.
+//   - N, SN, P, CH, T and the word analysis (L, LC, LD) are gated: they must be equal.
+//   - The chain after resolve (S), the sentence output (K), the cleanup (C), the restore
+//     steps (R1-R3) and the output line (OUT) are compared per line. A line that differs
+//     is counted under the first of these stages that differs, so a cause shows in the
+//     stage it starts in. These are reported, not gated.
+// Sets: corpus.raw (the raw path: T, L, S, K), corpus2.each (a session per line) and the
+// doc-* and x-* sets (one document each). Dictionaries: $HDTRANS_DICTS (default
+// $HDTRANS_GOLDEN/dicts/base). Skipped when the stages MANIFEST is absent. With
+// HDTRANS_DRIVER_DUMP set to a directory, the records made are written there as
+// <set>.<TAG>.got.tsv.
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -47,14 +53,17 @@ const dict::Snapshot* Dictionaries() {
     return snapshot.get();
 }
 
-// The records of one run, by stage file and by line (the number of a #LINE or #CASE header).
+// Records by their tag (the first column) and by line (the number of a #LINE or #CASE header).
+using Records = std::map<std::string, std::map<int, std::vector<std::string>>>;
+
 struct Collector {
-    std::map<std::string, std::map<int, std::vector<std::string>>> records;
+    Records records;
     int key = 0;
     int caseBase = 0;  // the case number before the line of a call
 
-    void Add(std::string_view file, std::string record) {
-        records[std::string(file)][key].push_back(std::move(record));
+    void Add(std::string record) {
+        std::string tag = record.substr(0, record.find('\t'));
+        records[tag][key].push_back(std::move(record));
     }
 };
 
@@ -66,7 +75,7 @@ void OnLine(void* context, int line) {
 }
 
 void OnText(void* context, std::string_view tag, std::string_view text) {
-    static_cast<Collector*>(context)->Add(tag, std::string(tag) + "\t" + Esc(text));
+    static_cast<Collector*>(context)->Add(std::string(tag) + "\t" + Esc(text));
 }
 
 void OnPieces(void* context, std::string_view tag, int chunk, const output::Pieces& pieces) {
@@ -75,9 +84,9 @@ void OnPieces(void* context, std::string_view tag, int chunk, const output::Piec
     for (size_t i = 0; i < pieces.size(); i++) {
         const std::string span = std::to_string(static_cast<int>(pieces[i].span));
         if (chunk < 0) {
-            c->Add("P", "P\t" + std::to_string(i) + "\t" + span + "\t" + Esc(pieces[i].text));
+            c->Add("P\t" + std::to_string(i) + "\t" + span + "\t" + Esc(pieces[i].text));
         } else {
-            c->Add("P", "CH\t" + std::to_string(chunk) + "\t" + std::to_string(i) + "\t" + span + "\t" + Esc(pieces[i].text));
+            c->Add("CH\t" + std::to_string(chunk) + "\t" + std::to_string(i) + "\t" + span + "\t" + Esc(pieces[i].text));
         }
     }
 }
@@ -89,7 +98,7 @@ void OnTokens(void* context, int chunk, const tokenizer::Tokens& tokens) {
         std::string r = "T\t" + std::to_string(chunk) + "\t" + std::to_string(i) + "\t" +
                         std::to_string(tokens[i].type) + "\t" + std::to_string(tokens[i].span) + "\t" + Esc(raw) + "\t";
         if (tokens[i].span != 0) r += Esc(raw);
-        c->Add("T", std::move(r));
+        c->Add(std::move(r));
     }
 }
 
@@ -100,13 +109,13 @@ void OnAnalysis(void* context, int chunk, const tokenizer::Tokens& tokens, const
         out.clear();
         analyzetest::SentenceRecords(tokens, analysis.sentences[s], chunk, static_cast<int>(s), out);
         for (std::string& r : out) {
-            if (!r.starts_with("LX\t")) c->Add("L", std::move(r));
+            if (!r.starts_with("LX\t")) c->Add(std::move(r));
         }
     }
 }
 
-// The S record of an item in the reference's column order, with the columns this engine
-// does not carry (entry attributes) written as "-".
+// The S record of an item in the reference's column order. The engine does not carry the
+// semantic codes of an entry (column 13), written as "-".
 std::string SRecord(int chunk, int sent, const output::ResolvedItem& it) {
     static const char* const kDetail[] = {"TWordInfo", "TVerbWord", "TKeiyoWord", "TDakeiyoWord"};
     auto part = [](const output::ResolvedEntry& e, bool present) {
@@ -115,7 +124,7 @@ std::string SRecord(int chunk, int sent, const output::ResolvedItem& it) {
     const bool hasEntry = !it.entry.code.empty() || !it.entry.text.empty() || !it.entry.gattr.empty();
     const bool hasEnding = !it.ending.code.empty() || !it.ending.text.empty() || !it.ending.gattr.empty();
     const bool hasFirst = !it.first.code.empty() || !it.first.text.empty() || !it.first.gattr.empty();
-    std::vector<std::string> c = {
+    const std::string columns[] = {
         "S", std::to_string(chunk), std::to_string(sent), std::to_string(it.tokenIndex) + ":" + std::to_string(it.offset),
         std::to_string(it.length), Esc(it.surface), std::to_string(it.selected), std::to_string(it.selectionFlag),
         kDetail[static_cast<int>(it.detailClass)], std::to_string(it.detailKind), std::to_string(it.detailRecord),
@@ -127,9 +136,9 @@ std::string SRecord(int chunk, int sent, const output::ResolvedItem& it) {
         it.otherHangul ? "1" : "0",
     };
     std::string out;
-    for (size_t i = 0; i < c.size(); i++) {
+    for (size_t i = 0; i < std::size(columns); i++) {
         if (i > 0) out += '\t';
-        out += c[i];
+        out += columns[i];
     }
     return out;
 }
@@ -138,7 +147,39 @@ void OnResolved(void* context, int chunk, int sentence, const word::Chain& chain
     auto* c = static_cast<Collector*>(context);
     std::vector<output::ResolvedItem> items;
     internal::ResolvedItems(chain, items);
-    for (const output::ResolvedItem& it : items) c->Add("S", SRecord(chunk, sentence, it));
+    for (const output::ResolvedItem& it : items) c->Add(SRecord(chunk, sentence, it));
+}
+
+void OnComposed(void* context, int chunk, int sentence, const output::Pieces& pieces) {
+    auto* c = static_cast<Collector*>(context);
+    for (size_t p = 0; p < pieces.size(); p++) {
+        c->Add("K\t" + std::to_string(chunk) + "\t" + std::to_string(sentence) + "\t" + std::to_string(p) + "\t" +
+               std::to_string(static_cast<int>(pieces[p].span)) + "\t" + Esc(pieces[p].text));
+    }
+}
+
+void OnCleaned(void* context, const output::Pieces& pieces) {
+    auto* c = static_cast<Collector*>(context);
+    for (size_t p = 0; p < pieces.size(); p++) {
+        c->Add("C\t" + std::to_string(p) + "\t" + std::to_string(static_cast<int>(pieces[p].span)) + "\t" +
+               Esc(pieces[p].text));
+    }
+}
+
+// The pieces of one restore step, as the stage file writes them.
+void AddPieces(Collector& c, const char* tag, const output::Pieces& pieces) {
+    for (size_t p = 0; p < pieces.size(); p++) {
+        c.Add(std::string(tag) + "\t" + std::to_string(p) + "\t" + std::to_string(static_cast<int>(pieces[p].span)) +
+              "\t" + Esc(pieces[p].text));
+    }
+}
+
+void OnRestored(void* context, const pipeline::RestoreSteps& steps) {
+    auto* c = static_cast<Collector*>(context);
+    AddPieces(*c, "R1", steps.spaced);
+    AddPieces(*c, "R2", steps.bracketed);
+    AddPieces(*c, "R3", steps.korean);
+    c->Add("OUT\t" + Esc(steps.line));
 }
 
 internal::StageObserver ObserverFor(Collector& c) {
@@ -150,11 +191,11 @@ internal::StageObserver ObserverFor(Collector& c) {
     o.tokens = OnTokens;
     o.analysis = OnAnalysis;
     o.resolved = OnResolved;
+    o.composed = OnComposed;
+    o.cleaned = OnCleaned;
+    o.restored = OnRestored;
     return o;
 }
-
-// Golden records by file and by line number.
-using Golden = std::map<std::string, std::map<int, std::vector<std::string>>>;
 
 // The number of a block header: #LINE k or #CASE k; -1 for a header without one.
 int HeaderKey(std::string_view header) {
@@ -165,64 +206,86 @@ int HeaderKey(std::string_view header) {
     return std::atoi(std::string(f[1]).c_str());
 }
 
-bool LoadGolden(const std::string& set, const std::vector<const char*>& tags, Golden& golden) {
+// The golden records of the stage files of a set, by record tag and line. K0 (token texts
+// of a sentence) and the lookup records are not compared.
+Records LoadGolden(const std::string& set, const std::vector<const char*>& files) {
+    Records golden;
     const std::string dir = GoldenRoot() + "/stages/";
-    for (const char* tag : tags) {
+    for (const char* file : files) {
         std::string text;
-        if (!ReadFile(dir + set + "." + tag + ".tsv", text)) return false;
+        if (!ReadFile(dir + set + "." + file + ".tsv", text)) continue;
         for (const Block& b : Blocks(text)) {
             const int key = HeaderKey(b.header);
             if (key < 0) continue;
-            auto& list = golden[tag][key];
-            for (const auto r : b.records) list.push_back(std::string(r));
+            for (const auto r : b.records) {
+                const std::string tag(r.substr(0, r.find('\t')));
+                if (tag == "K0" || tag == "LK" || tag == "LKC") continue;
+                golden[tag][key].push_back(std::string(r));
+            }
         }
     }
-    return true;
+    return golden;
 }
 
-// The S columns compared; column 13 (entry attributes) is not carried by the engine.
-bool SColumnCompared(size_t i) { return i != 13; }
-
-// Records that differ between got and want, by position; for S, by compared column.
-long long Differing(const std::string& tag, const std::vector<std::string>& got, const std::vector<std::string>& want,
-                    std::map<size_t, long long>& columns) {
-    long long differing = 0;
-    const size_t n = std::max(got.size(), want.size());
-    for (size_t i = 0; i < n; i++) {
-        const std::string_view g = i < got.size() ? std::string_view(got[i]) : std::string_view("<none>");
-        const std::string_view w = i < want.size() ? std::string_view(want[i]) : std::string_view("<none>");
+// Whether the records of one tag in a line differ. For S, the compared columns decide, and
+// each column that differs is counted in columns. Column 13 (the entry's semantic codes) is
+// not carried by the engine.
+bool Differs(const std::string& tag, const std::vector<std::string>& got, const std::vector<std::string>& want,
+             std::map<size_t, long long>& columns) {
+    if (got.size() != want.size()) return true;
+    bool any = false;
+    for (size_t i = 0; i < got.size(); i++) {
         if (tag != "S") {
-            if (g != w) differing++;
+            if (got[i] != want[i]) any = true;
             continue;
         }
-        const auto gf = Split(g, '\t');
-        const auto wf = Split(w, '\t');
-        bool any = gf.size() != wf.size();
+        const auto gf = Split(got[i], '\t');
+        const auto wf = Split(want[i], '\t');
         for (size_t c = 0; c < std::min(gf.size(), wf.size()) && c < 27; c++) {
-            if (!SColumnCompared(c)) continue;
+            if (c == 13) continue;
             std::string_view a = gf[c], b = wf[c];
-            // The part code: the golden record carries the major tag.
+            // The part code: the reference's record carries its major tag.
             if ((c == 12 || c == 16 || c == 19) && b != "-" && !b.empty()) b.remove_prefix(1);
             if (a != b) {
                 columns[c]++;
                 any = true;
             }
         }
-        if (any) differing++;
     }
-    return differing;
+    return any;
 }
 
+// The stages reported per line, in the order their first difference is attributed to.
+const std::vector<std::string> kLineStages = {"S", "K", "C", "R1", "R2", "R3", "OUT"};
+
 struct Totals {
-    std::map<std::string, long long> records, differing;
+    std::map<std::string, long long> records, differing;  // gated tags
+    std::map<std::string, long long> firstStage;          // lines by their first differing stage
+    long long lines = 0, identical = 0;
+    std::map<size_t, long long> sColumns;
 };
 
-// Runs one set: every line through the driver, then the records against the stages.
+// Writes the records of a run to HDTRANS_DRIVER_DUMP as <set>.<tag>.got.tsv.
+void Dump(const std::string& set, const Collector& c) {
+    const char* dump = std::getenv("HDTRANS_DRIVER_DUMP");
+    if (dump == nullptr || *dump == 0) return;
+    for (const auto& [tag, byLine] : c.records) {
+        std::FILE* f = std::fopen((std::string(dump) + "/" + set + "." + tag + ".got.tsv").c_str(), "wb");
+        if (f == nullptr) continue;
+        for (const auto& [k, recs] : byLine) {
+            std::fprintf(f, "#LINE\t%d\n", k);
+            for (const std::string& r : recs) std::fprintf(f, "%s\n", r.c_str());
+        }
+        std::fclose(f);
+    }
+}
+
+// Runs one set: every line through the driver, then the records against the golden ones.
 void RunSet(const std::string& set, const std::vector<std::string>& lines, bool raw, Totals& totals) {
-    const std::vector<const char*> tags = raw ? std::vector<const char*>{"T", "L", "S"}
-                                              : std::vector<const char*>{"N", "SN", "P", "T", "L", "S"};
-    Golden golden;
-    if (!LoadGolden(set, tags, golden)) {
+    const std::vector<const char*> files = raw ? std::vector<const char*>{"T", "L", "S", "K"}
+                                               : std::vector<const char*>{"N", "SN", "P", "T", "L", "S", "K", "C", "R", "OUT"};
+    const Records golden = LoadGolden(set, files);
+    if (golden.empty()) {
         hdtest::Fail(__FILE__, __LINE__, "no stage records of " + set);
         return;
     }
@@ -232,7 +295,6 @@ void RunSet(const std::string& set, const std::vector<std::string>& lines, bool 
     const bool each = set.ends_with(".each") || raw;
     internal::Generated generated;
     if (!each) {
-        c.caseBase = 0;
         internal::Memory memory;
         internal::TranslateDocument(snap, generated, lines, memory, observer);
     } else {
@@ -246,47 +308,57 @@ void RunSet(const std::string& set, const std::vector<std::string>& lines, bool 
             }
         }
     }
-    if (const char* dump = std::getenv("HDTRANS_DRIVER_DUMP"); dump != nullptr && *dump != 0) {
-        for (const char* tag : tags) {
-            std::FILE* f = std::fopen((std::string(dump) + "/" + set + "." + tag + ".got.tsv").c_str(), "wb");
-            if (f == nullptr) continue;
-            for (const auto& [k, recs] : c.records[tag]) {
-                std::fprintf(f, "#LINE\t%d\n", k);
-                for (const std::string& r : recs) std::fprintf(f, "%s\n", r.c_str());
-            }
-            std::fclose(f);
+    Dump(set, c);
+
+    // Each golden or produced tag, line by line.
+    std::vector<std::string> tags;
+    for (const auto& [tag, byLine] : golden) tags.push_back(tag);
+    for (const auto& [tag, byLine] : c.records) {
+        if (std::find(tags.begin(), tags.end(), tag) == tags.end()) tags.push_back(tag);
+    }
+    std::vector<int> keys;
+    for (const auto& [tag, byLine] : golden) {
+        for (const auto& [k, v] : byLine) keys.push_back(k);
+    }
+    for (const auto& [tag, byLine] : c.records) {
+        for (const auto& [k, v] : byLine) keys.push_back(k);
+    }
+    std::sort(keys.begin(), keys.end());
+    keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
+
+    const std::vector<std::string> none;
+    auto list = [&](const Records& r, const std::string& tag, int k) -> const std::vector<std::string>& {
+        const auto t = r.find(tag);
+        if (t == r.end()) return none;
+        const auto i = t->second.find(k);
+        return i == t->second.end() ? none : i->second;
+    };
+    auto isLineStage = [](const std::string& tag) {
+        return std::find(kLineStages.begin(), kLineStages.end(), tag) != kLineStages.end();
+    };
+    for (const int k : keys) {
+        std::string first;
+        for (const std::string& tag : tags) {
+            const auto& g = list(c.records, tag, k);
+            const auto& w = list(golden, tag, k);
+            if (isLineStage(tag)) continue;
+            totals.records[tag] += static_cast<long long>(w.size());
+            if (Differs(tag, g, w, totals.sColumns)) totals.differing[tag]++;
+        }
+        for (const std::string& tag : kLineStages) {
+            if (raw && tag != "S" && tag != "K") continue;
+            const auto& g = list(c.records, tag, k);
+            const auto& w = list(golden, tag, k);
+            if (Differs(tag, g, w, totals.sColumns) && first.empty()) first = tag;
+        }
+        totals.lines++;
+        if (first.empty()) {
+            totals.identical++;
+        } else {
+            totals.firstStage[first]++;
         }
     }
-    for (const char* tag : tags) {
-        std::map<size_t, long long> columns;
-        long long differing = 0, records = 0;
-        const auto& got = c.records[tag];
-        const auto& want = golden[tag];
-        std::vector<int> keys;
-        for (const auto& [k, v] : want) keys.push_back(k);
-        for (const auto& [k, v] : got) keys.push_back(k);
-        std::sort(keys.begin(), keys.end());
-        keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
-        const std::vector<std::string> none;
-        for (const int k : keys) {
-            const auto gi = got.find(k);
-            const auto wi = want.find(k);
-            const auto& g = gi == got.end() ? none : gi->second;
-            const auto& w = wi == want.end() ? none : wi->second;
-            records += static_cast<long long>(w.size());
-            differing += Differing(tag, g, w, columns);
-        }
-        totals.records[tag] += records;
-        totals.differing[tag] += differing;
-        if (std::string_view(tag) == "S" && differing > 0) {
-            std::printf("  S columns differing in %s:", set.c_str());
-            for (const auto& [col, n] : columns) std::printf(" %zu:%lld", col, n);
-            std::printf("\n");
-        }
-    }
-    std::printf("driver_golden %s:", set.c_str());
-    for (const char* tag : tags) std::printf(" %s %lld/%lld", tag, totals.differing[tag], totals.records[tag]);
-    std::printf("\n");
+    std::printf("driver_golden %s: %lld lines, identical so far %lld\n", set.c_str(), totals.lines, totals.identical);
 }
 
 std::vector<std::string> SplitLines(const std::string& text, bool keepTrailing) {
@@ -316,17 +388,14 @@ HD_TEST(engine_driver_golden) {
     std::vector<std::string> sets;
     for (std::filesystem::directory_iterator it(golden, ec), end; !ec && it != end; it.increment(ec)) {
         const std::string name = it->path().filename().string();
-        if (name.size() > 3 && name.ends_with(".in")) {
-            const std::string set = name.substr(0, name.size() - 3);
-            sets.push_back(set);
-        }
+        if (name.size() > 3 && name.ends_with(".in")) sets.push_back(name.substr(0, name.size() - 3));
     }
     std::sort(sets.begin(), sets.end());
     HD_REQUIRE(!sets.empty());
 
     Totals totals;
     for (const std::string& set : sets) {
-        if (set != "corpus2.each" && !set.starts_with("doc-") && !set.starts_with("x-") && set != "corpus.raw") continue;
+        if (set != "corpus.raw" && set != "corpus2.each" && !set.starts_with("doc-") && !set.starts_with("x-")) continue;
         std::string text;
         if (!ReadFile(golden + "/" + set + ".in", text)) continue;
         const bool raw = set == "corpus.raw";
@@ -339,8 +408,10 @@ HD_TEST(engine_driver_golden) {
         RunSet(set, lines, raw, totals);
     }
     long long gated = 0;
-    for (const char* tag : {"N", "SN", "P", "T", "L"}) gated += totals.differing[tag];
-    std::printf("driver_golden: stages up to analyze differing %lld; S differing %lld of %lld\n", gated,
-                totals.differing["S"], totals.records["S"]);
+    for (const auto& [tag, n] : totals.differing) gated += n;
+    std::printf("driver_golden: gated records differing %lld; %lld lines, %lld identical\n", gated, totals.lines,
+                totals.identical);
+    for (const auto& [stage, n] : totals.firstStage) std::printf("  first differing stage %-4s %lld lines\n", stage.c_str(), n);
+    for (const auto& [col, n] : totals.sColumns) std::printf("  S column %zu differs in %lld records\n", col, n);
     HD_CHECK_EQ(gated, 0LL);
 }

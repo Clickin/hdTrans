@@ -119,6 +119,7 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
             s.composer.Compose(s.items, s.texts, sentence.first, sentence.last, s.markers, composeSettings,
                                generated.families, done.pieces);
         }
+        if (observer.composed) observer.composed(observer.context, index, static_cast<int>(k), done.pieces);
         out.push_back(std::move(done));
     }
 }
@@ -148,7 +149,10 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
         TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, s, generated, observer, sentences);
     }
     const output::Pieces cleaned = output::Cleanup(sentences);
-    return pipeline::Restore(cleaned, typed, /*keepBrackets=*/true);
+    if (observer.cleaned) observer.cleaned(observer.context, cleaned);
+    const pipeline::RestoreSteps steps = pipeline::RestoreAll(cleaned, typed, /*keepBrackets=*/true);
+    if (observer.restored) observer.restored(observer.context, steps);
+    return steps.line;
 }
 
 }  // namespace

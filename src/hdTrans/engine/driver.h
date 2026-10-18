@@ -11,6 +11,7 @@
 #include "hdTrans/dict/snapshot.h"
 #include "hdTrans/output/families.h"
 #include "hdTrans/output/pieces.h"
+#include "hdTrans/pipeline/restore.h"
 #include "hdTrans/tokenizer/token.h"
 #include "hdTrans/word/analyze.h"
 
@@ -32,6 +33,11 @@ struct StageObserver {
         nullptr;
     // The chain of a sentence after the resolve stage.
     void (*resolved)(void* context, int chunk, int sentence, const word::Chain& chain) = nullptr;
+    // The output pieces of a sentence after the compose stage (K).
+    void (*composed)(void* context, int chunk, int sentence, const output::Pieces& pieces) = nullptr;
+    // The cleaned-up pieces of a line (C), then the restore steps of the line (R1-R3, OUT).
+    void (*cleaned)(void* context, const output::Pieces& pieces) = nullptr;
+    void (*restored)(void* context, const pipeline::RestoreSteps& steps) = nullptr;
 };
 
 // The marker families of one loaded dictionary, made by the translations of all sessions.
