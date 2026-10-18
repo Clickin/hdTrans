@@ -1,19 +1,11 @@
 #pragma once
 // The normalising rewrites of a line before the sound lexicon. They need no dictionary.
+#include "hdTrans/pipeline/line_context.h"
 #include <span>
 #include <string>
 #include <string_view>
 
 namespace hdTrans::pipeline {
-
-// What Normalize needs from the document a line belongs to.
-struct LineContext {
-    // The line is a line of a document (its kin terms and ruby markup are rewritten);
-    // false for text translated without a document.
-    bool document = true;
-    // The document shows a woman's speech (internal::FemaleSpeech).
-    bool female = false;
-};
 
 // The line (without "\n" or a final "\r") after the normalising rewrites; the order is
 // in normalize.cpp. A line that is written whole from the line table is not passed here.

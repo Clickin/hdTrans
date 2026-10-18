@@ -244,17 +244,17 @@ HD_TEST(pipeline_normalize_sequence) {
         {"|お兄様《おにいさま》、ｺﾞﾒﾝ、なさい"sv, "오빠、ゴメンなさい"sv},
         {"「お兄様！」ﾏﾙﾌﾀﾏﾙﾏﾙ"sv, "「오빠！」0200"sv},
     };
-    for (const Case& c : femaleDoc) HD_CHECK_EQ(Normalize(c.in, LineContext{true, true}), std::string(c.want));
+    for (const Case& c : femaleDoc) HD_CHECK_EQ(Normalize(c.in, LineContext{.document = true, .female = true}), std::string(c.want));
     const Case doc[] = {
         {"|お兄様《おにいさま》、ｺﾞﾒﾝ、なさい"sv, "お兄様、ゴメンなさい"sv},
         {"あれ、知らんかもしれん"sv, "あれっ、知らんかもしれない"sv},
     };
-    for (const Case& c : doc) HD_CHECK_EQ(Normalize(c.in, LineContext{true, false}), std::string(c.want));
+    for (const Case& c : doc) HD_CHECK_EQ(Normalize(c.in, LineContext{.document = true, .female = false}), std::string(c.want));
     const Case text[] = {
         {"|お兄様《おにいさま》、ｺﾞﾒﾝ、なさい"sv, "|お兄様《おにいさま》、ゴメンなさい"sv},
         {"ごめん…なさい、ござい、ます"sv, "ごめんなさい、ございます"sv},
     };
-    for (const Case& c : text) HD_CHECK_EQ(Normalize(c.in, LineContext{false, false}), std::string(c.want));
+    for (const Case& c : text) HD_CHECK_EQ(Normalize(c.in, LineContext{.document = false, .female = false}), std::string(c.want));
 }
 
 HD_TEST(pipeline_escape_stage_text) {
