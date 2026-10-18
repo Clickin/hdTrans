@@ -201,6 +201,52 @@ bool Dekinu(std::string_view s, size_t pos, Match& m) {
     return true;
 }
 
+bool ExclamationNa(std::string_view s, size_t pos, Match& m) {
+    auto rest = [&](size_t p) {
+        m.group[1] = Span(s, pos, p);
+        if (!Lit(s, p, "な")) return false;
+        return Repeat(s, p, InSet(U"ぁあー～"), 0, kUnbounded, [&](size_t q) {
+            size_t r = q;
+            if (!OneOf(s, r, U"！!？?。…‥」』）") && q != s.size()) return false;
+            m.group[2] = Span(s, p, q);
+            m.group[3] = Span(s, q, r);
+            m.end = r;
+            return true;
+        });
+    };
+    constexpr std::u32string_view excluded = U"\t\n\f\r 、。！？!?…‥「」『』";
+    auto afterRun = [&](size_t p, size_t min, size_t max) {
+        // Try shorter rune runs before longer ones.
+        for (size_t count = 0;; ++count) {
+            if (count >= min) {
+                size_t q = p;
+                if (OneOf(s, q, U"うくぐすつぬぶむる") && rest(q)) return true;
+            }
+            if (count == max || !NoneOf(s, p, excluded)) return false;
+        }
+    };
+    size_t p = pos;
+    if (NoneOf(s, p, U"\t\n\f\r 、。！？!?…‥「」『』（") && Lit(s, p, "が") && afterRun(p, 1, 8)) return true;
+    p = pos;
+    if (Lit(s, p, "よく") && afterRun(p, 0, 4)) return true;
+    for (std::string_view stem : {"気もする", "そうなる", "ことになる", "事になる", "なかなかやる", "違う", "困る", "助かる", "見える",
+                                  "聞こえる", "落ち着く"}) {
+        p = pos;
+        if (Lit(s, p, stem) && rest(p)) return true;
+    }
+    return false;
+}
+
+std::string ReplaceExclamationNa(const Match& m) {
+    const Match g = Rematch(m, ExclamationNa);
+    for (std::string_view ending : {"言う", "よう", "そう", "です", "ます"}) {
+        if (g.group[1].ends_with(ending)) return std::string(m.group[0]);
+    }
+    size_t trim = 0;
+    while (OneOf(g.group[2], trim, U"ぁあ")) {}
+    return Cat({g.group[1], "なあ", g.group[2].substr(trim), g.group[3]});
+}
+
 bool ContainsAny(std::string_view s, std::u32string_view set) {
     for (size_t i = 0; i < s.size();) {
         const text::Rune r = At(s, i);
@@ -216,7 +262,7 @@ std::string Group1Plus(const Match& m, std::string_view mid) { return Cat({m.gro
 
 }  // namespace
 
-std::string SpokenForms(std::string_view in) {
+std::string SpokenForms(std::string_view in, bool exclamationNa) {
     std::string text(in);
     if (ContainsAny(text, kKataStemStarts)) {
         text = ReplaceAll(text, KataStemPattern, [](const Match& m) {
@@ -255,6 +301,7 @@ std::string SpokenForms(std::string_view in) {
         text = ReplaceAll(text, NegativeN, [](const Match& m) { return Group1Plus(m, "ない"); });
         text = ReplaceAll(text, NegativeE, [](const Match& m) { return Group1Plus(m, "ない"); });
     }
+    if (exclamationNa && Contains(text, "な")) text = ReplaceAll(text, ExclamationNa, ReplaceExclamationNa);
     return ReplaceAll(text, Dekinu, [](const Match&) { return std::string("できない"); });
 }
 

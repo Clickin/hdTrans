@@ -139,7 +139,8 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
     const pipeline::LineFacts facts = pipeline::ReadLine(doc, body);
     if (facts.wholeLine) return *facts.wholeLine;
     const pipeline::LineLookup lookup = pipeline::LookupOf(doc, facts);
-    const pipeline::LineContext ctx = pipeline::ContextOf(doc, lookup);
+    pipeline::LineContext ctx = pipeline::ContextOf(doc, lookup);
+    ctx.exclamationNa = !options.reference && options.wordImprovements.exclamationNa;
 
     const std::string normalized = pipeline::Normalize(facts.text, ctx);
     if (observer.text) observer.text(observer.context, "N", normalized);

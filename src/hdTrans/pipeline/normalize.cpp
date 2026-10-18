@@ -23,7 +23,7 @@ std::string Normalize(std::string_view line, const LineContext& ctx) {
     std::string text(line);
     if (ctx.document) text = StripRuby(WriteKinTerms(text, ctx.female));
     text = JoinNasai(NormalizeForms(text));
-    text = RewriteCasual(RewriteInterjections(SpokenForms(JoinMasu(text))));
+    text = RewriteCasual(RewriteInterjections(SpokenForms(JoinMasu(text), ctx.exclamationNa)));
     return RewriteMilitaryTime(text);
 }
 

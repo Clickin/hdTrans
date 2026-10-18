@@ -111,7 +111,7 @@ HD_TEST(pipeline_spoken_forms) {
         {"遅っっ。"sv, "遅い。"sv},
         {"やったじゃない"sv, "やったじゃん"sv},
     };
-    Check(SpokenForms, cases);
+    Check([](std::string_view text) { return SpokenForms(text, false); }, cases);
 }
 
 HD_TEST(pipeline_rewrite_interjections) {
@@ -263,4 +263,31 @@ HD_TEST(pipeline_escape_stage_text) {
         {"plain テキスト"sv, "plain テキスト"sv},
     };
     for (const Case& c : cases) HD_CHECK_EQ(EscapeStageText(c.in), std::string(c.want));
+}
+
+HD_TEST(pipeline_exclamation_na) {
+    const Case cases[] = {
+        {"そろそろ日が暮れるな。"sv, "そろそろ日が暮れるなあ。"sv},
+        {"懐かしい気がするなー。"sv, "懐かしい気がするなあー。"sv},
+        {"最近よく降るな…"sv, "最近よく降るなあ…"sv},
+        {"まあ、そうなるな。"sv, "まあ、そうなるなあ。"sv},
+        {"逃がすな！"sv, "逃がすな！"sv},
+        {"お前が言うな！"sv, "お前が言うな！"sv},
+        {"誰も動くな！"sv, "誰も動くな！"sv},
+        {"さすが先生ですな。"sv, "さすが先生ですな。"sv},
+        {"面倒なことになるなら"sv, "面倒なことになるなら"sv},
+        {"困るなぁあーぁ。"sv, "困るなあーぁ。"sv},
+        {"よく　降るな。"sv, "よく　降るなあ。"sv},
+        {"よく\t降るな。"sv, "よく\t降るな。"sv},
+        {"よく眠っているな。"sv, "よく眠っているなあ。"sv},
+        {"よく眠ってはいるな。"sv, "よく眠ってはいるな。"sv},
+    };
+    for (const Case& c : cases) {
+        HD_CHECK_EQ(SpokenForms(c.in, true), std::string(c.want));
+        HD_CHECK_EQ(SpokenForms(c.in, false), std::string(c.in));
+    }
+    LineContext ctx;
+    ctx.document = false;
+    ctx.exclamationNa = true;
+    HD_CHECK_EQ(Normalize("日が暮れるな。", ctx), "日が暮れるなあ。");
 }

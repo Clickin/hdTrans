@@ -22,6 +22,7 @@ struct Improvements {
     bool literalCleanup = true;
     bool imperativeEu = true;
     bool causativePassive = true;
+    bool exclamationNa = true;
     bool documentSenses = false;
     bool desireWindow = true;
     bool expandedGroups = true;
@@ -39,6 +40,7 @@ struct Improvements {
         improvements.literalCleanup = false;
         improvements.imperativeEu = false;
         improvements.causativePassive = false;
+        improvements.exclamationNa = false;
         improvements.documentSenses = false;
         improvements.desireWindow = false;
         improvements.expandedGroups = false;
