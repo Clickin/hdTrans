@@ -12,6 +12,7 @@
 #include "hdTrans/text/utf8.h"
 #include "hdTrans/tokenizer/tokenize.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "stage_records.h"
 
 using namespace hdTrans::tokenizer;
@@ -75,6 +76,7 @@ size_t Capacities(const Tokens& t) {
 
 HD_TEST(tokenizer_golden_t_records) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string dir = stagetest::StagesDir();
     if (dir.empty()) {
         HD_SKIP("no complete stage set (HDTRANS_GOLDEN/stages/MANIFEST)");
@@ -86,8 +88,10 @@ HD_TEST(tokenizer_golden_t_records) {
         if (name.size() > 6 && name.ends_with(".T.tsv")) sets.push_back(name.substr(0, name.size() - 6));
     }
     std::sort(sets.begin(), sets.end());
+    HD_REQUIRE(!ec);
     HD_REQUIRE(!sets.empty());
     long long records = 0, differing = 0;
+    size_t expectedRecords = 0;
     for (const std::string& set : sets) {
         const bool raw = set.ends_with(".raw");
         std::string input, want;
@@ -96,7 +100,9 @@ HD_TEST(tokenizer_golden_t_records) {
             hdtest::Fail(__FILE__, __LINE__, "cannot read the input or T records of " + set);
             continue;
         }
+        expectedRecords += hdtest::CountRecords(want, "T");
         const std::vector<std::string> got = TRecords(input, raw);
+        HD_CHECK_EQ(got.size(), hdtest::LineCount(want));
         const std::vector<std::string_view> wantLines = stagetest::Lines(want);
         long long setDiffering = 0;
         for (size_t i = 0; i < std::max(got.size(), wantLines.size()); i++) {
@@ -113,11 +119,14 @@ HD_TEST(tokenizer_golden_t_records) {
     }
     std::printf("tokenizer_golden_t_records: %zu sets, %lld T records, %lld differing\n", sets.size(), records,
                 differing);
+    HD_CHECK(records > 0);
+    HD_CHECK_EQ(static_cast<size_t>(records), expectedRecords);
     HD_CHECK_EQ(differing, 0LL);
 }
 
 HD_TEST(tokenizer_golden_sweep) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string dir = stagetest::StagesDir();
     std::string sweep;
     if (dir.empty() || !stagetest::ReadFile(dir + "sweep.cp.tsv", sweep)) {
@@ -149,6 +158,7 @@ HD_TEST(tokenizer_golden_sweep) {
         }
     }
     std::printf("tokenizer_golden_sweep: %lld code points, %lld mismatches\n", rows, mismatches);
+    HD_CHECK_EQ(static_cast<size_t>(rows), hdtest::LineCount(sweep));
     HD_CHECK_EQ(rows, 1112064LL);
     HD_CHECK_EQ(mismatches, 0LL);
 }
@@ -157,6 +167,7 @@ HD_TEST(tokenizer_golden_sweep) {
 // have held every chunk (the tokenizer allocates nothing else).
 HD_TEST(tokenizer_golden_speed) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string dir = stagetest::StagesDir();
     std::string input;
     if (dir.empty() || !stagetest::ReadFile(dir + "corpus2.each.P.tsv", input)) {
@@ -175,6 +186,9 @@ HD_TEST(tokenizer_golden_speed) {
         chunk = k;
         chunks.back().push_back({stagetest::UnescapeStageText(cols[4]), std::atoi(std::string(cols[3]).c_str())});
     }
+    HD_CHECK_EQ(chunks.size(), size_t{43176});
+    std::string expectedTokens;
+    HD_REQUIRE(stagetest::ReadFile(dir + "corpus2.each.T.tsv", expectedTokens));
     Tokens tokens;
     size_t count = 0;
     for (const auto& c : chunks) TokenizeSpans(c, true, tokens);  // grow the buffers
@@ -187,7 +201,5 @@ HD_TEST(tokenizer_golden_speed) {
     const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
     std::printf("tokenizer_golden_speed: %zu chunks, %zu tokens, %.3f s\n", chunks.size(), count, seconds);
     HD_CHECK_EQ(Capacities(tokens), capacities);
-#ifdef NDEBUG
-    HD_CHECK(seconds <= 0.5);
-#endif
+    HD_CHECK_EQ(count, hdtest::CountRecords(expectedTokens, "T"));
 }

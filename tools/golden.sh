@@ -31,9 +31,23 @@ for in in "$golden"/*.in; do
     name=${in##*/}; name=${name%.in}
     flag=""
     case $name in *.raw) flag=-raw ;; *.each) flag=-each ;; esac
+    expected=$golden/$name.expected
+    [ -f "$expected" ] || { echo "missing expectation: $expected" >&2; exit 2; }
     "$cli" -reference -dicts "$dicts" $flag -in "$in" > "$run/$name.actual" || status=1
-    n=$(diff "$golden/$name.expected" "$run/$name.actual" | grep -c '^<' || true)
-    echo "$name: $n differing lines of $(wc -l < "$golden/$name.expected")"
-    [ "$n" -eq 0 ] || status=1
+    if diff "$expected" "$run/$name.actual" > "$run/$name.diff"; then
+        n=0
+    else
+        status=1
+        n=$(awk '/^</ {left++} /^>/ {right++} END {print (left > right ? left+0 : right+0)}' "$run/$name.diff")
+    fi
+    expectedLines=$(awk 'END {print NR+0}' "$expected")
+    actualLines=$(awk 'END {print NR+0}' "$run/$name.actual")
+    echo "$name: $n differing lines of $expectedLines; compared $actualLines"
+    [ "$actualLines" -eq "$expectedLines" ] || status=1
+    [ "$expectedLines" -gt 0 ] || { echo "empty expectation: $expected" >&2; status=1; }
+done
+for expected in "$golden"/*.expected; do
+    [ -f "$expected" ] || { echo "no expectations in $golden" >&2; exit 2; }
+    [ -f "${expected%.expected}.in" ] || { echo "missing input for $expected" >&2; exit 2; }
 done
 exit $status

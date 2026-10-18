@@ -19,6 +19,7 @@
 #include "hdTrans/dict/snapshot.h"
 #include "hdTrans/pipeline/sound.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "output/stage_records.h"
 
 using namespace hdTrans;
@@ -94,6 +95,7 @@ dict::KeySet AcceptedNames(std::string_view key) {
 HD_TEST(pipeline_sound_golden) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string dir = GoldenDir() + "/stages/";
     const std::string plainDir = GoldenDir() + "/plain/";
     std::error_code ec;
@@ -110,6 +112,7 @@ HD_TEST(pipeline_sound_golden) {
         if (!set.ends_with(".raw")) sets.push_back(set);
     }
     std::sort(sets.begin(), sets.end());
+    HD_REQUIRE(!ec);
     HD_REQUIRE(!sets.empty());
 
     dict::LoadResult loaded = dict::LoadFolders({DictsDir()});
@@ -179,6 +182,7 @@ HD_TEST(pipeline_sound_golden) {
                              nRecord.data(), static_cast<int>(want.size()), want.data(), got.c_str());
             }
         }
+        HD_CHECK_EQ(lines, hdtest::CountRecords(snFile, "SN"));
         allLines += lines;
         allChanged += changed;
         allDiffering += differing;
@@ -186,5 +190,6 @@ HD_TEST(pipeline_sound_golden) {
     }
     std::printf("pipeline sound golden: %zu sets, %zu SN records, %zu changed by the stage, %zu differing\n", sets.size(),
                 allLines, allChanged, allDiffering);
+    HD_CHECK(allLines > 0);
     HD_CHECK_EQ(allDiffering, size_t{0});
 }

@@ -15,6 +15,7 @@
 
 #include "hdTrans/pipeline/restore.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "output/stage_records.h"
 
 using namespace hdTrans;
@@ -85,6 +86,7 @@ void Compare(const std::string& set, std::string_view header, int k, const std::
 
 HD_TEST(pipeline_restore_golden) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string dir = GoldenDir() + "/stages/";
     std::error_code ec;
     if (!std::filesystem::is_directory(dir, ec)) {
@@ -102,10 +104,12 @@ HD_TEST(pipeline_restore_golden) {
         sets.push_back(set);
     }
     std::sort(sets.begin(), sets.end());
+    HD_REQUIRE(!ec);
     HD_REQUIRE(!sets.empty());
 
     Totals t;
     for (const auto& set : sets) {
+        const Totals before = t;
         std::string files[5];
         const char* stages[5] = {"P", "C", "R", "OUT", "CTX"};
         for (int s = 0; s < 5; s++) HD_REQUIRE(ReadFile(dir + set + "." + stages[s] + ".tsv", files[s]));
@@ -153,7 +157,12 @@ HD_TEST(pipeline_restore_golden) {
                 Compare(set, header, k, got[k], want, t);
             }
         }
+        for (int k = 0; k < 4; ++k) {
+            HD_CHECK_EQ(t.records[k] - before.records[k], hdtest::CountRecords(k < 3 ? files[2] : files[3], kTags[k]));
+        }
+        HD_CHECK_EQ(t.blocks - before.blocks, hdtest::CountRecords(files[3], "OUT"));
     }
+    HD_CHECK(t.blocks > 0);
     std::printf("pipeline_restore_golden: %zu sets, %zu lines (%zu whole), R1 %zu/%zu R2 %zu/%zu R3 %zu/%zu OUT %zu/%zu "
                 "differing\n",
                 sets.size(), t.blocks, t.wholeLines, t.differing[0], t.records[0], t.differing[1], t.records[1],

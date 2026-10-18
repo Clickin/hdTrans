@@ -10,6 +10,7 @@
 
 #include "hdTrans/rules/rules.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "scripted_item.h"
 
 namespace {
@@ -72,5 +73,7 @@ HD_TEST(rules_path_hashes) {
     }
     std::printf("rules_path_hashes: %lld rules, %lld paths, %lld mismatches\n", rules, paths, mismatches);
     HD_CHECK_EQ(rules, static_cast<long long>(p.localRules.size() + p.globalRules.size()));
+    HD_CHECK(rules > 0 && paths > 0);
+    HD_CHECK_EQ(static_cast<size_t>(rules), hdtest::LineCount(hashes));
     HD_CHECK_EQ(mismatches, 0LL);
 }

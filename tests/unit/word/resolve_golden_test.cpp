@@ -23,6 +23,7 @@
 #include "hdTrans/word/util.h"
 #include "hdTrans/word/worker.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "tokenizer/stage_records.h"
 #include "word/analyze_records.h"
 
@@ -222,6 +223,9 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
         return;
     }
     const auto expected = ExpectedS(GoldenDir() + "/stages/" + set + ".S.tsv");
+    size_t expectedRecords = 0, comparedRecords = 0;
+    for (const auto& [key, records] : expected) expectedRecords += records.size();
+    const auto chunksBefore = totals.chunks, recordsBefore = totals.records;
     const std::set<std::string> verseTexts = VerseTexts(set);
     std::vector<std::string> docLines;
     {
@@ -272,6 +276,7 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
         totals.chunks++;
         const auto found = expected.find(chunk.header + "\t" + std::to_string(chunk.index));
         const std::vector<std::string> want = found == expected.end() ? std::vector<std::string>{} : found->second;
+        comparedRecords += want.size();
         const size_t n = std::max(got.size(), want.size());
         for (size_t i = 0; i < n; i++) {
             totals.records++;
@@ -287,6 +292,9 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
         }
     };
     analyzetest::ForEachChunk(data, chunk, finish);
+    HD_CHECK_EQ(totals.chunks - chunksBefore, static_cast<long long>(hdtest::CountRecords(data, "ENV")));
+    HD_CHECK_EQ(comparedRecords, expectedRecords);
+    HD_CHECK_EQ(totals.records - recordsBefore, static_cast<long long>(expectedRecords));
 }
 
 void RunSets(const char* name, bool (*select)(const std::string&)) {
@@ -306,12 +314,15 @@ void RunSets(const char* name, bool (*select)(const std::string&)) {
         }
     }
     std::sort(sets.begin(), sets.end());
+    HD_REQUIRE(!ec);
     HD_REQUIRE(!sets.empty());
     analyzetest::Environments envs(dir);
     Totals totals;
     for (const std::string& set : sets) RunSet(dir, set, envs, totals);
     std::printf("%s: %zu sets, %lld chunks, %lld S records, %lld differing (%lld ignoring family ids), %.2f s\n", name,
                 sets.size(), totals.chunks, totals.records, totals.differing, totals.differingIgnoringIds, totals.seconds);
+    HD_CHECK(totals.chunks > 0);
+    HD_CHECK(totals.records > 0);
     HD_CHECK_EQ(totals.differing, 0LL);
 }
 
@@ -320,17 +331,23 @@ void RunSets(const char* name, bool (*select)(const std::string&)) {
 HD_TEST(resolve_golden_raw) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/analyze/"));
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     RunSets("resolve_golden_raw", [](const std::string& s) { return s == "corpus.raw"; });
 }
 
 HD_TEST(resolve_golden_each) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/analyze/"));
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     RunSets("resolve_golden_each", [](const std::string& s) { return s == "corpus2.each"; });
 }
 
 HD_TEST(resolve_golden_docs) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/analyze/"));
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     RunSets("resolve_golden_docs", [](const std::string& s) { return s.starts_with("doc-"); });
 }

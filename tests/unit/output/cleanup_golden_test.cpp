@@ -12,6 +12,7 @@
 
 #include "hdTrans/output/cleanup.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "stage_records.h"
 
 using namespace hdTrans::output;
@@ -48,6 +49,7 @@ std::vector<std::string> CleanupRecords(const std::vector<std::string_view>& kRe
 
 HD_TEST(output_cleanup_golden) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string dir = GoldenDir() + "/stages/";
     std::error_code ec;
     if (!std::filesystem::is_directory(dir, ec)) {
@@ -65,6 +67,7 @@ HD_TEST(output_cleanup_golden) {
         sets.push_back(set);
     }
     std::sort(sets.begin(), sets.end());
+    HD_REQUIRE(!ec);
     HD_REQUIRE(!sets.empty());
 
     size_t cases = 0, records = 0, differing = 0;
@@ -72,6 +75,7 @@ HD_TEST(output_cleanup_golden) {
         std::string kFile, cFile;
         HD_REQUIRE(ReadFile(dir + set + ".K.tsv", kFile));
         HD_REQUIRE(ReadFile(dir + set + ".C.tsv", cFile));
+        const auto recordsBefore = records;
         const auto kBlocks = Blocks(kFile);
         const auto cBlocks = Blocks(cFile);
         HD_REQUIRE(kBlocks.size() == cBlocks.size());
@@ -93,7 +97,9 @@ HD_TEST(output_cleanup_golden) {
                 }
             }
         }
+        HD_CHECK_EQ(records - recordsBefore, hdtest::CountRecords(cFile, "C"));
     }
+    HD_CHECK(records > 0);
     std::printf("output_cleanup_golden: %zu sets, %zu cases, %zu C records, %zu differing\n", sets.size(), cases,
                 records, differing);
     HD_CHECK_EQ(differing, static_cast<size_t>(0));

@@ -26,6 +26,7 @@
 #include "hdTrans/pipeline/segment.h"
 #include "hdTrans/text/utf8.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "output/stage_records.h"
 
 using namespace hdTrans;
@@ -152,6 +153,7 @@ size_t Diff(const std::vector<std::string>& got, const std::vector<std::string_v
 HD_TEST(pipeline_protect_segment_golden) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string dir = GoldenDir() + "/stages/";
     const std::string plainDir = GoldenDir() + "/plain/";
     std::error_code ec;
@@ -159,7 +161,7 @@ HD_TEST(pipeline_protect_segment_golden) {
         HD_SKIP(std::string("no ") + dir + "MANIFEST");
     }
     const bool withProtect = std::filesystem::is_directory(plainDir, ec) && std::filesystem::is_directory(DictsDir(), ec);
-    if (!withProtect) std::printf("pipeline_protect_segment_golden: no %s or %s, Segment only\n", plainDir.c_str(), DictsDir().c_str());
+    HD_REQUIRE(withProtect);
 
     std::vector<std::string> sets;
     for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
@@ -171,6 +173,7 @@ HD_TEST(pipeline_protect_segment_golden) {
         sets.push_back(set);
     }
     std::sort(sets.begin(), sets.end());
+    HD_REQUIRE(!ec);
     HD_REQUIRE(!sets.empty());
 
     std::shared_ptr<const dict::Snapshot> snap;
@@ -260,6 +263,9 @@ HD_TEST(pipeline_protect_segment_golden) {
             const std::string sounded = UnescapeStageText(f[1]);
             t.pDiffering += Diff(PieceRecords("P", pipeline::Protect(sounded, lc, *snap)), wantP, where, shown);
         }
+        HD_CHECK_EQ(t.lines, hdtest::CountRecords(snFile, "SN"));
+        HD_CHECK_EQ(t.pRecords, hdtest::CountRecords(pFile, "P"));
+        HD_CHECK_EQ(t.chRecords, hdtest::CountRecords(pFile, "CH"));
         std::printf("pipeline golden %s: %zu lines, P %zu records %zu differing, CH %zu records %zu differing\n", set.c_str(),
                     t.lines, t.pRecords, t.pDiffering, t.chRecords, t.chDiffering);
         all.lines += t.lines;
@@ -271,6 +277,7 @@ HD_TEST(pipeline_protect_segment_golden) {
     std::printf("pipeline golden: %zu sets, %zu lines, P %zu records %zu differing%s, CH %zu records %zu differing\n",
                 sets.size(), all.lines, all.pRecords, all.pDiffering, withProtect ? "" : " (not run)", all.chRecords,
                 all.chDiffering);
+    HD_CHECK(all.lines > 0 && all.pRecords > 0 && all.chRecords > 0);
     HD_CHECK_EQ(all.pDiffering, size_t{0});
     HD_CHECK_EQ(all.chDiffering, size_t{0});
 }
@@ -280,6 +287,7 @@ HD_TEST(pipeline_protect_segment_golden) {
 HD_TEST(pipeline_cut_spans_sweep) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     std::string file;
     if (!ReadFile(GoldenDir() + "/stages/sweep.cp.tsv", file)) {
         HD_SKIP("no sweep.cp.tsv");
@@ -305,5 +313,7 @@ HD_TEST(pipeline_cut_spans_sweep) {
         }
     }
     std::printf("pipeline cut spans sweep: %zu code points, %zu differing\n", lines, differing);
+    HD_CHECK_EQ(lines, hdtest::LineCount(file));
+    HD_CHECK_EQ(lines, size_t{1112064});
     HD_CHECK_EQ(differing, size_t{0});
 }

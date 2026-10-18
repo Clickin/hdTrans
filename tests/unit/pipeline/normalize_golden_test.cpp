@@ -14,6 +14,7 @@
 #include "hdTrans/pipeline/normalize.h"
 #include "hdTrans/pipeline/stage_text.h"
 #include "hdtest.h"
+#include "golden.h"
 
 namespace {
 
@@ -101,6 +102,7 @@ void CheckSet(const std::string& dir, const std::string& set, Totals& t) {
         hdtest::Fail(__FILE__, __LINE__, "missing stage files of " + set);
         return;
     }
+    const auto recordsBefore = t.records;
     const Units ctx = ReadUnits(ctxText);
     const Units expected = ReadUnits(nText);
     auto ctxHas = [&](const std::string& key, std::string_view record) {
@@ -162,12 +164,14 @@ void CheckSet(const std::string& dir, const std::string& set, Totals& t) {
         }
     }
     endCase();
+    HD_CHECK_EQ(static_cast<size_t>(t.records - recordsBefore), hdtest::CountRecords(nText, "N"));
 }
 
 }  // namespace
 
 HD_TEST(pipeline_normalize_golden) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string dir = GoldenDir() + "/stages/";
     std::string manifest;
     if (!ReadFile(dir + "MANIFEST", manifest)) {

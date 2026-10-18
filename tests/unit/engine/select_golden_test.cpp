@@ -10,6 +10,7 @@
 #include "hdTrans/engine/driver.h"
 #include "hdTrans/word/select.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "tokenizer/stage_records.h"
 
 using namespace hdTrans;
@@ -83,6 +84,7 @@ using hdtest::DictsDir;
 HD_TEST(select_shadow_golden) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const char* root = std::getenv("HDTRANS_GOLDEN");
     if (root == nullptr || *root == 0) {
         HD_SKIP("no HDTRANS_GOLDEN");
@@ -97,6 +99,7 @@ HD_TEST(select_shadow_golden) {
     HD_REQUIRE(!error);
     std::sort(inputs.begin(), inputs.end());
     HD_REQUIRE(!inputs.empty());
+    HD_CHECK_EQ(inputs.size(), hdtest::ManifestSets(std::string(root) + "/stages/", ".S.tsv").size());
     const word::Scorer scorers[] = {{"shortest-target", word::ShortestTargetScore}};
     internal::TranslationOptions options;
     options.reference = true;
@@ -116,10 +119,13 @@ HD_TEST(select_shadow_golden) {
             counted = true;
         }
         const std::string actual = TranslateSet(*loaded.snapshot, input, set, options, observer);
+        HD_REQUIRE(!expected.empty());
+        HD_CHECK_EQ(hdtest::LineCount(actual), hdtest::LineCount(expected));
         const bool identical = actual == expected;
         std::printf("select_shadow_golden %s: %s\n", set.c_str(), identical ? "identical" : "DIFFERENT");
         if (!identical) hdtest::Fail(__FILE__, __LINE__, "shadow output differs in " + set);
     }
+    HD_REQUIRE(counted);
     if (counted) {
         HD_CHECK(stats.items > 0);
         HD_CHECK(stats.wouldChange > 0);
@@ -134,6 +140,7 @@ HD_TEST(select_shadow_golden) {
 HD_TEST(engine_session_select_shadow) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const char* golden = std::getenv("HDTRANS_GOLDEN");
     if (golden == nullptr || *golden == 0) {
         HD_SKIP("no HDTRANS_GOLDEN");
