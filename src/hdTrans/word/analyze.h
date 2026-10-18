@@ -18,7 +18,7 @@ class Worker;
 struct SessionSenses;
 
 struct Improvements {
-    bool documentSenses = true;
+    bool documentSenses = false;
 
     static Improvements Reference() {
         Improvements improvements;

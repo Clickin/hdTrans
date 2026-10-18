@@ -417,14 +417,14 @@ HD_TEST(word_select_shortest_target_counts_scalars_without_mutation) {
 
 HD_TEST(document_senses_trusted_layers) {
     const word::Provenance layers[] = {
-        word::Provenance::LocalRule, word::Provenance::GlobalRule,
-        word::Provenance::Sense, word::Provenance::SenseDefault,
+        word::Provenance::LocalRule, word::Provenance::Sense,
     };
     const auto snapshot = Dictionary();
     HD_REQUIRE(snapshot != nullptr);
     for (const auto layer : layers) {
         word::SessionSenses senses;
         word::Settings settings;
+        settings.improvements.documentSenses = true;
         settings.sessionSenses = &senses;
         {
             SelectLine first(*snapshot, settings);
@@ -461,6 +461,7 @@ HD_TEST(document_senses_only_frequency_defaults) {
         word::SessionSenses senses;
         senses.choices.emplace("人気", word::SessionSense{"인기", "N110"});
         word::Settings settings;
+        settings.improvements.documentSenses = true;
         settings.sessionSenses = &senses;
         settings.selectRules = true;
         SelectLine line(*snapshot, settings);
@@ -474,6 +475,7 @@ HD_TEST(document_senses_only_frequency_defaults) {
 
 HD_TEST(document_senses_do_not_learn_defaults_or_fixed_items) {
     const word::Provenance layers[] = {
+        word::Provenance::GlobalRule, word::Provenance::SenseDefault,
         word::Provenance::FirstXxx, word::Provenance::Digit,
         word::Provenance::Single, word::Provenance::Initial,
         word::Provenance::Rewrite, word::Provenance::Fixed,
@@ -484,6 +486,7 @@ HD_TEST(document_senses_do_not_learn_defaults_or_fixed_items) {
     for (const auto layer : layers) {
         word::SessionSenses senses;
         word::Settings settings;
+        settings.improvements.documentSenses = true;
         settings.sessionSenses = &senses;
         SelectLine line(*snapshot, settings);
         line.Add("人気", {{"유명세"}, {"인기"}}, {layer}, 1);
@@ -493,6 +496,7 @@ HD_TEST(document_senses_do_not_learn_defaults_or_fixed_items) {
     }
     word::SessionSenses senses;
     word::Settings settings;
+    settings.improvements.documentSenses = true;
     settings.sessionSenses = &senses;
     SelectLine line(*snapshot, settings);
     word::Item& it = line.Add("人気", {{"유명세"}, {"인기"}}, {word::Provenance::LocalRule}, 1);
@@ -507,11 +511,12 @@ HD_TEST(document_senses_first_trusted_target_and_exact_key) {
     HD_REQUIRE(snapshot != nullptr);
     word::SessionSenses senses;
     word::Settings settings;
+    settings.improvements.documentSenses = true;
     settings.sessionSenses = &senses;
     {
         SelectLine first(*snapshot, settings);
         first.Add("人気", {{"유명세"}, {"인기"}}, {word::Provenance::LocalRule}, 1);
-        first.Add("人気", {{"유명세"}, {"인기"}}, {word::Provenance::GlobalRule}, 0);
+        first.Add("人気", {{"유명세"}, {"인기"}}, {word::Provenance::LocalRule}, 0);
         word::Select(first.flusher);
     }
     senses.FinishLine();
@@ -549,6 +554,7 @@ HD_TEST(document_senses_ties_missing_and_incompatible_targets) {
         word::SessionSenses senses;
         senses.choices.emplace("人気", word::SessionSense{"인기", "N110"});
         word::Settings settings;
+        settings.improvements.documentSenses = true;
         settings.sessionSenses = &senses;
         SelectLine line(*snapshot, settings);
         word::Item& it = line.Add("人気", c.candidates, {word::Provenance::Digit, 19}, c.current);
@@ -562,7 +568,7 @@ HD_TEST(document_senses_ties_missing_and_incompatible_targets) {
 HD_TEST(document_senses_flag_and_reference_mode) {
     const auto snapshot = Dictionary();
     HD_REQUIRE(snapshot != nullptr);
-    HD_CHECK(word::Improvements{}.documentSenses);
+    HD_CHECK(!word::Improvements{}.documentSenses);
     HD_CHECK(!word::Improvements::Reference().documentSenses);
     for (const bool reference : {false, true}) {
         word::SessionSenses senses;
@@ -587,6 +593,7 @@ HD_TEST(document_senses_shadow_and_scorer_order) {
         word::SessionSenses senses;
         senses.choices.emplace("人気", word::SessionSense{"인기", "N110"});
         word::Settings settings;
+        settings.improvements.documentSenses = true;
         settings.sessionSenses = &senses;
         settings.selectShadow = shadow;
         settings.selectRules = true;
@@ -619,6 +626,7 @@ HD_TEST(document_senses_score_is_pure) {
     word::SessionSenses senses;
     senses.choices.emplace("人気", word::SessionSense{"인기", "N110"});
     word::Settings settings;
+    settings.improvements.documentSenses = true;
     settings.sessionSenses = &senses;
     SelectLine line(*snapshot, settings);
     word::Item& it = line.Add("人気", {{"유명세"}, {"인기"}});
@@ -631,4 +639,62 @@ HD_TEST(document_senses_score_is_pure) {
     HD_CHECK(senses.pending.empty());
     HD_CHECK_EQ(senses.choices.size(), std::size_t{1});
     CheckTargets(it, {"유명세", "인기"});
+}
+
+HD_TEST(document_senses_content_keys_and_exact_part_code) {
+    struct Case {
+        const char* key;
+        const char* earlierPart;
+        const char* currentPart;
+        const char* proposedPart;
+        bool changed;
+    };
+    const Case cases[] = {
+        {"王", "N110", "N110", "N110", false},
+        {"こと", "N110", "N110", "N110", false},
+        {"ぐー", "N110", "N110", "N110", false},
+        {"に向か", "M421", "M421", "M421", true},
+        {"人気", "N110", "N110", "N110", true},
+        {"人気", "N130", "N110", "N130", false},
+        {"人気", "N110", "N110", "N130", false},
+        {"人気", "N110", "M110", "N110", false},
+        {"人気", "P200", "P200", "P200", false},
+    };
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    for (const auto& c : cases) {
+        word::SessionSenses senses;
+        word::Settings settings;
+        settings.improvements.documentSenses = true;
+        settings.sessionSenses = &senses;
+        {
+            SelectLine first(*snapshot, settings);
+            first.Add(c.key, {{"유명세", c.earlierPart}, {"인기", c.earlierPart}},
+                      {word::Provenance::LocalRule}, 1);
+            word::Select(first.flusher);
+        }
+        senses.FinishLine();
+        SelectLine second(*snapshot, settings);
+        word::Item& it = second.Add(c.key, {{"유명세", c.currentPart}, {"인기", c.proposedPart}});
+        word::Select(second.flusher);
+        HD_CHECK_EQ(it.selected, c.changed ? 1 : 0);
+    }
+}
+
+HD_TEST(document_senses_shadow_observes_disabled_improvement) {
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    word::SessionSenses senses;
+    senses.choices.emplace("人気", word::SessionSense{"인기", "N110"});
+    word::Settings settings;
+    HD_CHECK(!settings.improvements.documentSenses);
+    settings.selectShadow = true;
+    settings.sessionSenses = &senses;
+    SelectLine line(*snapshot, settings);
+    word::Item& it = line.Add("人気", {{"유명세"}, {"인기"}});
+    word::Select(line.flusher);
+    HD_CHECK_EQ(it.selected, 0);
+    HD_REQUIRE(it.shadowChoices.size() == 1);
+    HD_CHECK(it.shadowChoices[0].winner);
+    HD_CHECK_EQ(std::string(it.shadowChoices[0].scorer), std::string("document-senses"));
 }

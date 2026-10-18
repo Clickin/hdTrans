@@ -28,7 +28,8 @@ bool MaySelect(Provenance layer, bool rules) {
 void Select(Flusher& f) {
     ChooseSenses(f);
     const Settings& settings = f.w.settings;
-    const bool documentSenses = settings.improvements.documentSenses && settings.sessionSenses != nullptr;
+    const bool documentSenses = (settings.improvements.documentSenses || settings.selectShadow) &&
+                                settings.sessionSenses != nullptr;
     if (!documentSenses && settings.scorers.empty()) return;
     const Scorer documentScorer{"document-senses", DocumentSenseScore};
     const std::size_t documentCount = documentSenses ? 1 : 0;

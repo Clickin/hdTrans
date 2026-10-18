@@ -83,6 +83,7 @@ output::Settings ComposeSettings(bool text) {
 word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions& options,
                                 word::SessionSenses* sessionSenses) {
     word::Settings s = options.reference ? word::Settings::Reference() : word::Settings{};
+    if (!options.reference) s.improvements = options.wordImprovements;
     s.text = text;
     s.terminal = text;
     s.verse = verse;
@@ -173,7 +174,9 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
     const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(snap, all);
 
     Scratch s;
-    if (!options.reference) s.sessionSenses = &memory.senses;
+    if (!options.reference && (options.wordImprovements.documentSenses || options.selectShadow)) {
+        s.sessionSenses = &memory.senses;
+    }
     std::vector<std::string> out;
     out.reserve(lines.size());
     for (std::size_t i = 0; i < lines.size(); i++) {

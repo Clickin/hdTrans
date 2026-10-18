@@ -60,6 +60,7 @@ struct Memory {
 
 struct TranslationOptions {
     bool reference = false;
+    word::Improvements wordImprovements;
     std::span<const word::Scorer> scorers;
     bool selectShadow = false;
     bool selectRules = false;
