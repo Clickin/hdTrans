@@ -5,12 +5,24 @@
 
 #include "hdTrans/output/korean.h"
 #include "hdTrans/output/families.h"
+#include "hdTrans/text/utf8.h"
 #include "hdTrans/word/flush.h"
 #include "hdTrans/word/strings.h"
 #include "hdTrans/word/util.h"
 
 namespace hdTrans::word {
 namespace {
+
+// s without the Unicode white space at either end.
+std::string_view TrimSpace(std::string_view s) {
+    auto space = [](char32_t r) {
+        return r == ' ' || (r >= '\t' && r <= '\r') || r == 0x85 || r == 0xA0 || r == 0x1680 ||
+               (r >= 0x2000 && r <= 0x200A) || r == 0x2028 || r == 0x2029 || r == 0x202F || r == 0x205F || r == 0x3000;
+    };
+    while (!s.empty() && space(text::DecodeRune(s).cp)) s.remove_prefix(text::DecodeRune(s).size);
+    while (!s.empty() && space(DecodeLastRune(s).cp)) s.remove_suffix(DecodeLastRune(s).size);
+    return s;
+}
 
 // Whether s is one of list.
 template <std::size_t N>
@@ -143,6 +155,52 @@ void WriteLexicalPassive(Flusher& f, Item* it) {
     for (Entry* e : it->group->entries) e->dst = lexical;
 }
 
+// The subject form of 나, 저 and 너 (before 가), or "" for other lemmas.
+std::string_view SubjectPronoun(std::string_view lemma) {
+    if (lemma == "나") return "내";
+    if (lemma == "저") return "제";
+    if (lemma == "너") return "네";
+    return {};
+}
+
+// Whether the text after ではな is a contrast that goes on (大した傷ではないが), which keeps the
+// topic particle.
+bool Contrast(std::string_view rest) {
+    constexpr std::string_view kForms[] = {"い", "かった"};
+    constexpr std::string_view kParticles[] = {"が", "けど", "けれど", "ですが", "ですけど", "のですが", "のだが",
+                                               "んだが", "んですが", "んだけど", "でしょうが", "だろうが"};
+    for (const std::string_view form : kForms) {
+        if (!rest.starts_with(form)) continue;
+        std::string_view after = rest.substr(form.size());
+        if (after.starts_with(kJaComma)) after.remove_prefix(kJaComma.size());
+        for (const std::string_view p : kParticles) {
+            if (after.starts_with(p)) return true;
+        }
+    }
+    return false;
+}
+
+// Whether s is one of list.
+template <std::size_t N>
+bool InSet(const std::string_view (&list)[N], std::string_view s) {
+    for (const std::string_view x : list) {
+        if (x == s) return true;
+    }
+    return false;
+}
+
+// Nouns that name a quality: the の before an adjective after them is the subject.
+constexpr std::string_view kAttributeNouns[] = {
+    "香り", "色", "頭", "仲", "気持ち", "運", "口", "腕", "背", "人気", "面倒見", "品", "質", "勘", "性格", "器量",
+    "愛想", "要領", "手際", "物覚え", "見晴らし", "日当たり", "風通し", "味", "気前", "気立て", "育ち", "顔色",
+    "顔立ち", "目つき", "目付き", "人当たり", "評判", "趣味", "体格", "態度", "機嫌", "具合", "調子",
+};
+
+// Stems before い of the predicates of existence, quantity or knowing.
+constexpr std::string_view kSubjectPredicates[] = {
+    "居な", "いな", "少な", "無", "知らな", "分からな", "わからな", "見えな", "聞こえな", "多", "少", "絶えな",
+};
+
 // Whether text starts like a negative ending: な, ね (ねえ), ませ, ず, ぬ, ん.
 bool NegativeStart(std::string_view text) {
     constexpr std::string_view kStarts[] = {kJaNa, kJaNe, kJaMase, kJaZu, kJaNu, kJaN};
@@ -238,6 +296,75 @@ void PositiveIke(Flusher& f) {
             if (it->EntryText(slot).starts_with(kKoGalSu)) {
                 it->selected = slot;
                 break;
+            }
+        }
+    }
+}
+
+void CopulaDeAru(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* p = it->prev;
+        if (p != nullptr && it->group->surface == "であ" && !Has("と ここ そこ あそこ どこ", p->group->surface) &&
+            output::Lemma(it->EntryText(it->selected), f.families).starts_with("에서 만나")) {
+            SelectLemma(f, it, "이다");
+        }
+    }
+}
+
+void NegativeCopula(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        Item* p = it->prev;
+        if (p == nullptr) continue;
+        const Entry* pe = p->group->At(p->selected);
+        if (p->detail->cls != kDetailInfo || pe == nullptr || pe->cls != 'N') continue;
+        const std::string plemma = output::Lemma(p->EntryText(p->selected), f.families);
+        if (plemma.ends_with("히") || TrimSpace(plemma) == ",") continue;
+        if (it->group->surface != "ではな" || Contrast(From(it->text, it->start + static_cast<long>(it->group->surface.size())))) {
+            continue;
+        }
+        if (!output::Lemma(it->EntryText(it->selected), f.families).starts_with("(은)는 아니") ||
+            !SelectLemmaPrefix(f, it, "(이)가 아니")) {
+            continue;
+        }
+        if (const std::string_view subject = SubjectPronoun(plemma); !subject.empty()) SelectLemma(f, p, subject);
+    }
+}
+
+void SubjectBeforeGa(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        Item* p = it->prev;
+        if (p == nullptr || it->selected < 0 || p->selected < 0 ||
+            output::Lemma(it->EntryText(it->selected), f.families) != "(이)가") {
+            continue;
+        }
+        if (it->group->surface == "が") {
+            const std::string_view subject = SubjectPronoun(output::Lemma(p->EntryText(p->selected), f.families));
+            if (!subject.empty() && !p->detail->Yougo()) {
+                if (Entry* e = p->group->At(p->selected)) e->dst = std::string(subject);
+            }
+        } else if (it->group->surface == "の") {
+            const Item* n = it->next;
+            if (n != nullptr && n->detail->Yougo() && Has(n->group->surface, "を")) SelectLemma(f, it, "의");
+        }
+    }
+}
+
+void SubjectNo(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        Item* p = it->prev;
+        Item* n = it->next;
+        if (p == nullptr || n == nullptr || n->next == nullptr || it->group->surface != "の" || it->selected < 0 ||
+            output::Lemma(it->EntryText(it->selected), f.families) != "의" || p->selected < 0 ||
+            At(p->Code(p->selected), 0) != '1' || n->selected < 0 ||
+            (!InSet(kSubjectPredicates, n->group->surface) &&
+             !(InSet(kAttributeNouns, p->group->surface) && At(n->Code(n->selected), 0) == '7')) ||
+            n->next->selected < 0 || At(n->next->Code(n->next->selected), 0) != '1') {
+            continue;
+        }
+        if (SelectLemma(f, it, "(이)가")) {
+            const std::string_view subject = SubjectPronoun(output::Lemma(p->EntryText(p->selected), f.families));
+            if (!subject.empty()) {
+                if (Entry* e = p->group->At(p->selected)) e->dst = std::string(subject);
             }
         }
     }

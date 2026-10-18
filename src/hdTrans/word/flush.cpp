@@ -18,6 +18,10 @@ void Flush(Flusher& f) {
         AdjectiveNeighbours(f);
         GeotBeforeMitai(f);
         PositiveIke(f);
+        CopulaDeAru(f);
+        NegativeCopula(f);
+        SubjectBeforeGa(f);
+        SubjectNo(f);
     }
     if (f.w.settings.terminal) PreferTerminal(f);
 }

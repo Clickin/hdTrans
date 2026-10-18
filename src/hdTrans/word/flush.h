@@ -52,6 +52,10 @@ bool Person(std::string_view attr);
 void PassiveRecords(Flusher& f);
 void GoNotSay(Flusher& f);
 void PositiveIke(Flusher& f);
+void CopulaDeAru(Flusher& f);
+void NegativeCopula(Flusher& f);
+void SubjectBeforeGa(Flusher& f);
+void SubjectNo(Flusher& f);
 
 // Text-path adjectival neighbours (neighbours.cpp).
 void AdjectiveNeighbours(Flusher& f);
