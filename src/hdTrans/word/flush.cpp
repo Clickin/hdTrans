@@ -9,7 +9,7 @@ namespace hdTrans::word {
 // teSequence, pastSequence, quoteTo, nodaTo, terminalBeforeQuote, hodoDegree, questionCopula,
 // genitiveBetweenNames, longVowelAfterKatakana, returnTo, karaSource, niAfterAdverb, noAfterNa,
 // deScene, younaBeforeModifier, particleInNext, jiBeforeJiman, evenBeforePassive, comitativeTo,
-// nounTo (text); preferTerminal (terminal), exclaimedAdjective (terminal and text),
+// nounTo (text); exclaimedAdjective (terminal and text),
 // verbNegative (text).
 void Flush(Flusher& f) {
     DrainNmTail(f);
@@ -17,6 +17,7 @@ void Flush(Flusher& f) {
     CleanupSelectors(f);
     CleanupClass3(f);
     ApplyNegatives(f);
+    if (f.w.settings.terminal) PreferTerminal(f);
 }
 
 }  // namespace hdTrans::word

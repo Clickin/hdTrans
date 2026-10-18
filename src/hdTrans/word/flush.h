@@ -27,6 +27,9 @@ void CleanupSelectors(Flusher& f);
 void ApplyKj(Item* it);
 bool IsStative(Flusher& f, Item* it);
 
+// Terminal form (terminal.cpp).
+void PreferTerminal(Flusher& f);
+
 // Passes (passes.cpp).
 void DrainNmTail(Flusher& f);
 void ReinsertPhrases(Flusher& f);
