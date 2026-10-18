@@ -1,8 +1,12 @@
 // J2KEngine-compatible exports: Shift-JIS or UTF-16 in, CP949 or UTF-16 out.
 // Dictionaries are found next to the DLL; the path the host passes is ignored.
+// Calls are thread-safe, not reentrant; finish all calls before unloading the DLL.
 #include <windows.h>
 
+#include <cstdint>
 #include <cstring>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -32,8 +36,10 @@ std::wstring WideFromUtf8(const std::string& s) { return Widen(CP_UTF8, s.data()
 constexpr UINT kShiftJis = 932;
 constexpr UINT kCp949 = 949;
 
-hdTrans::Engine* g_engine = nullptr;
-hdTrans::Session* g_session = nullptr;
+std::mutex g_mutex;
+std::uint64_t g_generation = 0;
+std::unique_ptr<hdTrans::Engine> g_engine;
+std::unique_ptr<hdTrans::Session> g_session;
 
 std::string TranslateUtf8(const std::string& text) { return g_session ? g_session->Translate(text) : std::string(); }
 
@@ -67,23 +73,36 @@ std::vector<std::string> DictDirs() {
 
 extern "C" {
 
+// Terminate or a successful concurrent Initialize cancels a pending load (returns 0).
 int __stdcall J2K_Initialize(char* /*dicPath*/) {
-    if (g_engine) return 1;
-    auto* e = new hdTrans::Engine(false, hdTrans::CacheWrite::Off);
-    if (!e->Open(DictDirs())) {
-        delete e;
-        return 0;
+    std::uint64_t generation;
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        if (g_engine) return 1;
+        generation = g_generation;
     }
-    g_engine = e;
-    g_session = new hdTrans::Session(*g_engine);
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
+    if (!e->Open(DictDirs())) return 0;
+    std::lock_guard<std::mutex> lock(g_mutex);
+    if (generation != g_generation) return 0;
+    g_engine = std::move(e);
+    g_session = std::make_unique<hdTrans::Session>(*g_engine);
+    ++g_generation;
     return 1;
 }
 
 int __stdcall J2K_InitializeEx(char* dicPath, char* /*mainDir*/) { return J2K_Initialize(dicPath); }
 
-int __stdcall J2K_Terminate() { return 1; }
+int __stdcall J2K_Terminate() {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    ++g_generation;
+    g_session.reset();
+    g_engine.reset();
+    return 1;
+}
 
 char* __stdcall J2K_TranslateMMNT(HWND /*hWnd*/, char* text) {
+    std::lock_guard<std::mutex> lock(g_mutex);
     if (!g_engine || !text) return nullptr;
     const std::string utf8 = Utf8FromWide(Widen(kShiftJis, text, static_cast<int>(std::strlen(text))));
     const std::wstring w = WideFromUtf8(TranslateUtf8(utf8));
@@ -91,6 +110,7 @@ char* __stdcall J2K_TranslateMMNT(HWND /*hWnd*/, char* text) {
 }
 
 wchar_t* __stdcall J2K_TranslateMMNTW(HWND /*hWnd*/, const wchar_t* text) {
+    std::lock_guard<std::mutex> lock(g_mutex);
     if (!g_engine || !text) return nullptr;
     const std::string utf8 = Narrow(CP_UTF8, text, static_cast<int>(std::wcslen(text)));
     return Block(WideFromUtf8(TranslateUtf8(utf8)));
@@ -107,6 +127,7 @@ void __stdcall J2K_FreeMem(void* block) {
 
 int __stdcall J2K_StopTranslation(void* /*target*/) { return 1; }
 void __stdcall J2K_ReloadUserDict() {
+    std::lock_guard<std::mutex> lock(g_mutex);
     if (!g_engine) return;
     g_engine->Reload();
     g_session->Reset();

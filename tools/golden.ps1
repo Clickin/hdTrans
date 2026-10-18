@@ -20,6 +20,18 @@ try {
     $inputs = @(Get-ChildItem -LiteralPath $Golden -Filter '*.in' -File | Sort-Object Name)
     if ($inputs.Count -eq 0) { throw "no sets in $Golden" }
 
+    $environment = [Environment]::GetEnvironmentVariables('Process')
+    $cachePresent = $environment.Contains('HDTRANS_CACHE_DIR')
+    $cacheValue = if ($cachePresent) { [string]$environment['HDTRANS_CACHE_DIR'] } else { $null }
+    if (-not $cachePresent -or ($cacheValue -ne '' -and $cacheValue -ine 'off')) {
+        if ([string]$environment['HDTRANS_SNAPSHOT'] -ieq 'off') {
+            $cacheValue = 'off'
+        } else {
+            $cacheValue = Join-Path (Split-Path -Parent $cli) 'golden-cache'
+            [void][System.IO.Directory]::CreateDirectory($cacheValue)
+        }
+    }
+
     # One character per byte; ordinal comparisons retain CR, BOM and missing final LF.
     $encoding = [System.Text.Encoding]::GetEncoding(28591)
     $status = 0
@@ -34,6 +46,8 @@ try {
         $process.StartInfo.FileName = $cli
         $process.StartInfo.UseShellExecute = $false
         $process.StartInfo.RedirectStandardOutput = $true
+        # The child block preserves a present-empty value without changing the caller's environment.
+        $process.StartInfo.EnvironmentVariables['HDTRANS_CACHE_DIR'] = $cacheValue
         # Double trailing backslashes before the closing argument quote.
         $process.StartInfo.Arguments = '-reference -dicts "{0}"{1} -in "{2}"' -f ($Dicts -replace '(\\+)$', '$1$1'), $flag, $inputFile.FullName
         $output = [System.IO.File]::Create($actual)

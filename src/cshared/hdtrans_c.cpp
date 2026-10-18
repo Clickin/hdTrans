@@ -1,7 +1,9 @@
 #include "hdTrans/hdtrans.h"
 
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -11,8 +13,9 @@
 namespace {
 
 std::mutex g_mutex;
-hdTrans::Engine* g_engine = nullptr;
-hdTrans::Session* g_session = nullptr;
+std::uint64_t g_generation = 0;
+std::unique_ptr<hdTrans::Engine> g_engine;
+std::unique_ptr<hdTrans::Session> g_session;
 
 std::vector<std::string> SplitNul(const char* dirs) {
     std::vector<std::string> out;
@@ -35,17 +38,27 @@ int Copy(const std::string& s, char** out, size_t* outn) {
 extern "C" {
 
 int hdTrans_Initialize(const char* dirs) {
-    std::lock_guard<std::mutex> lock(g_mutex);
-    auto* e = new hdTrans::Engine(false, hdTrans::CacheWrite::Off);
-    if (!e->Open(SplitNul(dirs))) {
-        delete e;
-        return -1;
+    std::uint64_t generation;
+    {
+        std::lock_guard<std::mutex> lock(g_mutex);
+        generation = g_generation;
     }
-    delete g_session;
-    delete g_engine;
-    g_engine = e;
-    g_session = new hdTrans::Session(*g_engine);
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
+    if (!e->Open(SplitNul(dirs))) return -1;
+    std::lock_guard<std::mutex> lock(g_mutex);
+    if (generation != g_generation) return -1;
+    g_session.reset();
+    g_engine = std::move(e);
+    g_session = std::make_unique<hdTrans::Session>(*g_engine);
+    ++g_generation;
     return 0;
+}
+
+void hdTrans_Terminate(void) {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    ++g_generation;
+    g_session.reset();
+    g_engine.reset();
 }
 
 int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
