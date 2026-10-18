@@ -18,11 +18,15 @@ struct Generated;
 struct SessionState;
 }
 
+// Off reads valid caches but never writes; Sync publishes a cache before Open returns.
+enum class CacheWrite { Off, Sync };
+
 // The loaded dictionaries. Shared by any number of sessions and threads.
 class Engine {
 public:
     // Reference mode disables translation improvements. Sessions inherit it.
-    explicit Engine(bool reference = false) : reference_(reference) {}
+    explicit Engine(bool reference = false, CacheWrite cacheWrite = CacheWrite::Sync)
+        : reference_(reference), cacheWrite_(cacheWrite) {}
 
     // Loads the folders in order; later folders override earlier ones. Returns false when
     // no dictionary could be loaded; the dictionaries loaded before stay.
@@ -42,6 +46,7 @@ private:
     friend class Session;
     friend struct internal::Access;
     const bool reference_;
+    const CacheWrite cacheWrite_;
     mutable std::mutex mu_;
     std::vector<std::string> dirs_;
     std::shared_ptr<const dict::Snapshot> snapshot_;

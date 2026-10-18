@@ -5,10 +5,13 @@
 //   -raw                  translate each line with the word pipeline only
 //   -reference            disable translation improvements
 //   -verify-dicts         verify source hashes and every cache segment
+//   -compile-dicts        compile and verify the dictionary cache, then exit
+//   -no-cache             read only the editable dictionaries
 //   -why                  write word choices and shadow scores to stderr
 //   -select-shadow        score shortest targets without changing the translation
 //   -in FILE              read the input from FILE
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <string_view>
@@ -20,6 +23,7 @@
 #endif
 
 #include "hdTrans/engine.h"
+#include "hdTrans/dict/snapshot_file.h"
 #include "hdTrans/engine/driver.h"
 #include "hdTrans/word/select.h"
 
@@ -107,6 +111,8 @@ int main(int argc, char** argv) {
     bool selectShadow = false;
     bool reference = false;
     bool verifyDicts = false;
+    bool compileDicts = false;
+    bool noCache = false;
     for (int i = 1; i < argc; i++) {
         const char* a = argv[i];
         if (!std::strcmp(a, "-dicts") && i + 1 < argc) dicts = argv[++i];
@@ -115,19 +121,45 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-each")) each = true;
         else if (!std::strcmp(a, "-reference")) reference = true;
         else if (!std::strcmp(a, "-verify-dicts")) verifyDicts = true;
+        else if (!std::strcmp(a, "-compile-dicts")) compileDicts = true;
+        else if (!std::strcmp(a, "-no-cache")) noCache = true;
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-verify-dicts] [-why] [-select-shadow] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects the cache directory; empty or off (case-insensitive) disables caching.\n");
             return 2;
         }
     }
 
+    if (noCache) {
+        if (compileDicts) {
+            std::fprintf(stderr, "hdtrans: -compile-dicts and -no-cache cannot be combined\n");
+            return 2;
+        }
+#ifdef _WIN32
+        const int error = _putenv_s("HDTRANS_CACHE_DIR", "off");
+#else
+        const int error = setenv("HDTRANS_CACHE_DIR", "off", 1);
+#endif
+        if (error != 0) {
+            std::fprintf(stderr, "hdtrans: cannot disable caching\n");
+            return 1;
+        }
+    }
+    const auto folders = SplitComma(dicts);
+    if (compileDicts) {
+        const auto path = hdTrans::dict::internal::SnapshotPath(folders);
+        if (path.empty() || !hdTrans::dict::CompileSnapshot(folders, path)) {
+            std::fprintf(stderr, "hdtrans: cannot compile dictionary cache\n");
+            return 1;
+        }
+        return 0;
+    }
     if (why) std::setvbuf(stderr, nullptr, _IOFBF, 1 << 16);
 
     hdTrans::Engine engine(reference);
-    if (!engine.Open(SplitComma(dicts), verifyDicts)) {
+    if (!engine.Open(folders, verifyDicts)) {
         std::fprintf(stderr, "hdtrans: no dictionary loaded from %s\n", dicts.c_str());
         return 1;
     }

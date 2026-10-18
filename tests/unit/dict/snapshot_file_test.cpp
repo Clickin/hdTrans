@@ -18,6 +18,7 @@
 
 #include "hdTrans/dict/mapped_file.h"
 #include "hdTrans/dict/integrity.h"
+#include "hdTrans/engine.h"
 #include "hdtest.h"
 
 namespace {
@@ -322,6 +323,43 @@ HD_TEST(SnapshotCacheEnvironmentOverride) {
     }
     overrideDir.Set("off-cache");
     HD_CHECK(!hdTrans::dict::internal::SnapshotPath(folders).empty());
+}
+
+HD_TEST(SnapshotCacheWritePolicy) {
+    TempFolder temp;
+    const auto cache = temp.File("cache");
+    ScopedEnvironment overrideDir("HDTRANS_CACHE_DIR", cache.c_str());
+    const auto base = temp.path / "base.tsv";
+    HD_REQUIRE(WriteText(base, "key\tko\tpos\tid\n猫\t고양이\tN110\t1\n"));
+    const std::vector<std::string> folders{temp.File("")};
+    const auto path = hdTrans::dict::internal::SnapshotPath(folders);
+    const auto readonly = hdTrans::dict::LoadFolders(folders, cache, true, false);
+    HD_REQUIRE(readonly.snapshot != nullptr);
+    HD_CHECK(!readonly.snapshot->Mapped());
+    HD_CHECK(!std::filesystem::exists(Utf8Path(path)));
+    hdTrans::Engine reader(false, hdTrans::CacheWrite::Off);
+    HD_REQUIRE(reader.Open(folders));
+    HD_CHECK(!reader.Dictionaries()->Mapped());
+    HD_REQUIRE(reader.Reload());
+    HD_CHECK(!std::filesystem::exists(Utf8Path(path)));
+    hdTrans::Engine writer;
+    HD_REQUIRE(writer.Open(folders));
+    HD_REQUIRE(std::filesystem::exists(Utf8Path(path)));
+    const auto bytes = ReadBytes(path);
+    const auto cacheTime = std::filesystem::last_write_time(Utf8Path(path));
+    const auto sourceTime = std::filesystem::last_write_time(base);
+    std::filesystem::last_write_time(base, sourceTime + std::chrono::seconds(2));
+    HD_REQUIRE(reader.Reload());
+    HD_CHECK(reader.Dictionaries()->Mapped());
+    HD_CHECK(!std::filesystem::exists(Utf8Path(path + ".meta")));
+    HD_CHECK(ReadBytes(path) == bytes);
+    HD_CHECK(std::filesystem::last_write_time(Utf8Path(path)) == cacheTime);
+    HD_REQUIRE(WriteText(base, "key\tko\tpos\tid\n猫\t야옹이\tN110\t1\n"));
+    HD_REQUIRE(reader.Reload());
+    HD_CHECK(!reader.Dictionaries()->Mapped());
+    HD_CHECK_EQ(TargetOf(*reader.Dictionaries(), "猫"), "야옹이");
+    HD_CHECK(ReadBytes(path) == bytes);
+    HD_CHECK(std::filesystem::last_write_time(Utf8Path(path)) == cacheTime);
 }
 
 HD_TEST(SnapshotSourceInvalidation) {

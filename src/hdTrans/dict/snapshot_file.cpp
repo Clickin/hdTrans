@@ -990,7 +990,7 @@ void RefreshManifest(const internal::SnapshotFile& file, const std::vector<Sourc
 
 }  // namespace
 
-LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify) {
+LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify, bool cacheWrite) {
     for (const auto& folder : folders) if (!SafePath(folder)) return {nullptr, {{folder, LoadErrorKind::Folder, 0, TsvErrorKind::Read, {}}}};
     const char* mode = std::getenv("HDTRANS_SNAPSHOT");
     if (mode && std::string_view(mode) == "off") return LoadFoldersTsv(folders);
@@ -1004,10 +1004,11 @@ LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view
         auto& file = *SnapshotStorage::Backing(*cached.snapshot);
         bool refresh = false;
         if (CheckSources(folders, CachedManifest(file), sources, verify, refresh)) {
-            if (refresh) RefreshManifest(file, sources);
+            if (refresh && cacheWrite) RefreshManifest(file, sources);
             return cached;
         }
     }
+    if (!cacheWrite) return LoadFoldersTsv(folders);
     sources.clear();
     bool write = ListSources(folders, sources, true);
     auto loaded = LoadFoldersTsv(folders);

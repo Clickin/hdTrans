@@ -69,7 +69,7 @@ extern "C" {
 
 int __stdcall J2K_Initialize(char* /*dicPath*/) {
     if (g_engine) return 1;
-    auto* e = new hdTrans::Engine;
+    auto* e = new hdTrans::Engine(false, hdTrans::CacheWrite::Off);
     if (!e->Open(DictDirs())) {
         delete e;
         return 0;

@@ -18,8 +18,8 @@ namespace {
 constexpr std::size_t kMemoryLines = 2048;
 
 // The dictionaries of dirs; null when the load fails or finds no dictionary file.
-std::shared_ptr<const dict::Snapshot> LoadDictionaries(const std::vector<std::string>& dirs, bool verify = false) {
-    dict::LoadResult r = dict::LoadFolders(dirs, {}, verify);
+std::shared_ptr<const dict::Snapshot> LoadDictionaries(const std::vector<std::string>& dirs, bool verify, CacheWrite cacheWrite) {
+    dict::LoadResult r = dict::LoadFolders(dirs, {}, verify, cacheWrite == CacheWrite::Sync);
     if (!r.snapshot || !r.snapshot->HasDictionary()) return nullptr;
     return std::move(r.snapshot);
 }
@@ -59,7 +59,7 @@ struct Access {
 
 bool Engine::Open(const std::vector<std::string>& dirs, bool verifyDicts) {
     if (!internal::RulesLoaded()) return false;
-    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs, verifyDicts);
+    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs, verifyDicts, cacheWrite_);
     if (!s) return false;
     std::lock_guard<std::mutex> lock(mu_);
     dirs_ = dirs;
@@ -75,7 +75,7 @@ bool Engine::Reload() {
         if (!snapshot_) return false;
         dirs = dirs_;
     }
-    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs);
+    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs, false, cacheWrite_);
     if (!s) return false;
     std::lock_guard<std::mutex> lock(mu_);
     snapshot_ = std::move(s);

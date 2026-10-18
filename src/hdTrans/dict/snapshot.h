@@ -147,7 +147,8 @@ struct LoadResult {
 
 // Lists the *.tsv files of the folders in order, those of each folder in name order,
 // and reads them.
-LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir = {}, bool verify = false);
+LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir = {}, bool verify = false,
+                       bool cacheWrite = true);
 // Loads the editable files without reading or writing a cache.
 LoadResult LoadFoldersTsv(const std::vector<std::string>& folders);
 // Compiles the folders to an immutable resource; publishes only a fully validated file.

@@ -36,7 +36,7 @@ extern "C" {
 
 int hdTrans_Initialize(const char* dirs) {
     std::lock_guard<std::mutex> lock(g_mutex);
-    auto* e = new hdTrans::Engine;
+    auto* e = new hdTrans::Engine(false, hdTrans::CacheWrite::Off);
     if (!e->Open(SplitNul(dirs))) {
         delete e;
         return -1;
