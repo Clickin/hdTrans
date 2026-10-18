@@ -24,7 +24,7 @@ namespace hdTrans::pipeline {
 namespace {
 
 // The titles that show a name to be a person when they follow it (霧島さん, 千歳お姉, 加賀改二).
-const std::vector<std::string_view> kPersonTitles = {"さん", "ちゃん", "くん", "君", "様", "さま", "先輩", "先生", "殿", "氏",
+constexpr std::string_view kPersonTitles[] = {"さん", "ちゃん", "くん", "君", "様", "さま", "先輩", "先生", "殿", "氏",
                                                      "たん", "っち", "姉", "兄", "お姉", "お兄", "改"};
 
 // Whether key occurs in text with a person title after it or 艦 before it.

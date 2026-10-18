@@ -1,7 +1,7 @@
 // Speaker labels, honorifics and the evidence of a single run: the script formats
 // (OutputLine, Ren'Py, KiriKiri, TyranoScript), the plain-text forms (【名】, [名]:,
 // 名「」, 名：), the speaker cues of a line and the name runs of a line.
-#include <array>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -17,19 +17,19 @@ using namespace internal;
 
 namespace {
 
-const std::vector<std::string_view> kHonorificList = {"さん", "ちゃん", "くん", "君", "様", "さま", "先輩", "殿", "氏", "たん",
+constexpr std::string_view kHonorificList[] = {"さん", "ちゃん", "くん", "君", "様", "さま", "先輩", "殿", "氏", "たん",
                                                       "嬢", "はん", "っち", "ちゃま", "先生", "せんせい", "さぁん", "ちゃーん",
                                                       "くーん", "公", "卿"};
 
-const std::vector<std::string_view> kKanjiHonorificList = {"先生", "先輩", "様", "殿", "君", "氏", "嬢"};
+constexpr std::string_view kKanjiHonorificList[] = {"先生", "先輩", "様", "殿", "君", "氏", "嬢"};
 
-const std::vector<std::string_view> kTitleSuffixList = {"先生", "先輩", "選手", "様", "殿", "君", "氏", "嬢", "家", "姉",
+constexpr std::string_view kTitleSuffixList[] = {"先生", "先輩", "選手", "様", "殿", "君", "氏", "嬢", "家", "姉",
                                                         "兄", "夫妻", "一家", "達", "たち"};
 
-const std::vector<std::string_view> kPersonSuffixList = {"達", "家", "氏", "ら", "一家", "夫妻", "夫婦", "兄弟", "姉妹",
+constexpr std::string_view kPersonSuffixList[] = {"達", "家", "氏", "ら", "一家", "夫妻", "夫婦", "兄弟", "姉妹",
                                                          "親子", "一族", "様", "殿", "君"};
 
-const std::vector<std::string_view> kRoleWords = {
+constexpr std::string_view kRoleWords[] = {
     "父", "母", "兄", "姉", "弟", "妹", "叔父", "叔母", "伯父", "伯母", "祖父", "祖母", "爺", "婆", "主人", "奥", "奥様", "皆", "俺",
     "私", "僕", "自分", "子供", "子", "お前", "貴方", "先生", "先輩", "後輩", "部長", "会長", "店長", "社長", "委員長", "校長", "村長",
     "監督", "師匠", "殿下", "陛下", "姫", "王", "王子", "王女", "女王", "魔王", "勇者", "神", "神様", "下級生", "上級生", "生徒", "男",
@@ -38,24 +38,24 @@ const std::vector<std::string_view> kRoleWords = {
     "ウェイトレス", "メイド", "マスター", "ギャラリー", "シスター", "ママ", "パパ", "オーナー", "マネージャー", "キャプテン",
     "リーダー", "ボス", "お嬢", "じい", "ばあ"};
 
-const std::vector<std::string_view> kLabelRoleWords = {
+constexpr std::string_view kLabelRoleWords[] = {
     "みんな", "皆", "一同", "全員", "２人", "二人", "3人", "３人", "声", "電話", "アナウンス", "ナレーション", "司会", "実況", "解説",
     "店長", "店員", "担任", "秘書", "父親", "母親", "刑事", "女性", "男性", "女の子", "男の子", "クラスメイト", "おばあさん",
     "おじいさん", "ばあちゃん", "じいちゃん", "おばちゃん", "おじちゃん", "おばさん", "おじさん", "客", "お客さん", "子供",
     "スタッフ", "警察", "守衛", "審判", "ネコ", "猫", "犬", "魔物", "騎士", "兵士", "部員", "生徒", "教師", "医者"};
 
-const std::vector<std::string_view> kLabelRoleSuffixes = {"生徒", "女子", "男子", "部", "客", "員", "長", "者", "親", "性", "係",
+constexpr std::string_view kLabelRoleSuffixes[] = {"生徒", "女子", "男子", "部", "客", "員", "長", "者", "親", "性", "係",
                                                           "手", "官", "師", "顧問", "補佐", "主将", "担当", "学生", "ＤＪ", "DJ",
                                                           "たち", "達", "メンバー"};
 
-const std::vector<std::string_view> kParentSuffixes = {"の父", "の母", "の兄", "の姉", "の弟", "の妹"};
+constexpr std::string_view kParentSuffixes[] = {"の父", "の母", "の兄", "の姉", "の弟", "の妹"};
 
 // Particles that may follow a name where a verb or adjective stem would take its
 // inflection.
-const std::vector<std::string_view> kParticles = {"は", "が", "を", "の", "に", "へ", "と", "も", "や", "で", "よ", "ね", "さ"};
+constexpr std::string_view kParticles[] = {"は", "が", "を", "の", "に", "へ", "と", "も", "や", "で", "よ", "ね", "さ"};
 
 bool Has(std::string_view s, std::string_view part) { return s.find(part) != std::string_view::npos; }
-bool InList(std::string_view text, const std::vector<std::string_view>& list) {
+bool InList(std::string_view text, std::span<const std::string_view> list) {
     for (const std::string_view w : list) {
         if (w == text) return true;
     }
@@ -361,10 +361,10 @@ Run MakeRun(std::string_view s, std::size_t start, std::size_t end, bool kanji) 
 
 namespace internal {
 
-const std::vector<std::string_view>& Honorifics() { return kHonorificList; }
-const std::vector<std::string_view>& KanjiHonorifics() { return kKanjiHonorificList; }
-const std::vector<std::string_view>& TitleSuffixes() { return kTitleSuffixList; }
-const std::vector<std::string_view>& PersonSuffixes() { return kPersonSuffixList; }
+std::span<const std::string_view> Honorifics() { return kHonorificList; }
+std::span<const std::string_view> KanjiHonorifics() { return kKanjiHonorificList; }
+std::span<const std::string_view> TitleSuffixes() { return kTitleSuffixList; }
+std::span<const std::string_view> PersonSuffixes() { return kPersonSuffixList; }
 
 bool PlainLabel(std::string_view p) {
     if (AllRunes(p, [](char32_t c) { return (IsNameRune(c) && !IsHiragana(c)) || InRunes(c, "・＆&？?"); })) return true;

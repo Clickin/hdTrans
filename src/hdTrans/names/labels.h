@@ -1,5 +1,6 @@
 #pragma once
 // Label, honorific and role vocabulary shared by the registry and the document context.
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -7,13 +8,13 @@
 namespace hdTrans::names::internal {
 
 // Person suffixes that follow a name (さん, 様, 先生 ...).
-const std::vector<std::string_view>& Honorifics();
+std::span<const std::string_view> Honorifics();
 // Honorifics that fuse with a kanji name into one run (市松殿).
-const std::vector<std::string_view>& KanjiHonorifics();
+std::span<const std::string_view> KanjiHonorifics();
 // Title words that may follow a name inside its run (茜たち, 水無月家).
-const std::vector<std::string_view>& TitleSuffixes();
+std::span<const std::string_view> TitleSuffixes();
 // Person suffixes that follow a surname without being a given name.
-const std::vector<std::string_view>& PersonSuffixes();
+std::span<const std::string_view> PersonSuffixes();
 
 // Whether p may be the label of a plain-text form.
 bool PlainLabel(std::string_view p);

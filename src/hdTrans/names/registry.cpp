@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <set>
+#include <span>
 #include <utility>
 #include <string>
 #include <string_view>
@@ -40,7 +41,7 @@ bool HasSuffixOf(std::string_view text, std::string_view suffix) {
 }
 
 // Whether lst holds s.
-bool Contains(const std::vector<std::string_view>& lst, std::string_view s) {
+bool Contains(std::span<const std::string_view> lst, std::string_view s) {
     for (const std::string_view w : lst) {
         if (w == s) return true;
     }
