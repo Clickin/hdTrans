@@ -435,3 +435,26 @@ HD_TEST(engine_session_history_rebuild) {
         }
     }
 }
+
+HD_TEST(engine_session_piece_history) {
+    const std::string dicts = DictsDir();
+    HD_REQUIRE(!dicts.empty());
+    hdTrans::Engine engine(true);
+    HD_REQUIRE(engine.Open({dicts}));
+    const auto snap = engine.Dictionaries();
+    const auto generated = hdTrans::internal::NewGenerated(*snap);
+    hdTrans::internal::TranslationOptions options;
+    options.reference = true;
+    hdTrans::internal::Memory memory;
+    std::vector<std::string> prefix(2047);
+    prefix.front() = "「あたしが行くわよ」";
+    hdTrans::pipeline::RememberDocument(*snap, prefix, memory.document);
+    const std::string line = std::string(16381, 'a') + "て" + std::string(65536, 'a') + "。";
+    HD_REQUIRE(hdTrans::internal::TranslateDocument(*snap, *generated, {&line, 1}, memory, {}, options).size() == 1);
+    const auto document = hdTrans::pipeline::BuildDocument(*snap, {}, false, &memory.document);
+    HD_CHECK(document->female);
+    HD_CHECK(document->verse.empty());
+    const std::string probe = "お兄様！";
+    HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&probe, 1}, memory, {}, options)[0], "오빠!");
+    HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&probe, 1}, memory, {}, options)[0], "형님!");
+}

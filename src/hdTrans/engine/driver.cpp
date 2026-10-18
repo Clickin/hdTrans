@@ -172,15 +172,14 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
     return steps.line;
 }
 
-}  // namespace
-
-std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
-                                           std::span<const std::string> lines, Memory& memory,
-                                           const StageObserver& observer, const TranslationOptions& options) {
+std::vector<std::string> TranslateDocumentPieces(const dict::Snapshot& snap, Generated& generated,
+                                                 std::span<const std::string> lines, Memory& memory,
+                                                 const StageObserver& observer, const TranslationOptions& options,
+                                                 std::span<const std::string> sourceLines) {
     if (!snap.Healthy()) {
         const auto [fallback, replacement] = FallbackOf(snap);
         if (!fallback) return {};
-        return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
+        return TranslateDocumentPieces(*fallback, *replacement, lines, memory, observer, options, sourceLines);
     }
     if (std::any_of(lines.begin(), lines.end(), [](const std::string& line) {
             return line.size() > text::kMaxLineBytes;
@@ -191,7 +190,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
             for (std::string_view piece : text::TranslationPieces(line)) bounded.emplace_back(piece);
             ends.push_back(bounded.size());
         }
-        const auto translated = TranslateDocument(snap, generated, bounded, memory, observer, options);
+        const auto translated = TranslateDocumentPieces(snap, generated, bounded, memory, observer, options, sourceLines);
         if (translated.size() != bounded.size()) return {};
         std::vector<std::string> joined(lines.size());
         for (std::size_t i = 0, piece = 0; i < ends.size(); i++) {
@@ -200,7 +199,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
         return joined;
     }
     const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(
-        snap, lines, !options.reference && options.wordImprovements.extraBuiltin, &memory.document);
+        snap, sourceLines, !options.reference && options.wordImprovements.extraBuiltin, &memory.document);
 
     Scratch s;
     word::SessionSenses pending;
@@ -222,12 +221,20 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
     if (!snap.Healthy()) {
         const auto [fallback, replacement] = FallbackOf(snap);
         if (!fallback) return {};
-        return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
+        return TranslateDocumentPieces(*fallback, *replacement, lines, memory, observer, options, sourceLines);
     }
     if (s.sessionSenses == &pending) memory.senses = std::move(pending);
     memory.senses.Trim();
-    pipeline::RememberDocument(snap, lines, memory.document);
+    pipeline::RememberDocument(snap, sourceLines, memory.document);
     return out;
+}
+
+}  // namespace
+
+std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
+                                           std::span<const std::string> lines, Memory& memory,
+                                           const StageObserver& observer, const TranslationOptions& options) {
+    return TranslateDocumentPieces(snap, generated, lines, memory, observer, options, lines);
 }
 
 std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
