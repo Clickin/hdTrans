@@ -57,6 +57,10 @@ struct DocumentData;
 
 namespace hdTrans::dict {
 
+namespace internal {
+class SnapshotFile;
+}
+
 // A *.tsv file of a dictionary folder.
 struct File {
     int folder = 0;     // index of the folder in load order
@@ -143,7 +147,11 @@ struct LoadResult {
 
 // Lists the *.tsv files of the folders in order, those of each folder in name order,
 // and reads them.
-LoadResult LoadFolders(const std::vector<std::string>& folders);
+LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir = {}, bool verify = false);
+// Loads the editable files without reading or writing a cache.
+LoadResult LoadFoldersTsv(const std::vector<std::string>& folders);
+// Compiles the folders to an immutable resource; publishes only a fully validated file.
+bool CompileSnapshot(const std::vector<std::string>& folders, std::string_view outPath);
 // Loads files in load order.
 LoadResult Load(std::vector<File> files);
 
@@ -214,10 +222,15 @@ public:
 
     // Bytes held by the snapshot, the texts of the plain files included.
     std::size_t MemoryBytes() const;
+    bool Mapped() const;
+    bool Healthy() const;
+    // The editable-file generation used when a mapped resource fails validation.
+    std::shared_ptr<const Snapshot> Fallback() const;
 
 private:
     friend LoadResult Load(std::vector<File> files);
     friend struct SnapshotLoader;
+    friend struct SnapshotStorage;
 
     // The Korean a name-layer sense with the flag replace gives its key, and which
     // base senses of the key take it: with sameSound, its place-name senses (QCT or
@@ -233,6 +246,8 @@ private:
 
     Snapshot() = default;
 
+    Candidates GetWordInfoImpl(std::string_view text, LookupMode mode, const LookupContext& ctx) const;
+    std::vector<Candidate> RetrieveRecordsImpl(std::string_view key, LookupMode mode) const;
     const Respelling* Place(std::string_view key) const;
     std::string_view Respelled(const Respelling* sp, const KeySet* persons, std::string_view key, const Record& r) const;
     void NameEntries(std::string_view text, LookupMode mode, const LookupContext& ctx,
@@ -243,6 +258,7 @@ private:
     bool PhraseKey(std::string_view key) const;
     bool BaseWord(std::string_view key) const;
 
+    std::shared_ptr<internal::SnapshotFile> backing_;
     bool hasDictionary_ = false;
     CodeTable codes_;
     Dict base_;

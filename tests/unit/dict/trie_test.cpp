@@ -321,3 +321,140 @@ HD_TEST(trie_sample_keys) {
         HD_CHECK_EQ(keyOf(n), k);
     }
 }
+
+HD_TEST(trie_borrowed_arrays_and_moves) {
+    const std::string_view keys[] = {"", "東", "東京", "東京都", "𠮷", "𠮷野家"};
+    Trie owned = Trie::Build(keys, nullptr);
+    const Trie::ViewData arrays = owned.View();
+    const size_t before = allocations;
+    Trie borrowed = Trie::FromView(arrays);
+    HD_CHECK_EQ(allocations, before);
+    HD_CHECK(borrowed.View().tree.data() == arrays.tree.data());
+    HD_CHECK(borrowed.View().label.data() == arrays.label.data());
+    HD_CHECK_EQ(borrowed.MemoryBytes(), owned.MemoryBytes());
+
+    Trie moved = std::move(owned);
+    owned = std::move(moved);
+    for (const auto key : keys) HD_CHECK_EQ(borrowed.Find(key), owned.Find(key));
+    HD_CHECK_EQ(borrowed.Find("東北"), -1);
+    HD_CHECK_EQ(borrowed.LongestPrefix("東京都庁").length, size_t{9});
+    std::vector<std::string> got;
+    borrowed.Each([&](std::string_view key, int) { got.emplace_back(key); });
+    HD_CHECK(got == std::vector<std::string>(std::begin(keys), std::end(keys)));
+    borrowed = Trie::FromView(owned.View());
+    HD_CHECK_EQ(borrowed.Find("𠮷野家"), owned.Find("𠮷野家"));
+}
+
+HD_TEST(trie_children_in_high_word) {
+    const std::string_view keys[] = {"ax", "bxx", "cxxx", "dxxxx", "exxxxx"};
+    const Trie owned = Trie::Build(keys, nullptr);
+    auto view = owned.View();
+    HD_REQUIRE(view.tree.size() == 1);
+    const uint64_t tree[] = {view.tree[0], 0};
+    view.tree = std::span(tree).first(1);
+    const Trie borrowed = Trie::FromView(view);
+    HD_REQUIRE(borrowed.Validate());
+    for (const auto key : keys) {
+        HD_CHECK(borrowed.Find(key) >= 0);
+        HD_CHECK_EQ(borrowed.LongestPrefix(std::string(key) + "!").length, key.size());
+    }
+}
+
+HD_TEST(trie_guarded_views_and_validation) {
+    const std::string_view keys[] = {"", "学", "学生", "東京", "𠮷野家"};
+    const Trie owned = Trie::Build(keys, nullptr);
+    HD_CHECK(owned.Validate());
+    HD_CHECK(Trie{}.Validate());
+    struct GuardState {
+        bool readable = true;
+        mutable int checks = 0;
+        mutable int failures = 0;
+    } state;
+    auto data = owned.View();
+    data.guard = {&state,
+                  [](const void* context, const void* pointer, size_t size) {
+                      const auto& s = *static_cast<const GuardState*>(context);
+                      s.checks++;
+                      return s.readable && pointer == nullptr && size == 0;
+                  },
+                  [](const void* context) { static_cast<const GuardState*>(context)->failures++; }};
+    const Trie borrowed = Trie::FromView(data);
+    HD_CHECK(borrowed.Validate());
+    HD_CHECK(borrowed.View().guard.context == &state);
+    const size_t before = allocations;
+    HD_CHECK_EQ(borrowed.Find("学生"), owned.Find("学生"));
+    int prefixes = 0;
+    borrowed.Prefixes("学生です", [&](int, size_t) { prefixes++; });
+    HD_CHECK_EQ(prefixes, 3);
+    HD_CHECK_EQ(allocations, before);
+    state.readable = false;
+    HD_CHECK_EQ(borrowed.Find("学生"), -1);
+    HD_CHECK_EQ(borrowed.Next(0, U'学'), -1);
+    HD_CHECK_EQ(borrowed.KeyAt(0), -1);
+    HD_CHECK_EQ(borrowed.LongestPrefix("学生").key, -1);
+    borrowed.Prefixes("学生", [&](int, size_t) { prefixes++; });
+    borrowed.Each([&](std::string_view, int) { prefixes++; });
+    HD_CHECK_EQ(prefixes, 3);
+    HD_CHECK(!borrowed.Validate());
+    HD_CHECK(state.failures >= 7);
+}
+
+HD_TEST(trie_malformed_arrays) {
+    const std::string_view keys[] = {"a", "ab", "b", "bc"};
+    const Trie owned = Trie::Build(keys, nullptr);
+    HD_REQUIRE(owned.Validate());
+    const auto valid = owned.View();
+    auto exercise = [](Trie::ViewData view) {
+        const Trie t = Trie::FromView(view);
+        HD_CHECK(!t.Validate());
+        (void)t.Find("abc");
+        (void)t.Next(-1, U'a');
+        (void)t.Next(999, U'a');
+        (void)t.KeyAt(-1);
+        (void)t.KeyAt(999);
+        t.Prefixes("abc", [](int, size_t) {});
+        size_t visits = 0;
+        t.Each([&](std::string_view, int) { visits++; });
+        HD_CHECK(visits <= view.label.size());
+    };
+    for (int field = 0; field < 5; field++) {
+        auto data = valid;
+        switch (field) {
+            case 0: data.tree = data.tree.first(data.tree.size() - 1); break;
+            case 1: data.zeros = {}; break;
+            case 2: data.label = {}; break;
+            case 3: data.terminal = {}; break;
+            case 4: data.rank = {}; break;
+        }
+        exercise(data);
+    }
+    auto data = valid;
+    std::vector<uint64_t> tree(valid.tree.size(), ~uint64_t{0});
+    data.tree = tree;
+    exercise(data);
+    data = valid;
+    std::vector<uint32_t> zeros(valid.zeros.begin(), valid.zeros.end());
+    zeros[0] = UINT32_MAX;
+    data.zeros = zeros;
+    exercise(data);
+    zeros[0] = 0;
+    exercise(data);
+    data = valid;
+    std::vector<uint16_t> labels(valid.label.begin(), valid.label.end());
+    std::swap(labels[1], labels[2]);
+    data.label = labels;
+    exercise(data);
+    data = valid;
+    std::vector<uint32_t> ranks(valid.rank.begin(), valid.rank.end());
+    ranks[0] = UINT32_MAX;
+    data.rank = ranks;
+    exercise(data);
+    data = valid;
+    data.keys++;
+    exercise(data);
+    for (size_t nodes : {size_t{31}, size_t{32}, size_t{63}, size_t{64}, size_t{65}}) {
+        const std::string key(nodes - 1, 'a');
+        const std::string_view one[] = {key};
+        HD_CHECK(Trie::Build(one, nullptr).Validate());
+    }
+}

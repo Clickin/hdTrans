@@ -1,5 +1,7 @@
 #include "hdTrans/dict/dict.h"
 
+#include <limits>
+
 namespace hdTrans::dict {
 
 namespace {
@@ -11,15 +13,6 @@ uint64_t Hash(std::string_view s, uint64_t h) {
 
 uint64_t HashCodes(std::string_view part, std::string_view sem, std::string_view gram, std::string_view dict) {
     return Hash(dict, Hash(gram, Hash(sem, Hash(part, 0xCBF29CE484222325ull))));
-}
-
-uint64_t ReadUvarint(std::string_view s, std::size_t& i) {
-    uint64_t x = 0;
-    for (int shift = 0;; shift += 7) {
-        const auto b = static_cast<unsigned char>(s[i++]);
-        if (b < 0x80) return x | uint64_t{b} << shift;
-        x |= uint64_t{b & 0x7Fu} << shift;
-    }
 }
 
 }  // namespace
@@ -100,29 +93,98 @@ std::size_t CodeTable::MemoryBytes() const {
     return n;
 }
 
-std::size_t Dict::RecordsStart(int k) const {
-    std::size_t i = starts_[static_cast<std::size_t>(k / kKeysPerStart)];
-    for (int skip = k % kKeysPerStart; skip > 0;) {
-        const uint64_t h = ReadUvarint(blob_, i);
-        i += static_cast<std::size_t>(h >> 2);
-        for (int fields = (h & 2) ? 3 : 2; fields > 0; fields--) {
-            while (static_cast<unsigned char>(blob_[i]) >= 0x80) i++;
-            i++;
-        }
-        if ((h & 1) == 0) skip--;
+bool Dict::ReadUvarint(std::size_t& i, std::size_t end, uint64_t& value) const {
+    value = 0;
+    for (unsigned byte = 0; byte < 10; byte++) {
+        if (i >= end || i >= blob_.size()) return guard_.Fail();
+        if (!guard_.Check(blob_.data() + i, 1)) return guard_.Fail();
+        const auto b = static_cast<unsigned char>(blob_[i++]);
+        if (byte == 9 && b > 1) return guard_.Fail();
+        value |= uint64_t{b & 0x7Fu} << (byte * 7);
+        if (b < 0x80) return true;
     }
-    return i;
+    return guard_.Fail();
 }
 
-bool Dict::Decode(std::size_t& i, Record& r) const {
-    const uint64_t h = ReadUvarint(blob_, i);
-    const auto n = static_cast<std::size_t>(h >> 2);
-    r.target = std::string_view(blob_).substr(i, n);
+bool Dict::ReadStart(std::size_t group, std::size_t& offset) const {
+    if (group >= starts_.size()) return guard_.Fail();
+    if (!guard_.Check(starts_.data() + group, sizeof(uint32_t))) return guard_.Fail();
+    offset = starts_[group];
+    if (offset >= blob_.size()) return guard_.Fail();
+    return true;
+}
+
+bool Dict::RecordsStart(int k, std::size_t& i, std::size_t& end) const {
+    const std::size_t keys = Len();
+    if (k < 0 || static_cast<std::size_t>(k) >= keys ||
+        starts_.size() != keys / kKeysPerStart + (keys % kKeysPerStart != 0)) return guard_.Fail();
+    const auto group = static_cast<std::size_t>(k / kKeysPerStart);
+    std::size_t first;
+    if (!ReadStart(0, first)) return false;
+    if (first != 0) return guard_.Fail();
+    if (!ReadStart(group, i)) return false;
+    end = blob_.size();
+    if (group + 1 < starts_.size() && !ReadStart(group + 1, end)) return false;
+    if (i >= end) return guard_.Fail();
+    if (group > 0) {
+        std::size_t previous;
+        if (!ReadStart(group - 1, previous)) return false;
+        if (previous >= i) return guard_.Fail();
+    }
+    for (int skip = k % kKeysPerStart; skip > 0;) {
+        Record r;
+        bool more;
+        if (!Decode(i, end, r, more)) return false;
+        if (!more) skip--;
+    }
+    if (i >= end) return guard_.Fail();
+    return true;
+}
+
+bool Dict::Decode(std::size_t& i, std::size_t end, Record& r, bool& more) const {
+    uint64_t h;
+    if (!ReadUvarint(i, end, h)) return false;
+    const uint64_t length = h >> 2;
+    if (i > end || end > blob_.size() || length > end - i) return guard_.Fail();
+    const auto n = static_cast<std::size_t>(length);
+    if (!guard_.Check(blob_.data() + i, n)) return guard_.Fail();
+    const std::string_view target(blob_.data() + i, n);
     i += n;
-    r.codes = codes_[static_cast<std::size_t>(ReadUvarint(blob_, i))];
-    r.rule = (h & 2) ? static_cast<int32_t>(static_cast<uint32_t>(ReadUvarint(blob_, i))) : 0;
-    r.id = static_cast<int32_t>(static_cast<uint32_t>(ReadUvarint(blob_, i)));
-    return (h & 1) != 0;
+    uint64_t code, rule = 0, id;
+    if (!ReadUvarint(i, end, code)) return false;
+    if (code >= codes_.size() || codes_[static_cast<std::size_t>(code)] == nullptr) return guard_.Fail();
+    if ((h & 2) != 0 && !ReadUvarint(i, end, rule)) return false;
+    if (!ReadUvarint(i, end, id)) return false;
+    if (rule > std::numeric_limits<uint32_t>::max() || id > std::numeric_limits<uint32_t>::max())
+        return guard_.Fail();
+    r = {target, codes_[static_cast<std::size_t>(code)], static_cast<int32_t>(static_cast<uint32_t>(rule)),
+         static_cast<int32_t>(static_cast<uint32_t>(id))};
+    more = (h & 1) != 0;
+    return true;
+}
+
+bool Dict::Validate() const {
+    if (!keys_.Validate()) return guard_.Fail();
+    const std::size_t keys = Len();
+    if (starts_.size() != keys / kKeysPerStart + (keys % kKeysPerStart != 0)) return guard_.Fail();
+    if (keys == 0) return blob_.empty() && codes_.empty() ? true : guard_.Fail();
+    for (const Codes* codes : codes_) {
+        if (codes == nullptr) return guard_.Fail();
+    }
+    std::size_t i = 0;
+    for (std::size_t k = 0; k < keys; k++) {
+        if (k % kKeysPerStart == 0) {
+            std::size_t offset;
+            if (!ReadStart(k / kKeysPerStart, offset)) return false;
+            if (offset != i) return guard_.Fail();
+        }
+        bool more;
+        do {
+            Record r;
+            if (!Decode(i, blob_.size(), r, more)) return false;
+        } while (more);
+    }
+    return i == blob_.size() ? true : guard_.Fail();
 }
 
 void Dict::AppendRecords(std::vector<Record>& out, int k) const {
@@ -138,9 +200,22 @@ std::vector<Record> Dict::Records(std::string_view key) const {
     return out;
 }
 
+Dict Dict::FromView(ViewData data) {
+    Dict d;
+    d.keys_ = Trie::FromView(data.keys);
+    d.blob_ = data.blob;
+    d.starts_ = data.starts;
+    d.codes_ = data.codes;
+    d.guard_ = data.guard;
+    return d;
+}
+
 std::size_t Dict::MemoryBytes() const {
-    return keys_.MemoryBytes() + blob_.capacity() + starts_.capacity() * sizeof(uint32_t) +
-           codes_.capacity() * sizeof(const Codes*);
+    if (storage_) {
+        return keys_.MemoryBytes() + storage_->blob.capacity() + storage_->starts.capacity() * sizeof(uint32_t) +
+               storage_->codes.capacity() * sizeof(const Codes*);
+    }
+    return keys_.MemoryBytes() + blob_.size() + starts_.size_bytes() + codes_.size_bytes();
 }
 
 }  // namespace hdTrans::dict

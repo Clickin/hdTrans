@@ -8,3 +8,4 @@ dicts/
 *.wasm
 *.pdb
 .DS_Store
+.hdsnap/

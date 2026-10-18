@@ -18,8 +18,8 @@ namespace {
 constexpr std::size_t kMemoryLines = 2048;
 
 // The dictionaries of dirs; null when the load fails or finds no dictionary file.
-std::shared_ptr<const dict::Snapshot> LoadDictionaries(const std::vector<std::string>& dirs) {
-    dict::LoadResult r = dict::LoadFolders(dirs);
+std::shared_ptr<const dict::Snapshot> LoadDictionaries(const std::vector<std::string>& dirs, bool verify = false) {
+    dict::LoadResult r = dict::LoadFolders(dirs, {}, verify);
     if (!r.snapshot || !r.snapshot->HasDictionary()) return nullptr;
     return std::move(r.snapshot);
 }
@@ -57,9 +57,9 @@ struct Access {
 
 }  // namespace internal
 
-bool Engine::Open(const std::vector<std::string>& dirs) {
+bool Engine::Open(const std::vector<std::string>& dirs, bool verifyDicts) {
     if (!internal::RulesLoaded()) return false;
-    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs);
+    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs, verifyDicts);
     if (!s) return false;
     std::lock_guard<std::mutex> lock(mu_);
     dirs_ = dirs;

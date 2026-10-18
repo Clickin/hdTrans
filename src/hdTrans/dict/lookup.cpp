@@ -120,6 +120,14 @@ int MergeCandidates(Pool& p, int current, int incoming, std::string_view prior) 
 }  // namespace
 
 Candidates Snapshot::GetWordInfo(std::string_view text, LookupMode mode, const LookupContext& ctx) const {
+    Candidates out;
+    if (Healthy()) out = GetWordInfoImpl(text, mode, ctx);
+    if (Healthy()) return out;
+    const auto fallback = Fallback();
+    return fallback ? fallback->GetWordInfo(text, mode, ctx) : Candidates{};
+}
+
+Candidates Snapshot::GetWordInfoImpl(std::string_view text, LookupMode mode, const LookupContext& ctx) const {
     Pool pool;
     Candidates result;
     // User-dictionary matches.
@@ -300,6 +308,14 @@ Candidates Snapshot::GetWordInfo(std::string_view text, LookupMode mode, const L
 }
 
 std::vector<Candidate> Snapshot::RetrieveRecords(std::string_view key, LookupMode mode) const {
+    std::vector<Candidate> out;
+    if (Healthy()) out = RetrieveRecordsImpl(key, mode);
+    if (Healthy()) return out;
+    const auto fallback = Fallback();
+    return fallback ? fallback->RetrieveRecords(key, mode) : std::vector<Candidate>{};
+}
+
+std::vector<Candidate> Snapshot::RetrieveRecordsImpl(std::string_view key, LookupMode mode) const {
     const int m = static_cast<int>(mode);
     if (key.empty() && m >= 1 && m <= 3) key = kSentinelKeys[static_cast<std::size_t>(m - 1)];
     std::vector<Candidate> out;

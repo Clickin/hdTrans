@@ -1,5 +1,7 @@
 #include "hdTrans/dict/snapshot.h"
 
+#include <cstdint>
+#include <initializer_list>
 #include <string>
 #include <vector>
 
@@ -549,4 +551,141 @@ HD_TEST(SnapshotBuiltinViewIsolation) {
     HD_CHECK_EQ(extra[0]->target, "밑져야 본전");
     HD_CHECK(s.Plain(true).Search("駄目で元々", LookupMode::General).empty());
     HD_CHECK(s.TextPlain().Search("駄目で元々", LookupMode::General).empty());
+}
+
+HD_TEST(DictBorrowedBuffersAndMoves) {
+    const LoadResult loaded = LoadFolders({Folder(), Folder() + "/over"});
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    const Dict& base = loaded.snapshot->Base();
+    const Dict::ViewData data = base.View();
+    Dict borrowed = Dict::FromView(data);
+    HD_CHECK(borrowed.View().blob.data() == data.blob.data());
+    HD_CHECK(borrowed.View().starts.data() == data.starts.data());
+    HD_CHECK(borrowed.View().codes.data() == data.codes.data());
+    Dict moved = std::move(borrowed);
+    borrowed = std::move(moved);
+    HD_CHECK_EQ(borrowed.Len(), base.Len());
+    base.Each([&](std::string_view key, const std::vector<Record>& records) {
+        HD_CHECK_EQ(borrowed.Find(key), base.Find(key));
+        const std::vector<Record> got = borrowed.Records(key);
+        HD_REQUIRE(got.size() == records.size());
+        for (size_t i = 0; i < got.size(); i++) {
+            HD_CHECK(got[i].target == records[i].target);
+            HD_CHECK(got[i].codes == records[i].codes);
+            HD_CHECK_EQ(got[i].rule, records[i].rule);
+            HD_CHECK_EQ(got[i].id, records[i].id);
+        }
+    });
+    HD_CHECK_EQ(borrowed.Find("未登録の単語"), -1);
+    const Dict empty;
+    const Dict borrowedEmpty = Dict::FromView(empty.View());
+    HD_CHECK_EQ(borrowedEmpty.Len(), size_t{0});
+    HD_CHECK(borrowedEmpty.Records("学").empty());
+}
+
+HD_TEST(DictBoundedRecords) {
+    const std::string_view keys[] = {"学"};
+    const Trie trie = Trie::Build(keys, nullptr);
+    CodeTable table;
+    const Codes* codes[] = {table.At(table.Intern("N110", "", "", "GN"))};
+    const uint32_t starts[] = {0};
+    const auto bytes = [](std::initializer_list<unsigned> values) {
+        std::string s;
+        for (const unsigned value : values) s.push_back(static_cast<char>(value));
+        return s;
+    };
+    const std::vector<std::string> malformed = {
+        {}, bytes({0}), bytes({0, 0}), bytes({4}), bytes({8, 'x', 0, 0}), bytes({0, 1, 0}),
+        bytes({2, 0, 0}), bytes({0, 0, 0x80}), bytes({1, 0, 0}), bytes({0, 0, 0, 0}),
+        bytes({0, 0, 0x80, 0x80, 0x80, 0x80, 0x10}),
+        bytes({2, 0, 0x80, 0x80, 0x80, 0x80, 0x10, 0}),
+        bytes({0}) + std::string(10, static_cast<char>(0x80)),
+        bytes({2, 0}) + std::string(10, static_cast<char>(0x80)),
+        bytes({0, 0}) + std::string(10, static_cast<char>(0x80)),
+        std::string(10, static_cast<char>(0x80)),
+        std::string(9, static_cast<char>(0x80)) + bytes({2, 0, 0}),
+        std::string(10, static_cast<char>(0x80)) + bytes({0, 0, 0}),
+    };
+    struct GuardState {
+        const char* blob;
+        size_t size;
+        const uint32_t* starts;
+        bool readable = true;
+        mutable int failures = 0;
+        mutable int reads = 0;
+    } state{};
+    const ReadGuard guard = {
+        &state,
+        [](const void* context, const void* pointer, size_t length) {
+            const auto& s = *static_cast<const GuardState*>(context);
+            s.reads++;
+            if (!s.readable) return false;
+            if (pointer == s.starts) return length == sizeof(uint32_t);
+            const auto at = reinterpret_cast<std::uintptr_t>(pointer);
+            const auto begin = reinterpret_cast<std::uintptr_t>(s.blob);
+            return at >= begin && at - begin <= s.size && length <= s.size - (at - begin);
+        },
+        [](const void* context) { static_cast<const GuardState*>(context)->failures++; }};
+    for (const std::string& blob : malformed) {
+        state = {blob.data(), blob.size(), starts};
+        const Dict d = Dict::FromView({trie.View(), blob, starts, codes, guard});
+        HD_CHECK(!d.Validate());
+        size_t calls = 0;
+        d.EachRecord(0, [&](const Record&) { calls++; return true; });
+        HD_CHECK_EQ(calls, size_t{0});
+        HD_CHECK(state.failures > 0);
+    }
+    const std::string valid = bytes({6, 'x', 0, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F});
+    state = {valid.data(), valid.size(), starts};
+    auto view = Dict::ViewData{trie.View(), valid, starts, codes, guard};
+    const Dict d = Dict::FromView(view);
+    HD_CHECK(d.Validate());
+    HD_CHECK(d.View().guard.context == &state);
+    const auto records = d.Records("学");
+    HD_REQUIRE(records.size() == 1);
+    HD_CHECK(records[0].target == "x");
+    HD_CHECK_EQ(records[0].id, -1);
+    HD_CHECK_EQ(records[0].rule, -1);
+    HD_CHECK(records[0].codes == codes[0]);
+    for (const int k : {-1, 1, 999}) {
+        size_t calls = 0;
+        d.EachRecord(k, [&](const Record&) { calls++; return true; });
+        HD_CHECK_EQ(calls, size_t{0});
+    }
+    state.readable = false;
+    HD_CHECK(d.Records("学").empty());
+    HD_CHECK(!d.Validate());
+    state.readable = true;
+    view.starts = {};
+    HD_CHECK(!Dict::FromView(view).Validate());
+    const uint32_t outside[] = {999};
+    view.guard = {};
+    view.starts = outside;
+    HD_CHECK(Dict::FromView(view).Records("学").empty());
+    HD_CHECK(!Dict::FromView(view).Validate());
+    HD_CHECK(Dict{}.Validate());
+}
+
+HD_TEST(DictSparseOffsetsAndTruncation) {
+    const auto loaded = LoadFolders({Folder(), Folder() + "/over"});
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    const auto valid = loaded.snapshot->Base().View();
+    HD_REQUIRE(loaded.snapshot->Base().Validate());
+    HD_REQUIRE(valid.starts.size() > 1);
+    std::vector<uint32_t> starts(valid.starts.begin(), valid.starts.end());
+    for (const uint32_t offset : {uint32_t{0}, starts[1] + 1, UINT32_MAX}) {
+        auto data = valid;
+        starts[1] = offset;
+        data.starts = starts;
+        const Dict d = Dict::FromView(data);
+        HD_CHECK(!d.Validate());
+        for (size_t k = 0; k < d.Len(); k++) d.EachRecord(static_cast<int>(k), [](const Record&) { return true; });
+    }
+    for (size_t n = 0; n < valid.blob.size(); n++) {
+        auto data = valid;
+        data.blob = valid.blob.substr(0, n);
+        const Dict d = Dict::FromView(data);
+        HD_CHECK(!d.Validate());
+        for (size_t k = 0; k < d.Len(); k++) d.EachRecord(static_cast<int>(k), [](const Record&) { return true; });
+    }
 }

@@ -172,13 +172,21 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
 std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
                                            std::span<const std::string> lines, Memory& memory,
                                            const StageObserver& observer, const TranslationOptions& options) {
+    if (!snap.Healthy()) {
+        const auto fallback = snap.Fallback();
+        if (!fallback) return {};
+        const auto replacement = NewGenerated(*fallback);
+        return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
+    }
     std::vector<std::string> all = memory.lines;
     all.insert(all.end(), lines.begin(), lines.end());
     const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(snap, all, !options.reference && options.wordImprovements.extraBuiltin);
 
     Scratch s;
+    word::SessionSenses pending;
     if (!options.reference && (options.wordImprovements.documentSenses || options.selectShadow)) {
-        s.sessionSenses = &memory.senses;
+        if (snap.Mapped()) { pending = memory.senses; s.sessionSenses = &pending; }
+        else s.sessionSenses = &memory.senses;
     }
     std::vector<std::string> out;
     out.reserve(lines.size());
@@ -191,12 +199,25 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
         if (cr) translated += '\r';
         out.push_back(std::move(translated));
     }
+    if (!snap.Healthy()) {
+        const auto fallback = snap.Fallback();
+        if (!fallback) return {};
+        const auto replacement = NewGenerated(*fallback);
+        return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
+    }
+    if (s.sessionSenses == &pending) memory.senses = std::move(pending);
     memory.lines = std::move(all);
     return out;
 }
 
 std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
                              const StageObserver& observer, const TranslationOptions& options) {
+    if (!snap.Healthy()) {
+        const auto fallback = snap.Fallback();
+        if (!fallback) return {};
+        const auto replacement = NewGenerated(*fallback);
+        return TranslateRawLine(*fallback, *replacement, line, observer, options);
+    }
     Scratch s;
     output::Pieces chunk;
     if (!line.empty()) chunk.push_back({std::string(line), output::SpanText});
@@ -207,6 +228,12 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
     TranslateChunk(snap, lookup, chunk, 0, false, false, s, generated, observer, options, sentences);
     output::Pieces result;
     for (const output::Sentence& sentence : sentences) output::Append(result, sentence.pieces);
+    if (!snap.Healthy()) {
+        const auto fallback = snap.Fallback();
+        if (!fallback) return {};
+        const auto replacement = NewGenerated(*fallback);
+        return TranslateRawLine(*fallback, *replacement, line, observer, options);
+    }
     return output::String(result);
 }
 

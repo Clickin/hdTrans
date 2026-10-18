@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -48,7 +50,18 @@ private:
 
 class Dict {
 public:
+    struct ViewData {
+        Trie::ViewData keys;
+        std::string_view blob;
+        std::span<const uint32_t> starts;
+        std::span<const Codes* const> codes;
+        ReadGuard guard = {};
+    };
+
     Dict() = default;
+    // The buffers and codes must outlive the dictionary.
+    static Dict FromView(ViewData data);
+    ViewData View() const { return {keys_.View(), blob_, starts_, codes_, guard_}; }
 
     // The number of key or -1.
     int Find(std::string_view key) const { return keys_.Find(key); }
@@ -74,33 +87,49 @@ public:
     void Each(F&& f) const;
 
     std::size_t MemoryBytes() const;
+    bool Validate() const;
 
 private:
     friend struct DictBuilder;
     static constexpr int kKeysPerStart = 8;
 
-    // Decodes the record at offset i of the blob; sets i to the offset after it and
-    // returns whether another record of the key follows.
-    bool Decode(std::size_t& i, Record& r) const;
-    std::size_t RecordsStart(int k) const;
+    // On success, advances i and sets more when another record of the key follows.
+    bool Decode(std::size_t& i, std::size_t end, Record& r, bool& more) const;
+    bool ReadUvarint(std::size_t& i, std::size_t end, uint64_t& value) const;
+    bool ReadStart(std::size_t group, std::size_t& offset) const;
+    bool RecordsStart(int k, std::size_t& i, std::size_t& end) const;
 
     // blob_ holds the records of every key, key number k after key k-1. A record is
     // uvarint(len(target)<<2 | hasRule<<1 | more), target, uvarint(code),
     // uvarint(rule) when rule is not 0, uvarint(id); code is an index in codes_ and
     // more is set when another record of the key follows. starts_[g] is the offset
     // of key number g*kKeysPerStart.
+    struct Storage {
+        std::string blob;
+        std::vector<uint32_t> starts;
+        std::vector<const Codes*> codes;
+    };
+    std::unique_ptr<Storage> storage_;
     Trie keys_;
-    std::string blob_;
-    std::vector<uint32_t> starts_;
-    std::vector<const Codes*> codes_;  // by descending use
+    std::string_view blob_;
+    std::span<const uint32_t> starts_;
+    std::span<const Codes* const> codes_;  // by descending use
+    ReadGuard guard_ = {};
 };
 
 template <class F>
 void Dict::EachRecord(int k, F&& f) const {
-    std::size_t i = RecordsStart(k);
+    std::size_t i, end;
+    if (!RecordsStart(k, i, end)) return;
     for (;;) {
         Record r;
-        const bool more = Decode(i, r);
+        bool more;
+        if (!Decode(i, end, r, more)) return;
+        const bool last = static_cast<std::size_t>(k) + 1 == Len() || (static_cast<std::size_t>(k) + 1) % kKeysPerStart == 0;
+        if ((!more && last && i != end) || ((more || !last) && i == end)) {
+            guard_.Fail();
+            return;
+        }
         if (!f(static_cast<const Record&>(r)) || !more) return;
     }
 }
