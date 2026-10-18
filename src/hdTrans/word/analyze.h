@@ -20,6 +20,7 @@ struct SessionSenses;
 struct Improvements {
     bool extraBuiltin = true;
     bool literalCleanup = true;
+    bool imperativeEu = true;
     bool documentSenses = false;
     bool desireWindow = true;
     bool expandedGroups = true;
@@ -35,6 +36,7 @@ struct Improvements {
         Improvements improvements;
         improvements.extraBuiltin = false;
         improvements.literalCleanup = false;
+        improvements.imperativeEu = false;
         improvements.documentSenses = false;
         improvements.desireWindow = false;
         improvements.expandedGroups = false;

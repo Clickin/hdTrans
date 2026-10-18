@@ -158,6 +158,9 @@ Lookup Worker::DoLookup(std::string_view query, int mode) {
         Record* r = NewRecord();
         r->source = c.source;
         r->target.assign(c.target);
+        if (settings.improvements.imperativeEu && c.user != nullptr && c.user->euImperative) {
+            r->target[0] = '2';
+        }
         r->partCode = c.codes->partText;
         r->semantic = c.codes->sem.Text();
         r->attr.assign(c.codes->gram.Text());

@@ -108,6 +108,7 @@ std::string CompileEnding(std::string_view jp, std::string_view kr, Rec& r) {
         r.key = tail.substr(length < tail.size() ? length : tail.size());
         r.part = std::string("S5") + static_cast<char>('0' + branch) + "0";
         err = VerbForm(kr, code, text);
+        r.euImperative = kr.starts_with("쓰라");
     } else if (jp.starts_with(kModelAdjective)) {
         r.key = jp.substr(kModelAdjective.size());
         r.part = "T500";

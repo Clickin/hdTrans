@@ -352,6 +352,7 @@ std::string ParseLine(std::string_view line, Context& ctx, std::vector<dict::Use
         e.end = r.end;
         e.registerLevel = registerLevel;
         e.polite = r.polite;
+        e.euImperative = r.euImperative;
         e.stative = stative;
         if (i == 0) e.negative = negativeTarget;
         out.push_back(std::move(e));

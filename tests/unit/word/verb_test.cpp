@@ -197,3 +197,20 @@ HD_TEST(word_imperative_tail_length) {
         HD_CHECK_EQ(detail.kind, 10);
     }
 }
+
+HD_TEST(word_eu_imperative_lookup) {
+    const auto snapshot = dict::Load({{0, "plain.tsv", "書けって\t쓰라고\tpat\n"}}).snapshot;
+    HD_REQUIRE(snapshot != nullptr);
+    for (bool enabled : {false, true}) {
+        tokenizer::Tokens tokens;
+        word::Arena arena;
+        word::Settings settings = word::Settings::Reference();
+        settings.improvements.imperativeEu = enabled;
+        dict::LookupContext lookup;
+        lookup.plain = &snapshot->Plain();
+        word::Worker worker(tokens, *snapshot, lookup, settings, arena, {});
+        const auto found = worker.DoLookup("って", word::kModeVerbEnding);
+        HD_REQUIRE(found.records != nullptr);
+        HD_CHECK_EQ(found.records->target, enabled ? "2라고" : "1라고");
+    }
+}

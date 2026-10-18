@@ -18,6 +18,7 @@ struct Rec {
     bool honorific = false;
     bool end = false;
     bool polite = false;
+    bool euImperative = false;
 };
 
 // The records of a line with POS pos (the plain-format names: n, v, adj, end, ...),

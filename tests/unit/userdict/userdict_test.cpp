@@ -330,3 +330,14 @@ HD_TEST(userdict_kana_spellings) {
     const dict::Dict empty;
     HD_CHECK(KanaSpellings("// c\nあい\t愛\t\nx\n", empty, codes).empty());
 }
+
+HD_TEST(userdict_eu_imperative_model) {
+    Parsed p;
+    Run(p, "書けって\t쓰라고\tpat\n書きながら\t쓰면서\tpat\n高いなら\t높다면\tpat");
+    HD_REQUIRE(p.out.errors.empty());
+    HD_REQUIRE(p.out.entries.size() == 3);
+    HD_CHECK(p.out.entries[0].euImperative);
+    HD_CHECK_EQ(p.out.entries[0].target, "1라고");
+    HD_CHECK(!p.out.entries[1].euImperative);
+    HD_CHECK(!p.out.entries[2].euImperative);
+}
