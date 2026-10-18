@@ -7,11 +7,17 @@
 #include <fstream>
 #include <cstdlib>
 #include <filesystem>
+#include <iterator>
 #include <string>
 #include <thread>
 #include <vector>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "hdTrans/engine.h"
+#include "hdTrans/dict/snapshot_file.h"
 #include "hdTrans/engine/driver.h"
 #include "hdTrans/engine/raw.h"
 #include "hdTrans/text/lines.h"
@@ -28,6 +34,43 @@
 namespace {
 
 using hdtest::DictsDir;
+
+struct SessionCacheVariable {
+#ifdef _WIN32
+    std::wstring name, previous;
+#else
+    std::string name, previous;
+#endif
+    bool present = false;
+
+    SessionCacheVariable(std::string_view key, const std::filesystem::path* value) : name(key.begin(), key.end()) {
+#ifdef _WIN32
+        SetLastError(ERROR_SUCCESS);
+        const DWORD size = GetEnvironmentVariableW(name.c_str(), nullptr, 0);
+        present = size != 0 || GetLastError() != ERROR_ENVVAR_NOT_FOUND;
+        if (size != 0) {
+            previous.resize(size);
+            previous.resize(GetEnvironmentVariableW(name.c_str(), previous.data(), size));
+        }
+        HD_CHECK(SetEnvironmentVariableW(name.c_str(), value ? value->c_str() : nullptr) != 0 ||
+                 (!value && GetLastError() == ERROR_ENVVAR_NOT_FOUND));
+#else
+        const char* old = std::getenv(name.c_str());
+        present = old != nullptr;
+        if (old != nullptr) previous = old;
+        HD_CHECK((value ? setenv(name.c_str(), value->c_str(), 1) : unsetenv(name.c_str())) == 0);
+#endif
+    }
+
+    ~SessionCacheVariable() {
+#ifdef _WIN32
+        HD_CHECK(SetEnvironmentVariableW(name.c_str(), present ? previous.c_str() : nullptr) != 0 ||
+                 (!present && GetLastError() == ERROR_ENVVAR_NOT_FOUND));
+#else
+        HD_CHECK((present ? setenv(name.c_str(), previous.c_str(), 1) : unsetenv(name.c_str())) == 0);
+#endif
+    }
+};
 
 std::vector<std::string> RebuiltTranslation(const hdTrans::dict::Snapshot& snap,
                                           hdTrans::internal::Generated& generated,
@@ -500,4 +543,104 @@ HD_TEST(engine_quoted_pieces) {
     }
     hdTrans::Session session(engine);
     HD_CHECK_EQ(session.Translate(line), expected);
+}
+
+HD_TEST(engine_session_fallback_history) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    const fs::path temporary = fs::temp_directory_path(ec);
+    HD_REQUIRE(!ec);
+    struct Cleanup {
+        fs::path path;
+        ~Cleanup() { std::error_code error; fs::remove_all(path, error); }
+    } cleanup{temporary / ("hdtrans-session-fallback-" +
+              std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()))};
+    HD_REQUIRE(fs::create_directory(cleanup.path, ec) && !ec);
+    const SessionCacheVariable cache("HDTRANS_CACHE_DIR", &cleanup.path);
+    const SessionCacheVariable enabled("HDTRANS_SNAPSHOT", nullptr);
+    const SessionCacheVariable lazy("HDTRANS_VERIFY_DICTS", nullptr);
+    const auto pathText = [](const fs::path& path) {
+        const auto text = path.u8string();
+        return std::string(reinterpret_cast<const char*>(text.data()), text.size());
+    };
+    const std::vector<std::string> folders{pathText(fs::path(__FILE__).parent_path().parent_path() /
+                                                 "dict" / "testdata" / "folder")};
+    hdTrans::Engine textEngine(true, hdTrans::CacheWrite::Off);
+    HD_REQUIRE(textEngine.Open(folders));
+    HD_REQUIRE(!textEngine.Dictionaries()->Mapped());
+    hdTrans::Session text(textEngine);
+    const std::string cue = std::string(2046, '\n') + "「あたし」";
+    const std::string probe = "学生 お兄様！";
+    text.Translate(cue);
+    const std::string expected = text.Translate(probe);
+    HD_CHECK_EQ(expected, "학생님 오빠!");
+
+    hdTrans::Engine engine(true);
+    HD_REQUIRE(engine.Open(folders));
+    HD_REQUIRE(engine.Open(folders));
+    auto snapshot = engine.Dictionaries();
+    HD_REQUIRE(snapshot->Mapped());
+    hdTrans::Session session(engine);
+    session.Translate(cue);
+    HD_REQUIRE(snapshot->Healthy());
+
+    const auto index = hdTrans::dict::internal::SnapshotPath(folders, pathText(cleanup.path));
+    const std::string resource = hdTrans::dict::internal::SnapshotResourcePath(index);
+    HD_REQUIRE(!resource.empty());
+    const fs::path file(std::u8string(reinterpret_cast<const char8_t*>(resource.data()), resource.size()));
+    std::ifstream input(file, std::ios::binary);
+    HD_REQUIRE(input.good());
+    const std::string bytes((std::istreambuf_iterator<char>(input)), {});
+    input.close();
+    HD_REQUIRE(bytes.size() >= 256);
+    const auto field = [&](std::size_t at, std::size_t width) {
+        uint64_t value = 0;
+        for (std::size_t i = 0; i < width; i++) {
+            value |= static_cast<uint64_t>(static_cast<unsigned char>(bytes[at + i])) << (8 * i);
+        }
+        return value;
+    };
+    const uint64_t sections = field(40, 4);
+    HD_REQUIRE(sections <= (bytes.size() - 256) / 64);
+    std::size_t offset = 0;
+    for (std::size_t i = 0; i < sections; i++) {
+        const std::size_t at = 256 + 64 * i;
+        // The base layer's byte column is checked when a matching record is read.
+        if (field(at, 4) == 17 && field(at + 4, 4) == 0) {
+            offset = static_cast<std::size_t>(field(at + 8, 8));
+        }
+    }
+    HD_REQUIRE(offset != 0 && offset < bytes.size());
+    std::fstream edit(file, std::ios::in | std::ios::out | std::ios::binary);
+    HD_REQUIRE(edit.good());
+    edit.seekp(static_cast<std::streamoff>(offset));
+    edit.put(static_cast<char>(static_cast<unsigned char>(bytes[offset]) ^ 1u));
+    edit.close();
+    HD_REQUIRE(edit.good());
+    HD_CHECK_EQ(session.Translate(probe), expected);
+    HD_CHECK(!snapshot->Healthy());
+    const std::weak_ptr<const hdTrans::dict::Snapshot> cachedFallback = snapshot->Fallback();
+    for (int call = 0; call < 3; call++) {
+        const auto cached = cachedFallback.lock();
+        HD_REQUIRE(cached != nullptr);
+        HD_CHECK(cached == snapshot->Fallback());
+        auto start = std::chrono::steady_clock::now();
+        const std::string wanted = text.Translate("お兄様！");
+        const double normalMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+        start = std::chrono::steady_clock::now();
+        HD_CHECK_EQ(session.Translate("お兄様！"), wanted);
+        const double fallbackMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
+        std::printf("session fallback call %d: %.3f ms, text %.3f ms\n", call + 1, fallbackMs, normalMs);
+#if defined(NDEBUG) && !defined(HDTRANS_TEST_INSTRUMENTED) && !defined(__SANITIZE_ADDRESS__) && !defined(__SANITIZE_THREAD__)
+        HD_CHECK(fallbackMs < std::max(20.0, normalMs * 20.0));
+#endif
+    }
+#if !defined(NDEBUG) || defined(HDTRANS_TEST_INSTRUMENTED) || defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
+    std::printf("fallback timing assertion inactive: Debug or sanitizer build\n");
+#endif
+    HD_REQUIRE(engine.Reload());
+    snapshot.reset();
+    session.Reset();
+    hdTrans::Session fresh(textEngine);
+    HD_CHECK_EQ(session.Translate("お兄様！"), fresh.Translate("お兄様！"));
 }

@@ -229,10 +229,24 @@ struct DocumentHistory {
     uint64_t next = 0;
 };
 
+namespace {
+
+DocumentHistory& HistoryOf(const dict::Snapshot& snap, std::shared_ptr<DocumentHistory>& history) {
+    if (!history) history = std::make_shared<DocumentHistory>(snap);
+    else if (history->snap != &snap) {
+        auto rebuilt = std::make_shared<DocumentHistory>(snap);
+        for (const auto& line : history->lines) rebuilt->Remember(line.text);
+        history = std::move(rebuilt);
+    }
+    return *history;
+}
+
+}  // namespace
+
 void RememberDocument(const dict::Snapshot& snap, std::span<const std::string> lines,
                       std::shared_ptr<DocumentHistory>& history) {
-    if (!history || history->snap != &snap) history = std::make_shared<DocumentHistory>(snap);
-    for (const std::string& line : lines) history->Remember(line);
+    DocumentHistory& retained = HistoryOf(snap, history);
+    for (const std::string& line : lines) retained.Remember(line);
 }
 
 namespace internal {
@@ -276,8 +290,7 @@ std::unique_ptr<DocumentContext> BuildDocument(const dict::Snapshot& snap, std::
                                                bool extraBuiltin, std::shared_ptr<DocumentHistory>* history) {
     std::shared_ptr<DocumentHistory> local;
     auto& retained = history != nullptr ? *history : local;
-    if (!retained || retained->snap != &snap) retained = std::make_shared<DocumentHistory>(snap);
-    DocumentHistory& memory = *retained;
+    DocumentHistory& memory = HistoryOf(snap, retained);
     auto doc = std::make_unique<DocumentContext>();
     doc->snap = &snap;
     doc->extraBuiltin = extraBuiltin;

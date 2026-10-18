@@ -122,9 +122,9 @@ std::string Session::Translate(std::string_view text) {
 
 void Session::Reset() {
     std::lock_guard<std::mutex> lock(engine_.mu_);
+    state_ = std::make_unique<internal::SessionState>();
     snapshot_ = engine_.snapshot_;
     generated_ = engine_.generated_;
-    state_ = std::make_unique<internal::SessionState>();
 }
 
 namespace internal {
