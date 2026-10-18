@@ -234,8 +234,8 @@ bool Item::AcceptVerbContinuation(Record* following) {
         base.kind = 10;
     }
 
-    // The eight-unit window is never filled.
-    const Window eight;
+    Window eight;
+    if (w->settings.improvements.desireWindow && WidthOf(after()) >= 8) eight = Left(after(), 8);
     if ((!matched && base.patternKind == 7 && base.kind == 10) ||
         (surface == kJaOyo && Conjugation(base.patternKind, base.kind) == kJaBi)) {
         if (!(base.ClassifyTrailingPunctuation(after()) == 1 || four == kJaNiku || four == kJaTsutsu || four == kJaKire ||

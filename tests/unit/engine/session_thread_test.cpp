@@ -9,6 +9,8 @@
 #include <vector>
 
 #include "hdTrans/engine.h"
+#include "hdTrans/engine/driver.h"
+#include "hdTrans/engine/raw.h"
 #include "hdtest.h"
 
 namespace {
@@ -180,4 +182,33 @@ HD_TEST(engine_session_memory_window) {
     HD_CHECK_EQ(session.Translate("お兄様！"), "오빠!");
     session.Reset();
     HD_CHECK_EQ(session.Translate("お兄様！"), "형님!");
+}
+
+HD_TEST(engine_reference_mode) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine improved;
+    hdTrans::Engine reference(true);
+    HD_REQUIRE(improved.Open({dicts}));
+    HD_REQUIRE(reference.Open({dicts}));
+    const std::string text = "寝たかった。";
+    hdTrans::Session normal(improved), explicitReference(improved, true), inherited(reference);
+    HD_CHECK_EQ(normal.Translate(text), "자고 싶었다.");
+    HD_CHECK_EQ(explicitReference.Translate(text), "잠 싶었다.");
+    HD_CHECK_EQ(inherited.Translate(text), "잠 싶었다.");
+    explicitReference.Reset();
+    inherited.Reset();
+    HD_CHECK_EQ(explicitReference.Translate(text), "잠 싶었다.");
+    HD_CHECK_EQ(inherited.Translate(text), "잠 싶었다.");
+    HD_CHECK_EQ(hdTrans::internal::TranslateRaw(reference, text), "잠 싶었다.");
+    HD_CHECK_EQ(hdTrans::internal::TranslateRaw(improved, text), "자고 싶었다.");
+
+    const auto snap = improved.Dictionaries();
+    const auto generated = hdTrans::internal::NewGenerated(*snap);
+    hdTrans::internal::TranslationOptions options;
+    options.reference = true;
+    options.wordImprovements.desireWindow = true;
+    hdTrans::internal::Memory memory;
+    HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&text, 1}, memory, {}, options)[0],
+                "잠 싶었다.");
 }

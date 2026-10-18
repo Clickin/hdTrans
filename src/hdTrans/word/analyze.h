@@ -19,10 +19,12 @@ struct SessionSenses;
 
 struct Improvements {
     bool documentSenses = true;
+    bool desireWindow = true;
 
     static Improvements Reference() {
         Improvements improvements;
         improvements.documentSenses = false;
+        improvements.desireWindow = false;
         return improvements;
     }
 };

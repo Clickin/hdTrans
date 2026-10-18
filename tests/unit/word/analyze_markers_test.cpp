@@ -269,3 +269,12 @@ HD_TEST(analyze_wa_space_overlay) {
         HD_CHECK_EQ(spaced, c.spaced);
     }
 }
+
+HD_TEST(word_improvements_reference) {
+    const word::Settings settings = word::Settings::Reference();
+    HD_CHECK(!settings.improvements.documentSenses);
+    HD_CHECK(!settings.improvements.desireWindow);
+    HD_CHECK(settings.sessionSenses == nullptr);
+    HD_CHECK(word::Settings{}.improvements.documentSenses);
+    HD_CHECK(word::Settings{}.improvements.desireWindow);
+}
