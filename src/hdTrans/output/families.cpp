@@ -1,0 +1,88 @@
+#include "hdTrans/output/families.h"
+
+#include "hdTrans/output/markers.h"
+
+namespace hdTrans::output {
+
+namespace {
+
+int MarkerIndex(char marker) {
+    switch (marker) {
+        case '&': return 0;
+        case '$': return 1;
+        case '%': return 2;
+    }
+    return -1;
+}
+
+}  // namespace
+
+std::string_view Families::Row(std::string_view key) const {
+    if (rows_.empty()) return {};
+    const auto it = rows_.find(key);
+    return it == rows_.end() ? std::string_view() : std::string_view(it->second);
+}
+
+std::string Families::Generate(char marker, const FamilyRows& rows) {
+    const int m = MarkerIndex(marker);
+    if (m < 0) return {};
+    std::string sig(1, marker);
+    for (const auto& row : rows) {
+        sig += '\0';
+        sig += row;
+    }
+    if (const auto it = ids_.find(sig); it != ids_.end()) return it->second;
+    constexpr std::string_view kSecond = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const std::string_view used = MarkerFamilyLetters(marker);
+    int n = count_[m];
+    std::string id;
+    for (char first = 'A'; first <= 'z' && id.empty(); first++) {
+        if (used.find(first) != std::string_view::npos || (first > 'Z' && first < 'a')) continue;
+        if (n < static_cast<int>(kSecond.size())) id = {marker, first, kSecond[n], '@'};
+        n -= static_cast<int>(kSecond.size());
+    }
+    if (id.empty()) return {};
+    count_[m]++;
+    ids_.emplace(std::move(sig), id);
+    for (size_t c = 0; c < rows.size(); c++) {
+        if (!rows[c].empty()) rows_[id + kFormCodes[c]] = rows[c];
+    }
+    return id;
+}
+
+std::string_view LookupSource(std::string_view key, const Families& generated) {
+    const std::string_view row = SourceMarkerRow(key);
+    return row.empty() ? generated.Row(key) : row;
+}
+
+std::string_view LookupDollar(std::string_view key, const Families& generated) {
+    const std::string_view row = DollarMarkerRow(key);
+    return row.empty() ? generated.Row(key) : row;
+}
+
+std::string_view LookupPercent(std::string_view key, const Families& generated) {
+    const std::string_view row = PercentMarkerRow(key);
+    return row.empty() ? generated.Row(key) : row;
+}
+
+std::string_view LookupByMarker(std::string_view key, const Families& generated) {
+    switch (key.empty() ? 0 : key[0]) {
+        case '%': return LookupPercent(key, generated);
+        case '$': return LookupDollar(key, generated);
+        case '&': return LookupSource(key, generated);
+    }
+    return {};
+}
+
+std::string Lemma(std::string_view target, const Families& generated) {
+    const size_t n = target.size();
+    if (n < 4 || target[n - 1] != '@' || MarkerIndex(target[n - 4]) < 0) return std::string(target);
+    std::string key(target.substr(n - 4));
+    key += '1';
+    std::string out(target.substr(0, n - 4));
+    out += LookupByMarker(key, generated);
+    out += "다";
+    return out;
+}
+
+}  // namespace hdTrans::output
