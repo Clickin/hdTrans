@@ -22,7 +22,7 @@ struct Scorer {
 };
 
 // Sense rows run first; scorers may replace only a candidate-order default, or a
-// rule choice when selectRules is set. Sense rows and fixed items stay protected.
+// contextual or rule choice when selectRules is set. Sense rows and fixed items stay protected.
 void Select(Flusher& f);
 
 // An opt-in diagnostic score: the negative number of Unicode scalars in the target.

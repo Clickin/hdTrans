@@ -101,8 +101,8 @@ HD_TEST(select_shadow_golden) {
     HD_REQUIRE(!inputs.empty());
     const word::Scorer scorers[] = {{"shortest-target", word::ShortestTargetScore}};
     internal::TranslationOptions options;
-    options.reference = true;
-    options.scorers = scorers;
+    options.wordImprovements = word::Improvements::Reference();
+    options.shadowScorers = scorers;
     options.selectShadow = true;
     SelectStats stats;
     bool counted = false;
@@ -131,24 +131,4 @@ HD_TEST(select_shadow_golden) {
             std::printf("select_provenance %s %zu\n", word::ProvenanceName(layer), count);
         }
     }
-}
-
-HD_TEST(engine_session_select_shadow) {
-    const char* golden = std::getenv("HDTRANS_GOLDEN");
-    if (golden == nullptr || *golden == 0) {
-        std::printf("skip engine_session_select_shadow: no HDTRANS_GOLDEN\n");
-        return;
-    }
-    Engine engine(true);
-    HD_REQUIRE(engine.Open({DictsDir(golden)}));
-    const std::string input = "今日はいい天気ですね。\n彼は静かに頷いた。\n";
-    Session plain(engine), shadow(engine);
-    const std::string expected = plain.Translate(input);
-    shadow.SetSelectShadow(true);
-    HD_CHECK(shadow.Translate(input) == expected);
-    shadow.Reset();
-    HD_CHECK(shadow.Translate(input) == expected);
-    shadow.SetSelectShadow(false);
-    shadow.Reset();
-    HD_CHECK(shadow.Translate(input) == expected);
 }

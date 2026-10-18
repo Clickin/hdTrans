@@ -115,7 +115,6 @@ std::string Session::Translate(std::string_view text) {
     }
     internal::TranslationOptions options;
     options.reference = reference_;
-    options.selectShadow = selectShadow_;
     const std::vector<std::string> translated =
         internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, {}, options);
     std::string out;
