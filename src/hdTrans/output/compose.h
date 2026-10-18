@@ -67,6 +67,7 @@ public:
     // text, spaced by the spacing rules and with the pending control markers (&#CS,
     // </a>) put back, into the item's token text in place of the source it covers.
     void FinalOutputPrepass(std::vector<ResolvedItem>& items, const Nodes& nodes, std::vector<TokenText>& tokens,
+                            int first, int last,
                             std::span<tokenizer::ControlMarker> markers, const Settings& settings,
                             const Families& generated);
 

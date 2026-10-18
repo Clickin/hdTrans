@@ -122,10 +122,8 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
             if (observer.resolved) observer.resolved(observer.context, index, static_cast<int>(k), sentence.chain);
             ResolvedItems(sentence.chain, s.items);
             BuildTexts(s.tokens, analysis, sentence.first, sentence.last, s.texts);
-            s.markers.clear();
-            for (const tokenizer::ControlMarker& m : s.tokens.markers) {
-                if (m.tokenIndex >= sentence.first && m.tokenIndex <= sentence.last) s.markers.push_back(m);
-            }
+            s.markers.assign(s.tokens.markers.begin() + sentence.markerBegin,
+                             s.tokens.markers.begin() + sentence.markerEnd);
             s.composer.Compose(s.items, s.texts, sentence.first, sentence.last, s.markers, composeSettings,
                                generated.families, done.pieces);
         }

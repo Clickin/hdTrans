@@ -239,18 +239,19 @@ void Composer::Compose(std::vector<ResolvedItem>& items, std::vector<TokenText>&
                        std::span<tokenizer::ControlMarker> markers, const Settings& settings,
                        const Families& generated, Pieces& out) {
     BuildItems(items, tokens, nodes_);
-    FinalOutputPrepass(items, nodes_, tokens, markers, settings, generated);
+    FinalOutputPrepass(items, nodes_, tokens, first, last, markers, settings, generated);
     EmitSynchronousOutput(tokens, first, last, settings, out);
 }
 
 void Composer::FinalOutputPrepass(std::vector<ResolvedItem>& items, const Nodes& nodes,
-                                  std::vector<TokenText>& tokens, std::span<tokenizer::ControlMarker> markers,
+                                  std::vector<TokenText>& tokens, int first, int last,
+                                  std::span<tokenizer::ControlMarker> markers,
                                   const Settings& settings, const Families& generated) {
     Start(items, settings, generated);
     tokens_ = &tokens;
     if (settings.text) {
         if (source_.size() < tokens.size()) source_.resize(tokens.size());
-        for (size_t i = 0; i < tokens.size(); i++) source_[i] = tokens[i].text;
+        for (int i = first; i <= last; i++) source_[i] = tokens[i].text;
     }
     for (int n = static_cast<int>(nodes.size()) - 1; n >= 0; n--) {
         const int begin = n > 0 ? nodes[n - 1] : 0;
