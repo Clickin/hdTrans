@@ -127,8 +127,19 @@ HD_TEST(select_shadow_golden) {
     }
     HD_REQUIRE(counted);
     if (counted) {
-        HD_CHECK(stats.items > 0);
-        HD_CHECK(stats.wouldChange > 0);
+        HD_CHECK_EQ(stats.items, size_t{538139});
+        HD_CHECK_EQ(stats.scored, size_t{229758});
+        HD_CHECK_EQ(stats.wouldChange, size_t{95607});
+        HD_CHECK_EQ(stats.blocked, size_t{20216});
+        const std::map<word::Provenance, size_t> layers = {
+            {word::Provenance::Fixed, 17719}, {word::Provenance::LocalRule, 48731},
+            {word::Provenance::GlobalRule, 16523}, {word::Provenance::Single, 283306},
+            {word::Provenance::FirstXxx, 89519}, {word::Provenance::Digit, 76290},
+            {word::Provenance::Sense, 2894}, {word::Provenance::SenseDefault, 1085},
+            {word::Provenance::Initial, 586}, {word::Provenance::Rewrite, 1486},
+        };
+        HD_CHECK_EQ(stats.layers.size(), layers.size());
+        for (const auto& [layer, count] : layers) HD_CHECK_EQ(stats.layers[layer], count);
         std::printf("select_shadow corpus2.each: items=%zu scored=%zu would-change=%zu blocked=%zu\n",
                     stats.items, stats.scored, stats.wouldChange, stats.blocked);
         for (const auto& [layer, count] : stats.layers) {
@@ -149,7 +160,8 @@ HD_TEST(engine_session_select_shadow) {
     HD_REQUIRE(engine.Open({DictsDir()}));
     const std::string input = "今日はいい天気ですね。\n彼は静かに頷いた。\n";
     Session plain(engine), shadow(engine);
-    const std::string expected = plain.Translate(input);
+    const std::string expected = "오늘은 좋은 날씨군요.\n그는 조용하게 끄덕였다.\n";
+    HD_CHECK_EQ(plain.Translate(input), expected);
     shadow.SetSelectShadow(true);
     HD_CHECK(shadow.Translate(input) == expected);
     shadow.Reset();
@@ -157,4 +169,24 @@ HD_TEST(engine_session_select_shadow) {
     shadow.SetSelectShadow(false);
     shadow.Reset();
     HD_CHECK(shadow.Translate(input) == expected);
+}
+
+HD_TEST(select_shadow_default_consistency) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
+    const auto loaded = dict::LoadFolders({DictsDir()});
+    HD_REQUIRE(loaded.snapshot != nullptr && loaded.snapshot->HasDictionary());
+    for (const std::string set : {"corpus.raw", "corpus2.each"}) {
+        std::string input, frozen;
+        HD_REQUIRE(stagetest::ReadFile(hdtest::GoldenDir() + "/" + set + ".in", input));
+        HD_REQUIRE(stagetest::ReadFile(hdtest::GoldenDir() + "/" + set + ".expected", frozen));
+        internal::TranslationOptions defaults, shadow;
+        shadow.selectShadow = true;
+        const auto plain = TranslateSet(*loaded.snapshot, input, set, defaults, {});
+        const auto diagnostic = TranslateSet(*loaded.snapshot, input, set, shadow, {});
+        HD_REQUIRE(!plain.empty());
+        HD_CHECK_EQ(hdtest::LineCount(plain), hdtest::LineCount(frozen));
+        HD_CHECK(diagnostic == plain);
+    }
 }

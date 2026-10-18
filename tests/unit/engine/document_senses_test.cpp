@@ -11,6 +11,7 @@
 #include "hdTrans/engine.h"
 #include "hdTrans/engine/driver.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "tokenizer/stage_records.h"
 
 using namespace hdTrans;
@@ -153,7 +154,7 @@ HD_TEST(document_senses_session_reset_isolation_and_reference) {
     HD_CHECK_EQ(inherited.Translate("東京、\n東京。"), std::string("도쿄,\n동경."));
 }
 
-HD_TEST(document_senses_shadow_golden) {
+HD_TEST(document_senses_shadow_consistency) {
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const char* root = std::getenv("HDTRANS_GOLDEN");
@@ -171,6 +172,11 @@ HD_TEST(document_senses_shadow_golden) {
     }
     HD_REQUIRE(!error && !paths.empty());
     std::sort(paths.begin(), paths.end());
+    size_t expectedSets = 0;
+    for (const auto& set : hdtest::ManifestSets(std::string(root) + "/stages/", ".S.tsv")) {
+        if (set.starts_with("doc-")) ++expectedSets;
+    }
+    HD_REQUIRE(paths.size() == expectedSets);
     Choices total;
     for (const auto& path : paths) {
         std::string input;
@@ -186,7 +192,18 @@ HD_TEST(document_senses_shadow_golden) {
         observer.resolved = Observe;
         const auto expected = internal::TranslateDocument(*loaded.snapshot, *generated, lines, plainMemory, {}, defaults);
         const auto out = internal::TranslateDocument(*loaded.snapshot, *generated, lines, shadowMemory, observer, shadow);
+        HD_REQUIRE(!expected.empty());
         HD_CHECK(out == expected);
+        std::string frozen;
+        HD_REQUIRE(stagetest::ReadFile((path.parent_path() / (path.stem().string() + ".expected")).string(), frozen));
+        HD_REQUIRE(!frozen.empty());
+        HD_CHECK_EQ(out.size(), Lines(frozen).size());
+        internal::Memory referenceMemory;
+        internal::TranslationOptions reference;
+        reference.reference = true;
+        reference.selectShadow = true;
+        const auto referenceOut = internal::TranslateDocument(*loaded.snapshot, *generated, lines, referenceMemory, {}, reference);
+        HD_CHECK(referenceOut == Lines(frozen));
         total.scored += observed.scored;
         total.wouldChange += observed.wouldChange;
         total.blocked += observed.blocked;
@@ -195,7 +212,9 @@ HD_TEST(document_senses_shadow_golden) {
     }
     std::printf("document_senses_shadow total: sets=%zu scored=%zu would-change=%zu blocked=%zu\n",
                 paths.size(), total.scored, total.wouldChange, total.blocked);
-    HD_CHECK(total.scored > 0);
+    HD_CHECK_EQ(total.scored, size_t{57167});
+    HD_CHECK_EQ(total.wouldChange, size_t{5});
+    HD_CHECK_EQ(total.blocked, size_t{1});
 }
 
 HD_TEST(document_senses_memory_calls_and_reset) {

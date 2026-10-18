@@ -12,6 +12,8 @@
 #include "hdTrans/engine/driver.h"
 #include "hdTrans/engine/raw.h"
 #include "hdtest.h"
+#include "golden.h"
+#include "tokenizer/stage_records.h"
 
 namespace {
 
@@ -35,7 +37,7 @@ HD_TEST(engine_session_threads) {
         hdTrans::Session session(engine);
         expected = session.Translate(text);
     }
-    HD_CHECK(!expected.empty());
+    HD_CHECK_EQ(expected, std::string("오늘은 좋은 날씨군요.\n「미안해요, 기다렸어?」\n그는 조용하게 끄덕였다.\n"));
 
     constexpr int kThreads = 4;
     constexpr int kRounds = 3;
@@ -98,7 +100,14 @@ HD_TEST(engine_session_threads_stress) {
         }
         return out;
     };
+    HD_REQUIRE(lines.size() == 1000);
+    std::string frozen;
+    HD_REQUIRE(stagetest::ReadFile(std::string(golden) + "/corpus2.each.expected", frozen));
+    const auto frozenLines = stagetest::Lines(frozen);
+    HD_REQUIRE(frozenLines.size() >= lines.size());
     const std::vector<std::string> expected = translateAll();
+    HD_REQUIRE(expected.size() == lines.size());
+    for (size_t i = 0; i < expected.size(); ++i) HD_CHECK_EQ(expected[i], std::string(frozenLines[i]));
     constexpr int kThreads = 4;
     std::vector<std::vector<std::string>> got(kThreads);
     std::vector<std::thread> workers;
@@ -108,6 +117,7 @@ HD_TEST(engine_session_threads_stress) {
     for (std::thread& w : workers) w.join();
     int differing = 0;
     for (const auto& out : got) {
+        HD_REQUIRE(out.size() == expected.size());
         for (std::size_t i = 0; i < out.size(); i++) {
             if (out[i] != expected[i]) differing++;
         }

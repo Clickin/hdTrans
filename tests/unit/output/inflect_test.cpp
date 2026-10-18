@@ -150,7 +150,7 @@ void CheckRow(std::string_view key, std::string_view actual, std::string_view ex
 
 }  // namespace
 
-HD_TEST(inflect_all_marker_rows) {
+HD_TEST(inflect_all_marker_rows_consistency) {
     const std::array tables = {SourceMarkerTable(), DollarMarkerTable(), PercentMarkerTable()};
     const size_t expectedCounts[] = {3708, 1145, 824};
     std::set<std::string_view> keys;
@@ -195,7 +195,7 @@ HD_TEST(inflect_all_marker_rows) {
                 keys.size(), rowCount, exceptions, exceptionFamilies);
 }
 
-HD_TEST(inflect_all_form_membership) {
+HD_TEST(inflect_all_form_membership_consistency) {
     for (const auto& family : KoreanFamilies()) {
         for (int byte = 0; byte < 256; ++byte) {
             const char code = static_cast<char>(byte);
@@ -210,8 +210,60 @@ HD_TEST(inflect_all_form_membership) {
     }
 }
 
+HD_TEST(inflect_frozen_rows) {
+    const struct { const char* key; const char* surface; } cases[] = {
+        {"&A1@0", "가는"},
+        {"&A1@5", "갔"},
+        {"&A1@6", "가"},
+        {"&CJ@C", "줘"},
+        {"&LA@A", "어"},
+        {"&LA@B", ""},
+        {"&LT@0", "빠른"},
+        {"&LT@4", "빠르"},
+        {"&LT@5", "높았"},
+        {"&LT@B", "높음"},
+        {"&JB@0", "(듣)묻는"},
+        {"&JB@6", "(들)물어"},
+        {"&Mi@5", "덜"},
+        {"&Mi@6", "덜"},
+        {"&Mj@5", "뻤"},
+        {"&Mj@6", "뻐"},
+        {"&J8@5", "뵈었"},
+        {"&J8@6", "뵈어"},
+        {"$A5@6", "뻐"},
+        {"$A9@6", "커"},
+        {"$AA@6", "파"},
+        {"$AB@6", "해"},
+        {"$AH@5", "(이었)였"},
+        {"$AH@6", "(이어)여"},
+        {"$C1@6", "빨라"},
+        {"$C2@6", "푸르러"},
+        {"$C3@5", "노랐"},
+        {"$C3@6", "노래"},
+        {"$FA@4", "없는"},
+        {"$FB@4", "있는"},
+        {"$G1@6", "까워"},
+        {"$DH@9", "않은"},
+        {"$J6@8", ""},
+        {"$J6H8", "금"},
+        {"$Ky@6", "늦어"},
+        {"%EH@1", "(이)"},
+        {"%EH@6", "(이어)여"},
+        {"%DK@5", "여웠"},
+        {"%DK@6", "여워"},
+        {"%C5@6", "래"},
+    };
+    for (const auto& c : cases) {
+        const auto* family = FindKoreanFamily(std::string_view(c.key).substr(0, 4));
+        HD_REQUIRE(family != nullptr);
+        CheckRow(c.key, Inflect(*family, c.key[4]), c.surface);
+        CheckRow(c.key, MarkerRowFor(c.key), c.surface);
+    }
+}
+
 // $HDTRANS_GOLDEN/inflection_rows.tsv holds one key and surface per tab-separated line.
 HD_TEST(inflect_row_fixture) {
+    if (hdtest::RequireAll()) HD_REQUIRE(!hdtest::GoldenDir().empty());
     if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const char* root = std::getenv("HDTRANS_GOLDEN");
     if (!root || !*root) HD_SKIP("HDTRANS_GOLDEN is not set");
