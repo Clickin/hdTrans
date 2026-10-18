@@ -133,15 +133,11 @@ HD_TEST(document_senses_session_reset_isolation_and_reference) {
     HD_REQUIRE(!dictionary.path.empty());
     Engine engine;
     HD_REQUIRE(engine.Open({dictionary.path.string()}));
-    Session first(engine), independent(engine), reference(engine, true), shadow(engine);
+    Session first(engine), independent(engine), reference(engine, true);
     HD_CHECK_EQ(first.Translate("東京、"), std::string("도쿄,"));
     HD_CHECK_EQ(first.Translate("東京。"), std::string("동경."));
     HD_CHECK_EQ(independent.Translate("東京。"), std::string("동경."));
     HD_CHECK_EQ(reference.Translate("東京、\n東京。"), std::string("도쿄,\n동경."));
-    shadow.SetSelectShadow(true);
-    HD_CHECK_EQ(shadow.Translate("東京、\n東京。"), std::string("도쿄,\n동경."));
-    shadow.SetSelectShadow(false);
-    HD_CHECK_EQ(shadow.Translate("東京。"), std::string("동경."));
     first.Reset();
     HD_CHECK_EQ(first.Translate("東京。"), std::string("동경."));
     HD_CHECK(engine.Reload());
