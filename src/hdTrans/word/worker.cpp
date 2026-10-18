@@ -102,6 +102,7 @@ Detail* Worker::NewDetail(int cls, int token) {
     d->cls = cls;
     d->nextType = 0;
     d->nextText = {};
+    d->nonterminalBoundary = settings.improvements.nonterminalBoundary;
     d->kind = -1;
     d->record = 0;
     d->punct = 0;

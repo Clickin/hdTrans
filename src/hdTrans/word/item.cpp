@@ -43,7 +43,7 @@ int Detail::ClassifyTrailingPunctuation(std::string_view text) const {
             return 0;
         }
         }
-        return 2;
+        return nonterminalBoundary ? 0 : 2;
     }
     const char32_t r = text::DecodeRune(text).cp;
     if (r == U'〕' || r == U'〉' || r == U'》' || r == U'」' || r == U'』' || r == U'】') return 6;

@@ -24,6 +24,7 @@ struct Improvements {
     bool semanticAlternatives = true;
     bool preserveNeighbourSlots = false;
     bool perLevelRetries = false;
+    bool nonterminalBoundary = true;
 
     static Improvements Reference() {
         Improvements improvements;
@@ -33,6 +34,7 @@ struct Improvements {
         improvements.semanticAlternatives = false;
         improvements.preserveNeighbourSlots = false;
         improvements.perLevelRetries = false;
+        improvements.nonterminalBoundary = false;
         return improvements;
     }
 };

@@ -163,3 +163,21 @@ HD_TEST(word_expanded_ending_selection) {
         HD_CHECK_EQ(item->DirectIndex(), expanded ? 129 : 0);
     }
 }
+
+HD_TEST(word_nonterminal_boundary_punctuation) {
+    for (bool nonterminal : {false, true}) {
+        word::Detail detail;
+        detail.nonterminalBoundary = nonterminal;
+        for (int type : {tokenizer::kTypeAlpha, tokenizer::kTypeWideSpace, tokenizer::kTypeMarkup,
+                         tokenizer::kTypeEnd}) {
+            detail.nextType = type;
+            HD_CHECK_EQ(detail.ClassifyTrailingPunctuation(""), nonterminal ? 0 : 2);
+        }
+        detail.nextType = tokenizer::kTypeSentenceEnd;
+        detail.nextText = "。";
+        HD_CHECK_EQ(detail.ClassifyTrailingPunctuation(""), 2);
+        detail.nextText = "？";
+        HD_CHECK_EQ(detail.ClassifyTrailingPunctuation(""), 3);
+        HD_CHECK_EQ(detail.ClassifyTrailingPunctuation(","), 1);
+    }
+}
