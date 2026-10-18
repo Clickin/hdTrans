@@ -6,10 +6,13 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "hdTrans/engine.h"
 #include "hdTrans/engine/driver.h"
+#include "hdTrans/word/document_senses.h"
+#include "hdTrans/word/item.h"
 #include "hdtest.h"
 #include "tokenizer/stage_records.h"
 
@@ -27,6 +30,22 @@ std::shared_ptr<const dict::Snapshot> Dictionary() {
     const auto loaded = dict::Load({{0, "base.tsv", kRows}});
     HD_CHECK(loaded.errors.empty());
     return loaded.snapshot;
+}
+
+void Remember(word::SessionSenses& memory, std::string_view key, std::string_view target = "target",
+              std::string_view partCode = "N110") {
+    word::Entry entry;
+    entry.dst = target;
+    entry.cls = partCode.front();
+    entry.code = partCode.substr(1);
+    word::Group group;
+    group.surface = key;
+    group.entries.push_back(&entry);
+    word::Item it;
+    it.group = &group;
+    it.selected = 0;
+    it.choice = {word::Provenance::LocalRule};
+    memory.Remember(it);
 }
 
 struct Choices {
@@ -220,11 +239,88 @@ HD_TEST(document_senses_memory_calls_and_reset) {
     HD_CHECK(disabled.senses.choices.empty() && disabled.senses.pending.empty());
 }
 
+HD_TEST(document_senses_memory_fifo_entries) {
+    word::SessionSenses memory;
+    Remember(memory, "zz-oldest");
+    Remember(memory, "yy-next");
+    for (int i = 0; i < 4094; i++) Remember(memory, "middle" + std::to_string(i));
+    Remember(memory, "aa-newest");
+    HD_CHECK(memory.choices.empty());
+    memory.FinishLine();
+    HD_CHECK_EQ(memory.choices.size(), std::size_t{4097});
+    memory.Trim();
+    HD_CHECK_EQ(memory.choices.size(), std::size_t{4096});
+    HD_CHECK(!memory.choices.contains("zz-oldest"));
+    HD_CHECK(memory.choices.contains("yy-next"));
+    HD_CHECK(memory.choices.contains("aa-newest"));
+    memory.Trim();
+    HD_CHECK_EQ(memory.choices.size(), std::size_t{4096});
+    HD_CHECK(memory.choices.contains("yy-next"));
+    Remember(memory, "00-latest");
+    memory.FinishLine();
+    memory.Trim();
+    HD_CHECK_EQ(memory.choices.size(), std::size_t{4096});
+    HD_CHECK(!memory.choices.contains("yy-next"));
+    HD_CHECK(memory.choices.contains("aa-newest"));
+    HD_CHECK(memory.choices.contains("00-latest"));
+}
+
+HD_TEST(document_senses_memory_fifo_bytes) {
+    word::SessionSenses memory;
+    const std::string key = "aa-newest";
+    const std::string target(1024 * 1024 - key.size() - 4, 'a');
+    Remember(memory, "zz-oldest");
+    memory.FinishLine();
+    Remember(memory, key, target);
+    memory.FinishLine();
+    memory.Trim();
+    HD_REQUIRE(memory.choices.size() == 1);
+    HD_REQUIRE(memory.choices.contains(key));
+    HD_CHECK_EQ(memory.choices.at(key).target, target);
+    memory.Trim();
+    HD_CHECK_EQ(memory.choices.size(), std::size_t{1});
+    HD_CHECK(memory.choices.contains(key));
+}
+
+HD_TEST(document_senses_memory_duplicate_remember_age) {
+    for (const bool committed : {false, true}) {
+        word::SessionSenses memory;
+        Remember(memory, "zz-oldest", "first");
+        const auto age = memory.pending.at("zz-oldest").insertionAge;
+        HD_CHECK(age > 0);
+        Remember(memory, "aa-next");
+        const auto nextAge = memory.pending.at("aa-next").insertionAge;
+        HD_CHECK(nextAge > age);
+        if (committed) memory.FinishLine();
+        Remember(memory, "zz-oldest", "replacement", "N130");
+        const auto& first = (committed ? memory.choices : memory.pending).at("zz-oldest");
+        HD_CHECK_EQ(first.target, std::string("first"));
+        HD_CHECK_EQ(first.partCode, std::string("N110"));
+        HD_CHECK_EQ(first.insertionAge, age);
+        if (committed) HD_CHECK(memory.pending.empty());
+        memory.FinishLine();
+        for (int i = 0; i < 4095; i++) Remember(memory, "middle" + std::to_string(i));
+        HD_CHECK_EQ(memory.pending.at("middle0").insertionAge, nextAge + 1);
+        memory.FinishLine();
+        memory.Trim();
+        HD_CHECK_EQ(memory.choices.size(), std::size_t{4096});
+        HD_CHECK(!memory.choices.contains("zz-oldest"));
+        HD_CHECK(memory.choices.contains("aa-next"));
+    }
+}
+
 HD_TEST(document_senses_memory_limits) {
     word::SessionSenses memory;
     for (int i = 0; i < 5000; i++) memory.choices[std::to_string(i)] = {"target", "N110"};
     memory.Trim();
     HD_CHECK_EQ(memory.choices.size(), std::size_t{4096});
+    HD_CHECK(!memory.choices.contains("0"));
+    HD_CHECK(memory.choices.contains("999"));
+    Remember(memory, "aa-tracked");
+    memory.FinishLine();
+    memory.Trim();
+    HD_CHECK_EQ(memory.choices.size(), std::size_t{4096});
+    HD_CHECK(memory.choices.contains("aa-tracked"));
     memory.choices.clear();
     for (int i = 0; i < 100; i++) memory.choices[std::to_string(i)] = {std::string(32768, 'a'), "N110"};
     memory.Trim();
@@ -232,4 +328,12 @@ HD_TEST(document_senses_memory_limits) {
     for (const auto& [key, value] : memory.choices) bytes += key.size() + value.target.size() + value.partCode.size();
     HD_CHECK(bytes <= 1024 * 1024);
     HD_CHECK(!memory.choices.empty());
+    memory.choices.clear();
+    memory.pending["oversized"] = {std::string(1024 * 1024, 'a'), "N110"};
+    memory.FinishLine();
+    memory.Trim();
+    HD_CHECK(memory.choices.empty());
+    memory.pending["unfinished"] = {"target", "N110"};
+    memory.Trim();
+    HD_CHECK(memory.pending.empty());
 }

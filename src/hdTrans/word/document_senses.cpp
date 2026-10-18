@@ -1,5 +1,8 @@
 #include "hdTrans/word/document_senses.h"
 
+#include <algorithm>
+#include <vector>
+
 #include "hdTrans/text/utf8.h"
 #include "hdTrans/word/worker.h"
 
@@ -90,9 +93,18 @@ void SessionSenses::Trim() {
     };
     std::size_t bytes = 0;
     for (const auto& entry : choices) bytes += size(entry);
-    while (!choices.empty() && (choices.size() > kEntries || bytes > kBytes)) {
-        bytes -= size(*choices.begin());
-        choices.erase(choices.begin());
+    if (choices.size() > kEntries || bytes > kBytes) {
+        std::vector<decltype(choices)::iterator> oldest;
+        oldest.reserve(choices.size());
+        for (auto it = choices.begin(); it != choices.end(); ++it) oldest.push_back(it);
+        std::stable_sort(oldest.begin(), oldest.end(), [](const auto left, const auto right) {
+            return left->second.insertionAge < right->second.insertionAge;
+        });
+        for (const auto it : oldest) {
+            if (choices.size() <= kEntries && bytes <= kBytes) break;
+            bytes -= size(*it);
+            choices.erase(it);
+        }
     }
     pending.clear();
 }
@@ -103,8 +115,9 @@ void SessionSenses::Remember(const Item& it) {
         case Provenance::LocalRule:
         case Provenance::Sense:
             if (!choices.contains(it.group->surface)) {
-                pending.try_emplace(it.group->surface,
-                                    SessionSense{std::string(it.EntryText(it.selected)), PartCode(it, it.selected)});
+                const auto [entry, inserted] = pending.try_emplace(
+                    it.group->surface, SessionSense{std::string(it.EntryText(it.selected)), PartCode(it, it.selected)});
+                if (inserted) entry->second.insertionAge = ++lastInsertionAge_;
             }
             break;
         default:

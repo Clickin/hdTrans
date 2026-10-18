@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <string>
 #include <string_view>
@@ -11,6 +12,7 @@ namespace hdTrans::word {
 struct SessionSense {
     std::string target;
     std::string partCode;
+    std::uint64_t insertionAge = 0;  // Untracked entries are oldest.
 };
 
 // Only choices from completed lines are visible to the scorer. The first trusted
@@ -20,9 +22,12 @@ struct SessionSenses {
     std::map<std::string, SessionSense, std::less<>> pending;
 
     void FinishLine();
-    // Bounds cross-call choices; call only after translating the whole document.
+    // Evicts oldest insertions to bound cross-call choices; call after the whole document.
     void Trim();
     void Remember(const Item& it);
+
+private:
+    std::uint64_t lastInsertionAge_ = 0;
 };
 
 // A view into target without its form code, marker suffix, auxiliary prefixes or
