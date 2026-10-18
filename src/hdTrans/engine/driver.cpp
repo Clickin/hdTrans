@@ -87,9 +87,11 @@ word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions&
     s.text = text;
     s.terminal = text;
     s.verse = verse;
-    s.scorers = options.scorers;
-    s.selectShadow = options.selectShadow;
-    s.selectRules = options.selectRules;
+    if (!options.reference) {
+        s.scorers = options.scorers;
+        s.selectShadow = options.selectShadow;
+        s.selectRules = options.selectRules;
+    }
     s.sessionSenses = text ? sessionSenses : nullptr;
     return s;
 }

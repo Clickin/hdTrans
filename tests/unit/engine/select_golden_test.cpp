@@ -101,7 +101,7 @@ HD_TEST(select_shadow_golden) {
     HD_REQUIRE(!inputs.empty());
     const word::Scorer scorers[] = {{"shortest-target", word::ShortestTargetScore}};
     internal::TranslationOptions options;
-    options.reference = true;
+    options.wordImprovements = word::Improvements::Reference();
     options.scorers = scorers;
     options.selectShadow = true;
     SelectStats stats;
