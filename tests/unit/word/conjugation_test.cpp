@@ -28,6 +28,13 @@ HD_TEST(conjugation_fingerprints) {
     prefix.U32(kPrefixForms);
     for (int i = 0; i < kPrefixForms; i++) prefix.Str(PrefixForm(i));
     HD_CHECK_EQ(prefix.h, uint64_t{0x5d66f2d7348c3f9dull});
+
+    hdtest::Fnv gate;
+    gate.U32(kPrefixGates);
+    for (int i = 0; i < kPrefixGates; i++) gate.Str(PrefixGate(i));
+    HD_CHECK_EQ(gate.h, uint64_t{0x355eec07a1a61c76ull});
+    HD_CHECK_EQ(std::string(PrefixGate(14)), std::string("に"));
+    HD_CHECK(PrefixGate(34).empty());
 }
 
 HD_TEST(conjugation_samples) {

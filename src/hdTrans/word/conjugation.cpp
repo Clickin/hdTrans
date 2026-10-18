@@ -24,4 +24,9 @@ std::string_view PrefixForm(int index) {
     return internal::PrefixFormTable()[index];
 }
 
+std::string_view PrefixGate(int index) {
+    if (index < 0 || index >= kPrefixGates) return {};
+    return internal::PrefixGateTable()[index];
+}
+
 }  // namespace hdTrans::word
