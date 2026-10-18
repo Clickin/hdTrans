@@ -81,9 +81,14 @@ int main(int argc, char** argv) {
     while (start < input.size()) {
         size_t end = input.find('\n', start);
         if (end == std::string::npos) end = input.size();
-        std::string_view line(input.data() + start, end - start);
-        if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
-        const std::string out = hdTrans::internal::TranslateRaw(engine, line);
+        const std::string_view line(input.data() + start, end - start);
+        std::string out;
+        if (raw) {
+            out = hdTrans::internal::TranslateRaw(engine, line);
+        } else {
+            hdTrans::Session session(engine);
+            out = session.Translate(line);
+        }
         std::fwrite(out.data(), 1, out.size(), stdout);
         std::fputc('\n', stdout);
         start = end + 1;

@@ -1,11 +1,19 @@
 #include "hdTrans/engine.h"
 
+#include <cstddef>
+#include <memory>
+
 #include "hdTrans/dict/snapshot.h"
+#include "hdTrans/engine/driver.h"
 #include "hdTrans/engine/raw.h"
+#include "hdTrans/engine/rules.h"
 
 namespace hdTrans {
 
 namespace {
+
+// The lines of earlier calls a session keeps for its name registry; the oldest are dropped first.
+constexpr std::size_t kMemoryLines = 2048;
 
 // The dictionaries of dirs; null when the load fails or finds no dictionary file.
 std::shared_ptr<const dict::Snapshot> LoadDictionaries(const std::vector<std::string>& dirs) {
@@ -16,7 +24,16 @@ std::shared_ptr<const dict::Snapshot> LoadDictionaries(const std::vector<std::st
 
 }  // namespace
 
+namespace internal {
+
+struct SessionState {
+    Memory memory;
+};
+
+}  // namespace internal
+
 bool Engine::Open(const std::vector<std::string>& dirs) {
+    if (!internal::RulesLoaded()) return false;
     std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs);
     if (!s) return false;
     std::lock_guard<std::mutex> lock(mu_);
@@ -49,20 +66,43 @@ std::shared_ptr<const dict::Snapshot> Engine::Dictionaries() const {
     return snapshot_;
 }
 
-Session::Session(const Engine& engine) : engine_(engine), snapshot_(engine.Dictionaries()) {}
+Session::Session(const Engine& engine)
+    : engine_(engine), snapshot_(engine.Dictionaries()), state_(std::make_unique<internal::SessionState>()) {}
+
+Session::~Session() = default;
 
 std::string Session::Translate(std::string_view text) {
     if (!snapshot_) return {};
-    return std::string(text);
+    std::vector<std::string> lines;
+    std::size_t start = 0;
+    for (;;) {
+        const std::size_t end = text.find('\n', start);
+        lines.emplace_back(text.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start));
+        if (end == std::string_view::npos) break;
+        start = end + 1;
+    }
+    const std::vector<std::string> translated = internal::TranslateDocument(*snapshot_, lines, state_->memory, {});
+    std::string out;
+    for (std::size_t i = 0; i < translated.size(); i++) {
+        if (i > 0) out += '\n';
+        out += translated[i];
+    }
+    auto& memory = state_->memory.lines;
+    if (memory.size() > kMemoryLines) memory.erase(memory.begin(), memory.begin() + static_cast<std::ptrdiff_t>(memory.size() - kMemoryLines));
+    return out;
 }
 
-void Session::Reset() { snapshot_ = engine_.Dictionaries(); }
+void Session::Reset() {
+    snapshot_ = engine_.Dictionaries();
+    state_ = std::make_unique<internal::SessionState>();
+}
 
 namespace internal {
 
 std::string TranslateRaw(const Engine& e, std::string_view line) {
-    if (!e.loaded()) return {};
-    return std::string(line);
+    const std::shared_ptr<const dict::Snapshot> snap = e.Dictionaries();
+    if (!snap) return {};
+    return TranslateRawLine(*snap, line, {});
 }
 
 }  // namespace internal

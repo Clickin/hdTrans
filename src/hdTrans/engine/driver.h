@@ -1,0 +1,49 @@
+#pragma once
+// The driver: the stages of the pipeline in order, over the lines of a document (the text
+// path) or over one line as a single piece (the raw path).
+#include <cstddef>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "hdTrans/dict/snapshot.h"
+#include "hdTrans/output/families.h"
+#include "hdTrans/output/pieces.h"
+#include "hdTrans/tokenizer/token.h"
+#include "hdTrans/word/analyze.h"
+
+namespace hdTrans::internal {
+
+// Receives the outputs of the stages as they are made. A null member is not called. The
+// line callback starts each line before its stages; chunk indices restart per line.
+struct StageObserver {
+    void* context = nullptr;
+    void (*line)(void* context, int line) = nullptr;
+    // N (normalised) and SN (sounded) of a line.
+    void (*text)(void* context, std::string_view tag, std::string_view text) = nullptr;
+    // P (the protected pieces of a line, chunk -1) and CH (a chunk).
+    void (*pieces)(void* context, std::string_view tag, int chunk, const output::Pieces& pieces) = nullptr;
+    // The tokens of a chunk, after tokenizing.
+    void (*tokens)(void* context, int chunk, const tokenizer::Tokens& tokens) = nullptr;
+    // The sentences of a chunk after the word analysis, before resolve.
+    void (*analysis)(void* context, int chunk, const tokenizer::Tokens& tokens, const word::Analysis& analysis) =
+        nullptr;
+};
+
+// What a session keeps between its calls.
+struct Memory {
+    std::vector<std::string> lines;  // the lines of earlier calls, read by the name registry
+    output::Families families;       // the marker families the translations made
+};
+
+// Translates the lines of one call as one document: the registry and the document context
+// read the lines of memory and of this call. Returns the lines translated (each keeps its
+// "\r"). memory receives the lines.
+std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, std::span<const std::string> lines,
+                                           Memory& memory, const StageObserver& observer);
+
+// Translates line (without "\n") as one piece with the word pipeline only.
+std::string TranslateRawLine(const dict::Snapshot& snap, std::string_view line, const StageObserver& observer);
+
+}  // namespace hdTrans::internal

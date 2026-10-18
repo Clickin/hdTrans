@@ -1,0 +1,186 @@
+#include "hdTrans/engine/driver.h"
+
+#include <cstddef>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "hdTrans/engine/glue.h"
+#include "hdTrans/engine/resolve.h"
+#include "hdTrans/engine/rules.h"
+#include "hdTrans/names/document.h"
+#include "hdTrans/output/cleanup.h"
+#include "hdTrans/output/compose.h"
+#include "hdTrans/pipeline/normalize.h"
+#include "hdTrans/pipeline/protect.h"
+#include "hdTrans/pipeline/restore.h"
+#include "hdTrans/pipeline/segment.h"
+#include "hdTrans/pipeline/sound.h"
+#include "hdTrans/tokenizer/tokenize.h"
+
+namespace hdTrans::internal {
+
+namespace {
+
+// The buffers of one translation, reused from chunk to chunk.
+struct Scratch {
+    tokenizer::Tokens tokens;
+    word::Arena arena;
+    std::vector<output::ResolvedItem> items;
+    std::vector<output::TokenText> texts;
+    std::vector<tokenizer::ControlMarker> markers;
+    output::Composer composer;
+};
+
+// The pieces of the output as the tokenizer reads them (the span kinds are the same numbers).
+std::vector<tokenizer::Piece> TokenizerPieces(const output::Pieces& pieces) {
+    std::vector<tokenizer::Piece> out;
+    out.reserve(pieces.size());
+    for (const output::Piece& p : pieces) out.push_back({p.text, static_cast<int>(p.span)});
+    return out;
+}
+
+// The token texts the compose stage reads for the sentence first..last. Tokens after the
+// sentence are as scanned; the tokens of the sentence are as the token loop left them, and
+// a wide space that the analysis reads as a space becomes one.
+void BuildTexts(const tokenizer::Tokens& tokens, const word::Analysis& analysis, int first, int last,
+                std::vector<output::TokenText>& texts) {
+    if (texts.size() != tokens.size()) {
+        texts.assign(tokens.size(), {});
+        for (std::size_t j = 0; j < tokens.size(); j++) {
+            texts[j].type = tokens[j].type;
+            texts[j].span = tokens[j].span;
+            texts[j].text = std::string(tokens.Raw(j));
+            if (tokens[j].span != 0) texts[j].spanText = std::string(tokens.Raw(j));
+        }
+    }
+    for (int j = first; j <= last; j++) {
+        const auto v = tokens.View(static_cast<std::size_t>(j), static_cast<std::size_t>(last));
+        texts[static_cast<std::size_t>(j)].type = v.type;
+        texts[static_cast<std::size_t>(j)].text = std::string(v.text);
+        if (analysis.spaced[static_cast<std::size_t>(j)]) {
+            texts[static_cast<std::size_t>(j)].type = tokenizer::kTypeWideSpace;
+            texts[static_cast<std::size_t>(j)].text = " ";
+        }
+    }
+    if (static_cast<std::size_t>(last) + 1 < tokens.size()) {
+        const std::size_t next = static_cast<std::size_t>(last) + 1;
+        const auto v = tokens.View(next, static_cast<std::size_t>(last));
+        texts[next].type = v.type;
+        texts[next].text = std::string(v.text);
+    }
+}
+
+output::Settings ComposeSettings(bool text) {
+    output::Settings s;
+    s.cleanup = text;
+    s.text = text;
+    return s;
+}
+
+word::Settings AnalysisSettings(bool text) {
+    word::Settings s;
+    s.text = text;
+    s.terminal = text;
+    return s;
+}
+
+// Translates one chunk: its tokens, the word analysis, then per sentence the resolve stage
+// and the compose stage. The sentences are appended to out with the chunk index.
+void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& lookup, const output::Pieces& chunk,
+                    int index, bool text, Scratch& s, const output::Families& families, const StageObserver& observer,
+                    std::vector<output::Sentence>& out) {
+    s.texts.clear();
+    const std::vector<tokenizer::Piece> pieces = TokenizerPieces(chunk);
+    tokenizer::TokenizeSpans(pieces, text, s.tokens);
+    if (observer.tokens) observer.tokens(observer.context, index, s.tokens);
+
+    word::Analysis analysis;
+    const word::Settings settings = AnalysisSettings(text);
+    word::Analyze(s.tokens, snap, lookup, settings, s.arena, analysis);
+    if (observer.analysis) observer.analysis(observer.context, index, s.tokens, analysis);
+
+    const output::Settings composeSettings = ComposeSettings(text);
+    for (std::size_t k = 0; k < analysis.sentences.size(); k++) {
+        ResolveSentence(RulesProgram(), families, analysis, k);
+        const word::Sentence& sentence = analysis.sentences[k];
+        ResolvedItems(sentence.chain, s.items);
+        BuildTexts(s.tokens, analysis, sentence.first, sentence.last, s.texts);
+        s.markers.clear();
+        for (const tokenizer::ControlMarker& m : s.tokens.markers) {
+            if (m.tokenIndex >= sentence.first && m.tokenIndex <= sentence.last) s.markers.push_back(m);
+        }
+        output::Sentence done;
+        done.chunk = index;
+        s.composer.Compose(s.items, s.texts, sentence.first, sentence.last, s.markers, composeSettings, families,
+                           done.pieces);
+        out.push_back(std::move(done));
+    }
+}
+
+// The line body (without "\r") through every stage of the text path.
+std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext& doc, std::string_view body,
+                          Scratch& s, const output::Families& families, const StageObserver& observer) {
+    const pipeline::LineFacts facts = pipeline::ReadLine(doc, body);
+    if (facts.wholeLine) return *facts.wholeLine;
+    const pipeline::LineLookup lookup = pipeline::LookupOf(doc, facts);
+    const pipeline::LineContext ctx = pipeline::ContextOf(doc, lookup);
+
+    const std::string normalized = pipeline::Normalize(facts.text, ctx);
+    if (observer.text) observer.text(observer.context, "N", normalized);
+    const std::string sounded = pipeline::Sound(normalized, ctx, snap);
+    if (observer.text) observer.text(observer.context, "SN", sounded);
+
+    const output::Pieces typed = pipeline::ProtectTyped(sounded, ctx, snap);
+    const output::Pieces marked = pipeline::MarkCornerBrackets(typed);
+    if (observer.pieces) observer.pieces(observer.context, "P", -1, marked);
+
+    const std::vector<pipeline::Chunk> chunks = pipeline::Segment(marked);
+    std::vector<output::Sentence> sentences;
+    for (std::size_t i = 0; i < chunks.size(); i++) {
+        if (observer.pieces) observer.pieces(observer.context, "CH", static_cast<int>(i), chunks[i]);
+        TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, s, families, observer, sentences);
+    }
+    const output::Pieces cleaned = output::Cleanup(sentences);
+    return pipeline::Restore(cleaned, typed, /*keepBrackets=*/true);
+}
+
+}  // namespace
+
+std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, std::span<const std::string> lines,
+                                           Memory& memory, const StageObserver& observer) {
+    std::vector<std::string> all = memory.lines;
+    all.insert(all.end(), lines.begin(), lines.end());
+    const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(snap, all);
+
+    Scratch s;
+    std::vector<std::string> out;
+    out.reserve(lines.size());
+    for (std::size_t i = 0; i < lines.size(); i++) {
+        if (observer.line) observer.line(observer.context, static_cast<int>(i));
+        std::string_view body = lines[i];
+        const bool cr = !body.empty() && body.back() == '\r';
+        if (cr) body.remove_suffix(1);
+        std::string translated = TranslateBody(snap, *doc, body, s, memory.families, observer);
+        if (cr) translated += '\r';
+        out.push_back(std::move(translated));
+    }
+    memory.lines = std::move(all);
+    return out;
+}
+
+std::string TranslateRawLine(const dict::Snapshot& snap, std::string_view line, const StageObserver& observer) {
+    Scratch s;
+    output::Pieces chunk;
+    if (!line.empty()) chunk.push_back({std::string(line), output::SpanText});
+    if (observer.line) observer.line(observer.context, 0);
+    std::vector<output::Sentence> sentences;
+    const output::Families empty;
+    TranslateChunk(snap, dict::LookupContext{}, chunk, 0, false, s, empty, observer, sentences);
+    output::Pieces result;
+    for (const output::Sentence& sentence : sentences) output::Append(result, sentence.pieces);
+    return output::String(result);
+}
+
+}  // namespace hdTrans::internal

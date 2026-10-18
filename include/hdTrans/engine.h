@@ -12,6 +12,10 @@ namespace dict {
 class Snapshot;
 }
 
+namespace internal {
+struct SessionState;
+}
+
 // The loaded dictionaries. Shared by any number of sessions and threads.
 class Engine {
 public:
@@ -43,6 +47,9 @@ private:
 class Session {
 public:
     explicit Session(const Engine& engine);
+    ~Session();
+    Session(const Session&) = delete;
+    Session& operator=(const Session&) = delete;
 
     std::string Translate(std::string_view text);
 
@@ -53,6 +60,7 @@ public:
 private:
     const Engine& engine_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
+    std::unique_ptr<internal::SessionState> state_;
 };
 
 }  // namespace hdTrans
