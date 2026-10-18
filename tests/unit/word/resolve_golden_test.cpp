@@ -199,7 +199,7 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
     const auto expected = ExpectedS(GoldenDir() + "/stages/" + set + ".S.tsv");
     const dict::Snapshot* snapshot = Dictionaries();
     const rules::Program& program = *RuleProgram();
-    const output::Families families;
+    output::Families& families = snapshot->OutputFamilies();
     tokenizer::Tokens tokens;
     word::Arena arena;
     word::Analysis analysis;

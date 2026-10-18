@@ -11,12 +11,12 @@
 namespace hdTrans::word {
 
 // What the passes read besides the chain: the rule program of the selection and the
-// marker families of the output lookups that the selection makes (empty before the
-// output stage has generated any).
+// marker families of the output lookups. The passes add the families they make (the
+// conjugating targets of the text path), so the families are shared with the output stage.
 struct Flusher {
     Worker& w;
     const rules::Program& program;
-    const output::Families& families;
+    output::Families& families;
 };
 
 // Runs the sentence passes over w.chain (the chain of one sentence after the token loop).
@@ -35,5 +35,8 @@ void DrainNmTail(Flusher& f);
 void ReinsertPhrases(Flusher& f);
 void CleanupClass3(Flusher& f);
 void ApplyNegatives(Flusher& f);
+
+// Text-path grammar (grammar.cpp).
+void PassiveRecords(Flusher& f);
 
 }  // namespace hdTrans::word
