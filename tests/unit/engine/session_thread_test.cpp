@@ -116,3 +116,68 @@ HD_TEST(engine_session_threads_stress) {
     }
     HD_CHECK_EQ(differing, 0);
 }
+
+HD_TEST(engine_session_call_context) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine engine;
+    HD_REQUIRE(engine.Open({dicts}));
+    struct Case {
+        std::vector<std::string> lines;
+        const char* firstLinewise;
+        const char* firstDocument;
+        bool equal;
+    };
+    const Case cases[] = {
+        {{"今日はいい天気ですね。", "彼は静かに頷いた。"},
+         "오늘은 좋은 날씨군요.", "오늘은 좋은 날씨군요.", true},
+        {{"光が来た。", "光さん、", "光さん、", "光さん、"}, "빛이 왔다.", "히카루가 왔다.", false},
+        {{"お兄様！", "「あたしが行くわよ」"}, "형님!", "오빠!", false},
+        {{"空を見上げて", "星を探す", "空を見上げて"}, "하늘을 올려다봐", "하늘을 올려다보고", false},
+        {{"七里頼周が来た。", "七里三河守頼周が来た。"},
+         "시치리뢰주가 왔다.", "나나사토 요리치카가 왔다.", false},
+        {{"|竜宮レナ《りゅうぐうれな》", "|竜宮《たつみや》", "竜宮レナが来た。"},
+         "류우구우 레나", "타츠미야 레나", false},
+        {{"「あたしが行くわよ」", "お兄様！", "「お兄様、俺だ」"},
+         "「내가 갈 거야」", "「내가 갈 거야」", false},
+    };
+    for (const Case& c : cases) {
+        hdTrans::Session linewise(engine);
+        std::string input, streamed;
+        for (std::size_t i = 0; i < c.lines.size(); i++) {
+            if (i > 0) {
+                input += '\n';
+                streamed += '\n';
+            }
+            input += c.lines[i];
+            const std::string got = linewise.Translate(c.lines[i]);
+            if (i == 0) HD_CHECK_EQ(got, c.firstLinewise);
+            streamed += got;
+            // Each call sees its retained history and every line of that call.
+            hdTrans::Session replay(engine);
+            const std::string expected = replay.Translate(input);
+            const std::size_t nl = expected.find_last_of('\n');
+            HD_CHECK_EQ(got, nl == std::string::npos ? expected : expected.substr(nl + 1));
+        }
+        hdTrans::Session document(engine);
+        const std::string batch = document.Translate(input);
+        HD_CHECK_EQ(batch.substr(0, batch.find('\n')), c.firstDocument);
+        HD_CHECK_EQ(streamed == batch, c.equal);
+    }
+}
+
+HD_TEST(engine_session_memory_window) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine engine;
+    HD_REQUIRE(engine.Open({dicts}));
+    hdTrans::Session session(engine);
+    session.Translate("「あたしが行くわよ」");
+    HD_CHECK_EQ(session.Translate("お兄様！"), "오빠!");
+    session.Translate(std::string(2048, '\n'));
+    HD_CHECK_EQ(session.Translate("お兄様！"), "형님!");
+    session.Translate("「あたしが行くわよ」");
+    HD_CHECK_EQ(session.Translate("お兄様！"), "오빠!");
+    session.Reset();
+    HD_CHECK_EQ(session.Translate("お兄様！"), "형님!");
+}
