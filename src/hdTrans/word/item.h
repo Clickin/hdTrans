@@ -49,8 +49,8 @@ struct Entry {
 };
 
 // The candidates of one surface: the leading records of a list that share the first
-// record's source and class digit and are all plain or all base records (at most
-// 100). records holds the rest of the list.
+// record's source and class digit and are all plain or all base records.
+// records holds the rest of the list after the configured group limit.
 struct Group {
     std::string surface;
     int length = 0;  // length of the surface the group was built from
@@ -71,7 +71,8 @@ enum DetailClass : int {
     kDetailDakeiyo = 3,  // adjectival noun (TDakeiyoWord)
 };
 
-constexpr int kDirectSlots = 100;
+constexpr int kReferenceDirectSlots = 100;
+constexpr int kDirectSlots = 1000;
 
 // The conjugation state of an item. Info details only carry the next token; the
 // others also hold the group of the conjugation ending (direct group) and its

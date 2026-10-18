@@ -79,7 +79,8 @@ Group* Worker::NewGroup(Record* records, char mode) {
     g->surface.assign(records->source);
     g->length = static_cast<int>(g->surface.size());
     Record* rec = records;
-    for (int j = 0; j < kDirectSlots && rec != nullptr; j++) {
+    const int limit = settings.improvements.expandedGroups ? kDirectSlots : kReferenceDirectSlots;
+    for (int j = 0; j < limit && rec != nullptr; j++) {
         const std::string_view code = rec->partCode;
         if (kind != At(code, 1) || g->surface != rec->source || (rec->user == nullptr) != (records->user == nullptr)) {
             break;

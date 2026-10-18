@@ -135,7 +135,8 @@ void SelectDigit(Item* it) {
 void SelectDirectByJ(Item* it) {
     int flags[kDirectSlots];
     for (int& flag : flags) flag = 1;
-    const int count = static_cast<int>(static_cast<int8_t>(it->DirectCount()));
+    const int count = it->w->settings.improvements.expandedGroups
+        ? it->DirectCount() : static_cast<int>(static_cast<int8_t>(it->DirectCount()));
     int matches = 0;
     int want = it->detail->kind;
     if (At(it->Code(0), 0) == '4') want += '0';

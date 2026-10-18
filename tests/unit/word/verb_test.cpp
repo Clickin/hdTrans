@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "hdTrans/word/worker.h"
+#include "hdTrans/word/flush.h"
 #include "hdtest.h"
 
 using namespace hdTrans;
@@ -106,4 +107,59 @@ HD_TEST(verb_match_direct_kind) {
     HD_CHECK_EQ(d.patternKind, 14);
     HD_CHECK_EQ(d.patternMatched, 1);
     HD_CHECK_EQ(d.patternLength, 3);
+}
+
+HD_TEST(word_expanded_candidate_groups) {
+    const auto snapshot = dict::Load({{0, "base.tsv", "key\tko\tpos\tsem\tgram\tdict\trule\tid\n"}}).snapshot;
+    HD_REQUIRE(snapshot != nullptr);
+    for (bool expanded : {false, true}) {
+        tokenizer::Tokens tokens;
+        word::Arena arena;
+        word::Settings settings = word::Settings::Reference();
+        settings.improvements.expandedGroups = expanded;
+        word::Worker worker(tokens, *snapshot, {}, settings, arena, {});
+        std::deque<word::Record> records(1001);
+        for (std::size_t i = 0; i < records.size(); i++) {
+            records[i].partCode = "S500";
+            if (i + 1 < records.size()) records[i].child = &records[i + 1];
+        }
+        const auto* group = worker.NewGroup(&records[0], ' ');
+        const std::size_t count = expanded ? 1000 : 100;
+        HD_CHECK_EQ(group->entries.size(), count);
+        HD_CHECK(group->records == &records[count]);
+        word::Detail* detail = worker.NewDetail(word::kDetailVerb, -1);
+        detail->enabled[count - 1] = false;
+        detail->ResetEnabled(true);
+        HD_CHECK(detail->enabled[count - 1]);
+    }
+}
+
+HD_TEST(word_expanded_ending_selection) {
+    const auto snapshot = dict::Load({{0, "base.tsv", "key\tko\tpos\tsem\tgram\tdict\trule\tid\n"}}).snapshot;
+    HD_REQUIRE(snapshot != nullptr);
+    for (bool expanded : {false, true}) {
+        tokenizer::Tokens tokens;
+        word::Arena arena;
+        word::Settings settings = word::Settings::Reference();
+        settings.improvements.expandedGroups = expanded;
+        word::Worker worker(tokens, *snapshot, {}, settings, arena, {});
+        word::Record record;
+        record.source = "寝";
+        record.partCode = "M417";
+        auto* group = worker.NewGroup(&record, '0');
+        auto* detail = worker.NewDetail(word::kDetailVerb, -1);
+        detail->kind = 10;
+        detail->group = worker.NewGroup(nullptr, ' ');
+        for (int i = 0; i < 130; i++) {
+            auto* entry = worker.NewEntry();
+            entry->code = i == 129 ? "5:0" : "500";
+            detail->group->entries.push_back(entry);
+        }
+        auto* item = worker.NewItem(detail, group, "寝", 0, 0);
+        worker.chain.head = worker.chain.tail = item;
+        rules::Program program;
+        word::Flusher flusher{worker, program, snapshot->OutputFamilies()};
+        word::CleanupSelectors(flusher);
+        HD_CHECK_EQ(item->DirectIndex(), expanded ? 129 : 0);
+    }
 }
