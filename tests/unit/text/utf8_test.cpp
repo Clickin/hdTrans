@@ -112,6 +112,8 @@ HD_TEST(text_line_pieces_brackets) {
     while (inside.size() < 70000) inside += "あ。";
     inside += "」";
     HD_CHECK_EQ(std::string(TranslationPieces(inside).front()), "外。");
+    const std::string spaced = "外。  " + std::string(70000, 'a');
+    HD_CHECK_EQ(std::string(TranslationPieces(spaced).front()), "外。");
     const std::string unclosed = "「" + std::string(70000, 'a');
     std::string joined;
     for (const auto piece : TranslationPieces(unclosed)) {

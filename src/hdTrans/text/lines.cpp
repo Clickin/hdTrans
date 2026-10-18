@@ -84,7 +84,7 @@ std::vector<std::string_view> TranslationPieces(std::string_view line) {
             if (Space(rune.cp)) space = end;
             if (scanned.open == 0) {
                 outside = end;
-                if (scanned.sentenceTail) outsideSentence = end;
+                if (scanned.sentenceTail && !Space(rune.cp)) outsideSentence = end;
                 if (Space(rune.cp)) outsideSpace = end;
             }
         }
