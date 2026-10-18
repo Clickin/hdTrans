@@ -281,10 +281,10 @@ LoadResult SnapshotLoader::Run() {
         internal::ParallelFor(rows.size() - start, [&](std::size_t part, std::size_t begin, std::size_t end) {
             parts[part] = internal::DropNameKeys(rows.data() + start + begin, end - begin, s.base_);
         });
-        for (const auto& p : parts) {
-            dropped.punct += p.punct;
-            dropped.inflected += p.inflected;
-            dropped.longKorean += p.longKorean;
+        for (const auto& part : parts) {
+            dropped.punct += part.punct;
+            dropped.inflected += part.inflected;
+            dropped.longKorean += part.longKorean;
         }
         if (dropped.punct + dropped.inflected + dropped.longKorean > 0) {
             s.warnings_.push_back(files[i].name + ": name senses dropped: " + std::to_string(dropped.punct) +

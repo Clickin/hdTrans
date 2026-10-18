@@ -159,9 +159,9 @@ Trie Trie::Build(std::size_t count, KeyFunc key, const void* context, std::vecto
         // The next sampled zero is number zero rounded up to kZeroSample.
         for (;;) {
             const std::size_t skip = (kZeroSample - zero % kZeroSample) % kZeroSample;
-            const auto count = static_cast<std::size_t>(std::popcount(zeros));
-            if (skip >= count) {
-                zero += count;
+            const auto zeroCount = static_cast<std::size_t>(std::popcount(zeros));
+            if (skip >= zeroCount) {
+                zero += zeroCount;
                 break;
             }
             for (std::size_t k = 0; k < skip; k++) zeros &= zeros - 1;
