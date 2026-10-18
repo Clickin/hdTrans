@@ -120,6 +120,7 @@ public:
     int selected = -1;
     Selection choice;
     Selection directChoice;
+    std::vector<ShadowChoice> shadowChoices;
     Item* prev = nullptr;
     Item* next = nullptr;
     int compDI = -1;

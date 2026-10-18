@@ -1,4 +1,5 @@
 #include "hdTrans/word/flush.h"
+#include "hdTrans/word/select.h"
 
 namespace hdTrans::word {
 
@@ -11,7 +12,7 @@ void Flush(Flusher& f) {
     CleanupClass3(f);
     ApplyNegatives(f);
     if (f.w.settings.text) {
-        ChooseSenses(f);
+        Select(f);
         ChooseInitialConjunctions(f);
         GoNotSay(f);
         HanBeforeNa(f);

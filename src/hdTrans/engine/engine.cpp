@@ -109,8 +109,10 @@ std::string Session::Translate(std::string_view text) {
         if (end == std::string_view::npos) break;
         start = end + 1;
     }
+    internal::TranslationOptions options;
+    options.selectShadow = selectShadow_;
     const std::vector<std::string> translated =
-        internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, {});
+        internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, {}, options);
     std::string out;
     for (std::size_t i = 0; i < translated.size(); i++) {
         if (i > 0) out += '\n';

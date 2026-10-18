@@ -3,12 +3,14 @@
 // the item chain of each sentence, up to the end-of-sentence passes.
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string_view>
 #include <vector>
 
 #include "hdTrans/dict/snapshot.h"
 #include "hdTrans/tokenizer/token.h"
 #include "hdTrans/word/item.h"
+#include "hdTrans/word/select.h"
 
 namespace hdTrans::word {
 
@@ -23,6 +25,10 @@ struct Settings {
     // The line of verse goes on in the next line of its document: a て form that ends it is
     // the connective 고 rather than a request.
     bool verse = false;
+    // Empty by default; the list and its names outlive the analysis.
+    std::span<const Scorer> scorers;
+    bool selectShadow = false;
+    bool selectRules = false;  // scorers may override rule choices, never sense rows
     // The speech level (an output register, 0 for automatic) of sentence-final plain
     // and polite predicates; it selects the plain-dictionary end rows with a register.
     uint8_t registers[2] = {0, 0};

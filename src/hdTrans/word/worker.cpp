@@ -133,6 +133,7 @@ Item* Worker::NewItem(Detail* d, Group* g, std::string_view text, int start, int
     it->selected = -1;
     it->choice = {};
     it->directChoice = {};
+    it->shadowChoices.clear();
     it->prev = nullptr;
     it->next = nullptr;
     it->compDI = -1;
