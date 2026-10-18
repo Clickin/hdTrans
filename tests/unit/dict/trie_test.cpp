@@ -321,3 +321,26 @@ HD_TEST(trie_sample_keys) {
         HD_CHECK_EQ(keyOf(n), k);
     }
 }
+
+HD_TEST(trie_borrowed_arrays_and_moves) {
+    const std::string_view keys[] = {"", "東", "東京", "東京都", "𠮷", "𠮷野家"};
+    Trie owned = Trie::Build(keys, nullptr);
+    const Trie::ViewData arrays = owned.View();
+    const size_t before = allocations;
+    Trie borrowed = Trie::FromView(arrays);
+    HD_CHECK_EQ(allocations, before);
+    HD_CHECK(borrowed.View().tree.data() == arrays.tree.data());
+    HD_CHECK(borrowed.View().label.data() == arrays.label.data());
+    HD_CHECK_EQ(borrowed.MemoryBytes(), owned.MemoryBytes());
+
+    Trie moved = std::move(owned);
+    owned = std::move(moved);
+    for (const auto key : keys) HD_CHECK_EQ(borrowed.Find(key), owned.Find(key));
+    HD_CHECK_EQ(borrowed.Find("東北"), -1);
+    HD_CHECK_EQ(borrowed.LongestPrefix("東京都庁").length, size_t{9});
+    std::vector<std::string> got;
+    borrowed.Each([&](std::string_view key, int) { got.emplace_back(key); });
+    HD_CHECK(got == std::vector<std::string>(std::begin(keys), std::end(keys)));
+    borrowed = Trie::FromView(owned.View());
+    HD_CHECK_EQ(borrowed.Find("𠮷野家"), owned.Find("𠮷野家"));
+}

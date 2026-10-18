@@ -550,3 +550,33 @@ HD_TEST(SnapshotBuiltinViewIsolation) {
     HD_CHECK(s.Plain(true).Search("駄目で元々", LookupMode::General).empty());
     HD_CHECK(s.TextPlain().Search("駄目で元々", LookupMode::General).empty());
 }
+
+HD_TEST(DictBorrowedBuffersAndMoves) {
+    const LoadResult loaded = LoadFolders({Folder(), Folder() + "/over"});
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    const Dict& base = loaded.snapshot->Base();
+    const Dict::ViewData data = base.View();
+    Dict borrowed = Dict::FromView(data);
+    HD_CHECK(borrowed.View().blob.data() == data.blob.data());
+    HD_CHECK(borrowed.View().starts.data() == data.starts.data());
+    HD_CHECK(borrowed.View().codes.data() == data.codes.data());
+    Dict moved = std::move(borrowed);
+    borrowed = std::move(moved);
+    HD_CHECK_EQ(borrowed.Len(), base.Len());
+    base.Each([&](std::string_view key, const std::vector<Record>& records) {
+        HD_CHECK_EQ(borrowed.Find(key), base.Find(key));
+        const std::vector<Record> got = borrowed.Records(key);
+        HD_REQUIRE(got.size() == records.size());
+        for (size_t i = 0; i < got.size(); i++) {
+            HD_CHECK(got[i].target == records[i].target);
+            HD_CHECK(got[i].codes == records[i].codes);
+            HD_CHECK_EQ(got[i].rule, records[i].rule);
+            HD_CHECK_EQ(got[i].id, records[i].id);
+        }
+    });
+    HD_CHECK_EQ(borrowed.Find("未登録の単語"), -1);
+    const Dict empty;
+    const Dict borrowedEmpty = Dict::FromView(empty.View());
+    HD_CHECK_EQ(borrowedEmpty.Len(), size_t{0});
+    HD_CHECK(borrowedEmpty.Records("学").empty());
+}

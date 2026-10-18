@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -48,7 +50,17 @@ private:
 
 class Dict {
 public:
+    struct ViewData {
+        Trie::ViewData keys;
+        std::string_view blob;
+        std::span<const uint32_t> starts;
+        std::span<const Codes* const> codes;
+    };
+
     Dict() = default;
+    // The buffers must describe a valid dictionary and outlive it, as must its codes.
+    static Dict FromView(ViewData data);
+    ViewData View() const { return {keys_.View(), blob_, starts_, codes_}; }
 
     // The number of key or -1.
     int Find(std::string_view key) const { return keys_.Find(key); }
@@ -89,10 +101,16 @@ private:
     // uvarint(rule) when rule is not 0, uvarint(id); code is an index in codes_ and
     // more is set when another record of the key follows. starts_[g] is the offset
     // of key number g*kKeysPerStart.
+    struct Storage {
+        std::string blob;
+        std::vector<uint32_t> starts;
+        std::vector<const Codes*> codes;
+    };
+    std::unique_ptr<Storage> storage_;
     Trie keys_;
-    std::string blob_;
-    std::vector<uint32_t> starts_;
-    std::vector<const Codes*> codes_;  // by descending use
+    std::string_view blob_;
+    std::span<const uint32_t> starts_;
+    std::span<const Codes* const> codes_;  // by descending use
 };
 
 template <class F>

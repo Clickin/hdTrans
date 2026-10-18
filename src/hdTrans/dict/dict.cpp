@@ -138,9 +138,21 @@ std::vector<Record> Dict::Records(std::string_view key) const {
     return out;
 }
 
+Dict Dict::FromView(ViewData data) {
+    Dict d;
+    d.keys_ = Trie::FromView(data.keys);
+    d.blob_ = data.blob;
+    d.starts_ = data.starts;
+    d.codes_ = data.codes;
+    return d;
+}
+
 std::size_t Dict::MemoryBytes() const {
-    return keys_.MemoryBytes() + blob_.capacity() + starts_.capacity() * sizeof(uint32_t) +
-           codes_.capacity() * sizeof(const Codes*);
+    if (storage_) {
+        return keys_.MemoryBytes() + storage_->blob.capacity() + storage_->starts.capacity() * sizeof(uint32_t) +
+               storage_->codes.capacity() * sizeof(const Codes*);
+    }
+    return keys_.MemoryBytes() + blob_.size() + starts_.size_bytes() + codes_.size_bytes();
 }
 
 }  // namespace hdTrans::dict

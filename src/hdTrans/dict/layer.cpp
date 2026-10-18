@@ -182,6 +182,8 @@ Dict DictBuilder::Build(std::vector<internal::Row>& rows, const std::vector<int3
     } ctx{&rows, &first};
     const std::size_t count = first.size() - 1;
     Dict d;
+    d.storage_ = std::make_unique<Dict::Storage>();
+    Dict::Storage& buffers = *d.storage_;
     std::vector<int32_t> order;
     d.keys_ = Trie::Build(
         count,
@@ -191,7 +193,7 @@ Dict DictBuilder::Build(std::vector<internal::Row>& rows, const std::vector<int3
         },
         &ctx, &order);
 
-    // index[code] is the index in d.codes_ of the codes numbered code.
+    // index[code] is the index in buffers.codes of the codes numbered code.
     std::vector<int32_t> uses(codes.Size());
     for (const auto& r : rows) uses[static_cast<std::size_t>(r.code)]++;
     std::vector<int32_t> used;
@@ -202,10 +204,10 @@ Dict DictBuilder::Build(std::vector<internal::Row>& rows, const std::vector<int3
         return uses[static_cast<std::size_t>(a)] > uses[static_cast<std::size_t>(b)];
     });
     std::vector<int32_t> index(codes.Size());
-    d.codes_.resize(used.size());
+    buffers.codes.resize(used.size());
     for (std::size_t i = 0; i < used.size(); i++) {
         index[static_cast<std::size_t>(used[i])] = static_cast<int32_t>(i);
-        d.codes_[i] = codes.At(used[i]);
+        buffers.codes[i] = codes.At(used[i]);
     }
 
     auto recordSize = [&](const internal::Row& r) {
@@ -218,10 +220,10 @@ Dict DictBuilder::Build(std::vector<internal::Row>& rows, const std::vector<int3
     };
     std::size_t size = 0;
     for (const auto& r : rows) size += recordSize(r);
-    d.blob_.reserve(size);
-    d.starts_.reserve((order.size() + Dict::kKeysPerStart - 1) / Dict::kKeysPerStart);
+    buffers.blob.reserve(size);
+    buffers.starts.reserve((order.size() + Dict::kKeysPerStart - 1) / Dict::kKeysPerStart);
     for (std::size_t k = 0; k < order.size(); k++) {
-        if (k % Dict::kKeysPerStart == 0) d.starts_.push_back(static_cast<uint32_t>(d.blob_.size()));
+        if (k % Dict::kKeysPerStart == 0) buffers.starts.push_back(static_cast<uint32_t>(buffers.blob.size()));
         const auto key = static_cast<std::size_t>(order[k]);
         const auto lo = static_cast<std::size_t>(first[key]);
         const auto hi = static_cast<std::size_t>(first[key + 1]);
@@ -230,13 +232,16 @@ Dict DictBuilder::Build(std::vector<internal::Row>& rows, const std::vector<int3
             uint64_t h = uint64_t{r.target.size()} << 2;
             if (r.rule != 0) h |= 2;
             if (i + 1 < hi) h |= 1;
-            AppendUvarint(d.blob_, h);
-            d.blob_.append(r.target);
-            AppendUvarint(d.blob_, static_cast<uint64_t>(index[static_cast<std::size_t>(r.code)]));
-            if (r.rule != 0) AppendUvarint(d.blob_, static_cast<uint32_t>(r.rule));
-            AppendUvarint(d.blob_, static_cast<uint32_t>(r.id));
+            AppendUvarint(buffers.blob, h);
+            buffers.blob.append(r.target);
+            AppendUvarint(buffers.blob, static_cast<uint64_t>(index[static_cast<std::size_t>(r.code)]));
+            if (r.rule != 0) AppendUvarint(buffers.blob, static_cast<uint32_t>(r.rule));
+            AppendUvarint(buffers.blob, static_cast<uint32_t>(r.id));
         }
     }
+    d.blob_ = buffers.blob;
+    d.starts_ = buffers.starts;
+    d.codes_ = buffers.codes;
     return d;
 }
 

@@ -118,11 +118,13 @@ Trie Trie::Build(std::size_t count, KeyFunc key, const void* context, std::vecto
         keys += ends[d];
     }
     Trie t;
+    t.storage_ = std::make_unique<Storage>();
+    Storage& arrays = *t.storage_;
     t.keys_ = count;
     const auto n64 = static_cast<std::size_t>(nodes);
-    t.tree_.assign((2 * n64 + 63) / 64, 0);
-    t.label_.assign(n64, 0);
-    t.terminal_.assign(n64 / 64 + 1, 0);
+    arrays.tree.assign((2 * n64 + 63) / 64, 0);
+    arrays.label.assign(n64, 0);
+    arrays.terminal.assign(n64 / 64 + 1, 0);
     next[0] = 1;
     if (order) order->assign(count, 0);
     prev = {};
@@ -138,23 +140,23 @@ Trie Trie::Build(std::size_t count, KeyFunc key, const void* context, std::vecto
             half = u.nextHalf;
             d++;
             const int32_t c = next[d]++;
-            t.label_[static_cast<std::size_t>(c)] = UnitLabel(u.unit);
+            arrays.label[static_cast<std::size_t>(c)] = UnitLabel(u.unit);
             const auto b = static_cast<std::size_t>(c - 1 + cur[d - 1]);
-            t.tree_[b / 64] |= uint64_t{1} << (b % 64);
+            arrays.tree[b / 64] |= uint64_t{1} << (b % 64);
             cur[d] = c;
         }
         const auto n = static_cast<std::size_t>(cur[d]);
-        t.terminal_[n / 64] |= uint64_t{1} << (n % 64);
+        arrays.terminal[n / 64] |= uint64_t{1} << (n % 64);
         const int32_t number = endAt[d]++;
         if (order) (*order)[static_cast<std::size_t>(number)] = static_cast<int32_t>(i);
         prev = k;
     }
 
     const std::size_t bits = 2 * n64 - 1;
-    t.zeros_.reserve((n64 + kZeroSample - 1) / kZeroSample);
+    arrays.zeros.reserve((n64 + kZeroSample - 1) / kZeroSample);
     std::size_t zero = 0;
     for (std::size_t w = 0; w * 64 < bits; w++) {
-        uint64_t zeros = ~t.tree_[w];
+        uint64_t zeros = ~arrays.tree[w];
         if (bits - w * 64 < 64) zeros &= (uint64_t{1} << (bits - w * 64)) - 1;
         // The next sampled zero is number zero rounded up to kZeroSample.
         for (;;) {
@@ -166,20 +168,36 @@ Trie Trie::Build(std::size_t count, KeyFunc key, const void* context, std::vecto
             }
             for (std::size_t k = 0; k < skip; k++) zeros &= zeros - 1;
             zero += skip;
-            t.zeros_.push_back(static_cast<uint32_t>(w * 64 + static_cast<std::size_t>(std::countr_zero(zeros))));
+            arrays.zeros.push_back(static_cast<uint32_t>(w * 64 + static_cast<std::size_t>(std::countr_zero(zeros))));
             zeros &= zeros - 1;
             zero++;
         }
     }
-    t.rank_.assign(t.terminal_.size(), 0);
-    for (std::size_t w = 1; w < t.terminal_.size(); w++) {
-        t.rank_[w] = t.rank_[w - 1] + static_cast<uint32_t>(std::popcount(t.terminal_[w - 1]));
+    arrays.rank.assign(arrays.terminal.size(), 0);
+    for (std::size_t w = 1; w < arrays.terminal.size(); w++) {
+        arrays.rank[w] = arrays.rank[w - 1] + static_cast<uint32_t>(std::popcount(arrays.terminal[w - 1]));
     }
+    t.tree_ = arrays.tree;
+    t.zeros_ = arrays.zeros;
+    t.label_ = arrays.label;
+    t.terminal_ = arrays.terminal;
+    t.rank_ = arrays.rank;
     return t;
 }
 
 Trie Trie::Build(std::span<const std::string_view> keys, std::vector<int32_t>* order) {
     return Build(keys.size(), SpanKey, keys.data(), order);
+}
+
+Trie Trie::FromView(ViewData data) {
+    Trie t;
+    t.tree_ = data.tree;
+    t.zeros_ = data.zeros;
+    t.label_ = data.label;
+    t.terminal_ = data.terminal;
+    t.rank_ = data.rank;
+    t.keys_ = data.keys;
+    return t;
 }
 
 std::size_t Trie::MemoryBytes() const {

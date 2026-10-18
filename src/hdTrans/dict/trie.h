@@ -22,6 +22,7 @@
 // allocate. A default-constructed Trie has no keys.
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
@@ -33,6 +34,20 @@ namespace hdTrans::dict {
 
 class Trie {
 public:
+    struct ViewData {
+        std::span<const uint64_t> tree;
+        std::span<const uint32_t> zeros;
+        std::span<const uint16_t> label;
+        std::span<const uint64_t> terminal;
+        std::span<const uint32_t> rank;
+        std::size_t keys = 0;
+    };
+
+    Trie() = default;
+    // The arrays must describe a valid trie and outlive it.
+    static Trie FromView(ViewData data);
+    ViewData View() const { return {tree_, zeros_, label_, terminal_, rank_, keys_}; }
+
     // Returns key i of the keys a Trie is built from.
     using KeyFunc = std::string_view (*)(const void* context, std::size_t i);
 
@@ -83,11 +98,19 @@ private:
     std::size_t ChildStart(int n) const { return n > 0 ? Select0(static_cast<std::size_t>(n - 1)) + 1 : 0; }
     int Child(int n, uint16_t label) const;
 
-    std::vector<uint64_t> tree_;
-    std::vector<uint32_t> zeros_;
-    std::vector<uint16_t> label_;
-    std::vector<uint64_t> terminal_;
-    std::vector<uint32_t> rank_;
+    struct Storage {
+        std::vector<uint64_t> tree;
+        std::vector<uint32_t> zeros;
+        std::vector<uint16_t> label;
+        std::vector<uint64_t> terminal;
+        std::vector<uint32_t> rank;
+    };
+    std::unique_ptr<Storage> storage_;
+    std::span<const uint64_t> tree_;
+    std::span<const uint32_t> zeros_;
+    std::span<const uint16_t> label_;
+    std::span<const uint64_t> terminal_;
+    std::span<const uint32_t> rank_;
     std::size_t keys_ = 0;
 };
 
