@@ -96,7 +96,7 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
             totals.records[tag]++;
             if (g == w) continue;
             totals.differing[tag]++;
-            if (++shown <= 8) {
+            if (++shown <= 10) {
                 hdtest::Fail(__FILE__, __LINE__, set + " " + chunk.header + " record " + std::to_string(i) + "\n  got  " +
                                                      std::string(g) + "\n  want " + std::string(w));
             }

@@ -4,17 +4,20 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <iterator>
 #include <list>
 #include <map>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "hdTrans/dict/snapshot.h"
 #include "hdTrans/tokenizer/token.h"
 #include "hdTrans/word/analyze.h"
 #include "hdTrans/word/worker.h"
+#include "fnv.h"
 #include "tokenizer/stage_records.h"
 
 namespace analyzetest {
@@ -212,7 +215,7 @@ void ForEachChunk(std::string_view data, Chunk& chunk, Finish finish) {
             chunk.want.clear();
         } else if (tag == "FAULT") {
             if (chunk.active) chunk.faultSentence = Int(cols[2]);
-        } else if (chunk.active && (tag == "LK" || tag == "LKC" || tag == "CM" || tag == "L" || tag == "LC" || tag == "LD")) {
+        } else if (chunk.active && (tag == "LK" || tag == "LKC" || tag == "CM" || tag == "L" || tag == "LC" || tag == "LD" || tag == "LX")) {
             chunk.want.emplace_back(line);
         }
     }
@@ -251,6 +254,105 @@ inline void OnLookup(void* context, int token, std::string_view query, int mode,
     }
 }
 
+// FNV-1a over the bytes of s, appended to h.
+inline void HashText(hdtest::Fnv& h, std::string_view s) {
+    for (const char c : s) h.Byte(static_cast<uint8_t>(c));
+}
+
+inline std::string Hex16(uint64_t v) {
+    char b[17];
+    std::snprintf(b, sizeof b, "%016llx", static_cast<unsigned long long>(v));
+    return b;
+}
+
+// The records of a list from r on: their count and the digest of their fields.
+inline std::pair<int, uint64_t> RecordsDigest(const word::Record* r) {
+    hdtest::Fnv h;
+    int n = 0;
+    for (; r != nullptr; r = r->child) {
+        n++;
+        HashText(h, r->source);
+        h.Byte(0x1f);
+        HashText(h, r->target);
+        h.Byte(0x1f);
+        HashText(h, r->partCode);
+        h.Byte(0x1f);
+        HashText(h, r->semantic);
+        h.Byte(0x1f);
+        HashText(h, r->attr);
+        h.Byte(0x1f);
+        HashText(h, r->dictCode);
+        h.Byte(0x1f);
+        HashText(h, std::to_string(r->ruleNo));
+        h.Byte(0x1f);
+        HashText(h, r->user != nullptr ? "1" : "0");
+        h.Byte(0x1e);
+    }
+    return {n, h.h};
+}
+
+// The plain-entry digest of the candidates of an item: the user fields of every entry
+// ("-" for a base entry).
+inline uint64_t UsersDigest(const std::vector<word::Entry*>& entries) {
+    hdtest::Fnv h;
+    for (const word::Entry* e : entries) {
+        const dict::UserEntry* u = e->user;
+        if (u == nullptr) {
+            HashText(h, "-");
+            h.Byte(0x1e);
+            continue;
+        }
+        const std::string fields[] = {u->key, u->target, std::string(u->Part().Text()), std::to_string(u->registerLevel),
+                                      u->polite ? "1" : "0", u->stative ? "1" : "0", u->end ? "1" : "0", u->negative,
+                                      u->kana ? "1" : "0", u->name ? "1" : "0"};
+        for (std::size_t i = 0; i < std::size(fields); i++) {
+            if (i > 0) h.Byte(0x1f);
+            HashText(h, fields[i]);
+        }
+        h.Byte(0x1e);
+    }
+    return h.h;
+}
+
+// The LX record of an item: the analyze state the L, LC and LD records leave out
+// (detail classes, punctuation, voice, pattern, candidate records, plain-entry digest).
+inline std::string ItemState(int chunk, int sent, const word::Item& it) {
+    const word::Detail& d = *it.detail;
+    const word::Group* g = it.group;
+    std::string classes;
+    for (int i = 0; i < it.DirectCount(); i++) {
+        if (i > 0) classes += ',';
+        classes += std::to_string(d.classes[i]);
+    }
+    const auto [restN, restH] = RecordsDigest(g->records);
+    int dn = 0, dlen = 0;
+    uint64_t dh = hdtest::Fnv{}.h;
+    std::vector<word::Entry*> entries = g->entries;
+    if (const word::Group* dg = it.DirectGroup(); dg != nullptr) {
+        const auto [n, h] = RecordsDigest(dg->records);
+        dn = n;
+        dh = h;
+        dlen = dg->length;
+        entries.insert(entries.end(), dg->entries.begin(), dg->entries.end());
+    }
+    hdtest::Fnv text;
+    HashText(text, it.text);
+    const std::string cols[] = {
+        "LX", std::to_string(chunk), std::to_string(sent), std::to_string(it.tokenIndex) + ":" + std::to_string(it.start),
+        Hex16(text.h), std::to_string(it.start), std::to_string(it.length), std::to_string(g->length),
+        std::to_string(d.nextType), Esc(d.nextText), std::to_string(d.kind), std::to_string(d.record),
+        std::to_string(d.punct), std::to_string(d.resultCount), std::to_string(d.selected), std::to_string(d.scanOffset),
+        std::to_string(d.patternKind), std::to_string(d.patternMatched), std::to_string(d.patternLength), classes,
+        std::to_string(restN), Hex16(restH), std::to_string(dn), Hex16(dh), std::to_string(dlen),
+        Hex16(UsersDigest(entries))};
+    std::string out;
+    for (std::size_t i = 0; i < std::size(cols); i++) {
+        if (i > 0) out += '\t';
+        out += cols[i];
+    }
+    return out;
+}
+
 // The records of the sentence's chain before its sentence passes.
 inline void SentenceRecords(const tokenizer::Tokens& tokens, const word::Sentence& s, int chunk, int sent,
                             std::vector<std::string>& out) {
@@ -279,6 +381,9 @@ inline void SentenceRecords(const tokenizer::Tokens& tokens, const word::Sentenc
                           (it->DirectEnabled(d) ? "1" : "0") + "\t" + Esc(PartCode(e)) + "\t" + Esc(e.attr) + "\t" +
                           Esc(e.gattr) + "\t" + Esc(e.field) + "\t" + std::to_string(e.ruleId) + "\t" + Esc(e.dst));
         }
+    }
+    for (const word::Item* it = s.chain.head; it != nullptr; it = it->next) {
+        out.push_back(ItemState(chunk, sent, *it));
     }
 }
 
