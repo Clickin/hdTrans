@@ -1,5 +1,14 @@
 #include "hdTrans/output/inflect.h"
 
+#include <array>
+#include <bit>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <map>
+#include <set>
+
+#include "hdTrans/output/markers.h"
 #include "hdtest.h"
 
 using namespace hdTrans::output::internal;
@@ -115,4 +124,122 @@ HD_TEST(inflect_membership_and_exceptions) {
     HD_CHECK_EQ(InflectionFormBit('C'), uint16_t{4096});
     HD_CHECK_EQ(InflectionFormBit('D'), uint16_t{0});
     HD_CHECK_EQ(InflectionFormBit('\0'), uint16_t{0});
+}
+
+namespace {
+
+using hdTrans::output::DollarMarkerRow;
+using hdTrans::output::PercentMarkerRow;
+using hdTrans::output::SourceMarkerRow;
+
+std::string_view MarkerRowFor(std::string_view key) {
+    switch (key[0]) {
+        case '&': return SourceMarkerRow(key);
+        case '$': return DollarMarkerRow(key);
+        case '%': return PercentMarkerRow(key);
+    }
+    return {};
+}
+
+void CheckRow(std::string_view key, std::string_view actual, std::string_view expected) {
+    if (actual != expected) {
+        hdtest::Fail(__FILE__, __LINE__, std::string(key) + ": " + hdtest::Show(std::string(actual)) +
+                                       " != " + hdtest::Show(std::string(expected)));
+    }
+}
+
+}  // namespace
+
+HD_TEST(inflect_all_marker_rows) {
+    const std::array tables = {SourceMarkerTable(), DollarMarkerTable(), PercentMarkerTable()};
+    const size_t expectedCounts[] = {3708, 1145, 824};
+    std::set<std::string_view> keys;
+    size_t rowCount = 0;
+    for (size_t table = 0; table < tables.size(); ++table) {
+        HD_CHECK_EQ(tables[table].size(), expectedCounts[table]);
+        for (const auto& row : tables[table]) {
+            const std::string_view key = row.key;
+            HD_REQUIRE(key.size() == 5);
+            const auto* family = FindKoreanFamily(key.substr(0, 4));
+            HD_REQUIRE(family != nullptr);
+            keys.insert(family->key);
+            CheckRow(key, Inflect(*family, key[4]), row.text);
+            CheckRow(key, MarkerRowFor(key), row.text);
+            ++rowCount;
+        }
+    }
+    HD_CHECK_EQ(keys.size(), size_t{556});
+    HD_CHECK_EQ(rowCount, size_t{5677});
+    HD_CHECK_EQ(keys.size(), KoreanFamilies().size());
+
+    size_t exceptions = 0, exceptionFamilies = 0, formCount = 0;
+    for (const auto& family : KoreanFamilies()) {
+        HD_CHECK(keys.contains(family.key));
+        formCount += static_cast<size_t>(std::popcount(family.forms));
+        if (!family.exceptions.empty()) ++exceptionFamilies;
+        std::set<char> codes;
+        for (const auto& exception : family.exceptions) {
+            HD_CHECK(codes.insert(exception.code).second);
+            HD_CHECK((family.forms & InflectionFormBit(exception.code)) != 0);
+            HD_CHECK(!exception.surface.empty());
+            const auto computed = InflectStem(family.stem, family.partOfSpeech, family.inflectionClass,
+                                              family.flags, family.key[0], exception.code);
+            HD_CHECK(computed != exception.surface);
+            ++exceptions;
+        }
+    }
+    HD_CHECK_EQ(formCount, rowCount);
+    HD_CHECK_EQ(exceptions, size_t{186});
+    HD_CHECK_EQ(exceptionFamilies, size_t{85});
+    std::printf("inflect: %zu family keys, %zu row keys, %zu necessary exception rows in %zu families\n",
+                keys.size(), rowCount, exceptions, exceptionFamilies);
+}
+
+HD_TEST(inflect_all_form_membership) {
+    for (const auto& family : KoreanFamilies()) {
+        for (int byte = 0; byte < 256; ++byte) {
+            const char code = static_cast<char>(byte);
+            const std::string key = std::string(family.key) + code;
+            const auto row = Inflect(family, code);
+            CheckRow(key, row, MarkerRowFor(key));
+            HD_CHECK_EQ(!row.empty(), (family.forms & InflectionFormBit(code)) != 0);
+            if (family.key[0] != '&') HD_CHECK(SourceMarkerRow(key).empty());
+            if (family.key[0] != '$') HD_CHECK(DollarMarkerRow(key).empty());
+            if (family.key[0] != '%') HD_CHECK(PercentMarkerRow(key).empty());
+        }
+    }
+}
+
+// $HDTRANS_GOLDEN/inflection_rows.tsv holds one key and surface per tab-separated line.
+HD_TEST(inflect_row_fixture) {
+    const char* root = std::getenv("HDTRANS_GOLDEN");
+    if (!root || !*root) return;
+    std::ifstream input(std::filesystem::path(root) / "inflection_rows.tsv", std::ios::binary);
+    HD_REQUIRE(input.is_open());
+    std::map<std::string, std::string, std::less<>> rows;
+    std::string line;
+    while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        const auto tab = line.find('\t');
+        HD_REQUIRE(tab == 5 && line.size() > 6);
+        HD_CHECK(rows.emplace(line.substr(0, tab), line.substr(tab + 1)).second);
+    }
+    HD_CHECK(input.eof());
+    HD_REQUIRE(rows.size() == 5677);
+    for (const auto& [key, surface] : rows) {
+        const auto* family = FindKoreanFamily(std::string_view(key).substr(0, 4));
+        HD_REQUIRE(family != nullptr);
+        CheckRow(key, Inflect(*family, key[4]), surface);
+        CheckRow(key, MarkerRowFor(key), surface);
+    }
+    for (const auto& family : KoreanFamilies()) {
+        for (int byte = 0; byte < 256; ++byte) {
+            const auto code = static_cast<char>(byte);
+            const auto key = std::string(family.key) + code;
+            const auto found = rows.find(key);
+            const std::string_view expected = found == rows.end() ? std::string_view{} : found->second;
+            CheckRow(key, Inflect(family, code), expected);
+            CheckRow(key, MarkerRowFor(key), expected);
+        }
+    }
 }
