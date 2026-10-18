@@ -275,8 +275,8 @@ std::vector<std::string> PlainStream(const dict::Snapshot& snap, bool each, cons
 
 HD_TEST(names_plain_golden) {
     const std::string golden = GoldenDir();
-    if (!fs::exists(golden + "/plain/corpus2.each.tsv")) {
-        std::printf("  skipped: no plain entries in %s\n", golden.c_str());
+    if (!fs::exists(golden + "/stages/MANIFEST")) {
+        std::printf("  skipped: no stage goldens in %s\n", golden.c_str());
         return;
     }
     dict::LoadResult loaded = dict::LoadFolders({DictsDir()});
