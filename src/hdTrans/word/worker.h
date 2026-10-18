@@ -39,6 +39,7 @@ public:
 
     std::vector<uint8_t> spaced;  // Analysis::spaced
     Chain chain;
+    Selection ruleChoice;  // active rule, including assignments to neighbouring items
     int current = -1;  // the token being processed
     int insertedLength = 0;
     int candidateRetryCount = 0;

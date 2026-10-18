@@ -11,6 +11,7 @@
 
 #include "hdTrans/dict/user_text.h"
 #include "hdTrans/rules/rules.h"
+#include "hdTrans/word/provenance.h"
 
 namespace hdTrans::word {
 
@@ -44,6 +45,7 @@ struct Entry {
     int ruleId = -1;            // local rule number
     bool fixed = false;         // no rule selects another entry or changes the target
     const dict::UserEntry* user = nullptr;  // the plain entry, null for base records
+    Selection targetChoice;  // a rule or rewrite that changed this candidate's target
 };
 
 // The candidates of one surface: the leading records of a list that share the first
@@ -116,6 +118,8 @@ public:
     std::string_view text;  // the token text the word was found in
     int length = 0;         // bytes consumed, the conjugation ending included
     int selected = -1;
+    Selection choice;
+    Selection directChoice;
     Item* prev = nullptr;
     Item* next = nullptr;
     int compDI = -1;
@@ -130,7 +134,8 @@ public:
     std::string_view Attr(int i) const;
     std::string_view GAttr(int i) const;
     int RuleID(int i) const;
-    void AssignEntrySurface(int i, std::string_view s);
+    void SelectCandidate(int i, Selection source);
+    void AssignEntrySurface(int i, std::string_view s, Selection source = {Provenance::Rewrite});
 
     // The detail kind of a verb or adjective, -1 for Info details.
     int DetailKind() const { return detail->Yougo() ? detail->kind : -1; }
@@ -140,9 +145,7 @@ public:
     // The conjugation-ending group, null if none.
     Group* DirectGroup() const { return detail->Yougo() ? detail->group : nullptr; }
     int DirectIndex() const { return DirectGroup() ? detail->selected : -1; }
-    void SetDirectIndex(int i) {
-        if (DirectGroup()) detail->selected = i;
-    }
+    void SetDirectIndex(int i, Selection source = {Provenance::Rewrite});
     int DirectCount() const { return DirectGroup() ? static_cast<int>(DirectGroup()->entries.size()) : 0; }
     std::string_view DirectSurface() const { return DirectGroup() ? std::string_view(DirectGroup()->surface) : ""; }
     int DirectLength() const { return DirectGroup() ? DirectGroup()->length : 0; }
@@ -155,7 +158,7 @@ public:
     std::string_view DirectGAttr(int i) const;
     int DirectRuleID(int i) const;
     int DirectClassifier(int i) const;
-    void AssignDirectSlot(int i, std::string_view s);
+    void AssignDirectSlot(int i, std::string_view s, Selection source = {Provenance::Rewrite});
 
     // Appends marker to the grammar codes of the selected entry, or of every entry
     // when none is selected.
@@ -182,6 +185,7 @@ public:
     Item* Object(int delta);
 
     // rules::Item
+    void SetRuleContext(bool global, int number) override;
     rules::Item* GetObject(int delta) override;
     int GetCurrentCompDI() override { return compDI; }
     int GetCurrentCompUmiDI() override { return compUmiDI; }

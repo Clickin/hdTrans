@@ -84,8 +84,42 @@ int Item::RuleID(int i) const {
     return e ? e->ruleId : -1;
 }
 
-void Item::AssignEntrySurface(int i, std::string_view s) {
-    if (Entry* e = group->At(i)) e->dst.assign(s);
+namespace {
+
+Selection CandidateChoice(const Entry* e, Selection source) {
+    if (e != nullptr && e->targetChoice.layer != Provenance::None &&
+        (source.layer == Provenance::Single || source.layer == Provenance::FirstXxx || source.layer == Provenance::Digit)) {
+        return e->targetChoice;
+    }
+    return source;
+}
+
+}  // namespace
+
+void Item::SelectCandidate(int i, Selection source) {
+    selected = i;
+    choice = CandidateChoice(group->At(i), source);
+}
+
+void Item::SetDirectIndex(int i, Selection source) {
+    if (!DirectGroup()) return;
+    detail->selected = i;
+    directChoice = CandidateChoice(DirectEntry(i), source);
+}
+
+void Item::SetRuleContext(bool global, int number) {
+    if (w) w->ruleChoice = number < 0 ? Selection{} : Selection{global ? Provenance::GlobalRule : Provenance::LocalRule, number};
+}
+
+void Item::AssignEntrySurface(int i, std::string_view s, Selection source) {
+    if (Entry* e = group->At(i)) {
+        if (e->dst != s) {
+            if (w && w->ruleChoice.layer != Provenance::None) source = w->ruleChoice;
+            e->targetChoice = source;
+            if (i == selected) choice = source;
+        }
+        e->dst.assign(s);
+    }
 }
 
 std::string_view Item::DirectText(int i) const {
@@ -118,8 +152,15 @@ int Item::DirectClassifier(int i) const {
     return detail->classes[i];
 }
 
-void Item::AssignDirectSlot(int i, std::string_view s) {
-    if (Entry* e = DirectEntry(i)) e->dst.assign(s);
+void Item::AssignDirectSlot(int i, std::string_view s, Selection source) {
+    if (Entry* e = DirectEntry(i)) {
+        if (e->dst != s) {
+            if (w && w->ruleChoice.layer != Provenance::None) source = w->ruleChoice;
+            e->targetChoice = source;
+            if (i == DirectIndex()) directChoice = source;
+        }
+        e->dst.assign(s);
+    }
 }
 
 void Item::AppendRuleCandidateMarker(std::string_view marker) {

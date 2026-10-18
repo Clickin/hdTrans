@@ -139,12 +139,12 @@ bool HadaRoot(Flusher& f, const Item* it) {
 // candidate becomes the first of class with that target, else the selected candidate
 // takes it. The ending of an Av candidate (an adjective with verb endings) was chosen for
 // a verb, so another candidate of class takes the target in its place.
-void TakeTarget(Item* it, char cls, std::string_view target) {
+void TakeTarget(Item* it, char cls, std::string_view target, Selection source) {
     const int count = static_cast<int>(it->group->entries.size());
     for (int slot = 0; slot < count; slot++) {
         const Entry* e = it->group->At(slot);
         if (At(e->code, 0) == cls && e->dst == target) {
-            it->selected = slot;
+            it->SelectCandidate(slot, source);
             return;
         }
     }
@@ -152,12 +152,13 @@ void TakeTarget(Item* it, char cls, std::string_view target) {
         for (int slot = 0; slot < count; slot++) {
             const Entry* e = it->group->At(slot);
             if (At(e->code, 0) == cls && !Has(e->gattr, "Av")) {
-                it->selected = slot;
+                it->SelectCandidate(slot, source);
                 break;
             }
         }
     }
-    if (Entry* e = it->group->At(it->selected)) e->dst = std::string(target);
+    it->AssignEntrySurface(it->selected, target, source);
+    it->choice = source;
 }
 
 void ChooseSenses(Flusher& f) {
@@ -168,7 +169,7 @@ void ChooseSenses(Flusher& f) {
         if (senses == snapshot.Senses().end()) continue;
         for (const userdict::Sense& s : senses->second) {
             if (At(it->Code(it->selected), 0) == s.classDigit && Triggered(f, it, s)) {
-                TakeTarget(it, s.classDigit, s.target);
+                TakeTarget(it, s.classDigit, s.target, {s.triggers.empty() ? Provenance::SenseDefault : Provenance::Sense, s.row});
                 it->adjectival = s.adjective;
                 break;
             }
@@ -183,7 +184,7 @@ void ChooseInitialConjunctions(Flusher& f) {
         bool done = false;
         for (const InitialConjunction& c : kInitialConjunctions) {
             if (c.surface != surface) continue;
-            TakeTarget(it, At(it->Code(it->selected), 0), c.target);
+            TakeTarget(it, At(it->Code(it->selected), 0), c.target, {Provenance::Initial});
             done = true;
             break;
         }
@@ -191,8 +192,8 @@ void ChooseInitialConjunctions(Flusher& f) {
         Item* ni = it->next;
         if (surface == "とき" && ni != nullptr && ni->selected >= 0 && !ni->Fixed() && ni->group->surface == "に" &&
             ni->next != nullptr && ni->next->group->surface == "、") {
-            TakeTarget(it, At(it->Code(it->selected), 0), "그런데");
-            TakeTarget(ni, At(ni->Code(ni->selected), 0), "");
+            TakeTarget(it, At(it->Code(it->selected), 0), "그런데", {Provenance::Initial});
+            TakeTarget(ni, At(ni->Code(ni->selected), 0), "", {Provenance::Initial});
         }
     }
 }

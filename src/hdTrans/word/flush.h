@@ -43,7 +43,7 @@ void ApplyNegatives(Flusher& f);
 // with target, or writes target over the selected one. SelectLemma (grammar.cpp) selects
 // the first entry whose dictionary form is lemma (or starts with prefix) and reports
 // whether there was one. Thing and Person classify dictionary attributes.
-void TakeTarget(Item* it, char cls, std::string_view target);
+void TakeTarget(Item* it, char cls, std::string_view target, Selection source = {Provenance::Rewrite});
 bool SelectLemma(Flusher& f, Item* it, std::string_view lemma);
 bool SelectLemmaPrefix(Flusher& f, Item* it, std::string_view prefix);
 bool Thing(std::string_view attr);

@@ -19,15 +19,15 @@ int ByteAt(std::string_view s, long i) { return static_cast<unsigned char>(At(s,
 
 bool RunLocalRule(Flusher& f, Item* it, int rule) { return rules::RunLocal(f.program, it, rule); }
 
-bool RunGlobalRule(Flusher& f, Item* it, bool uganRule, unsigned char pumsa, bool last) {
-    return rules::RunGlobal(f.program, it, uganRule, pumsa, last);
+bool RunGlobalRule(Flusher& f, Item* it, bool uganRule, unsigned char pumsa, bool last, int* fired) {
+    return rules::RunGlobal(f.program, it, uganRule, pumsa, last, fired);
 }
 
 // The entry of the first "XXX" attribute.
 void SelectLastXXX(Item* it) {
     for (int i = 0; i < static_cast<int>(it->group->entries.size()); i++) {
         if (Has(it->Attr(i), "XXX")) {
-            it->selected = i;
+            it->SelectCandidate(i, {Provenance::FirstXxx});
             return;
         }
     }
@@ -38,7 +38,7 @@ void SelectDirectLastXXX(Item* it) {
     if (!it->detail->Yougo()) return;
     for (int i = 0; i < it->DirectCount(); i++) {
         if (it->detail->enabled[i] && Has(it->DirectAttr(i), "XXX")) {
-            it->detail->selected = i;
+            it->SetDirectIndex(i, {Provenance::FirstXxx});
             return;
         }
     }
@@ -52,7 +52,7 @@ void SelectOwnedDirect(Flusher& f, Item* it) {
     for (int slot = 0; slot < static_cast<int>(g->entries.size()); slot++) {
         Entry* e = g->entries[static_cast<std::size_t>(slot)];
         if (!it->detail->enabled[slot] || (e->user != nullptr && e->user->stative && !stative)) continue;
-        it->SetDirectIndex(slot);
+        it->SetDirectIndex(slot, {Provenance::Fixed});
         const bool polite = e->user != nullptr &&
                             it->w->Register(*e->user) == kPoliteRegister;
         const std::string yo = polite ? std::string(kKoYo) : std::string();
@@ -74,7 +74,7 @@ void SelectDigit(Item* it) {
     switch (At(it->Code(0), 0)) {
         case '0': case '1': case '2': case '3': case '6': case '9': {
             if (count <= 0) {
-                it->selected = 0;
+                it->SelectCandidate(0, {Provenance::Digit});
                 return;
             }
             int positive = 0, negative = 0, firstPositive = 0, firstNegative = 0;
@@ -95,22 +95,22 @@ void SelectDigit(Item* it) {
             auto withXXX = [&](int want) {
                 for (int slot = 0; slot < count; slot++) {
                     if (it->CheckJ(slot) == want && Has(it->Attr(slot), "XXX")) {
-                        it->selected = slot;
+                        it->SelectCandidate(slot, {Provenance::Digit});
                         return true;
                     }
                 }
                 return false;
             };
             if (positive > 1) {
-                if (!withXXX(1)) it->selected = firstPositive;
+                if (!withXXX(1)) it->SelectCandidate(firstPositive, {Provenance::Digit});
             } else if (positive == 1) {
-                it->selected = firstPositive;
+                it->SelectCandidate(firstPositive, {Provenance::Digit});
             } else if (negative > 1) {
-                if (!withXXX(-1)) it->selected = firstNegative;
+                if (!withXXX(-1)) it->SelectCandidate(firstNegative, {Provenance::Digit});
             } else if (negative == 1) {
-                it->selected = firstNegative;
+                it->SelectCandidate(firstNegative, {Provenance::Digit});
             } else {
-                it->selected = 0;
+                it->SelectCandidate(0, {Provenance::Digit});
             }
             return;
         }
@@ -122,7 +122,7 @@ void SelectDigit(Item* it) {
                     break;
                 }
             }
-            it->selected = chosen;
+            it->SelectCandidate(chosen, {Provenance::Digit});
             return;
         }
         default:
@@ -161,7 +161,7 @@ void SelectDirectByJ(Item* it) {
                     break;
                 }
             }
-            it->SetDirectIndex(chosen);
+            it->SetDirectIndex(chosen, {Provenance::Digit});
             return;
         }
         int chosen = -1;
@@ -169,20 +169,20 @@ void SelectDirectByJ(Item* it) {
             if (flags[i] == 0) continue;
             if (chosen == -1) chosen = i;
             if (Has(it->DirectAttr(i), "XXX")) {
-                it->SetDirectIndex(i);
+                it->SetDirectIndex(i, {Provenance::Digit});
                 return;
             }
         }
-        it->SetDirectIndex(chosen);
+        it->SetDirectIndex(chosen, {Provenance::Digit});
         return;
     }
     for (int i = 0; i < count; i++) {
         if (flags[i] != 0) {
-            it->SetDirectIndex(i);
+            it->SetDirectIndex(i, {Provenance::Digit});
             return;
         }
     }
-    it->SetDirectIndex(0);
+    it->SetDirectIndex(0, {Provenance::Digit});
 }
 
 // selectDirect selects the ending of a conjugating item.
@@ -192,26 +192,29 @@ void SelectDirect(Flusher& f, Item* it) {
         return;
     }
     const int n = it->DirectCount();
-    auto selectBy = [&](int slot, auto fire) {
+    auto selectBy = [&](int slot, Selection& source, auto fire) {
         if (!it->detail->enabled[slot]) return false;
         it->compUmiDI = slot;
         if (!fire()) return false;
-        it->SetDirectIndex(slot);
+        it->SetDirectIndex(slot, source);
         if (Has(it->DirectGAttr(slot), "Kj")) ApplyKj(it);
         return true;
     };
     bool chosen = false;
     for (int slot = 0; slot < n && !chosen; slot++) {
-        chosen = selectBy(slot, [&] {
-            const int rule = it->DirectRuleID(slot);
-            return rule != -1 && RunLocalRule(f, it, rule);
+        Selection source{Provenance::LocalRule, it->DirectRuleID(slot)};
+        chosen = selectBy(slot, source, [&] {
+            return source.id != -1 && RunLocalRule(f, it, source.id);
         });
     }
     for (int slot = 0; slot < n && !chosen; slot++) {
-        chosen = selectBy(slot, [&] { return RunGlobalRule(f, it, false, static_cast<unsigned char>(At(it->Code(0), 0)), false); });
+        Selection source{Provenance::GlobalRule};
+        chosen = selectBy(slot, source, [&] {
+            return RunGlobalRule(f, it, false, static_cast<unsigned char>(At(it->Code(0), 0)), false, &source.id);
+        });
     }
     if (!chosen) {
-        if (n == 1) it->SetDirectIndex(0);
+        if (n == 1) it->SetDirectIndex(0, {Provenance::Single});
         else SelectDirectLastXXX(it);
         if (Has(it->DirectGAttr(it->DirectIndex()), "Kj")) ApplyKj(it);
     }
@@ -261,36 +264,37 @@ void CleanupSelectors(Flusher& f) {
     for (Item* it = chain.head; it != nullptr; it = it->next) {
         if (it->Fixed()) {
             // The ending of a fixed stem is still selected by its rules.
-            it->selected = 0;
+            it->SelectCandidate(0, {Provenance::Fixed});
             it->compDI = 0;
             if (it->detail->Yougo()) SelectDirect(f, it);
             it->compUmiDI = it->DetailSelectedIndex();
             continue;
         }
         const int count = static_cast<int>(it->group->entries.size());
-        auto selectBy = [&](int slot, auto fire) {
+        auto selectBy = [&](int slot, Selection& source, auto fire) {
             it->compDI = slot;
             it->compUmiDI = -1;
             if (f.w.settings.text && it->EntryText(slot).starts_with(kKoBogo) && it->MitaiLike()) return false;
             if (!fire()) return false;
-            it->selected = slot;
+            it->SelectCandidate(slot, source);
             if (Has(it->GAttr(slot), "Kj")) ApplyKj(it);
             return true;
         };
         bool chosen = false;
         for (int slot = 0; slot < count && !chosen; slot++) {
-            chosen = selectBy(slot, [&] {
-                const int rule = it->RuleID(slot);
-                return rule != -1 && RunLocalRule(f, it, rule);
+            Selection source{Provenance::LocalRule, it->RuleID(slot)};
+            chosen = selectBy(slot, source, [&] {
+                return source.id != -1 && RunLocalRule(f, it, source.id);
             });
         }
         for (int slot = 0; slot < count && !chosen; slot++) {
-            chosen = selectBy(slot, [&] {
-                return RunGlobalRule(f, it, true, static_cast<unsigned char>(At(it->Code(slot), 0)), false);
+            Selection source{Provenance::GlobalRule};
+            chosen = selectBy(slot, source, [&] {
+                return RunGlobalRule(f, it, true, static_cast<unsigned char>(At(it->Code(slot), 0)), false, &source.id);
             });
         }
         if (!chosen) {
-            if (count == 1) it->selected = 0;
+            if (count == 1) it->SelectCandidate(0, {Provenance::Single});
             else SelectLastXXX(it);
             if (Has(it->GAttr(it->selected), "Kj")) ApplyKj(it);
         }
@@ -314,8 +318,9 @@ void CleanupSelectors(Flusher& f) {
             it->AppendRuleCandidateMarker(marker);
         }
         for (int slot = 0; slot < count; slot++) {
-            const bool fired = selectBy(slot, [&] {
-                return RunGlobalRule(f, it, true, static_cast<unsigned char>(At(it->Code(slot), 0)), true);
+            Selection source{Provenance::GlobalRule};
+            const bool fired = selectBy(slot, source, [&] {
+                return RunGlobalRule(f, it, true, static_cast<unsigned char>(At(it->Code(slot), 0)), true, &source.id);
             });
             if (fired) break;
         }

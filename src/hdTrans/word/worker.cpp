@@ -47,6 +47,7 @@ Entry* Worker::NewEntry() {
     e->ruleId = -1;
     e->fixed = false;
     e->user = nullptr;
+    e->targetChoice = {};
     return e;
 }
 
@@ -130,6 +131,8 @@ Item* Worker::NewItem(Detail* d, Group* g, std::string_view text, int start, int
     it->text = text;
     it->length = g->length;
     it->selected = -1;
+    it->choice = {};
+    it->directChoice = {};
     it->prev = nullptr;
     it->next = nullptr;
     it->compDI = -1;
