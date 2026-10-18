@@ -464,7 +464,8 @@ bool PublishCacheTemp(const std::filesystem::path& from, const std::filesystem::
         (attributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY)) != 0) return false;
     for (int attempt = 0; attempt < 4; attempt++) {
         if (MoveFileExW(from.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) return true;
-        if (GetLastError() != ERROR_SHARING_VIOLATION) return false;
+        const DWORD error = GetLastError();
+        if (error != ERROR_SHARING_VIOLATION && error != ERROR_ACCESS_DENIED) return false;
         Sleep(1);
     }
     return false;

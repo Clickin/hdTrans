@@ -829,6 +829,21 @@ HD_TEST(SnapshotWarmPlainEditsKeepColumnCache) {
     HD_CHECK(std::filesystem::last_write_time(Utf8Path(CacheResource(path))) == time);
 }
 
+HD_TEST(SnapshotPlainReadingsRecognizeBothPathSeparators) {
+    CacheTestEnvironment environment;
+    const std::vector<std::string> lines{"風音「こんにちは」", "風音「ありがとう」"};
+    for (const char* name : {"readings.tsv", "first/readings.tsv", "first\\readings.tsv"}) {
+        const auto loaded = hdTrans::dict::Load({
+            {0, "base.tsv", "key\tko\tpos\tid\n愛\t사랑\tN110\t1\n"},
+            {0, name, "風音\t카자네\n"},
+        });
+        HD_REQUIRE(loaded.snapshot != nullptr && loaded.errors.empty());
+        const auto doc = hdTrans::pipeline::BuildDocument(*loaded.snapshot, lines);
+        HD_REQUIRE(doc != nullptr && doc->registry != nullptr);
+        HD_CHECK_EQ(doc->registry->Render("風音"), "카자네");
+    }
+}
+
 HD_TEST(SnapshotWarmPlainFileOrderAndReadings) {
     CacheTestEnvironment environment;
     TempFolder temp;
@@ -1788,7 +1803,14 @@ HD_TEST(SnapshotCompileCacheReusesFullyVerifiedGeneration) {
     const auto offset = Field(corrupt, section + 8, 8);
     HD_REQUIRE(offset < corrupt.size());
     corrupt[static_cast<size_t>(offset)] ^= std::byte{1};
-    HD_REQUIRE(WriteBytes(changed, corrupt));
+    {
+        std::fstream file(Utf8Path(changed), std::ios::binary | std::ios::in | std::ios::out);
+        HD_REQUIRE(file.is_open());
+        file.seekp(static_cast<std::streamoff>(offset));
+        file.put(static_cast<char>(std::to_integer<unsigned char>(corrupt[static_cast<size_t>(offset)])));
+        file.flush();
+        HD_REQUIRE(file.good());
+    }
     HD_REQUIRE(hdTrans::dict::internal::CompileCache(folders));
     HD_CHECK(hdTrans::dict::internal::SnapshotResourcePath(index) != changed);
     const auto repaired = hdTrans::dict::LoadFolders(folders, {}, true, false);

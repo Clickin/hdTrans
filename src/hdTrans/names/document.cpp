@@ -41,7 +41,7 @@ bool Titled(std::string_view text, std::string_view key) {
 }
 
 std::string_view BaseName(std::string_view path) {
-    const std::size_t slash = path.find_last_of('/');
+    const std::size_t slash = path.find_last_of("/\\");
     return slash == std::string_view::npos ? path : path.substr(slash + 1);
 }
 

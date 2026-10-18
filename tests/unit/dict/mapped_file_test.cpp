@@ -342,9 +342,9 @@ HD_TEST(CachePublishRetriesSharingViolation) {
     HD_REQUIRE(locked != INVALID_HANDLE_VALUE);
     const bool blocked = MoveFileExW(temp.c_str(), target.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) == 0;
     const DWORD error = GetLastError();
-    if (!blocked || error != ERROR_SHARING_VIOLATION) {
+    if (!blocked || (error != ERROR_SHARING_VIOLATION && error != ERROR_ACCESS_DENIED)) {
         CloseHandle(locked);
-        HD_REQUIRE(blocked && error == ERROR_SHARING_VIOLATION);
+        HD_REQUIRE(blocked && (error == ERROR_SHARING_VIOLATION || error == ERROR_ACCESS_DENIED));
     }
     bool closed = false;
     std::thread release([&] {
