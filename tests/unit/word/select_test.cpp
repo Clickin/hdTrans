@@ -242,7 +242,7 @@ HD_TEST(word_select_shadow_all_scorers_without_mutation) {
     const auto snapshot = Dictionary();
     HD_REQUIRE(snapshot != nullptr);
     word::Settings settings = word::Settings::Reference();
-    settings.scorers = scorers;
+    settings.shadowScorers = scorers;
     settings.selectShadow = true;
     SelectLine line(*snapshot, settings);
     word::Item& it = line.Add("書", {{"기입하", "M421"}, {"적", "M422"}, {"기록하", "M421"}},
@@ -307,7 +307,7 @@ HD_TEST(word_select_shadow_blocked_recommendations) {
     for (word::Provenance layer : layers) {
         for (bool rules : {false, true}) {
             word::Settings settings = word::Settings::Reference();
-            settings.scorers = scorers;
+            settings.shadowScorers = scorers;
             settings.selectShadow = true;
             settings.selectRules = rules;
             SelectLine line(*snapshot, settings);
@@ -346,7 +346,8 @@ HD_TEST(word_select_skips_fixed_invalid_and_small_groups) {
     for (const Case& c : cases) {
         for (bool shadow : {false, true}) {
             word::Settings settings = word::Settings::Reference();
-            settings.scorers = scorers;
+            if (shadow) settings.shadowScorers = scorers;
+            else settings.scorers = scorers;
             settings.selectShadow = shadow;
             settings.selectRules = true;
             SelectLine line(*snapshot, settings);
@@ -368,7 +369,8 @@ HD_TEST(word_select_same_class_digit_only) {
     for (bool shadow : {false, true}) {
         for (bool compatible : {false, true}) {
             word::Settings settings = word::Settings::Reference();
-            settings.scorers = scorers;
+            if (shadow) settings.shadowScorers = scorers;
+            else settings.scorers = scorers;
             settings.selectShadow = shadow;
             SelectLine line(*snapshot, settings);
             word::Item& it = line.Add("人気", {{"유명세", "N110"}, {"인", "M421"}, {"", ""}, {"인기", "N130"}});
@@ -623,10 +625,11 @@ HD_TEST(document_senses_shadow_and_scorer_order) {
         settings.selectShadow = shadow;
         settings.selectRules = true;
         settings.scorers = scorers;
+        if (shadow) settings.shadowScorers = scorers;
         SelectLine line(*snapshot, settings);
         word::Item& it = line.Add("人気", {{"유명세"}, {"인기"}, {"명성"}}, {word::Provenance::Digit, 9});
         word::Select(line.flusher);
-        HD_CHECK_EQ(it.selected, shadow ? 0 : 1);
+        HD_CHECK_EQ(it.selected, 1);
         CheckTargets(it, {"유명세", "인기", "명성"});
         HD_CHECK(senses.pending.empty());
         HD_CHECK_EQ(senses.choices.at("人気").target, std::string("인기"));
@@ -640,8 +643,8 @@ HD_TEST(document_senses_shadow_and_scorer_order) {
             HD_CHECK_EQ(choice.score, 1);
             HD_CHECK(choice.eligible && choice.winner);
             HD_CHECK(!it.shadowChoices[1].winner);
-            CheckChoice(it.choice, word::Provenance::Digit, 9);
-        } else CheckChoice(it.choice, word::Provenance::Scorer, 0);
+        } else HD_CHECK(it.shadowChoices.empty());
+        CheckChoice(it.choice, word::Provenance::Scorer, 0);
     }
 }
 

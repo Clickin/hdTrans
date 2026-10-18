@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
     hdTrans::internal::TranslationOptions options;
     options.reference = reference;
     if (selectShadow) {
-        options.scorers = diagnosticScorers;
+        options.shadowScorers = diagnosticScorers;
         options.selectShadow = true;
     }
     WhyContext whyContext;

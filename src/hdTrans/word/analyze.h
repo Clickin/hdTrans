@@ -70,6 +70,7 @@ struct Settings {
     bool verse = false;
     // Empty by default; the list and its names outlive the analysis.
     std::span<const Scorer> scorers;
+    std::span<const Scorer> shadowScorers;  // recorded only when selectShadow is set
     bool selectShadow = false;
     bool selectRules = false;  // scorers may override rule choices, never sense rows
     // The speech level (an output register, 0 for automatic) of sentence-final plain

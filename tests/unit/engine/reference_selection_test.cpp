@@ -31,6 +31,7 @@ HD_TEST(engine_reference_disables_selection_options) {
     internal::TranslationOptions options;
     options.reference = true;
     options.scorers = scorers;
+    options.shadowScorers = scorers;
     options.selectShadow = true;
     options.selectRules = true;
     options.wordImprovements.documentSenses = true;

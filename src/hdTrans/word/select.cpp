@@ -28,27 +28,33 @@ bool MaySelect(Provenance layer, bool rules) {
 void Select(Flusher& f) {
     ChooseSenses(f);
     const Settings& settings = f.w.settings;
-    const bool documentSenses = (settings.improvements.documentSenses || settings.selectShadow) &&
-                                settings.sessionSenses != nullptr;
-    if (!documentSenses && settings.scorers.empty()) return;
+    const bool documentActive = settings.improvements.documentSenses && settings.sessionSenses != nullptr;
+    const bool documentShadow = settings.selectShadow && settings.sessionSenses != nullptr;
     const Scorer documentScorer{"document-senses", DocumentSenseScore};
-    const std::size_t documentCount = documentSenses ? 1 : 0;
+    const std::size_t documentCount = documentActive || documentShadow ? 1 : 0;
+    const std::size_t activeEnd = documentCount + settings.scorers.size();
+    const std::size_t scorerCount = activeEnd + (settings.selectShadow ? settings.shadowScorers.size() : 0);
+    if (scorerCount == 0) return;
     const SelectContext context{f.w.snapshot, f.w.chain};
     for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
         const int count = static_cast<int>(it->group->entries.size());
         if (it->Fixed() || it->selected < 0 || it->selected >= count) continue;
-        if (documentSenses) settings.sessionSenses->Remember(*it);
+        if (documentActive || documentShadow) settings.sessionSenses->Remember(*it);
         if (count < 2) continue;
-        if (!MaySelect(it->choice.layer, settings.selectRules) && !settings.selectShadow) continue;
         const int current = it->selected;
         const std::string_view code = it->Code(current);
         if (code.empty()) continue;
-        bool decided = false;
-        for (std::size_t index = 0; index < documentCount + settings.scorers.size(); index++) {
+        // Both scorer sets see the same selection; diagnostics never suppress an active choice.
+        int activeWinner = -1, activeId = -1;
+        bool shadowDecided = false;
+        for (std::size_t index = 0; index < scorerCount; index++) {
             const bool document = index < documentCount;
-            const Scorer& scorer = document ? documentScorer : settings.scorers[index - documentCount];
+            const bool active = document ? documentActive : index < activeEnd;
+            const bool shadow = settings.selectShadow && (document || index >= activeEnd);
+            const Scorer& scorer = document ? documentScorer : index < activeEnd
+                ? settings.scorers[index - documentCount] : settings.shadowScorers[index - activeEnd];
             const bool eligible = MaySelect(it->choice.layer, !document && settings.selectRules);
-            if (scorer.score == nullptr || (!eligible && !settings.selectShadow)) continue;
+            if (scorer.score == nullptr || (!eligible && !shadow) || (activeWinner >= 0 && !shadow)) continue;
             const int currentScore = scorer.score(*it, current, context);
             int best = current, bestScore = currentScore;
             for (int candidate = 0; candidate < count; candidate++) {
@@ -61,16 +67,19 @@ void Select(Flusher& f) {
                     bestScore = score;
                 }
             }
-            const bool winner = eligible && !decided && best != current;
-            if (settings.selectShadow) {
+            const bool winner = eligible && best != current;
+            if (shadow) {
+                const bool shadowWinner = winner && !shadowDecided;
                 it->shadowChoices.push_back({scorer.name, current, best, currentScore, bestScore,
-                                             eligible, winner, std::string(it->EntryText(best))});
-                decided = decided || winner;
-            } else if (winner) {
-                it->SelectCandidate(best, {Provenance::Scorer, static_cast<int>(index)});
-                break;
+                                             eligible, shadowWinner, std::string(it->EntryText(best))});
+                shadowDecided = shadowDecided || shadowWinner;
+            }
+            if (active && activeWinner < 0 && winner) {
+                activeWinner = best;
+                activeId = document ? 0 : static_cast<int>(index - documentCount + (documentActive ? 1 : 0));
             }
         }
+        if (activeWinner >= 0) it->SelectCandidate(activeWinner, {Provenance::Scorer, activeId});
     }
 }
 
