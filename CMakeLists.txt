@@ -43,9 +43,10 @@ file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/src/hdTrans/dict/builtin_gen.cpp" built
 file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/src/hdTrans/dict/builtin_extra_gen.cpp" builtinExtraHash)
 string(SHA256 HDTRANS_BUILTIN_ID "${builtinBaseHash}${builtinExtraHash}")
 string(SHA256 HDTRANS_COMPILER_ID "${CMAKE_CXX_COMPILER_ID}:${CMAKE_CXX_COMPILER_VERSION}:${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}:${CMAKE_SIZEOF_VOID_P}:${CMAKE_BUILD_TYPE}:${CMAKE_CXX_FLAGS}:${CMAKE_CXX_FLAGS_RELEASE}:${CMAKE_CXX_FLAGS_DEBUG}")
-target_compile_definitions(hdtrans PRIVATE HDTRANS_DATA_ID="${HDTRANS_DATA_ID}" HDTRANS_BUILTIN_ID="${HDTRANS_BUILTIN_ID}" HDTRANS_COMPILER_ID="${HDTRANS_COMPILER_ID}")
+file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dictionary_ids.h" CONTENT
+"#pragma once\n#define HDTRANS_DATA_ID \"${HDTRANS_DATA_ID}\"\n#define HDTRANS_BUILTIN_ID \"${HDTRANS_BUILTIN_ID}\"\n#define HDTRANS_COMPILER_ID \"${HDTRANS_COMPILER_ID}\"\n")
 set_target_properties(hdtrans PROPERTIES OUTPUT_NAME hdTransCore COMPILE_PDB_NAME hdTransCore)
-target_include_directories(hdtrans PUBLIC include PRIVATE src)
+target_include_directories(hdtrans PUBLIC include PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}")
 
 if(NOT EMSCRIPTEN)
     add_executable(hdtrans_cli src/cli/main.cpp)

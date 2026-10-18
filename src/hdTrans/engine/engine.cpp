@@ -63,6 +63,7 @@ bool Engine::Open(const std::vector<std::string>& dirs, bool verifyDicts) {
     if (!s) return false;
     std::lock_guard<std::mutex> lock(mu_);
     dirs_ = dirs;
+    verifyDicts_ = verifyDicts;
     snapshot_ = std::move(s);
     generated_ = internal::NewGenerated(*snapshot_);
     return true;
@@ -70,12 +71,14 @@ bool Engine::Open(const std::vector<std::string>& dirs, bool verifyDicts) {
 
 bool Engine::Reload() {
     std::vector<std::string> dirs;
+    bool verify;
     {
         std::lock_guard<std::mutex> lock(mu_);
         if (!snapshot_) return false;
         dirs = dirs_;
+        verify = verifyDicts_;
     }
-    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs, false, cacheWrite_);
+    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs, verify, cacheWrite_);
     if (!s) return false;
     std::lock_guard<std::mutex> lock(mu_);
     snapshot_ = std::move(s);

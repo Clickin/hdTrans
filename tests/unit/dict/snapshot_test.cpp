@@ -68,7 +68,7 @@ UserEntry Entry(CodeTable& table, std::string key, std::string target, std::stri
 }  // namespace
 
 HD_TEST(SnapshotFolderLayers) {
-    const LoadResult r = LoadFolders({Folder(), Folder() + "/over"});
+    const LoadResult r = LoadFoldersTsv({Folder(), Folder() + "/over"});
     HD_REQUIRE(r.snapshot != nullptr);
     const Snapshot& s = *r.snapshot;
     // The line with an unknown tag is skipped and listed; the load takes place.
@@ -180,7 +180,7 @@ HD_TEST(SnapshotFolderLayers) {
 }
 
 HD_TEST(SnapshotFolderWithoutLaterFolder) {
-    const LoadResult r = LoadFolders({Folder()});
+    const LoadResult r = LoadFoldersTsv({Folder()});
     HD_REQUIRE(r.snapshot != nullptr);
     // more.tsv shadows the base sense 행; words-extra.tsv adds 행차 after it.
     HD_CHECK_EQ(Show(r.snapshot->RetrieveRecords("行", LookupMode::General)),
@@ -451,7 +451,7 @@ HD_TEST(SnapshotStrategies) {
 }
 
 HD_TEST(SnapshotNamesAndPlainEntries) {
-    const LoadResult r = LoadFolders({Folder()});
+    const LoadResult r = LoadFoldersTsv({Folder()});
     HD_REQUIRE(r.snapshot != nullptr);
     CodeTable table;
     // A name entry goes before the plain entries with a shorter key.
@@ -541,6 +541,63 @@ HD_TEST(SnapshotCompiledPlainDictionaries) {
     HD_CHECK_EQ(bad.errors[1].message, "empty KR");
 }
 
+HD_TEST(SnapshotColumnMembershipUsesContent) {
+    for (const std::string name : {"names.tsv", "userdict.tsv", "readings.tsv", "kana.tsv"}) {
+        const auto column = Load({MakeFile(name, kHeader + "猫\t고양이\tN110\t\t\tGN\t1\n")});
+        HD_REQUIRE(column.snapshot != nullptr);
+        HD_CHECK(column.snapshot->HasDictionary());
+        HD_CHECK(column.snapshot->PlainFiles().empty());
+        const std::string plainText = "猫\t고양이\tn\n";
+        const auto plain = Load({MakeFile(name, plainText)});
+        HD_REQUIRE(plain.snapshot != nullptr);
+        HD_CHECK(!plain.snapshot->HasDictionary());
+        HD_REQUIRE(plain.snapshot->PlainFiles().size() == 1);
+        HD_CHECK_EQ(plain.snapshot->PlainFiles()[0].name, name);
+        HD_CHECK_EQ(plain.snapshot->PlainFiles()[0].text, plainText);
+    }
+}
+
+HD_TEST(SnapshotColumnAndPlainCodeClosure) {
+    const auto loaded = Load({
+        MakeFile("base.tsv", kHeader + "犬\t견\tN110\tQNN\tWb\tBZ\t1\n猫\t고양이\tN110\t\t\tGN\t2\n"),
+        MakeFile("names.tsv", kHeader + "アリス\t앨리스\tN130\tQPN\tWa\tPN\t1\n"),
+        MakeFile("userdict.tsv", kHeader + "犬\t개\tN110\tVHn\tWb\t\t1\n"),
+        MakeFile("plain.tsv", "猫\t냥이\tn\n歌う\t노래하다\tv5\n"),
+    });
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    HD_CHECK(loaded.errors.empty());
+    const auto& s = *loaded.snapshot;
+    auto check = [](const Codes* c) {
+        HD_REQUIRE(c != nullptr);
+        HD_REQUIRE(c->withXXX != nullptr);
+        HD_REQUIRE(c->asPlain != nullptr);
+        HD_CHECK(c->withXXX->sem.Contains("XXX"));
+        HD_CHECK(c->asPlain->dict == "GN");
+        HD_CHECK_EQ(c->withXXX->partText, c->partText);
+        HD_CHECK(c->asPlain->sem.Text() == c->sem.Text());
+        HD_CHECK(c->asPlain->gram.Text() == c->gram.Text());
+        HD_CHECK(c->withXXX->withXXX == c->withXXX);
+        HD_CHECK(c->asPlain->asPlain == c->asPlain);
+        HD_REQUIRE(c->withXXX->asPlain != nullptr);
+        HD_CHECK(c->withXXX->asPlain == c->asPlain->withXXX);
+    };
+    HD_REQUIRE(s.User() != nullptr && s.Names() != nullptr);
+    for (const auto* layer : {&s.Base(), s.User(), s.Names()}) {
+        layer->Each([&](std::string_view, const std::vector<Record>& records) {
+            for (const auto& r : records) check(r.codes);
+        });
+    }
+    for (bool extra : {false, true}) {
+        for (const auto* view : {&s.Plain(extra), &s.TextPlain(extra)}) {
+            for (const auto& e : view->Entries()) check(e.codes);
+        }
+    }
+    const auto cat = s.Base().Records("猫");
+    const auto plainCat = s.Plain().Search("猫", LookupMode::General);
+    HD_REQUIRE(cat.size() == 1 && plainCat.size() == 1);
+    HD_CHECK(cat[0].codes == plainCat[0]->codes);
+}
+
 HD_TEST(SnapshotBuiltinViewIsolation) {
     const auto loaded = Load({});
     HD_REQUIRE(loaded.snapshot != nullptr);
@@ -554,7 +611,7 @@ HD_TEST(SnapshotBuiltinViewIsolation) {
 }
 
 HD_TEST(DictBorrowedBuffersAndMoves) {
-    const LoadResult loaded = LoadFolders({Folder(), Folder() + "/over"});
+    const LoadResult loaded = LoadFoldersTsv({Folder(), Folder() + "/over"});
     HD_REQUIRE(loaded.snapshot != nullptr);
     const Dict& base = loaded.snapshot->Base();
     const Dict::ViewData data = base.View();
@@ -667,7 +724,7 @@ HD_TEST(DictBoundedRecords) {
 }
 
 HD_TEST(DictSparseOffsetsAndTruncation) {
-    const auto loaded = LoadFolders({Folder(), Folder() + "/over"});
+    const auto loaded = LoadFoldersTsv({Folder(), Folder() + "/over"});
     HD_REQUIRE(loaded.snapshot != nullptr);
     const auto valid = loaded.snapshot->Base().View();
     HD_REQUIRE(loaded.snapshot->Base().Validate());

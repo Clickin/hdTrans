@@ -2,8 +2,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <filesystem>
 #include <memory>
 #include <span>
+#include <string>
 #include <string_view>
 
 #if defined(__EMSCRIPTEN__)
@@ -42,5 +45,20 @@ struct FileStamp {
 
 // Leaves stamp unchanged on failure. Empty regular files have valid stamps.
 bool ReadStamp(std::string_view utf8, FileStamp& stamp);
+
+// Reads a regular file smaller than 512 bytes. Leaves out unchanged on failure.
+bool ReadCacheSmall(const std::filesystem::path& path, std::string& out);
+
+// Creates a private, exclusive sibling of target. Close flushes and closes even on failure.
+std::FILE* OpenCacheTemp(const std::filesystem::path& target, std::filesystem::path& temp);
+bool CloseCacheTemp(std::FILE* file);
+
+// Atomically replaces to with a sibling from and synchronizes the directory entry.
+bool PublishCacheTemp(const std::filesystem::path& from, const std::filesystem::path& to);
+
+// Runs at most once per process per cache directory. The 512 MiB cap is best-effort:
+// active generations and files younger than 10 minutes can exceed it.
+// The current index and its referenced generation remain protected.
+void MaintainCache(const std::filesystem::path& index, const std::filesystem::path& activeGeneration);
 
 }  // namespace hdTrans::dict::internal

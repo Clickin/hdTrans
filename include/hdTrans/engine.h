@@ -18,7 +18,8 @@ struct Generated;
 struct SessionState;
 }
 
-// Off reads valid caches but never writes; Sync publishes a cache before Open returns.
+// Off never publishes a cache generation; Sync attempts publication before Open returns.
+// Off can write a .bad marker and rename a generation proven corrupt.
 enum class CacheWrite { Off, Sync };
 
 // The loaded dictionaries. Shared by any number of sessions and threads.
@@ -49,6 +50,7 @@ private:
     const CacheWrite cacheWrite_;
     mutable std::mutex mu_;
     std::vector<std::string> dirs_;
+    bool verifyDicts_ = false;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;  // the marker families made on snapshot_
 };

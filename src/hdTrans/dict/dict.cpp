@@ -1,5 +1,6 @@
 #include "hdTrans/dict/dict.h"
 
+#include <algorithm>
 #include <limits>
 #include <utility>
 
@@ -126,9 +127,10 @@ std::size_t CodeTable::MemoryBytes() const {
 
 bool Dict::ReadUvarint(std::size_t& i, std::size_t end, uint64_t& value) const {
     value = 0;
+    if (i >= end || end > blob_.size() ||
+        !guard_.Check(blob_.data() + i, std::min<std::size_t>(10, end - i))) return guard_.Fail();
     for (unsigned byte = 0; byte < 10; byte++) {
-        if (i >= end || i >= blob_.size()) return guard_.Fail();
-        if (!guard_.Check(blob_.data() + i, 1)) return guard_.Fail();
+        if (i >= end) return guard_.Fail();
         const auto b = static_cast<unsigned char>(blob_[i++]);
         if (byte == 9 && b > 1) return guard_.Fail();
         value |= uint64_t{b & 0x7Fu} << (byte * 7);

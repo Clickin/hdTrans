@@ -1,4 +1,4 @@
-# Runs every <name>.in against <name>.expected, preserving stdout bytes in <name>.actual.
+# Runs every <name>.in against <name>.expected with per-run output files in the build directory.
 # Sets ending in .raw use -raw; .each uses -each; other sets use one session.
 # Usage: powershell -File tools/golden.ps1 [-Build DIR] [-Golden DIR] [-Dicts DIR]
 param(
@@ -12,6 +12,7 @@ if (-not $Build) { $Build = Join-Path $here 'build/msvc-x86' }
 if (-not $Golden) { $Golden = Join-Path $here '../hdtrans-golden' }
 if (-not $Dicts) { $Dicts = Join-Path $here '../dicts/base' }
 
+$actualDir = $null
 try {
     $cli = Join-Path (Resolve-Path -LiteralPath $Build).Path 'hdtrans.exe'
     if (-not (Test-Path -LiteralPath $cli -PathType Leaf)) { throw "no CLI at $cli" }
@@ -32,13 +33,17 @@ try {
         }
     }
 
+    $actualPath = Join-Path (Split-Path -Parent $cli) ('golden-actual-' + [Guid]::NewGuid().ToString('N'))
+    [void][System.IO.Directory]::CreateDirectory($actualPath)
+    $actualDir = $actualPath
+
     # One character per byte; ordinal comparisons retain CR, BOM and missing final LF.
     $encoding = [System.Text.Encoding]::GetEncoding(28591)
     $status = 0
     foreach ($inputFile in $inputs) {
         $name = $inputFile.BaseName
         $expected = Join-Path $Golden "$name.expected"
-        $actual = Join-Path $Golden "$name.actual"
+        $actual = Join-Path $actualDir "$name.actual"
         $flag = if ($name.EndsWith('.raw')) { ' -raw' } elseif ($name.EndsWith('.each')) { ' -each' } else { '' }
         if (-not (Test-Path -LiteralPath $expected -PathType Leaf)) { throw "no expectation at $expected" }
 
@@ -77,8 +82,10 @@ try {
         Write-Host "$name`: $different differing lines of $total"
         if ($different -ne 0) { $status = 1 }
     }
-    exit $status
 } catch {
     Write-Error $_ -ErrorAction Continue
-    exit 2
+    $status = 2
+} finally {
+    if ($null -ne $actualDir) { Remove-Item -LiteralPath $actualDir -Recurse -Force }
 }
+exit $status

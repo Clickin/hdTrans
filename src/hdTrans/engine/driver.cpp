@@ -174,7 +174,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
                                            const StageObserver& observer, const TranslationOptions& options) {
     if (!snap.Healthy()) {
         const auto fallback = snap.Fallback();
-        if (!fallback) return {};
+        if (!fallback) return std::vector<std::string>(lines.begin(), lines.end());
         const auto replacement = NewGenerated(*fallback);
         return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
     }
@@ -201,7 +201,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
     }
     if (!snap.Healthy()) {
         const auto fallback = snap.Fallback();
-        if (!fallback) return {};
+        if (!fallback) return std::vector<std::string>(lines.begin(), lines.end());
         const auto replacement = NewGenerated(*fallback);
         return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
     }
@@ -214,7 +214,7 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
                              const StageObserver& observer, const TranslationOptions& options) {
     if (!snap.Healthy()) {
         const auto fallback = snap.Fallback();
-        if (!fallback) return {};
+        if (!fallback) return std::string(line);
         const auto replacement = NewGenerated(*fallback);
         return TranslateRawLine(*fallback, *replacement, line, observer, options);
     }
@@ -230,7 +230,7 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
     for (const output::Sentence& sentence : sentences) output::Append(result, sentence.pieces);
     if (!snap.Healthy()) {
         const auto fallback = snap.Fallback();
-        if (!fallback) return {};
+        if (!fallback) return std::string(line);
         const auto replacement = NewGenerated(*fallback);
         return TranslateRawLine(*fallback, *replacement, line, observer, options);
     }

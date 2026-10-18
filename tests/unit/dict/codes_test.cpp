@@ -429,7 +429,7 @@ HD_TEST(CodeTableOwnsBaseLifetimeAndCountsItsMemoryOnce) {
     auto base = std::make_shared<const CodeTable>(std::move(root));
     const std::weak_ptr<const CodeTable> held = base;
     const Codes* pointer = base->At(number);
-    const Codes original = *pointer;
+    const Codes expected = *pointer;
     const std::size_t baseMemory = base->MemoryBytes();
     {
         CodeTable table;
@@ -449,7 +449,7 @@ HD_TEST(CodeTableOwnsBaseLifetimeAndCountsItsMemoryOnce) {
         HD_CHECK(!held.expired());
         CodeTable moved(std::move(table));
         HD_CHECK(moved.At(number) == pointer);
-        CheckCodesUnchanged(*moved.At(number), original);
+        CheckCodesUnchanged(*moved.At(number), expected);
         HD_CHECK_EQ(moved.MemoryBytes(), baseMemory + owned.MemoryBytes());
     }
     HD_CHECK(held.expired());
