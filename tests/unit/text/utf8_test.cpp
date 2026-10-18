@@ -94,3 +94,29 @@ HD_TEST(text_line_pieces) {
     HD_CHECK_EQ(std::string(lines[1]), "line\r");
     HD_CHECK(lines.back().empty());
 }
+
+HD_TEST(text_line_pieces_brackets) {
+    using namespace hdTrans::text;
+    for (const std::string_view unit : {"「今日は（いい！）天気です。明日も晴れる。」", "『【あ！】（い？）《う。》え。』", "\"alpha? (beta!) gamma.\"", "\"alpha \\\"?beta\\\" (gamma!).\""}) {
+        std::string line;
+        while (line.size() < 100000) line += unit;
+        std::string joined;
+        for (const auto piece : TranslationPieces(line)) {
+            HD_CHECK(piece.size() <= 16384);
+            HD_CHECK_EQ(piece.size() % unit.size(), std::size_t{0});
+            joined += piece;
+        }
+        HD_CHECK_EQ(joined, line);
+    }
+    std::string inside = "外。「";
+    while (inside.size() < 70000) inside += "あ。";
+    inside += "」";
+    HD_CHECK_EQ(std::string(TranslationPieces(inside).front()), "外。");
+    const std::string unclosed = "「" + std::string(70000, 'a');
+    std::string joined;
+    for (const auto piece : TranslationPieces(unclosed)) {
+        HD_CHECK(piece.size() <= 16384);
+        joined += piece;
+    }
+    HD_CHECK_EQ(joined, unclosed);
+}

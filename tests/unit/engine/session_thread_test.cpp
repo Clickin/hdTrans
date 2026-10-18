@@ -458,3 +458,21 @@ HD_TEST(engine_session_piece_history) {
     HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&probe, 1}, memory, {}, options)[0], "오빠!");
     HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&probe, 1}, memory, {}, options)[0], "형님!");
 }
+
+HD_TEST(engine_quoted_pieces) {
+    const std::string dicts = DictsDir();
+    HD_REQUIRE(!dicts.empty());
+    hdTrans::Engine engine(true);
+    HD_REQUIRE(engine.Open({dicts}));
+    std::string line;
+    const std::string unit = "「今日は天気です。明日も晴れるでしょう。」と彼は言った。";
+    while (line.size() < 70000) line += unit;
+    std::string expected;
+    for (const auto piece : hdTrans::text::TranslationPieces(line)) {
+        HD_CHECK_EQ(piece.size() % unit.size(), std::size_t{0});
+        hdTrans::Session fresh(engine);
+        expected += fresh.Translate(piece);
+    }
+    hdTrans::Session session(engine);
+    HD_CHECK_EQ(session.Translate(line), expected);
+}

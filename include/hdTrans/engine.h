@@ -60,7 +60,7 @@ public:
     Session(const Session&) = delete;
     Session& operator=(const Session&) = delete;
 
-    // Lines over 64 KiB are translated in pieces of at most 16 KiB, split at sentence ends where possible.
+    // Lines over 64 KiB are translated in pieces of at most 16 KiB, split at sentence ends outside brackets where possible.
     std::string Translate(std::string_view text);
 
     // Scores candidates without applying their choices. Disabled by default.
