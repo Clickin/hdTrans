@@ -22,10 +22,37 @@ void Flush(Flusher& f) {
         NegativeCopula(f);
         SubjectBeforeGa(f);
         SubjectNo(f);
+        VerseTe(f);
         TeRequest(f);
+        ResultState(f);
+        NotYet(f);
+        SeeAnd(f);
         TeSequence(f);
+        PastSequence(f);
+        QuoteTo(f);
+        NodaTo(f);
+        TerminalBeforeQuote(f);
+        HodoDegree(f);
+        QuestionCopula(f);
+        GenitiveBetweenNames(f);
+        LongVowelAfterKatakana(f);
+        ReturnTo(f);
+        KaraSource(f);
+        NiAfterAdverb(f);
+        NoAfterNa(f);
+        DeScene(f);
+        YounaBeforeModifier(f);
+        ParticleInNext(f);
+        JiBeforeJiman(f);
+        EvenBeforePassive(f);
+        ComitativeTo(f);
+        NounTo(f);
     }
-    if (f.w.settings.terminal) PreferTerminal(f);
+    if (f.w.settings.terminal) {
+        PreferTerminal(f);
+        if (f.w.settings.text) ExclaimedAdjective(f);
+    }
+    if (f.w.settings.text) VerbNegative(f);
 }
 
 }  // namespace hdTrans::word
