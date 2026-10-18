@@ -2,7 +2,9 @@
 // document line of the text-path sets in $HDTRANS_GOLDEN/stages, the cleaned-up pieces (C)
 // and the pieces as typed (P) run through RestoreAll must give the R1, R2 and R3 records
 // and the OUT line. A line written whole from the line table (CTX line.wholeline) has no
-// C to R3 records; its OUT is the CTX value. Skipped when the stages folder is absent.
+// C to R3 records; its OUT is the CTX value. A line of the document ending in CR is
+// translated without it and the CR is written back after the translation (IN record).
+// Skipped when the stages folder is absent.
 #include <algorithm>
 #include <cstdio>
 #include <filesystem>
@@ -37,6 +39,14 @@ void WriteRecords(std::vector<std::string>& out, std::string_view tag, const out
         out.push_back(std::string(tag) + "\t" + std::to_string(i) + "\t" + std::to_string(static_cast<int>(p[i].span)) +
                       "\t" + EscapeStageText(p[i].text));
     }
+}
+
+// The text of the IN record of a line (the line as read, CR included).
+std::string InText(const std::vector<std::string_view>& records) {
+    for (const auto r : records) {
+        if (r.substr(0, r.find('\t')) == "IN") return UnescapeStageText(r.substr(r.find('\t') + 1));
+    }
+    return {};
 }
 
 std::vector<std::string_view> Tagged(const std::vector<std::string_view>& records, std::string_view tag) {
@@ -104,8 +114,13 @@ HD_TEST(pipeline_restore_golden) {
             blocks[s] = Blocks(files[s]);
             HD_REQUIRE(blocks[s].size() == blocks[0].size());
         }
+        std::string inFile;
+        HD_REQUIRE(ReadFile(dir + set + ".IN.tsv", inFile));
+        const std::vector<Block> inBlocks = Blocks(inFile);
+        HD_REQUIRE(inBlocks.size() == blocks[0].size());
         for (size_t b = 0; b < blocks[0].size(); b++) {
             for (int s = 1; s < 5; s++) HD_REQUIRE(blocks[s][b].header == blocks[0][b].header);
+            HD_REQUIRE(inBlocks[b].header == blocks[0][b].header);
             const std::string_view header = blocks[0][b].header;
             const auto& outRecords = blocks[3][b].records;
             if (outRecords.empty()) continue;  // a document header
@@ -119,17 +134,19 @@ HD_TEST(pipeline_restore_golden) {
                     whole = true;
                 }
             }
+            const std::string in = InText(inBlocks[b].records);
+            const bool cr = !in.empty() && in.back() == '\r';
             std::vector<std::string> got[4];
             if (whole) {
                 t.wholeLines++;
-                got[3].push_back("OUT\t" + EscapeStageText(wholeLine));
+                got[3].push_back("OUT\t" + EscapeStageText(wholeLine + (cr ? "\r" : "")));
             } else {
                 const auto steps = pipeline::RestoreAll(ReadPieces(blocks[1][b].records, "C"),
                                                         ReadPieces(blocks[0][b].records, "P"), true);
                 WriteRecords(got[0], "R1", steps.spaced);
                 WriteRecords(got[1], "R2", steps.bracketed);
                 WriteRecords(got[2], "R3", steps.korean);
-                got[3].push_back("OUT\t" + EscapeStageText(steps.line));
+                got[3].push_back("OUT\t" + EscapeStageText(steps.line + (cr ? "\r" : "")));
             }
             for (int k = 0; k < 4; k++) {
                 const auto want = k < 3 ? Tagged(blocks[2][b].records, kTags[k]) : outRecords;
