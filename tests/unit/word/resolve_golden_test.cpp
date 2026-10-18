@@ -202,6 +202,8 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
         analyzetest::Analyze(tokens, *snapshot, *env, chunk.index, chunk.faultSentence, arena, analysis, sink);
         word::Worker& w = *analysis.worker;
         w.settings.terminal = env->settings.terminal;
+        // The lookup observer of the analyze pass is out of scope once Analyze returns.
+        w.observer = {};
         for (std::size_t s = 0; s < analysis.sentences.size(); s++) {
             word::Sentence& sentence = analysis.sentences[s];
             w.chain = sentence.chain;
