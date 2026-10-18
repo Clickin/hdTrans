@@ -293,6 +293,24 @@ HD_TEST(names_registry_forget_evidence) {
     }
 }
 
+HD_TEST(names_registry_forget_empty_reading) {
+    const dict::Snapshot* snap = Base();
+    HD_REQUIRE(snap != nullptr);
+    const std::vector<std::string> lines = {
+        "竜宮（りゅう）", "竜宮（・・）", "竜宮（たつみや）", "光さん、",
+        "define a = Character(\"光\")", "define a = Character(\"茜\")",
+        "|風音《かざね》", "|風音《かのん》", "竜宮（・・）", "光さん、"};
+    names::Registry retained(snap);
+    std::vector<names::Registry::Evidence> evidence(lines.size());
+    for (std::size_t i = 0; i < lines.size(); i++) retained.Add(lines[i], &evidence[i]);
+    for (std::size_t first = 0; first < lines.size(); first++) {
+        names::Registry fresh(snap), document(retained);
+        for (std::size_t i = first; i < lines.size(); i++) fresh.Add(lines[i]);
+        HD_CHECK_EQ(document.Key(), fresh.Key());
+        retained.Forget(evidence[first]);
+    }
+}
+
 HD_TEST(names_registry_forget_actors) {
     names::Registry retained(nullptr);
     names::Registry::Evidence first, second;

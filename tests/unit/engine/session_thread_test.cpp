@@ -25,6 +25,16 @@ std::string DictsDir() {
     return {};
 }
 
+std::vector<std::string> RebuiltTranslation(const hdTrans::dict::Snapshot& snap,
+                                          hdTrans::internal::Generated& generated,
+                                          const std::vector<std::string>& retained,
+                                          const std::string& line,
+                                          const hdTrans::internal::TranslationOptions& options) {
+    hdTrans::internal::Memory memory;
+    hdTrans::pipeline::RememberDocument(snap, retained, memory.document);
+    return hdTrans::internal::TranslateDocument(snap, generated, {&line, 1}, memory, {}, options);
+}
+
 }  // namespace
 
 HD_TEST(engine_session_threads) {
@@ -369,5 +379,59 @@ HD_TEST(engine_megabyte_line) {
     const std::string translated = session.Translate(symbols);
     for (char c : std::string_view("0123456789.,")) {
         HD_CHECK_EQ(std::count(translated.begin(), translated.end(), c), std::count(symbols.begin(), symbols.end(), c));
+    }
+}
+
+HD_TEST(engine_session_history_rebuild) {
+    const std::string dicts = DictsDir();
+    HD_REQUIRE(!dicts.empty());
+    const char* golden = std::getenv("HDTRANS_GOLDEN");
+    HD_REQUIRE(golden != nullptr && *golden != 0);
+    std::ifstream input(std::string(golden) + "/corpus2.each.in", std::ios::binary);
+    HD_REQUIRE(input.good());
+    std::vector<std::string> corpus;
+    for (int i = 0; i < 32; i++) {
+        std::string line;
+        HD_REQUIRE(static_cast<bool>(std::getline(input, line)));
+        corpus.push_back(std::move(line));
+    }
+    hdTrans::Engine engine(true);
+    HD_REQUIRE(engine.Open({dicts}));
+    const auto snap = engine.Dictionaries();
+    const auto generated = hdTrans::internal::NewGenerated(*snap);
+    const std::vector<std::string> prefix = {
+        "竜宮（りゅう）", "竜宮（・・）", "竜宮（たつみや）", "光さん、",
+        "|風音《かざね》", "|風音《かのん》", "「お兄様、俺だ」", "「あたしが行くわよ」",
+        "お兄様！", "空を見上げて", "星を探す", "七里三河守頼周が来た。", "七里頼周が来た。"};
+    for (bool reference : {true, false}) {
+        hdTrans::internal::TranslationOptions options;
+        options.reference = reference;
+        hdTrans::internal::Memory incremental;
+        std::vector<std::string> retained;
+        std::size_t bytes = 0;
+        for (std::size_t call = 0; call < 2160; call++) {
+            std::string line;
+            if (call < prefix.size()) line = prefix[call];
+            else if (call == 2049) line = "竜宮が来た。";
+            else if (call % 41 == 0) line = "お兄様！";
+            else if (call % 43 == 0) line = "空を見上げて";
+            else if (call % 47 == 0) line = "七里頼周が来た。";
+            else if (call % 53 == 0) line = "光さん、";
+            else line = corpus[(call * 17) % corpus.size()];
+            const auto expected = RebuiltTranslation(*snap, *generated, retained, line, options);
+            const auto got = hdTrans::internal::TranslateDocument(*snap, *generated, {&line, 1}, incremental, {}, options);
+            HD_REQUIRE(got.size() == 1 && expected.size() == 1);
+            if (got != expected) {
+                hdtest::Fail(__FILE__, __LINE__, "history call " + std::to_string(call) + ": " + got[0] + " != " + expected[0]);
+                return;
+            }
+            if (call == 2049) HD_CHECK_EQ(got[0], "타츠미야가 왔다.");
+            retained.push_back(line);
+            bytes += line.size();
+            while (retained.size() > 2048 || bytes > 1024 * 1024) {
+                bytes -= retained.front().size();
+                retained.erase(retained.begin());
+            }
+        }
     }
 }

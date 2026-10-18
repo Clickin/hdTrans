@@ -97,6 +97,7 @@ void Registry::CacheDictionaryFacts() {
 }
 
 void Registry::SetReading(const std::string& key, const std::string& value) {
+    if (value.empty()) return;
     if (reading_[key].empty()) reading_[key] = value;
     if (recording_ != nullptr) {
         sources_->readings[key].emplace_back(recording_->id, value);
