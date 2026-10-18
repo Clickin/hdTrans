@@ -5,6 +5,7 @@
 
 #include "hdTrans/output/korean.h"
 #include "hdTrans/output/families.h"
+#include "hdTrans/text/hangul.h"
 #include "hdTrans/text/utf8.h"
 #include "hdTrans/word/flush.h"
 #include "hdTrans/word/strings.h"
@@ -453,6 +454,63 @@ void SeeAnd(Flusher& f) {
             if (stop || Has(kSeeAndFollowers, " " + std::string(next) + " ")) continue;
         }
         e->dst = "1고";
+    }
+}
+
+namespace {
+
+// Whether the Korean lemma's stem ends in ㄹ (들다).
+bool RieulStem(std::string_view lemma) {
+    constexpr std::string_view kDa = "다";
+    if (lemma.ends_with(kDa)) lemma.remove_suffix(kDa.size());
+    return text::Final(DecodeLastRune(lemma).cp) == text::kFinalRieul;
+}
+
+}  // namespace
+
+void PastSequence(Flusher& f) {
+    const Item* last = nullptr;
+    for (const Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const std::string_view s = it->group->surface;
+        if (it->detail->Yougo() || !Has(" 、 。 ！ ？ ! ? … ‥ 」 』 ） よ ね な ぞ ぜ わ さ ", " " + std::string(s) + " ")) {
+            last = it;
+        }
+    }
+    if (last == nullptr) return;
+    std::string end(last->group->surface);
+    if (last->DirectIndex() >= 0) end += std::string(last->DirectSurface());
+    if (!end.ends_with("た") || end.ends_with("よかった") || end.ends_with("良かった")) return;
+    for (Item* it = f.w.chain.head; it != nullptr && it != last; it = it->next) {
+        if (!it->detail->Yougo() || it->DirectIndex() < 0) continue;
+        Entry* e = it->DirectEntry(it->DirectIndex());
+        if (e == nullptr) continue;
+        const std::string_view d = it->DirectSurface();
+        if (it->next == nullptr || it->next->group->surface != kJaComma) {
+            continue;
+        } else if (e->dst == "2면" && d.ends_with("ば") && output::Lemma(it->EntryText(it->selected), f.families).ends_with("보다")) {
+            e->dst = "2니";
+        } else if (e->dst != "2면(자)") {
+            continue;
+        } else if (d == "と" && RieulStem(output::Lemma(it->EntryText(it->selected), f.families))) {
+            e->dst = "1자";
+        } else if (d == "と") {
+            e->dst = "2니";
+        } else if (d.ends_with("ら")) {
+            e->dst = "5더니";
+        }
+    }
+}
+
+void EvenBeforePassive(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* n = it->next;
+        if (n == nullptr || it->prev == nullptr || it->group->surface != "でも" ||
+            output::Lemma(it->EntryText(it->selected), f.families) != "에서도" || !n->detail->Yougo() ||
+            Has(it->prev->Attr(it->prev->selected), "VPl")) {
+            continue;
+        }
+        const std::string_view s = Slice(n->text, n->start, n->length);
+        if (Has(s, "られ") || s.starts_with("され")) SelectLemma(f, it, "(이)라도");
     }
 }
 

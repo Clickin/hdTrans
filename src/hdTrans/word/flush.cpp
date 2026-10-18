@@ -28,6 +28,8 @@ void Flush(Flusher& f) {
         NotYet(f);
         SeeAnd(f);
         TeSequence(f);
+        PastSequence(f);
+        EvenBeforePassive(f);
     }
     if (f.w.settings.terminal) PreferTerminal(f);
 }

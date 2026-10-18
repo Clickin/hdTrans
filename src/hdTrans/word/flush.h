@@ -66,6 +66,8 @@ void VerseTe(Flusher& f);
 void ResultState(Flusher& f);
 void NotYet(Flusher& f);
 void SeeAnd(Flusher& f);
+void PastSequence(Flusher& f);
+void EvenBeforePassive(Flusher& f);
 void TeSequence(Flusher& f);
 bool UtteranceEnd(const Worker& w, const Item* it);
 
