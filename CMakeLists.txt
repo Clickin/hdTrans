@@ -65,7 +65,8 @@ if(NOT EMSCRIPTEN)
     add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp)
     target_link_libraries(admin_priority PRIVATE hdtrans Threads::Threads)
     add_test(NAME host.admin_priority COMMAND admin_priority "${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/dict/testdata/folder")
-    set_tests_properties(host.admin_priority PROPERTIES TIMEOUT 60)
+    set_tests_properties(host.admin_priority PROPERTIES TIMEOUT 60
+        ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/admin-priority-cache")
 
     # Dumps the dictionary lookups over corpus lines for comparison with a reference dump.
     add_executable(snapshot_check tests/snapshot_check/main.cpp)
