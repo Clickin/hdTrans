@@ -538,3 +538,15 @@ HD_TEST(SnapshotCompiledPlainDictionaries) {
     HD_CHECK_EQ(bad.errors[0].message, "る-verb \"帰る\" is ambiguous: write v1 (ichidan) or v5 (godan)");
     HD_CHECK_EQ(bad.errors[1].message, "empty KR");
 }
+
+HD_TEST(SnapshotBuiltinViewIsolation) {
+    const auto loaded = Load({});
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    const Snapshot& s = *loaded.snapshot;
+    HD_CHECK(s.TextPlain().Search("駄目で元々", LookupMode::General).empty());
+    const auto extra = s.TextPlain(true).Search("駄目で元々", LookupMode::General);
+    HD_REQUIRE(extra.size() == 1);
+    HD_CHECK_EQ(extra[0]->target, "밑져야 본전");
+    HD_CHECK(s.Plain(true).Search("駄目で元々", LookupMode::General).empty());
+    HD_CHECK(s.TextPlain().Search("駄目で元々", LookupMode::General).empty());
+}

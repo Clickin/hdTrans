@@ -152,9 +152,10 @@ std::vector<std::string> CuedNames(const dict::Snapshot& snap, std::string_view 
     return keys;
 }
 
-std::unique_ptr<DocumentContext> BuildDocument(const dict::Snapshot& snap, std::span<const std::string> lines) {
+std::unique_ptr<DocumentContext> BuildDocument(const dict::Snapshot& snap, std::span<const std::string> lines, bool extraBuiltin) {
     auto doc = std::make_unique<DocumentContext>();
     doc->snap = &snap;
+    doc->extraBuiltin = extraBuiltin;
     doc->data = &snap.DocumentData();
     doc->codes = std::make_unique<dict::CodeTable>();
     doc->registry = std::make_unique<names::Registry>(doc->data->registry);
@@ -239,7 +240,7 @@ LineLookup LookupOf(DocumentContext& doc, const LineFacts& facts) {
                 !std::binary_search(facts.skip.begin(), facts.skip.end(), e.key)) entries.push_back(e);
         }
         DocumentContext::CachedLookup cached;
-        cached.plain = std::make_unique<dict::UserText>(doc.snap->TextPlain(), std::move(entries));
+        cached.plain = std::make_unique<dict::UserText>(doc.snap->TextPlain(doc.extraBuiltin), std::move(entries));
         if (!facts.skip.empty()) {
             for (const std::string& t : doc.accepted) {
                 if (!std::binary_search(facts.skip.begin(), facts.skip.end(), t)) cached.confirmed.insert(t);
@@ -257,6 +258,7 @@ LineContext ContextOf(const DocumentContext& doc, const LineLookup& lookup) {
     LineContext ctx;
     ctx.document = true;
     ctx.female = doc.female;
+    ctx.extraBuiltin = doc.extraBuiltin;
     ctx.lookup.plain = lookup.plain;
     ctx.lookup.confirmed = lookup.confirmed;
     ctx.lookup.persons = &lookup.persons;

@@ -33,8 +33,8 @@ bool StandalonePhrase(const std::vector<std::string_view>& f) {
     return f.size() >= 3 && f[2] == "intj" && IsKana(text::DecodeRune(f[0]).cp);
 }
 
-void AddRows(Lexicon& lex, std::string_view file, bool phrases) {
-    const std::string text = dict::BuiltinText(file);
+void AddRows(Lexicon& lex, std::string_view file, bool phrases, bool extra) {
+    const std::string text = dict::BuiltinText(file, extra);
     const std::string_view all = text;
     for (size_t pos = 0; pos <= all.size();) {
         size_t nl = all.find('\n', pos);
@@ -61,32 +61,38 @@ void AddRows(Lexicon& lex, std::string_view file, bool phrases) {
     }
 }
 
-const Lexicon& SoundLexicon() {
-    static const Lexicon lex = [] {
-        Lexicon l;
-        AddRows(l, "sound.tsv", false);
-        AddRows(l, "phrases.tsv", true);
-        for (auto& [first, rows] : l) {
-            std::stable_sort(rows.begin(), rows.end(),
-                             [](const SoundRow& a, const SoundRow& b) { return a.key.size() > b.key.size(); });
-        }
-        return l;
-    }();
+Lexicon BuildLexicon(bool extra) {
+    Lexicon l;
+    AddRows(l, "sound.tsv", false, extra);
+    AddRows(l, "phrases.tsv", true, extra);
+    for (auto& [first, rows] : l) {
+        std::stable_sort(rows.begin(), rows.end(),
+                         [](const SoundRow& a, const SoundRow& b) { return a.key.size() > b.key.size(); });
+    }
+    return l;
+}
+
+const Lexicon& SoundLexicon(bool extra) {
+    if (extra) {
+        static const Lexicon lex = BuildLexicon(true);
+        return lex;
+    }
+    static const Lexicon lex = BuildLexicon(false);
     return lex;
 }
 
 }  // namespace
 
-std::span<const SoundRow> SoundRows(char32_t c) {
-    const Lexicon& lex = SoundLexicon();
+std::span<const SoundRow> SoundRows(char32_t c, bool extra) {
+    const Lexicon& lex = SoundLexicon(extra);
     const auto it = lex.find(c);
     if (it == lex.end()) return {};
     return it->second;
 }
 
-bool IsSoundKey(std::u32string_view key) {
+bool IsSoundKey(std::u32string_view key, bool extra) {
     if (key.empty()) return false;
-    for (const SoundRow& s : SoundRows(key[0])) {
+    for (const SoundRow& s : SoundRows(key[0], extra)) {
         if (s.key == key && !s.phrase) return true;
     }
     return false;

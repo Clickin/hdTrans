@@ -313,7 +313,7 @@ void SoundText::LongestKeys(size_t p, size_t& base, size_t& user, size_t& name) 
 bool SoundText::MatchAt(size_t p, SoundMatch& best) const {
     const SoundRow* chosen = nullptr;
     std::string units;
-    for (const SoundRow& s : SoundRows(f_[p])) {
+    for (const SoundRow& s : SoundRows(f_[p], ctx_.extraBuiltin)) {
         if (chosen != nullptr && s.key.size() < chosen->key.size()) break;
         size_t end = 0;
         bool ok = MatchSound(s, f_, p, end, units);
@@ -404,7 +404,7 @@ bool SoundText::AfterClause(size_t p, size_t end) const {
     ptrdiff_t j = i;
     while (j >= 0 && IsKana(rs_[j])) j--;
     const std::u32string_view word = std::u32string_view(f_).substr(j + 1, i - j);
-    if ((j < 0 || !text::IsLetter(rs_[j])) && (word.size() == 1 || (word.size() > 1 && IsSoundKey(word)))) return false;
+    if ((j < 0 || !text::IsLetter(rs_[j])) && (word.size() == 1 || (word.size() > 1 && IsSoundKey(word, ctx_.extraBuiltin)))) return false;
     const size_t next = NextWord(end);
     return next == f_.size() || !In(f_[next], U"ナ何");
 }
@@ -562,7 +562,7 @@ size_t SoundText::Stutter(size_t p, std::vector<std::u32string_view>& seps) cons
         return p + n;
     }
     const std::u32string_view x = f.substr(p, n);
-    if (n > 1 && IsSoundKey(x)) return 0;
+    if (n > 1 && IsSoundKey(x, ctx_.extraBuiltin)) return 0;
     size_t i = p;
     while (f.substr(i, n) == x) {
         const size_t k = StutterSeparator(rs, i + n);

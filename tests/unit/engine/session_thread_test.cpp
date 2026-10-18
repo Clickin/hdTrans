@@ -245,3 +245,17 @@ HD_TEST(engine_forward_terminal) {
     CheckWordImprovement(&hdTrans::word::Improvements::forwardTerminal, "食べたい、食べたい、食べたーい！",
                           "먹고 싶다, 먹고 싶다, 먹고 싶다!", "먹고 싶은, 먹고 싶다, 먹고 싶다!");
 }
+
+HD_TEST(engine_reference_session_builtin_isolation) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine engine;
+    HD_REQUIRE(engine.Open({dicts}));
+    hdTrans::Session improved(engine);
+    hdTrans::Session reference(engine, true);
+    HD_CHECK_EQ(improved.Translate("がぼっ！"), "커헉!");
+    HD_CHECK_EQ(reference.Translate("がぼっ！"), "가봇!");
+    reference.Reset();
+    HD_CHECK_EQ(reference.Translate("がぼっ！"), "가봇!");
+    HD_CHECK_EQ(improved.Translate("がぼっ！"), "커헉!");
+}

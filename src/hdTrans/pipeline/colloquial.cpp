@@ -104,15 +104,15 @@ public:
     bool WordEnds(std::u32string_view rs, size_t from, size_t at) const {
         bool word = false;
         for (size_t j = from; j < at; j++) {
-            if (LexiconKey(ToKatakana(rs.substr(j, at - j)))) return false;
+            if (LexiconKey(ToKatakana(rs.substr(j, at - j)), ctx_.extraBuiltin)) return false;
             word = word || ((at - j >= 2 || IsKanjiRune(rs[j])) && !Tags(rs.substr(j, at - j)).empty());
         }
         return word;
     }
 
-    static bool LexiconKey(std::u32string_view key) {
+    static bool LexiconKey(std::u32string_view key, bool extra) {
         if (key.empty()) return false;
-        for (const SoundRow& s : SoundRows(key[0])) {
+        for (const SoundRow& s : SoundRows(key[0], extra)) {
             if (s.key == key) return true;
         }
         return false;
@@ -139,11 +139,11 @@ bool Volitional(std::u32string_view rs, size_t i) {
 
 // A key of the sound lexicon that starts between from and i, holds the mark at
 // character i and goes past it (おーい, えーっと).
-bool SoundCovers(std::u32string_view rs, size_t from, size_t i) {
+bool SoundCovers(std::u32string_view rs, size_t from, size_t i, bool extra) {
     const std::u32string f = ToKatakana(rs);
     std::string units;
     for (size_t j = from; j < i; j++) {
-        for (const SoundRow& s : SoundRows(f[j])) {
+        for (const SoundRow& s : SoundRows(f[j], extra)) {
             size_t end = 0;
             if (MatchSound(s, f, j, end, units) && end > i + 1 && s.key.find(f[i]) != std::u32string::npos) return true;
         }
@@ -163,10 +163,10 @@ bool Nickname(std::u32string_view text) {
 // A key of the sound lexicon that is the text from the start of a run of kana and
 // kanji at or after from to end: the mark belongs to an interjection (まぁいいんじゃない,
 // さぁて).
-bool SoundWord(std::u32string_view rs, size_t from, size_t end) {
+bool SoundWord(std::u32string_view rs, size_t from, size_t end, bool extra) {
     for (size_t j = from; j < end; j++) {
         if (j > 0 && (IsHiraganaRune(rs[j - 1]) || IsKanjiRune(rs[j - 1]))) continue;
-        if (Emphasis::LexiconKey(ToKatakana(rs.substr(j, end - j)))) return true;
+        if (Emphasis::LexiconKey(ToKatakana(rs.substr(j, end - j)), extra)) return true;
     }
     return false;
 }
@@ -341,7 +341,7 @@ std::string RewriteEmphasis(std::string_view text, const LineContext& ctx, const
         }
         if (rs[i] != U'っ' && rs[end] == U'い' && e.StemTagged(rs, from, i, "H")) cands.resize(1);  // すごーい, おそーい
         const size_t before = e.Reach(rs, from, i);
-        if (before > end || SoundCovers(rs, from, i) || SoundWord(rs, from, end)) continue;  // もっと, せーの, おーい
+        if (before > end || SoundCovers(rs, from, i, ctx.extraBuiltin) || SoundWord(rs, from, end, ctx.extraBuiltin)) continue;  // もっと, せーの, おーい
         int best = -1;
         size_t bestReach = std::max(before, end);
         for (size_t k = 0; k < cands.size(); k++) {

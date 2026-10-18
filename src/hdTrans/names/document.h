@@ -35,6 +35,7 @@ struct DocumentContext {
     // verse and historical parts appended.
     std::string key;
     bool female = false;
+    bool extraBuiltin = false;
     std::vector<std::string> persons;  // doc.persons, sorted
     std::vector<std::string> verse;    // doc.verse, sorted
     std::string historical;            // doc.historical: JP KR POS rows
@@ -74,7 +75,8 @@ struct LineLookup {
 };
 
 // Builds the context of the lines of a document (each may end in "\r").
-std::unique_ptr<DocumentContext> BuildDocument(const dict::Snapshot& snap, std::span<const std::string> lines);
+std::unique_ptr<DocumentContext> BuildDocument(const dict::Snapshot& snap, std::span<const std::string> lines,
+                                               bool extraBuiltin = false);
 
 // The facts of one line of the document; line is the line without its "\r".
 LineFacts ReadLine(DocumentContext& doc, std::string_view line);

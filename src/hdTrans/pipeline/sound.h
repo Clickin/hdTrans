@@ -99,10 +99,10 @@ struct SoundRow {
 
 // The rows of the sound lexicon whose key starts with the katakana c, longer keys
 // first, rows of equal length in file order (sound.tsv, then phrases.tsv).
-std::span<const SoundRow> SoundRows(char32_t c);
+std::span<const SoundRow> SoundRows(char32_t c, bool extra = false);
 
 // Whether key (katakana) is the key of a row of sound.tsv.
-bool IsSoundKey(std::u32string_view key);
+bool IsSoundKey(std::u32string_view key, bool extra = false);
 
 // The characters of s; an invalid UTF-8 byte b is kInvalidByte + b.
 constexpr char32_t kInvalidByte = 0x110000;

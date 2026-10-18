@@ -323,7 +323,7 @@ std::size_t Snapshot::MemoryBytes() const {
                     names_.MemoryBytes();
     for (const auto& [key, sp] : places_) n += 64 + key.capacity() + sp.ko.capacity() + sp.person.capacity();
     for (const File& f : plain_) n += sizeof(File) + f.name.capacity() + f.text.capacity();
-    for (const UserText* u : {rawPlain_.get(), textPlain_.get()}) {
+    for (const UserText* u : {rawPlain_.get(), textPlain_.get(), rawExtraPlain_.get(), textExtraPlain_.get()}) {
         if (!u) continue;
         for (const UserEntry& e : u->Entries()) {
             n += sizeof(UserEntry) + 2 * sizeof(void*) + e.key.capacity() + e.target.capacity() + e.negative.capacity();

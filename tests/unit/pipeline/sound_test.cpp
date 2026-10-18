@@ -173,3 +173,9 @@ HD_TEST(pipeline_rewrite_casual_adjectives) {
     };
     for (const auto& c : cases) HD_CHECK_EQ(internal::RewriteCasualAdjectives(c.in, ctx, *snap), std::string(c.want));
 }
+
+HD_TEST(pipeline_sound_extra_isolation) {
+    HD_CHECK(!internal::IsSoundKey(U"ガボッ"));
+    HD_CHECK(internal::IsSoundKey(U"ガボッ", true));
+    HD_CHECK(!internal::IsSoundKey(U"ガボッ"));
+}

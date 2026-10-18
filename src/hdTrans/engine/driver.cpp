@@ -171,7 +171,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
                                            const StageObserver& observer, const TranslationOptions& options) {
     std::vector<std::string> all = memory.lines;
     all.insert(all.end(), lines.begin(), lines.end());
-    const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(snap, all);
+    const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(snap, all, !options.reference && options.wordImprovements.extraBuiltin);
 
     Scratch s;
     if (!options.reference && (options.wordImprovements.documentSenses || options.selectShadow)) {
@@ -200,7 +200,7 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
     if (observer.line) observer.line(observer.context, 0);
     std::vector<output::Sentence> sentences;
     dict::LookupContext lookup;
-    lookup.plain = &snap.Plain();
+    lookup.plain = &snap.Plain(!options.reference && options.wordImprovements.extraBuiltin);
     TranslateChunk(snap, lookup, chunk, 0, false, false, s, generated, observer, options, sentences);
     output::Pieces result;
     for (const output::Sentence& sentence : sentences) output::Append(result, sentence.pieces);

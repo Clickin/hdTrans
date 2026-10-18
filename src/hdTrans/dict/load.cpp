@@ -162,7 +162,7 @@ bool ReadColumnFile(const File& f, CodeReader& reader, internal::Layer& layer, s
 // plain dictionaries.
 bool OwnBuiltin(std::string_view name) {
     return name == "sound.tsv" || name == "phrases.tsv" || name == "patterns.tsv" || name == "senses.tsv" ||
-           name == "lines.tsv";
+           name == "lines.tsv" || name == "cleanup.tsv";
 }
 
 // Whether a line of phrases.tsv is an interjection in kana: an utterance of the sound
@@ -181,8 +181,8 @@ bool StandalonePhrase(std::string_view line) {
 }
 
 // The text of phrases.tsv without its standalone phrases, which keep their lines.
-std::string BuiltinPhrases() {
-    const std::string text = BuiltinText("phrases.tsv");
+std::string BuiltinPhrases(bool extraOnly = false) {
+    const std::string text = extraOnly ? ExtraBuiltinText("phrases.tsv") : BuiltinText("phrases.tsv");
     std::string out;
     out.reserve(text.size());
     for (std::size_t pos = 0;;) {
@@ -293,6 +293,19 @@ bool SnapshotLoader::CompilePlain(const std::vector<std::size_t>& rest) {
     }
     s.rawPlain_ = std::make_unique<const UserText>(std::move(rawView));
     s.textPlain_ = std::make_unique<const UserText>(std::move(textView));
+
+    std::vector<UserEntry> extraEndings, extraPhrases;
+    ok = Compile("endings.tsv", ExtraBuiltinText("endings.tsv"), -1, builtin, extraEndings) && ok;
+    ok = Compile("phrases.tsv", BuiltinPhrases(true), -1, builtin, extraPhrases) && ok;
+    ok = Compile("patterns.tsv", ExtraBuiltinText("patterns.tsv"), -1, builtin, extraPhrases) && ok;
+    if (!ok) return false;
+    rawView = s.rawPlain_->Entries();
+    textView = s.textPlain_->Entries();
+    rawView.insert(rawView.end(), extraEndings.begin(), extraEndings.end());
+    textView.insert(textView.end(), extraEndings.begin(), extraEndings.end());
+    textView.insert(textView.end(), extraPhrases.begin(), extraPhrases.end());
+    s.rawExtraPlain_ = std::make_unique<const UserText>(std::move(rawView));
+    s.textExtraPlain_ = std::make_unique<const UserText>(std::move(textView));
     return true;
 }
 

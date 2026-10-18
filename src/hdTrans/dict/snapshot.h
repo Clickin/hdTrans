@@ -161,10 +161,10 @@ public:
     const std::vector<File>& PlainFiles() const { return plain_; }
     // The plain entries of the word pipeline: the builtin endings, then the entries
     // of the plain dictionaries.
-    const UserText& Plain() const { return *rawPlain_; }
+    const UserText& Plain(bool extra = false) const { return *(extra ? rawExtraPlain_ : rawPlain_); }
     // The plain entries of the text path: the kana spellings, the builtin endings,
     // phrases and patterns, then the entries of the plain dictionaries.
-    const UserText& TextPlain() const { return *textPlain_; }
+    const UserText& TextPlain(bool extra = false) const { return *(extra ? textExtraPlain_ : textPlain_); }
     // The shared dictionary data used to build document contexts.
     const pipeline::DocumentData& DocumentData() const;
     // The builtin sense table.
@@ -253,7 +253,7 @@ private:
     std::vector<File> plain_;
     userdict::Families families_;
     mutable output::Families outputFamilies_;
-    std::unique_ptr<const UserText> rawPlain_, textPlain_;
+    std::unique_ptr<const UserText> rawPlain_, textPlain_, rawExtraPlain_, textExtraPlain_;
     userdict::SenseTable senses_;
     mutable std::once_flag documentOnce_;
     mutable std::shared_ptr<const pipeline::DocumentData> documentData_;

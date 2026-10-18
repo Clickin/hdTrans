@@ -15,7 +15,8 @@ namespace hdTrans::dict {
 // The names of the builtin files, in name order.
 std::vector<std::string_view> BuiltinNames();
 // The text of the builtin file name ("endings.tsv"); empty when there is none.
-std::string BuiltinText(std::string_view name);
+std::string BuiltinText(std::string_view name, bool extra = false);
+std::string ExtraBuiltinText(std::string_view name);
 
 namespace internal {
 
@@ -27,6 +28,7 @@ struct BuiltinTable {
 
 // Sorted by name.
 std::span<const BuiltinTable> BuiltinTables();
+std::span<const BuiltinTable> ExtraBuiltinFiles();
 
 }  // namespace internal
 
