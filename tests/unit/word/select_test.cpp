@@ -831,3 +831,99 @@ HD_TEST(document_senses_find_remembered_stem_in_current_form) {
     CheckChoice(it.choice, word::Provenance::Scorer, 0);
     HD_CHECK_EQ(senses.choices.at("求め").target, std::string("구&AV@"));
 }
+
+HD_TEST(word_selected_assignment_rule_provenance) {
+    const struct { bool global; bool neighbour; bool succeeds; int selected; } cases[] = {
+        {false, false, true, 0}, {false, false, true, 1}, {true, false, true, 1},
+        {false, true, true, 1}, {true, true, false, 1}, {false, false, false, 1},
+    };
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    for (const auto& c : cases) {
+        SelectLine line(*snapshot);
+        auto& anchor = line.Add("東京", {{"동경", "N130"}, {"도쿄", "N110"}}, {word::Provenance::FirstXxx, 17}, c.selected);
+        auto& neighbour = line.Add("大阪", {{"대판", "N130"}, {"오사카", "N110"}}, {word::Provenance::FirstXxx, 17}, c.selected);
+        auto& affected = c.neighbour ? neighbour : anchor;
+        anchor.compDI = c.selected;
+        for (auto* entry : affected.group->entries) {
+            entry->attr = "QPN";
+            entry->gattr = "J7";
+        }
+        const std::string body = "||1 &&2 D+" + std::string(c.neighbour ? "1" : "0") +
+                                 "= \"수도\" S+0== \"" + (c.succeeds ? "東京" : "missing") + "\"\n";
+        const std::string flat = c.global ? "rules 1 0 1\nG 0 1 1015 1 " + body
+                                          : "rules 1 1 0\nL 0 " + body;
+        rules::Program program;
+        rules::LoadError error{};
+        HD_REQUIRE(rules::Load(flat, program, error));
+        const bool result = c.global ? rules::RunGlobal(program, &anchor, true, '1', false)
+                                     : rules::RunLocal(program, &anchor, 0);
+        HD_CHECK_EQ(result, c.succeeds);
+        HD_CHECK_EQ(affected.selected, c.selected);
+        const auto layer = c.global ? word::Provenance::GlobalRule : word::Provenance::LocalRule;
+        const int id = c.global ? 1015 : 0;
+        CheckChoice(affected.choice, layer, id);
+        CheckChoice(affected.group->At(c.selected)->targetChoice, layer, id);
+        CheckChoice(affected.group->At(1 - c.selected)->targetChoice, word::Provenance::None);
+        CheckChoice(line.worker.ruleChoice, word::Provenance::None);
+        HD_CHECK_EQ(std::string(affected.EntryText(c.selected)), std::string("수도"));
+        const char* untouched = c.neighbour ? (c.selected == 0 ? "오사카" : "대판")
+                                           : (c.selected == 0 ? "도쿄" : "동경");
+        HD_CHECK_EQ(std::string(affected.EntryText(1 - c.selected)), std::string(untouched));
+        HD_CHECK_EQ(std::string(affected.Code(0)), std::string("130"));
+        HD_CHECK_EQ(std::string(affected.Code(1)), std::string("110"));
+        for (int i : {0, 1}) {
+            HD_CHECK_EQ(std::string(affected.Attr(i)), std::string("QPN"));
+            HD_CHECK_EQ(std::string(affected.GAttr(i)), std::string("J7"));
+        }
+    }
+}
+
+HD_TEST(word_punctuation_digit_matches) {
+    const struct { const char* attrs; const char* tail; int matches; } cases[] = {
+        {"J0", "あ", 1}, {"J1", ",", 1}, {"J2", ".", 1}, {"J3", "?", 1},
+        {"J4", "!", 1}, {"J5", ")", 1}, {"J6", "]", 1}, {"J7", ":", 1}, {"J7", "<", 1},
+        {"J7", "。", -1}, {"J8", ":", -1}, {"NJ7Wa", ":", 1}, {"J7J1", ":", 1},
+        {"J8J7", ":", -1}, {"JsJ7", ":", -1}, {"J", ":", -1}, {"", ":", -1},
+    };
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    for (const auto& c : cases) {
+        SelectLine line(*snapshot);
+        auto& item = line.Add("東京", {{"도쿄"}});
+        const std::string text = std::string("東京") + c.tail;
+        item.text = text;
+        item.group->At(0)->gattr = c.attrs;
+        HD_CHECK_EQ(item.CheckJ(0), c.matches);
+        HD_CHECK_EQ(item.CheckJ(-1), -1);
+    }
+}
+
+HD_TEST(document_senses_particle_and_prefix_stems) {
+    const struct { const char* target; const char* stem; } cases[] = {
+        {"학교에서는", "학교"}, {"친구에게서", "친구"}, {"집으로는", "집"},
+        {"학교에는", "학교"}, {"친구에게", "친구"}, {"학교에서", "학교"}, {"집으로", "집"},
+        {"집은", "집"}, {"나무는", "나무"}, {"집을", "집"}, {"나무를", "나무"},
+        {"서울의", "서울"}, {"학교에", "학교"}, {"의", "의"}, {"서울의는", "서울의"},
+        {"할 수 구&AV@", "구"}, {"(이)라고 말&AV@", "말"}, {"(을)를 향&AV@", "향"},
+        {"(으)로 향&AV@", "향"}, {"해 주&AE@", "주"}, {"해결&AV@", "해결"},
+    };
+    for (const auto& c : cases) {
+        HD_CHECK_EQ(std::string(word::DocumentSenseStem(c.target)), std::string(c.stem));
+    }
+    for (char code : std::string_view("0123456789ABC")) {
+        const std::string target = std::string(1, code) + "서울의&AV@5다";
+        HD_CHECK_EQ(std::string(word::DocumentSenseStem(target)), std::string("서울"));
+    }
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    word::SessionSenses senses;
+    senses.choices.emplace("東京", word::SessionSense{"서울", "N130"});
+    word::Settings settings;
+    settings.sessionSenses = &senses;
+    SelectLine line(*snapshot, settings);
+    auto& item = line.Add("東京", {{"동경의", "N130"}, {"서울의", "N130"}});
+    const word::SelectContext context{*snapshot, line.worker.chain};
+    HD_CHECK_EQ(word::DocumentSenseScore(item, 1, context), 1);
+    HD_CHECK_EQ(word::DocumentSenseScore(item, 0, context), 0);
+}
