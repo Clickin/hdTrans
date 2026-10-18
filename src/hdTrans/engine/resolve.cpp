@@ -4,7 +4,7 @@
 
 namespace hdTrans::internal {
 
-void ResolveSentence(const rules::Program& program, const output::Families& families, word::Analysis& analysis,
+void ResolveSentence(const rules::Program& program, output::Families& families, word::Analysis& analysis,
                      std::size_t sentence) {
     word::Sentence& s = analysis.sentences[sentence];
     word::Worker& w = *analysis.worker;

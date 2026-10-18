@@ -89,7 +89,7 @@ word::Settings AnalysisSettings(bool text) {
 // Translates one chunk: its tokens, the word analysis, then per sentence the resolve stage
 // and the compose stage. The sentences are appended to out with the chunk index.
 void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& lookup, const output::Pieces& chunk,
-                    int index, bool text, Scratch& s, const output::Families& families, const StageObserver& observer,
+                    int index, bool text, Scratch& s, Generated& generated, const StageObserver& observer,
                     std::vector<output::Sentence>& out) {
     s.texts.clear();
     const std::vector<tokenizer::Piece> pieces = TokenizerPieces(chunk);
@@ -103,19 +103,22 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
 
     const output::Settings composeSettings = ComposeSettings(text);
     for (std::size_t k = 0; k < analysis.sentences.size(); k++) {
-        ResolveSentence(RulesProgram(), families, analysis, k);
-        if (observer.resolved) observer.resolved(observer.context, index, static_cast<int>(k), analysis.sentences[k].chain);
         const word::Sentence& sentence = analysis.sentences[k];
-        ResolvedItems(sentence.chain, s.items);
-        BuildTexts(s.tokens, analysis, sentence.first, sentence.last, s.texts);
-        s.markers.clear();
-        for (const tokenizer::ControlMarker& m : s.tokens.markers) {
-            if (m.tokenIndex >= sentence.first && m.tokenIndex <= sentence.last) s.markers.push_back(m);
-        }
         output::Sentence done;
         done.chunk = index;
-        s.composer.Compose(s.items, s.texts, sentence.first, sentence.last, s.markers, composeSettings, families,
-                           done.pieces);
+        {
+            std::lock_guard<std::mutex> lock(generated.mu);
+            ResolveSentence(RulesProgram(), generated.families, analysis, k);
+            if (observer.resolved) observer.resolved(observer.context, index, static_cast<int>(k), sentence.chain);
+            ResolvedItems(sentence.chain, s.items);
+            BuildTexts(s.tokens, analysis, sentence.first, sentence.last, s.texts);
+            s.markers.clear();
+            for (const tokenizer::ControlMarker& m : s.tokens.markers) {
+                if (m.tokenIndex >= sentence.first && m.tokenIndex <= sentence.last) s.markers.push_back(m);
+            }
+            s.composer.Compose(s.items, s.texts, sentence.first, sentence.last, s.markers, composeSettings,
+                               generated.families, done.pieces);
+        }
         out.push_back(std::move(done));
     }
 }
@@ -123,7 +126,7 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
 // One line through every stage of the text path; the line's trailing "\r" is written
 // back by the caller.
 std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext& doc, std::string_view body,
-                          Scratch& s, const output::Families& families, const StageObserver& observer) {
+                          Scratch& s, Generated& generated, const StageObserver& observer) {
     const pipeline::LineFacts facts = pipeline::ReadLine(doc, body);
     if (facts.wholeLine) return *facts.wholeLine;
     const pipeline::LineLookup lookup = pipeline::LookupOf(doc, facts);
@@ -142,7 +145,7 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
     std::vector<output::Sentence> sentences;
     for (std::size_t i = 0; i < chunks.size(); i++) {
         if (observer.pieces) observer.pieces(observer.context, "CH", static_cast<int>(i), chunks[i]);
-        TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, s, families, observer, sentences);
+        TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, s, generated, observer, sentences);
     }
     const output::Pieces cleaned = output::Cleanup(sentences);
     return pipeline::Restore(cleaned, typed, /*keepBrackets=*/true);
@@ -150,8 +153,9 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
 
 }  // namespace
 
-std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, std::span<const std::string> lines,
-                                           Memory& memory, const StageObserver& observer) {
+std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
+                                           std::span<const std::string> lines, Memory& memory,
+                                           const StageObserver& observer) {
     std::vector<std::string> all = memory.lines;
     all.insert(all.end(), lines.begin(), lines.end());
     const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(snap, all);
@@ -163,7 +167,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, std::span
         if (observer.line) observer.line(observer.context, static_cast<int>(i));
         // ReadLine takes the line without its one trailing "\r"; the "\r" is written back.
         const bool cr = !lines[i].empty() && lines[i].back() == '\r';
-        std::string translated = TranslateBody(snap, *doc, lines[i], s, memory.families, observer);
+        std::string translated = TranslateBody(snap, *doc, lines[i], s, generated, observer);
         if (cr) translated += '\r';
         out.push_back(std::move(translated));
     }
@@ -171,16 +175,16 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, std::span
     return out;
 }
 
-std::string TranslateRawLine(const dict::Snapshot& snap, std::string_view line, const StageObserver& observer) {
+std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
+                             const StageObserver& observer) {
     Scratch s;
     output::Pieces chunk;
     if (!line.empty()) chunk.push_back({std::string(line), output::SpanText});
     if (observer.line) observer.line(observer.context, 0);
     std::vector<output::Sentence> sentences;
-    const output::Families empty;
     dict::LookupContext lookup;
     lookup.plain = &snap.Plain();
-    TranslateChunk(snap, lookup, chunk, 0, false, s, empty, observer, sentences);
+    TranslateChunk(snap, lookup, chunk, 0, false, s, generated, observer, sentences);
     output::Pieces result;
     for (const output::Sentence& sentence : sentences) output::Append(result, sentence.pieces);
     return output::String(result);

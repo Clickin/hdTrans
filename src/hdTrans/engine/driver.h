@@ -2,6 +2,7 @@
 // The driver: the stages of the pipeline in order, over the lines of a document (the text
 // path) or over one line as a single piece (the raw path).
 #include <cstddef>
+#include <mutex>
 #include <span>
 #include <string>
 #include <string_view>
@@ -33,19 +34,27 @@ struct StageObserver {
     void (*resolved)(void* context, int chunk, int sentence, const word::Chain& chain) = nullptr;
 };
 
+// The marker families of one loaded dictionary, made by the translations of all sessions.
+// Resolve and compose of a sentence run under mu.
+struct Generated {
+    std::mutex mu;
+    output::Families families;
+};
+
 // What a session keeps between its calls.
 struct Memory {
     std::vector<std::string> lines;  // the lines of earlier calls, read by the name registry
-    output::Families families;       // the marker families the translations made
 };
 
 // Translates the lines of one call as one document: the registry and the document context
 // read the lines of memory and of this call. Returns the lines translated (each keeps its
 // "\r"). memory receives the lines.
-std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, std::span<const std::string> lines,
-                                           Memory& memory, const StageObserver& observer);
+std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
+                                           std::span<const std::string> lines, Memory& memory,
+                                           const StageObserver& observer);
 
 // Translates line (without "\n") as one piece with the word pipeline only.
-std::string TranslateRawLine(const dict::Snapshot& snap, std::string_view line, const StageObserver& observer);
+std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
+                             const StageObserver& observer);
 
 }  // namespace hdTrans::internal

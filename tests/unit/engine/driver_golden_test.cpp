@@ -230,20 +230,19 @@ void RunSet(const std::string& set, const std::vector<std::string>& lines, bool 
     const internal::StageObserver observer = ObserverFor(c);
     const dict::Snapshot& snap = *Dictionaries();
     const bool each = set.ends_with(".each") || raw;
-    internal::Memory memory;
+    internal::Generated generated;
     if (!each) {
         c.caseBase = 0;
-        std::vector<std::string> copy = lines;
-        internal::TranslateDocument(snap, copy, memory, observer);
+        internal::Memory memory;
+        internal::TranslateDocument(snap, generated, lines, memory, observer);
     } else {
         for (size_t i = 0; i < lines.size(); i++) {
             c.caseBase = static_cast<int>(i);
             if (raw) {
-                internal::TranslateRawLine(snap, lines[i], observer);
+                internal::TranslateRawLine(snap, generated, lines[i], observer);
             } else {
                 internal::Memory fresh;
-                std::vector<std::string> one{lines[i]};
-                internal::TranslateDocument(snap, one, fresh, observer);
+                internal::TranslateDocument(snap, generated, std::vector<std::string>{lines[i]}, fresh, observer);
             }
         }
     }

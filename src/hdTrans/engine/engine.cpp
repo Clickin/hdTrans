@@ -30,6 +30,17 @@ struct SessionState {
     Memory memory;
 };
 
+std::shared_ptr<Generated> NewGenerated() { return std::make_shared<Generated>(); }
+
+struct Access {
+    static void Current(const Engine& e, std::shared_ptr<const dict::Snapshot>& snap,
+                        std::shared_ptr<Generated>& generated) {
+        std::lock_guard<std::mutex> lock(e.mu_);
+        snap = e.snapshot_;
+        generated = e.generated_;
+    }
+};
+
 }  // namespace internal
 
 bool Engine::Open(const std::vector<std::string>& dirs) {
@@ -39,6 +50,7 @@ bool Engine::Open(const std::vector<std::string>& dirs) {
     std::lock_guard<std::mutex> lock(mu_);
     dirs_ = dirs;
     snapshot_ = std::move(s);
+    generated_ = internal::NewGenerated();
     return true;
 }
 
@@ -53,6 +65,7 @@ bool Engine::Reload() {
     if (!s) return false;
     std::lock_guard<std::mutex> lock(mu_);
     snapshot_ = std::move(s);
+    generated_ = internal::NewGenerated();
     return true;
 }
 
@@ -66,8 +79,11 @@ std::shared_ptr<const dict::Snapshot> Engine::Dictionaries() const {
     return snapshot_;
 }
 
-Session::Session(const Engine& engine)
-    : engine_(engine), snapshot_(engine.Dictionaries()), state_(std::make_unique<internal::SessionState>()) {}
+Session::Session(const Engine& engine) : engine_(engine), state_(std::make_unique<internal::SessionState>()) {
+    std::lock_guard<std::mutex> lock(engine.mu_);
+    snapshot_ = engine.snapshot_;
+    generated_ = engine.generated_;
+}
 
 Session::~Session() = default;
 
@@ -81,7 +97,8 @@ std::string Session::Translate(std::string_view text) {
         if (end == std::string_view::npos) break;
         start = end + 1;
     }
-    const std::vector<std::string> translated = internal::TranslateDocument(*snapshot_, lines, state_->memory, {});
+    const std::vector<std::string> translated =
+        internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, {});
     std::string out;
     for (std::size_t i = 0; i < translated.size(); i++) {
         if (i > 0) out += '\n';
@@ -93,16 +110,20 @@ std::string Session::Translate(std::string_view text) {
 }
 
 void Session::Reset() {
-    snapshot_ = engine_.Dictionaries();
+    std::lock_guard<std::mutex> lock(engine_.mu_);
+    snapshot_ = engine_.snapshot_;
+    generated_ = engine_.generated_;
     state_ = std::make_unique<internal::SessionState>();
 }
 
 namespace internal {
 
 std::string TranslateRaw(const Engine& e, std::string_view line) {
-    const std::shared_ptr<const dict::Snapshot> snap = e.Dictionaries();
+    std::shared_ptr<const dict::Snapshot> snap;
+    std::shared_ptr<Generated> generated;
+    Access::Current(e, snap, generated);
     if (!snap) return {};
-    return TranslateRawLine(*snap, line, {});
+    return TranslateRawLine(*snap, *generated, line, {});
 }
 
 }  // namespace internal

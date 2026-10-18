@@ -13,6 +13,8 @@ class Snapshot;
 }
 
 namespace internal {
+struct Access;
+struct Generated;
 struct SessionState;
 }
 
@@ -34,9 +36,12 @@ public:
     std::shared_ptr<const dict::Snapshot> Dictionaries() const;
 
 private:
+    friend class Session;
+    friend struct internal::Access;
     mutable std::mutex mu_;
     std::vector<std::string> dirs_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
+    std::shared_ptr<internal::Generated> generated_;  // the marker families made on snapshot_
 };
 
 // A translation with memory: names and other context found in earlier text of the
@@ -60,6 +65,7 @@ public:
 private:
     const Engine& engine_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
+    std::shared_ptr<internal::Generated> generated_;
     std::unique_ptr<internal::SessionState> state_;
 };
 
