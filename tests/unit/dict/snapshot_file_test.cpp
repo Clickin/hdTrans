@@ -109,3 +109,176 @@ HD_TEST(SnapshotFileRoundTrip) {
     });
 }
 
+
+namespace {
+
+std::filesystem::path Utf8Path(std::string_view text) {
+    return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(text.data()), text.size()));
+}
+
+bool WriteText(const std::filesystem::path& path, std::string_view text) {
+    std::ofstream f(path, std::ios::binary | std::ios::trunc);
+    f.write(text.data(), static_cast<std::streamsize>(text.size()));
+    return f.good();
+}
+
+std::vector<std::byte> ReadBytes(const std::string& path) {
+    std::ifstream f(Utf8Path(path), std::ios::binary);
+    const std::string text((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    const auto bytes = std::as_bytes(std::span(text.data(), text.size()));
+    return {bytes.begin(), bytes.end()};
+}
+
+bool WriteBytes(const std::string& path, std::span<const std::byte> bytes) {
+    return WriteText(Utf8Path(path), {reinterpret_cast<const char*>(bytes.data()), bytes.size()});
+}
+
+uint64_t Field(std::span<const std::byte> bytes, size_t offset, size_t width) {
+    uint64_t value = 0;
+    for (size_t i = 0; i < width; i++) value |= uint64_t{std::to_integer<uint8_t>(bytes[offset + i])} << (8 * i);
+    return value;
+}
+
+void SetField(std::span<std::byte> bytes, size_t offset, uint64_t value, size_t width) {
+    for (size_t i = 0; i < width; i++) bytes[offset + i] = static_cast<std::byte>(value >> (8 * i));
+}
+
+void FixDirectories(std::vector<std::byte>& bytes) {
+    const auto count = Field(bytes, 40, 4) + Field(bytes, 44, 4);
+    SetField(bytes, 196, hdTrans::dict::internal::Crc32c(std::span(bytes).subspan(256, static_cast<size_t>(count * 64))), 4);
+    SetField(bytes, 192, 0, 4);
+    SetField(bytes, 192, hdTrans::dict::internal::Crc32c(std::span(bytes).first(256)), 4);
+}
+
+std::string TargetOf(const hdTrans::dict::Snapshot& snap, std::string_view key) {
+    const auto records = snap.Base().Records(key);
+    return records.empty() ? std::string() : std::string(records[0].target);
+}
+
+}  // namespace
+
+HD_TEST(SnapshotSourceInvalidation) {
+    TempFolder temp;
+    const auto base = temp.path / "base.tsv";
+    const std::string header = "key\tko\tpos\tid\n";
+    HD_REQUIRE(WriteText(base, header + "猫\t고양이\tN110\t1\n"));
+    const std::vector<std::string> folders{temp.File("")};
+    const auto built = hdTrans::dict::LoadFolders(folders);
+    HD_REQUIRE(built.snapshot != nullptr);
+    const auto cached = hdTrans::dict::LoadFolders(folders, {}, true);
+    HD_REQUIRE(cached.snapshot != nullptr && cached.snapshot->Mapped());
+    const auto time = std::filesystem::last_write_time(base);
+    HD_REQUIRE(WriteText(base, header + "猫\t야옹이\tN110\t1\n"));
+    std::filesystem::last_write_time(base, time);
+    // Strict verification detects changed bytes even when all file metadata match.
+    const auto changed = hdTrans::dict::LoadFolders(folders, {}, true);
+    HD_REQUIRE(changed.snapshot != nullptr);
+    HD_CHECK(!changed.snapshot->Mapped());
+    HD_CHECK_EQ(TargetOf(*changed.snapshot, "猫"), "야옹이");
+    const auto current = hdTrans::dict::LoadFolders(folders, {}, true);
+    HD_REQUIRE(current.snapshot != nullptr && current.snapshot->Mapped());
+    std::filesystem::last_write_time(base, time + std::chrono::seconds(2));
+    const auto touched = hdTrans::dict::LoadFolders(folders);
+    HD_REQUIRE(touched.snapshot != nullptr);
+    HD_CHECK(touched.snapshot->Mapped());
+    const auto path = hdTrans::dict::internal::SnapshotPath(folders);
+    HD_CHECK(std::filesystem::exists(Utf8Path(path + ".meta")));
+    const auto again = hdTrans::dict::LoadFolders(folders);
+    HD_REQUIRE(again.snapshot != nullptr);
+    HD_CHECK(again.snapshot->Mapped());
+    HD_REQUIRE(WriteText(temp.path / "more.tsv", header + "犬\t개\tN110\t2\n"));
+    const auto added = hdTrans::dict::LoadFolders(folders, {}, true);
+    HD_REQUIRE(added.snapshot != nullptr);
+    HD_CHECK(!added.snapshot->Mapped());
+    HD_CHECK_EQ(TargetOf(*added.snapshot, "犬"), "개");
+    std::filesystem::remove(temp.path / "more.tsv");
+    const auto removed = hdTrans::dict::LoadFolders(folders, {}, true);
+    HD_REQUIRE(removed.snapshot != nullptr);
+    HD_CHECK(!removed.snapshot->Mapped());
+    HD_CHECK_EQ(removed.snapshot->Base().Len(), size_t{1});
+}
+
+HD_TEST(SnapshotCorruptFileFallback) {
+    TempFolder temp;
+    const std::vector<std::string> folders{FixtureFolder()};
+    const auto cache = temp.File("cache");
+    const auto built = hdTrans::dict::LoadFolders(folders, cache);
+    HD_REQUIRE(built.snapshot != nullptr);
+    const auto path = hdTrans::dict::internal::SnapshotPath(folders, cache);
+    const auto good = ReadBytes(path);
+    HD_REQUIRE(good.size() > 1024);
+    const size_t lengths[] = {0, 7, 255, good.size() / 2, good.size() - 1};
+    for (const size_t length : lengths) {
+        HD_REQUIRE(WriteBytes(path, std::span(good).first(length)));
+        const auto loaded = hdTrans::dict::LoadFolders(folders, cache, true);
+        HD_REQUIRE(loaded.snapshot != nullptr);
+        HD_CHECK(!loaded.snapshot->Mapped());
+        HD_CHECK_EQ(loaded.snapshot->Base().Len(), built.snapshot->Base().Len());
+    }
+    for (int variant = 0; variant < 6; variant++) {
+        auto bytes = good;
+        switch (variant) {
+        case 0: bytes[0] ^= std::byte{1}; break;
+        case 1: SetField(bytes, 8, 99, 4); break;
+        case 2: SetField(bytes, 12, 99, 4); break;
+        case 3: SetField(bytes, 256 + 8, std::numeric_limits<uint64_t>::max() - 7, 8); break;
+        case 4: SetField(bytes, 256 + 36, 3, 4); break;
+        case 5: SetField(bytes, 256 + 64 + 8, Field(bytes, 256 + 8, 8), 8); break;
+        }
+        FixDirectories(bytes);
+        HD_REQUIRE(WriteBytes(path, bytes));
+        const auto loaded = hdTrans::dict::LoadFolders(folders, cache, true);
+        HD_REQUIRE(loaded.snapshot != nullptr);
+        HD_CHECK(!loaded.snapshot->Mapped());
+        HD_CHECK_EQ(loaded.snapshot->Base().Len(), built.snapshot->Base().Len());
+    }
+}
+
+HD_TEST(SnapshotLazyChecksumFallback) {
+    TempFolder temp;
+    const std::vector<std::string> folders{FixtureFolder()};
+    const auto cache = temp.File("cache");
+    const auto editable = hdTrans::dict::LoadFoldersTsv(folders);
+    HD_REQUIRE(editable.snapshot != nullptr);
+    const auto built = hdTrans::dict::LoadFolders(folders, cache);
+    HD_REQUIRE(built.snapshot != nullptr);
+    const auto path = hdTrans::dict::internal::SnapshotPath(folders, cache);
+    auto bytes = ReadBytes(path);
+    size_t labels = 0;
+    for (size_t section = 0; section < Field(bytes, 40, 4); section++) {
+        const size_t at = 256 + 64 * section;
+        if (Field(bytes, at, 4) == 12 && Field(bytes, at + 4, 4) == 2) labels = static_cast<size_t>(Field(bytes, at + 8, 8));
+    }
+    HD_REQUIRE(labels != 0);
+    bytes[labels] ^= std::byte{1};
+    HD_REQUIRE(WriteBytes(path, bytes));
+    const auto loaded = hdTrans::dict::LoadFolders(folders, cache);
+    HD_REQUIRE(loaded.snapshot != nullptr && loaded.snapshot->Mapped());
+    HD_CHECK(loaded.snapshot->Healthy());
+    const hdTrans::dict::LookupContext context;
+    const auto want = editable.snapshot->GetWordInfo("アリスさん", hdTrans::dict::LookupMode::General, context);
+    const auto got = loaded.snapshot->GetWordInfo("アリスさん", hdTrans::dict::LookupMode::General, context);
+    HD_CHECK(!loaded.snapshot->Healthy());
+    HD_REQUIRE(got.list.size() == want.list.size());
+    for (size_t i = 0; i < got.list.size(); i++) HD_CHECK(got.list[i].target == want.list[i].target);
+    const auto retry = hdTrans::dict::LoadFolders(folders, cache);
+    HD_REQUIRE(retry.snapshot != nullptr);
+    HD_CHECK(!retry.snapshot->Mapped());
+    HD_CHECK(retry.snapshot->Healthy());
+}
+
+HD_TEST(SnapshotCacheErrorsAreOptional) {
+    TempFolder temp;
+    const auto blocked = temp.File("not-a-directory");
+    HD_REQUIRE(WriteText(Utf8Path(blocked), "data"));
+    const auto loaded = hdTrans::dict::LoadFolders({FixtureFolder()}, blocked, true);
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    HD_CHECK(!loaded.snapshot->Mapped());
+    HD_CHECK(loaded.snapshot->Healthy());
+    const std::string invalid(1, static_cast<char>(0xff));
+    const auto bad = hdTrans::dict::LoadFolders({invalid});
+    HD_CHECK(bad.snapshot == nullptr);
+    HD_REQUIRE(bad.errors.size() == 1);
+    HD_CHECK(bad.errors[0].kind == hdTrans::dict::LoadErrorKind::Folder);
+    HD_CHECK(!hdTrans::dict::CompileSnapshot({FixtureFolder()}, invalid));
+}
