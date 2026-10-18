@@ -21,7 +21,7 @@ struct Unit {
 };
 
 Unit UnitAt(std::string_view key, std::size_t depth, bool half) {
-    const auto r = text::DecodeRune(key.substr(depth));
+    const auto r = internal::DecodeRuneAt(key.substr(depth));
     if (r.cp < 0x10000) return {static_cast<uint16_t>(r.cp), depth + r.size, false};
     if (!half) return {HighSurrogate(r.cp), depth, true};
     return {LowSurrogate(r.cp), depth + r.size, false};
@@ -47,9 +47,11 @@ Shared SharedPrefix(std::string_view prev, std::string_view k) {
         if (b >= 0xF0) units++;  // a 4-byte code point takes two units
     }
     bool half = false;
-    if (at < prev.size() && at < k.size()) {
-        const char32_t a = text::DecodeRune(prev.substr(at)).cp;
-        const char32_t b = text::DecodeRune(k.substr(at)).cp;
+    // Only code points above U+FFFF, with a lead byte F0..F4, share a high surrogate.
+    if (at < prev.size() && at < k.size() && static_cast<unsigned char>(prev[at]) >= 0xF0 &&
+        static_cast<unsigned char>(k[at]) >= 0xF0) {
+        const char32_t a = internal::DecodeRuneAt(prev.substr(at)).cp;
+        const char32_t b = internal::DecodeRuneAt(k.substr(at)).cp;
         if (a >= 0x10000 && b >= 0x10000 && HighSurrogate(a) == HighSurrogate(b)) {
             units++;
             half = true;
@@ -151,9 +153,21 @@ Trie Trie::Build(std::size_t count, KeyFunc key, const void* context, std::vecto
     const std::size_t bits = 2 * n64 - 1;
     t.zeros_.reserve((n64 + kZeroSample - 1) / kZeroSample);
     std::size_t zero = 0;
-    for (std::size_t i = 0; i < bits; i++) {
-        if (!t.Bit(i)) {
-            if (zero % kZeroSample == 0) t.zeros_.push_back(static_cast<uint32_t>(i));
+    for (std::size_t w = 0; w * 64 < bits; w++) {
+        uint64_t zeros = ~t.tree_[w];
+        if (bits - w * 64 < 64) zeros &= (uint64_t{1} << (bits - w * 64)) - 1;
+        // The next sampled zero is number zero rounded up to kZeroSample.
+        for (;;) {
+            const std::size_t skip = (kZeroSample - zero % kZeroSample) % kZeroSample;
+            const auto count = static_cast<std::size_t>(std::popcount(zeros));
+            if (skip >= count) {
+                zero += count;
+                break;
+            }
+            for (std::size_t k = 0; k < skip; k++) zeros &= zeros - 1;
+            zero += skip;
+            t.zeros_.push_back(static_cast<uint32_t>(w * 64 + static_cast<std::size_t>(std::countr_zero(zeros))));
+            zeros &= zeros - 1;
             zero++;
         }
     }
@@ -223,7 +237,7 @@ int Trie::Find(std::string_view s) const {
     if (label_.empty()) return -1;
     int n = 0;
     while (!s.empty()) {
-        const auto r = text::DecodeRune(s);
+        const auto r = internal::DecodeRuneAt(s);
         if ((n = Next(n, r.cp)) < 0) return -1;
         s.remove_prefix(r.size);
     }

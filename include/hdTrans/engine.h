@@ -1,43 +1,58 @@
 #pragma once
 // C++ API of the engine. All strings are UTF-8.
+#include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace hdTrans {
 
+namespace dict {
+class Snapshot;
+}
+
 // The loaded dictionaries. Shared by any number of sessions and threads.
 class Engine {
 public:
     // Loads the folders in order; later folders override earlier ones. Returns false when
-    // no dictionary could be loaded.
+    // no dictionary could be loaded; the dictionaries loaded before stay.
     bool Open(const std::vector<std::string>& dirs);
 
-    // Reloads the folders given to Open. Sessions keep translating with the dictionaries
-    // they started with.
+    // Reloads the folders given to Open and swaps the new dictionaries in. Sessions keep
+    // translating with the dictionaries they started with. Returns false when the load
+    // fails; the dictionaries loaded before stay.
     bool Reload();
 
-    bool loaded() const { return loaded_; }
+    bool loaded() const;
+
+    // The current dictionaries; null before a successful Open.
+    std::shared_ptr<const dict::Snapshot> Dictionaries() const;
 
 private:
+    mutable std::mutex mu_;
     std::vector<std::string> dirs_;
-    bool loaded_ = false;
+    std::shared_ptr<const dict::Snapshot> snapshot_;
 };
 
 // A translation with memory: names and other context found in earlier text of the
 // session shape the translation of later text. Text may hold one or more
 // "\n"-separated lines ("\r" is kept). One session is used from one thread at a time.
+// A session translates with the dictionaries of the engine when it was created or last
+// reset.
 class Session {
 public:
-    explicit Session(const Engine& engine) : engine_(engine) {}
+    explicit Session(const Engine& engine);
 
     std::string Translate(std::string_view text);
 
-    // Forgets everything learned from earlier text.
+    // Forgets everything learned from earlier text and takes the engine's current
+    // dictionaries.
     void Reset();
 
 private:
     const Engine& engine_;
+    std::shared_ptr<const dict::Snapshot> snapshot_;
 };
 
 }  // namespace hdTrans

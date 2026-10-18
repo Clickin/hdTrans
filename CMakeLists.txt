@@ -45,6 +45,11 @@ if(NOT EMSCRIPTEN)
     target_link_libraries(hdtrans_tests PRIVATE hdtrans)
     enable_testing()
     add_test(NAME unit COMMAND hdtrans_tests)
+
+    # Dumps the dictionary lookups over corpus lines for comparison with a reference dump.
+    add_executable(snapshot_check tests/snapshot_check/main.cpp)
+    target_include_directories(snapshot_check PRIVATE src)
+    target_link_libraries(snapshot_check PRIVATE hdtrans)
 endif()
 
 if(EMSCRIPTEN)

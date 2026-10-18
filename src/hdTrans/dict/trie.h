@@ -27,7 +27,7 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/text/utf8.h"
+#include "hdTrans/dict/runes.h"
 
 namespace hdTrans::dict {
 
@@ -98,7 +98,7 @@ void Trie::Prefixes(std::string_view s, F&& f) const {
     for (std::size_t i = 0;;) {
         if (const int k = KeyAt(n); k >= 0) f(k, i);
         if (i == s.size()) return;
-        const auto r = text::DecodeRune(s.substr(i));
+        const auto r = internal::DecodeRuneAt(s.substr(i));
         if ((n = Next(n, r.cp)) < 0) return;
         i += r.size;
     }

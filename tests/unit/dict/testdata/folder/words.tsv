@@ -1,0 +1,4 @@
+key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
+学生	학우	N110			GN			1		w:1
+東京	동경	N130	QCTVPl		GN		replace			w:2
+走	뛰&AH@	M428			GN					w:3

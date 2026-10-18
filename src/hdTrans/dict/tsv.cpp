@@ -1,5 +1,8 @@
 #include "hdTrans/dict/tsv.h"
 
+#include <bit>
+#include <cstring>
+
 #include "hdTrans/text/utf8.h"
 
 namespace hdTrans::dict {
@@ -8,6 +11,24 @@ namespace {
 
 constexpr std::size_t kChunkSize = 64 << 10;
 constexpr std::string_view kBom = "\xEF\xBB\xBF";
+
+// The index of the first tab of s at or after i, or s.size().
+std::size_t FindTab(std::string_view s, std::size_t i) {
+    if constexpr (std::endian::native == std::endian::little) {
+        constexpr uint64_t kOnes = 0x0101010101010101ull;
+        for (; i + 8 <= s.size(); i += 8) {
+            uint64_t x;
+            std::memcpy(&x, s.data() + i, 8);
+            x ^= kOnes * '\t';
+            // The lowest flagged byte is the first zero byte, the first tab.
+            if (const uint64_t zero = (x - kOnes) & ~x & (kOnes << 7)) {
+                return i + static_cast<std::size_t>(std::countr_zero(zero) / 8);
+            }
+        }
+    }
+    while (i < s.size() && s[i] != '\t') i++;
+    return i;
+}
 
 std::string_view DropCR(std::string_view s) {
     if (!s.empty() && s.back() == '\r') s.remove_suffix(1);
@@ -122,11 +143,12 @@ bool TsvReader::Next() {
         if (line_ == 1 && line.starts_with(kBom)) line.remove_prefix(kBom.size());
         if (line.empty() || (!comment_.empty() && line.starts_with(comment_))) continue;
         fields_.clear();
-        for (std::size_t tab = line.find('\t'); tab != std::string_view::npos; tab = line.find('\t')) {
-            fields_.push_back(line.substr(0, tab));
-            line.remove_prefix(tab + 1);
+        for (std::size_t start = 0;;) {
+            const std::size_t tab = FindTab(line, start);
+            fields_.push_back(line.substr(start, tab - start));
+            if (tab == line.size()) break;
+            start = tab + 1;
         }
-        fields_.push_back(line);
         return true;
     }
     return false;
