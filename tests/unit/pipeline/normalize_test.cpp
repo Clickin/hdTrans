@@ -291,3 +291,45 @@ HD_TEST(pipeline_exclamation_na) {
     ctx.exclamationNa = true;
     HD_CHECK_EQ(Normalize("日が暮れるな。", ctx), "日が暮れるなあ。");
 }
+
+HD_TEST(pipeline_dialect_forms) {
+    const Case cases[] = {
+        {"こいつはたまんねぇ！"sv, "こいつはたまらない！"sv},
+        {"金がねえ"sv, "金がない"sv},
+        {"面白くねえな"sv, "面白くないな"sv},
+        {"静かねえ。"sv, "静かねえ。"sv},
+        {"来たねえ。"sv, "来たねえ。"sv},
+        {"消化できへんかったなぁ"sv, "消化できなかったなぁ"sv},
+        {"何にもあらへん"sv, "何にもない"sv},
+        {"諦めはせえへん"sv, "諦めはしない"sv},
+        {"たいへんに稀な"sv, "たいへんに稀な"sv},
+        {"そこらへんで"sv, "そこらへんで"sv},
+        {"ロボットが動いとる！"sv, "ロボットが動いている！"sv},
+        {"何を読んどるんじゃ"sv, "何を読んでいるんじゃ"sv},
+        {"メモをとる"sv, "メモをとる"sv},
+        {"もちろんとる！"sv, "もちろんとる！"sv},
+        {"出口らへんの様子"sv, "出口らへんの様子"sv},
+        {"俺は知らへん"sv, "俺は知らない"sv},
+        {"待っとった。"sv, "待っていた。"sv},
+        {"読んどらん！"sv, "読んでいない！"sv},
+        {"読んどれ！"sv, "読んでいろ！"sv},
+        {"わかんねー"sv, "わからない"sv},
+        {"分かんねぇ"sv, "分からない"sv},
+        {"つまんねえ"sv, "つまらない"sv},
+        {"くだんねえ"sv, "くだらない"sv},
+        {"動かねぇ"sv, "動かない"sv},
+        {"待たねえ"sv, "待たない"sv},
+        {"あれへんかった"sv, "なかった"sv},
+        {"まだ食べてへん。"sv, "まだ食べてない。"sv},
+        {"読んどれよ"sv, "読んでいろよ"sv},
+        {"読んどる、待っとる。"sv, "読んでいる、待っている。"sv},
+    };
+    for (const Case& c : cases) {
+        HD_CHECK_EQ(SpokenForms(c.in, false, true), std::string(c.want));
+        HD_CHECK_EQ(SpokenForms(c.in, false, false), std::string(c.in));
+    }
+    LineContext ctx;
+    ctx.document = false;
+    ctx.dialectForms = true;
+    HD_CHECK_EQ(Normalize("金がねえ", ctx), "金がない");
+}

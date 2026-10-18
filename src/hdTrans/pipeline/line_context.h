@@ -16,6 +16,7 @@ struct LineContext {
     bool female = false;
     bool extraBuiltin = false;
     bool exclamationNa = false;
+    bool dialectForms = false;
     // Host markers: text that is protected wherever it occurs, the longest first.
     std::span<const std::string> markers;
     // The lookups of the line: its plain entries (the plain dictionaries with the names

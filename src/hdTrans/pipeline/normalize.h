@@ -32,7 +32,7 @@ std::string JoinMasu(std::string_view text);
 // ねえ after は or も, the contracted ている and いる, じゃない of an appeal (じゃん) or a
 // prohibition (なよ), a clipped adjective (怖っ！ 怖い！), the negative ん (知らん 知らない),
 // できぬ.
-std::string SpokenForms(std::string_view text, bool exclamationNa = false);
+std::string SpokenForms(std::string_view text, bool exclamationNa = false, bool dialectForms = false);
 
 // あれ and え at the start of a sentence with a small っ (あれ、 あれっ、, えぇ？ えっ？),
 // じゃあ before a word with a comma (じゃあどっち じゃあ、どっち).

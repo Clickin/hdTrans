@@ -201,6 +201,117 @@ bool Dekinu(std::string_view s, size_t pos, Match& m) {
     return true;
 }
 
+bool NegativeNee(std::string_view s, size_t pos, Match& m) {
+    auto rest = [&](size_t p) {
+        m.group[1] = Span(s, pos, p);
+        if (!Lit(s, p, "ね")) return false;
+        return Repeat(s, p, InSet(U"ぇえー"), 1, kUnbounded, [&](size_t q) {
+            m.end = q;
+            return true;
+        });
+    };
+    size_t p = pos;
+    if (Take(s, p, IsKanjiClass) && OneOf(s, p, U"らわさまばが") && rest(p)) return true;
+    for (std::string_view stem : {"動", "書", "聞", "行", "効", "届", "働", "開", "抜", "泣", "驚", "歩", "気付", "敵わ"}) {
+        p = pos;
+        if (Lit(s, p, stem) && Lit(s, p, "か") && rest(p)) return true;
+    }
+    for (std::string_view stem : {"待", "持", "立", "勝", "打", "育", "保"}) {
+        p = pos;
+        if (Lit(s, p, stem) && Lit(s, p, "た") && rest(p)) return true;
+    }
+    for (std::string_view stem : {"死な", "かまわ", "構わ", "わから", "わかん", "分かん", "しら", "いら", "たまら", "たまん",
+                                  "つまら", "つまん", "くだら", "くだん", "でき", "出来", "すま", "仕方", "しかた", "しょうが",
+                                  "しょーが", "ありえ", "あり得", "見え", "聞こえ"}) {
+        p = pos;
+        if (Lit(s, p, stem) && rest(p)) return true;
+    }
+    for (std::string_view stem : {"面白", "悪", "痛", "怖", "寒", "熱", "暑", "強", "弱", "早", "遅", "高", "安", "重", "軽",
+                                  "長", "短", "近", "遠", "多", "少", "狭", "広", "硬", "甘", "辛", "うま", "すご", "かわい", "おもしろ"}) {
+        p = pos;
+        if (Lit(s, p, stem) && Lit(s, p, "く") && rest(p)) return true;
+    }
+    return false;
+}
+
+std::string ReplaceNegativeNee(const Match& m) {
+    const Match g = Rematch(m, NegativeNee);
+    std::string_view stem = g.group[1];
+    if (stem == "わかん") stem = "わから";
+    else if (stem == "分かん") stem = "分から";
+    else if (stem == "たまん") stem = "たまら";
+    else if (stem == "つまん") stem = "つまら";
+    else if (stem == "くだん") stem = "くだら";
+    return Cat({stem, "ない"});
+}
+
+bool KansaiNegative(std::string_view s, size_t pos, Match& m) {
+    auto rest = [&](size_t p) {
+        m.group[1] = Span(s, pos, p);
+        if (!Lit(s, p, "へん")) return false;
+        const size_t ending = p;
+        if (Lit(s, p, "かった")) m.group[2] = Span(s, ending, p);
+        else m.group[2] = {};
+        m.end = p;
+        return true;
+    };
+    size_t p = pos;
+    if (Take(s, p, IsKanjiClass) && OneOf(s, p, U"わかがさたなまば") && rest(p)) return true;
+    for (std::string_view stem : {"知", "入", "帰", "要", "走", "乗", "取", "作", "守", "足", "分か", "変わ"}) {
+        p = pos;
+        if (Lit(s, p, stem) && Lit(s, p, "ら") && rest(p)) return true;
+    }
+    p = pos;
+    if (OneOf(s, p, U"てで") && rest(p)) return true;
+    for (std::string_view stem : {"あら", "あれ", "せえ", "でき", "出来", "わから", "しれ", "知れ", "おら", "いら"}) {
+        p = pos;
+        if (Lit(s, p, stem) && rest(p)) return true;
+    }
+    return false;
+}
+
+std::string ReplaceKansaiNegative(const Match& m) {
+    const Match g = Rematch(m, KansaiNegative);
+    std::string_view stem = g.group[1];
+    if (stem == "あら" || stem == "あれ") stem = {};
+    else if (stem == "せえ") stem = "し";
+    return Cat({stem, g.group[2].empty() ? "ない" : "なかった"});
+}
+
+bool ContractedToru(std::string_view s, size_t pos, Match& m) {
+    auto rest = [&](size_t p) {
+        m.group[1] = Span(s, pos, p);
+        for (std::string_view ending : {"る", "った", "らん", "れ"}) {
+            size_t q = p;
+            if (!Lit(s, q, ending)) continue;
+            const size_t end = q;
+            if (!OneOf(s, q, U"！!？?。、…‥」』ぞよわがけでなのやっん") && end != s.size()) continue;
+            m.group[2] = Span(s, p, end);
+            m.group[3] = Span(s, end, q);
+            m.end = q;
+            return true;
+        }
+        return false;
+    };
+    size_t p = pos;
+    if (OneOf(s, p, U"いっし") && Lit(s, p, "と") && rest(p)) return true;
+    p = pos;
+    return Lit(s, p, "んど") && rest(p);
+}
+
+std::string ReplaceContractedToru(const Match& m) {
+    const Match g = Rematch(m, ContractedToru);
+    const bool voiced = g.group[1].ends_with("ど");
+    const std::string_view contracted = voiced ? "ど" : "と";
+    const std::string_view stem = g.group[1].substr(0, g.group[1].size() - contracted.size());
+    std::string_view ending;
+    if (g.group[2] == "る") ending = "いる";
+    else if (g.group[2] == "った") ending = "いた";
+    else if (g.group[2] == "らん") ending = "いない";
+    else if (g.group[2] == "れ") ending = "いろ";
+    return Cat({stem, voiced ? "で" : "て", ending, g.group[3]});
+}
+
 bool ExclamationNa(std::string_view s, size_t pos, Match& m) {
     auto rest = [&](size_t p) {
         m.group[1] = Span(s, pos, p);
@@ -262,7 +373,7 @@ std::string Group1Plus(const Match& m, std::string_view mid) { return Cat({m.gro
 
 }  // namespace
 
-std::string SpokenForms(std::string_view in, bool exclamationNa) {
+std::string SpokenForms(std::string_view in, bool exclamationNa, bool dialectForms) {
     std::string text(in);
     if (ContainsAny(text, kKataStemStarts)) {
         text = ReplaceAll(text, KataStemPattern, [](const Match& m) {
@@ -277,7 +388,11 @@ std::string SpokenForms(std::string_view in, bool exclamationNa) {
     if (Contains(text, "ね")) {
         text = ReplaceAll(text, JaneQuestion, [](const Match& m) { return Group1Plus(m, "ない"); });
         text = ReplaceAll(text, ParticleNee, [](const Match& m) { return Group1Plus(m, "ない"); });
+        if (dialectForms) text = ReplaceAll(text, NegativeNee, ReplaceNegativeNee);
     }
+    if (dialectForms && Contains(text, "へん")) text = ReplaceAll(text, KansaiNegative, ReplaceKansaiNegative);
+    if (dialectForms && (Contains(text, "と") || Contains(text, "ど")))
+        text = ReplaceAll(text, ContractedToru, ReplaceContractedToru);
     if (Contains(text, "ん")) {
         text = ReplaceAll(text, ContractedTeru, [](const Match& m) { return Group1Plus(m, "るん"); });
         text = ReplaceAll(text, ContractedIru, [](const Match& m) {
