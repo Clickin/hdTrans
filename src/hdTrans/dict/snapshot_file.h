@@ -13,7 +13,7 @@ namespace hdTrans::dict::internal {
 
 // Hashes the ordered absolute, lexically normalized folders and data version.
 // An empty cacheDir selects HDTRANS_CACHE_DIR or the per-user cache directory.
-// A present but empty HDTRANS_CACHE_DIR disables caching even with an explicit cacheDir.
+// HDTRANS_CACHE_DIR="" or case-insensitive "off" disables even an explicit cacheDir.
 std::string SnapshotPath(const std::vector<std::string>& folders, std::string_view cacheDir = {});
 
 }  // namespace hdTrans::dict::internal

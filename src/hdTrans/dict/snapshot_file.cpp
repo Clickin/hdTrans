@@ -901,7 +901,11 @@ namespace internal {
 
 std::string SnapshotPath(const std::vector<std::string>& folders, std::string_view cacheDir) {
     const auto overrideDir = EnvironmentPath("HDTRANS_CACHE_DIR");
-    if (overrideDir && overrideDir->empty()) return {};
+    if (overrideDir) {
+        const auto& value = *overrideDir;
+        if (value.empty() || (value.size() == 3 && (value[0] == 'o' || value[0] == 'O') &&
+                              (value[1] == 'f' || value[1] == 'F') && (value[2] == 'f' || value[2] == 'F'))) return {};
+    }
     const auto dir = !cacheDir.empty() ? std::string(cacheDir) : overrideDir ? *overrideDir : DefaultCacheDirectory();
     if (folders.empty() || dir.empty() || !SafePath(dir)) return {};
     Buffer key;

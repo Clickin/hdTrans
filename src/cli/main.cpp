@@ -118,7 +118,8 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-verify-dicts] [-why] [-select-shadow] [-in FILE]\n");
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-verify-dicts] [-why] [-select-shadow] [-in FILE]\n"
+                                 "HDTRANS_CACHE_DIR selects the cache directory; empty or off (case-insensitive) disables caching.\n");
             return 2;
         }
     }

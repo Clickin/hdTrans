@@ -306,14 +306,22 @@ HD_TEST(SnapshotCacheEnvironmentOverride) {
     const auto explicitLoad = hdTrans::dict::LoadFolders(folders, explicitDir);
     HD_REQUIRE(explicitLoad.snapshot != nullptr);
     HD_CHECK(explicitLoad.snapshot->Mapped());
-    overrideDir.Set("");
-    const auto disabled = hdTrans::dict::LoadFolders(folders);
-    HD_REQUIRE(disabled.snapshot != nullptr);
-    HD_CHECK(!disabled.snapshot->Mapped());
-    HD_CHECK(hdTrans::dict::internal::SnapshotPath(folders, explicitDir).empty());
-    const auto explicitDisabled = hdTrans::dict::LoadFolders(folders, explicitDir);
-    HD_REQUIRE(explicitDisabled.snapshot != nullptr);
-    HD_CHECK(!explicitDisabled.snapshot->Mapped());
+    const auto bytes = ReadBytes(path);
+    const auto time = std::filesystem::last_write_time(Utf8Path(path));
+    for (const char* value : {"", "off", "OFF", "Off", "oFF", "OfF", "oFf", "OFf", "ofF"}) {
+        overrideDir.Set(value);
+        const auto disabled = hdTrans::dict::LoadFolders(folders);
+        HD_REQUIRE(disabled.snapshot != nullptr);
+        HD_CHECK(!disabled.snapshot->Mapped());
+        HD_CHECK(hdTrans::dict::internal::SnapshotPath(folders, explicitDir).empty());
+        const auto explicitDisabled = hdTrans::dict::LoadFolders(folders, explicitDir);
+        HD_REQUIRE(explicitDisabled.snapshot != nullptr);
+        HD_CHECK(!explicitDisabled.snapshot->Mapped());
+        HD_CHECK(ReadBytes(path) == bytes);
+        HD_CHECK(std::filesystem::last_write_time(Utf8Path(path)) == time);
+    }
+    overrideDir.Set("off-cache");
+    HD_CHECK(!hdTrans::dict::internal::SnapshotPath(folders).empty());
 }
 
 HD_TEST(SnapshotSourceInvalidation) {
