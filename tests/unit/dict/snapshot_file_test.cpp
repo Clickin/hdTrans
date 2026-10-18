@@ -248,7 +248,7 @@ HD_TEST(SnapshotDefaultCacheLocation) {
     HD_REQUIRE(WriteText(Utf8Path(dict) / "base.tsv", "key\tko\tpos\tid\n猫\t고양이\tN110\t1\n"));
     const std::vector<std::string> folders{dict};
     const auto path = hdTrans::dict::internal::SnapshotPath(folders);
-    HD_CHECK_EQ(path, hdTrans::dict::internal::SnapshotPath(folders, cache));
+    HD_CHECK(Utf8Path(path) == Utf8Path(hdTrans::dict::internal::SnapshotPath(folders, cache)));
     const auto built = hdTrans::dict::LoadFolders(folders);
     HD_REQUIRE(built.snapshot != nullptr);
     HD_REQUIRE(std::filesystem::exists(Utf8Path(path)));
@@ -272,10 +272,10 @@ HD_TEST(SnapshotDefaultCacheLocation) {
     overrideDir.Set(nullptr);
 #if !defined(_WIN32) && !defined(__APPLE__)
     xdg.Set(temp.File("xdg").c_str());
-    HD_CHECK_EQ(hdTrans::dict::internal::SnapshotPath(folders),
-                hdTrans::dict::internal::SnapshotPath(folders, temp.File("xdg/hdtrans")));
+    HD_CHECK(Utf8Path(hdTrans::dict::internal::SnapshotPath(folders)) ==
+             Utf8Path(hdTrans::dict::internal::SnapshotPath(folders, temp.File("xdg/hdtrans"))));
     xdg.Set("");
-    HD_CHECK_EQ(path, hdTrans::dict::internal::SnapshotPath(folders));
+    HD_CHECK(Utf8Path(path) == Utf8Path(hdTrans::dict::internal::SnapshotPath(folders)));
 #endif
     home.Set(nullptr);
     local.Set(nullptr);
@@ -289,7 +289,7 @@ HD_TEST(SnapshotCacheEnvironmentOverride) {
     const std::vector<std::string> folders{temp.File("")};
     HD_REQUIRE(WriteText(temp.path / "base.tsv", "key\tko\tpos\tid\n猫\t고양이\tN110\t1\n"));
     const auto path = hdTrans::dict::internal::SnapshotPath(folders);
-    HD_CHECK_EQ(path, hdTrans::dict::internal::SnapshotPath(folders, cache));
+    HD_CHECK(Utf8Path(path) == Utf8Path(hdTrans::dict::internal::SnapshotPath(folders, cache)));
     const auto built = hdTrans::dict::LoadFolders(folders);
     HD_REQUIRE(built.snapshot != nullptr);
     HD_REQUIRE(std::filesystem::exists(Utf8Path(path)));
