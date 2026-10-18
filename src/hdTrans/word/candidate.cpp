@@ -548,8 +548,7 @@ bool Worker::TranslateCandidateAt(std::string_view full, int cursor, int token, 
 }
 
 // Makes an item from records at full[cursor:], then translates the rest of the token
-// after it; when that fails it retries with the shorter candidates. The retry count is
-// shared by every level of the recursion.
+// after it; when that fails it retries with the shorter candidates.
 bool Worker::ProcessCandidateRecord(std::string_view full, int cursor, int token, Record* records, Item* parent) {
     if (parent != nullptr) {
         records = ReorderAfterNoun(*parent, records);
@@ -578,7 +577,11 @@ bool Worker::ProcessCandidateRecord(std::string_view full, int cursor, int token
         }
         return false;
     }
-    if (TranslateCandidateAt(full, cursor + candidate->length, token, candidate)) {
+    const int savedRetries = candidateRetryCount;
+    if (settings.improvements.perLevelRetries) candidateRetryCount = 0;
+    const bool translated = TranslateCandidateAt(full, cursor + candidate->length, token, candidate);
+    if (settings.improvements.perLevelRetries) candidateRetryCount = savedRetries;
+    if (translated) {
         Insert(candidate);
         return true;
     }

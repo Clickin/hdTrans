@@ -212,3 +212,31 @@ HD_TEST(engine_reference_mode) {
     HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&text, 1}, memory, {}, options)[0],
                 "잠 싶었다.");
 }
+
+namespace {
+
+void CheckWordImprovement(bool hdTrans::word::Improvements::* flag, const std::string& text,
+                          const std::string& reference, const std::string& improved) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine engine(true);
+    HD_REQUIRE(engine.Open({dicts}));
+    const auto snap = engine.Dictionaries();
+    const auto generated = hdTrans::internal::NewGenerated(*snap);
+    for (bool enabled : {false, true}) {
+        hdTrans::internal::TranslationOptions options;
+        options.wordImprovements = hdTrans::word::Improvements::Reference();
+        options.wordImprovements.*flag = enabled;
+        hdTrans::internal::Memory memory;
+        HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&text, 1}, memory, {}, options)[0],
+                    enabled ? improved : reference);
+    }
+}
+
+}  // namespace
+
+HD_TEST(engine_per_level_retries) {
+    CheckWordImprovement(&hdTrans::word::Improvements::perLevelRetries, "やなぎなぎ", "이네", "야나기나기");
+    CheckWordImprovement(&hdTrans::word::Improvements::perLevelRetries, "（独り言）しなきゃにゃ",
+                          "(혼잣말) 하지 않으면", "(혼잣말) 인");
+}
