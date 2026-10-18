@@ -1,0 +1,33 @@
+#pragma once
+// The builtin dictionary folder, compiled into the library and loaded ahead of the
+// dictionary folders (see Load): the end rows, register table and sentence-final
+// particles (endings.tsv), and for the text path its phrases (phrases.tsv), grammar
+// patterns (patterns.tsv), sense table (senses.tsv), whole-line rows (lines.tsv) and
+// sound lexicon (sound.tsv). All but senses.tsv and lines.tsv are in the plain
+// dictionary format.
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace hdTrans::dict {
+
+// The names of the builtin files, in name order.
+std::vector<std::string_view> BuiltinNames();
+// The text of the builtin file name ("endings.tsv"); empty when there is none.
+std::string BuiltinText(std::string_view name);
+
+namespace internal {
+
+// A builtin file as the lines of its text, each with its "\n" but the last.
+struct BuiltinTable {
+    std::string_view name;
+    std::span<const std::string_view> lines;
+};
+
+// Sorted by name.
+std::span<const BuiltinTable> BuiltinTables();
+
+}  // namespace internal
+
+}  // namespace hdTrans::dict

@@ -323,7 +323,20 @@ std::size_t Snapshot::MemoryBytes() const {
                     names_.MemoryBytes();
     for (const auto& [key, sp] : places_) n += 64 + key.capacity() + sp.ko.capacity() + sp.person.capacity();
     for (const File& f : plain_) n += sizeof(File) + f.name.capacity() + f.text.capacity();
-    return n;
+    for (const UserText* u : {rawPlain_.get(), textPlain_.get()}) {
+        if (!u) continue;
+        for (const UserEntry& e : u->Entries()) {
+            n += sizeof(UserEntry) + 2 * sizeof(void*) + e.key.capacity() + e.target.capacity() + e.negative.capacity();
+        }
+    }
+    for (const auto& [key, list] : senses_) {
+        n += 64 + key.capacity();
+        for (const userdict::Sense& x : list) {
+            n += sizeof(x) + x.key.capacity() + x.target.capacity();
+            for (const std::string& t : x.triggers) n += sizeof(t) + t.capacity();
+        }
+    }
+    return n + families_.MemoryBytes();
 }
 
 }  // namespace hdTrans::dict

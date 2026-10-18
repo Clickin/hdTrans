@@ -1,15 +1,18 @@
 #include <algorithm>
 #include <cstdio>
 #include <filesystem>
+#include <iterator>
 #include <system_error>
 #include <unordered_set>
 
+#include "hdTrans/dict/builtin.h"
 #include "hdTrans/dict/layer.h"
 #include "hdTrans/dict/names.h"
 #include "hdTrans/dict/parallel.h"
 #include "hdTrans/dict/snapshot.h"
 #include "hdTrans/text/hangul.h"
 #include "hdTrans/text/utf8.h"
+#include "hdTrans/userdict/userdict.h"
 
 namespace hdTrans::dict {
 
@@ -135,7 +138,7 @@ bool ReadColumnFile(const File& f, CodeReader& reader, internal::Layer& layer, s
     while (senses.Next(s)) {
         int32_t code;
         if (!reader.Code(s, code)) {
-            unknown.push_back({f.name, LoadErrorKind::UnknownPos, rows.Line(), TsvErrorKind::Read});
+            unknown.push_back({f.name, LoadErrorKind::UnknownPos, rows.Line(), TsvErrorKind::Read, {}});
             continue;
         }
         for (const std::string_view key : {s.key, s.reading}) {
@@ -149,9 +152,50 @@ bool ReadColumnFile(const File& f, CodeReader& reader, internal::Layer& layer, s
         return true;
     }
     for (const TsvError& e : senses.Errors()) {
-        errors.push_back({f.name, e.kind == TsvErrorKind::Read ? LoadErrorKind::Read : LoadErrorKind::Tsv, e.line, e.kind});
+        const LoadErrorKind kind = e.kind == TsvErrorKind::Read ? LoadErrorKind::Read : LoadErrorKind::Tsv;
+        errors.push_back({f.name, kind, e.line, e.kind, {}});
     }
     return false;
+}
+
+// The builtin files that the text path reads itself; the other builtin files are
+// plain dictionaries.
+bool OwnBuiltin(std::string_view name) {
+    return name == "sound.tsv" || name == "phrases.tsv" || name == "patterns.tsv" || name == "senses.tsv" ||
+           name == "lines.tsv";
+}
+
+// Whether a line of phrases.tsv is an interjection in kana: an utterance of the sound
+// lexicon, not a plain entry.
+bool StandalonePhrase(std::string_view line) {
+    std::vector<std::string_view> f;
+    for (std::size_t pos = 0;;) {
+        const std::size_t tab = line.find('\t', pos);
+        f.push_back(line.substr(pos, tab == std::string_view::npos ? std::string_view::npos : tab - pos));
+        if (tab == std::string_view::npos) break;
+        pos = tab + 1;
+    }
+    if (f.size() < 3 || f[2] != "intj" || f[0].empty()) return false;
+    const char32_t r = text::DecodeRune(f[0]).cp;
+    return (r >= U'ぁ' && r <= U'ゖ') || (r >= U'ァ' && r <= U'ヶ') || r == U'ー' || r == U'～';
+}
+
+// The text of phrases.tsv without its standalone phrases, which keep their lines.
+std::string BuiltinPhrases() {
+    const std::string text = BuiltinText("phrases.tsv");
+    std::string out;
+    out.reserve(text.size());
+    for (std::size_t pos = 0;;) {
+        const std::size_t nl = text.find('\n', pos);
+        const std::string_view line = std::string_view(text).substr(pos, nl == std::string::npos ? nl : nl - pos);
+        std::string_view bare = line;
+        while (bare.ends_with('\r')) bare.remove_suffix(1);
+        if (!StandalonePhrase(bare)) out += line;
+        if (nl == std::string::npos) break;
+        out += '\n';
+        pos = nl + 1;
+    }
+    return out;
 }
 
 // A name file parsed ahead, with codes numbered in its own table.
@@ -172,6 +216,9 @@ struct SnapshotLoader {
     CodeReader reader{snap->codes_};
 
     LoadResult Run();
+    bool CompilePlain(const std::vector<std::size_t>& rest);
+    bool Compile(const std::string& name, std::string_view text, int file, userdict::Context& ctx,
+                 std::vector<UserEntry>& out);
     void Respell(std::string_view key, std::string_view ko);
     std::string PersonSpelling(std::string_view ko, const std::vector<Record>& records) const;
 };
@@ -190,6 +237,63 @@ void SnapshotLoader::Respell(std::string_view key, std::string_view ko) {
         sp.mode = Snapshot::Respelling::Mode::AllPlaces;
     }
     snap->places_.insert_or_assign(std::string(key), std::move(sp));
+}
+
+bool SnapshotLoader::Compile(const std::string& name, std::string_view text, int file, userdict::Context& ctx,
+                             std::vector<UserEntry>& out) {
+    userdict::Compiled c = userdict::Parse(text, file, ctx);
+    for (userdict::Error& e : c.errors) {
+        errors.push_back({name, LoadErrorKind::Plain, e.line, TsvErrorKind::Read, std::move(e.message)});
+    }
+    std::move(c.entries.begin(), c.entries.end(), std::back_inserter(out));
+    return c.errors.empty();
+}
+
+// Compiles the plain dictionaries of the builtin folder and of the files rest, the
+// kana spellings and the sense table, in this order, which numbers the generated
+// marker families.
+bool SnapshotLoader::CompilePlain(const std::vector<std::size_t>& rest) {
+    Snapshot& s = *snap;
+    bool ok = true;
+    userdict::Context builtin{&s.codes_, &s.families_, nullptr};
+    std::vector<UserEntry> endings, phrases, entries, kana;
+    for (const std::string_view name : BuiltinNames()) {
+        if (OwnBuiltin(name)) continue;
+        const std::string data = BuiltinText(name);
+        if (!ColumnFile(data)) ok = Compile(std::string(name), data, -1, builtin, endings) && ok;
+    }
+    ok = Compile("phrases.tsv", BuiltinPhrases(), -1, builtin, phrases) && ok;
+    ok = Compile("patterns.tsv", BuiltinText("patterns.tsv"), -1, builtin, phrases) && ok;
+    userdict::Context ctx{&s.codes_, &s.families_, &s.base_};
+    int file = 0;
+    for (const std::size_t i : rest) {
+        const std::string_view name = BaseName(files[i].name);
+        if (name == "readings.tsv") continue;
+        if (name == "kana.tsv") {
+            std::vector<UserEntry> k = userdict::KanaSpellings(files[i].text, s.base_, s.codes_);
+            std::move(k.begin(), k.end(), std::back_inserter(kana));
+            continue;
+        }
+        ok = Compile(files[i].name, files[i].text, file++, ctx, entries) && ok;
+    }
+    userdict::CompiledSenses senses = userdict::ParseSenses(BuiltinText("senses.tsv"), s.families_);
+    for (userdict::Error& e : senses.errors) {
+        errors.push_back({"senses.tsv", LoadErrorKind::Plain, e.line, TsvErrorKind::Read, std::move(e.message)});
+    }
+    if (!ok || !senses.errors.empty()) return false;
+    s.senses_ = std::move(senses.table);
+
+    std::vector<UserEntry> rawView, textView;
+    rawView.reserve(endings.size() + entries.size());
+    rawView.insert(rawView.end(), endings.begin(), endings.end());
+    rawView.insert(rawView.end(), entries.begin(), entries.end());
+    textView.reserve(kana.size() + endings.size() + phrases.size() + entries.size());
+    for (std::vector<UserEntry>* part : {&kana, &endings, &phrases, &entries}) {
+        std::move(part->begin(), part->end(), std::back_inserter(textView));
+    }
+    s.rawPlain_ = std::make_unique<const UserText>(std::move(rawView));
+    s.textPlain_ = std::make_unique<const UserText>(std::move(textView));
+    return true;
 }
 
 // The first Korean of a person sense (QPN) among records that differs from ko in
@@ -299,6 +403,7 @@ LoadResult SnapshotLoader::Run() {
         sp.person = PersonSpelling(sp.ko, s.base_.Records(key));
         if (sp.person.empty()) sp.person = PersonSpelling(sp.ko, s.names_.Records(key));
     }
+    if (!CompilePlain(rest)) return {nullptr, std::move(errors)};
     // The codes of the lookups' rewritten candidates.
     for (int32_t c = 0; c < static_cast<int32_t>(s.codes_.Size()); c++) {
         s.codes_.SetWithXXX(c);
@@ -328,7 +433,7 @@ LoadResult LoadFolders(const std::vector<std::string>& folders) {
             if (name.ends_with(".tsv") && it->is_regular_file(fileEc)) names.push_back(name);
         }
         if (ec) {
-            errors.push_back({folders[f], LoadErrorKind::Folder, 0, TsvErrorKind::Read});
+            errors.push_back({folders[f], LoadErrorKind::Folder, 0, TsvErrorKind::Read, {}});
             return {nullptr, std::move(errors)};
         }
         std::sort(names.begin(), names.end());
@@ -337,7 +442,7 @@ LoadResult LoadFolders(const std::vector<std::string>& folders) {
             file.folder = static_cast<int>(f);
             file.name = Utf8Of(dir / PathOf(name));
             if (!ReadFile(dir / PathOf(name), file.text)) {
-                errors.push_back({file.name, LoadErrorKind::Read, 0, TsvErrorKind::Read});
+                errors.push_back({file.name, LoadErrorKind::Read, 0, TsvErrorKind::Read, {}});
                 return {nullptr, std::move(errors)};
             }
             files.push_back(std::move(file));

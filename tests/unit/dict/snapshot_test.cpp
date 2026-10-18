@@ -311,3 +311,71 @@ HD_TEST(SnapshotNamesAndPlainEntries) {
     HD_CHECK_EQ(Show(r.snapshot->GetWordInfo("アリスさん", LookupMode::General, ctx)),
                 "count 1\n[アリス] 아리스 N130|||GN r0 id0 plain");
 }
+
+namespace {
+
+// The entries of u from file as "key target part @line.order".
+std::string EntriesOf(const UserText& u, int file) {
+    std::string s;
+    for (const UserEntry& e : u.Entries()) {
+        if (e.file != file) continue;
+        s += (s.empty() ? "" : " | ") + e.key + " " + e.target + " " + e.codes->partText + " @" + std::to_string(e.line) +
+             "." + std::to_string(e.order);
+    }
+    return s;
+}
+
+std::size_t CountFile(const UserText& u, int file) {
+    std::size_t n = 0;
+    for (const UserEntry& e : u.Entries()) n += e.file == file;
+    return n;
+}
+
+}  // namespace
+
+HD_TEST(SnapshotCompiledPlainDictionaries) {
+    std::vector<File> files;
+    files.push_back(MakeFile("a/base.tsv", kHeader + "帰\t돌아가&AA@\tM428\t\t\tGN\t1\n愛\t사랑\tN110\t\t\tGN\t2\n"
+                                                    "愛\t사랑하&AV@\tM429\t\t\tGN\t3\n"));
+    files.push_back(MakeFile("a/kana.tsv", "// kana\nあい\t愛\t\n"));
+    files.push_back(MakeFile("a/plain.tsv", "帰る\t돌아가다\tv\n猫\t냥이\n"));
+    files.push_back(MakeFile("a/readings.tsv", "x\ty\n"));
+    files.push_back(MakeFile("b/userdict.tsv", "猫\t고양이\tn\tprio=1\n"));
+    const LoadResult r = Load(std::move(files));
+    HD_REQUIRE(r.snapshot != nullptr);
+    HD_CHECK(r.errors.empty());
+    const Snapshot& s = *r.snapshot;
+    HD_CHECK_EQ(s.PlainFiles().size(), size_t{4});
+    // The builtin endings come first, then the plain files numbered in order; the
+    // base dictionary resolves the る-verb 帰る as godan.
+    HD_CHECK_EQ(CountFile(s.Plain(), -1), size_t{323});
+    HD_CHECK_EQ(EntriesOf(s.Plain(), 0), "帰 돌아&A1@ M428 @1.0 | 猫 냥이 N110 @2.0");
+    HD_CHECK_EQ(EntriesOf(s.Plain(), 1), "猫 고양이 N110 @1.0");
+    HD_CHECK_EQ(s.Plain().Entries().size(), size_t{326});
+    HD_CHECK(s.Plain().Entries()[0].end);
+    // The text path adds the kana spellings, the phrases but the 329 interjections in
+    // kana, and the patterns.
+    HD_CHECK_EQ(EntriesOf(s.TextPlain(), -2), "あい 사랑 N110 @2.0");
+    HD_CHECK_EQ(CountFile(s.TextPlain(), -1), size_t{323 + 935 + 606});
+    HD_CHECK_EQ(s.TextPlain().Entries().size(), size_t{1 + 323 + 935 + 606 + 3});
+    HD_CHECK_EQ(s.Senses().size(), size_t{658});
+    HD_CHECK_EQ(s.GeneratedFamilies().Size(), size_t{32});
+
+    // The later file wins on an equal key and part code.
+    LookupContext ctx;
+    ctx.plain = &s.Plain();
+    HD_CHECK_EQ(Show(s.GetWordInfo("猫", LookupMode::General, ctx)), "count 1\n[猫] 고양이 N110|||GN r0 id0 plain");
+
+    // A line that does not compile fails the load and is listed with its file.
+    files.clear();
+    files.push_back(MakeFile("a/base.tsv", kHeader + "犬\t견\tN110\t\t\tGN\t1\n"));
+    files.push_back(MakeFile("a/plain.tsv", "猫\t냥이\n帰る\t돌아가다\tv\n鳥\n"));
+    const LoadResult bad = Load(std::move(files));
+    HD_CHECK(bad.snapshot == nullptr);
+    HD_REQUIRE(bad.errors.size() == 2);
+    HD_CHECK(bad.errors[0].kind == LoadErrorKind::Plain);
+    HD_CHECK_EQ(bad.errors[0].file, "a/plain.tsv");
+    HD_CHECK_EQ(bad.errors[0].line, 2);
+    HD_CHECK_EQ(bad.errors[0].message, "る-verb \"帰る\" is ambiguous: write v1 (ichidan) or v5 (godan)");
+    HD_CHECK_EQ(bad.errors[1].message, "empty KR");
+}

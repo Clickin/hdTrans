@@ -97,6 +97,8 @@ public:
 
     // The number of indexed lookup entries.
     std::size_t Len() const;
+    // The entries as given.
+    const std::vector<UserEntry>& Entries() const { return entries_; }
     // The honorific row with the longest key that prefixes text, the one loaded last
     // among equal keys, or null.
     const UserEntry* Honorific(std::string_view text) const;
