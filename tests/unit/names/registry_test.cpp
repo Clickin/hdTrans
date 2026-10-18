@@ -275,3 +275,39 @@ HD_TEST(names_shared_tables) {
     seed.Add("|風音《かざね》");
     HD_CHECK_EQ(seed.Key(), key);
 }
+
+HD_TEST(names_registry_forget_evidence) {
+    const std::vector<std::string> lines = {
+        "光「こんにちは」", "|竜宮《りゅうぐう》", "光さん、",
+        "茜「こんばんは」", "|竜宮《たつみや》", "光さん、"};
+    names::Registry retained(nullptr);
+    std::vector<names::Registry::Evidence> evidence(lines.size());
+    for (std::size_t i = 0; i < lines.size(); i++) retained.Add(lines[i], &evidence[i]);
+    for (std::size_t first = 0; first < lines.size(); first++) {
+        names::Registry fresh(nullptr);
+        for (std::size_t i = first; i < lines.size(); i++) fresh.Add(lines[i]);
+        // Rendering may derive part readings, so compare a document copy.
+        names::Registry document(retained);
+        HD_CHECK_EQ(document.Key(), fresh.Key());
+        retained.Forget(evidence[first]);
+    }
+}
+
+HD_TEST(names_registry_forget_actors) {
+    names::Registry retained(nullptr);
+    names::Registry::Evidence first, second;
+    retained.Add("define a = Character(\"光\")", &first);
+    retained.Add("define a = Character(\"茜\")", &second);
+    retained.Forget(first);
+    names::Registry document(retained), fresh(nullptr);
+    document.Add("a \"こんにちは\"");
+    fresh.Add("define a = Character(\"茜\")");
+    fresh.Add("a \"こんにちは\"");
+    HD_CHECK_EQ(document.Key(), fresh.Key());
+    retained.Forget(second);
+    document = retained;
+    document.Add("a \"こんにちは\"");
+    fresh = names::Registry(nullptr);
+    fresh.Add("a \"こんにちは\"");
+    HD_CHECK_EQ(document.Key(), fresh.Key());
+}

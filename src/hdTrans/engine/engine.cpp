@@ -14,9 +14,6 @@ namespace hdTrans {
 
 namespace {
 
-// The lines of earlier calls a session keeps for its name registry; the oldest are dropped first.
-constexpr std::size_t kMemoryLines = 2048;
-
 // The dictionaries of dirs; null when the load fails or finds no dictionary file.
 std::shared_ptr<const dict::Snapshot> LoadDictionaries(const std::vector<std::string>& dirs, bool verify = false) {
     dict::LoadResult r = dict::LoadFolders(dirs, {}, verify);
@@ -123,8 +120,6 @@ std::string Session::Translate(std::string_view text) {
         if (i > 0) out += '\n';
         out += translated[i];
     }
-    auto& memory = state_->memory.lines;
-    if (memory.size() > kMemoryLines) memory.erase(memory.begin(), memory.begin() + static_cast<std::ptrdiff_t>(memory.size() - kMemoryLines));
     return out;
 }
 

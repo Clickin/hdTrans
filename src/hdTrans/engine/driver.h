@@ -11,6 +11,7 @@
 
 #include "hdTrans/dict/snapshot.h"
 #include "hdTrans/output/families.h"
+#include "hdTrans/names/document.h"
 #include "hdTrans/output/pieces.h"
 #include "hdTrans/pipeline/restore.h"
 #include "hdTrans/tokenizer/token.h"
@@ -54,7 +55,7 @@ std::shared_ptr<Generated> NewGenerated(const dict::Snapshot& snap);
 
 // What a session keeps between its calls.
 struct Memory {
-    std::vector<std::string> lines;  // the lines of earlier calls, read by the name registry
+    std::shared_ptr<pipeline::DocumentHistory> document;
     word::SessionSenses senses;
 };
 
@@ -67,8 +68,8 @@ struct TranslationOptions {
 };
 
 // Translates the lines of one call as one document: the registry and the document context
-// read the lines of memory and of this call. Returns the lines translated (each keeps its
-// "\r"). memory receives the lines.
+// merge retained evidence with this call. Returns the lines translated (each keeps its
+// "\r"). Only the new lines update memory.
 std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
                                            std::span<const std::string> lines, Memory& memory,
                                            const StageObserver& observer, const TranslationOptions& options = {});

@@ -595,45 +595,61 @@ bool LineStartsList(const Runes& rs, std::size_t i) {
 
 }  // namespace
 
-std::string HistoricalNames(const dict::Snapshot& snap, std::span<const std::string> lines) {
-    std::map<std::string, std::string> found;
-    std::map<std::string, std::size_t> from;  // the length of the run an entry was read in
-    std::set<std::string> surnames;
-    auto add = [&](const Entries& entries, std::size_t run) {
-        for (const auto& [k, v] : entries) {
-            if (run > from[k]) {
-                found[k] = v;
-                from[k] = run;
-            }
+HistoricalLine ReadHistoricalLine(const dict::Snapshot& snap, std::string_view line) {
+    HistoricalLine out;
+    const Runes rs = ToRunes(line);
+    for (std::size_t i = 0; i < rs.size();) {
+        if (!IsNameKanji(rs[i])) {
+            i++;
+            continue;
         }
-    };
-    std::vector<Runes> listed;
-    for (const std::string& line : lines) {
-        const Runes rs = ToRunes(line);
-        for (std::size_t i = 0; i < rs.size();) {
-            if (!IsNameKanji(rs[i])) {
-                i++;
-                continue;
+        std::size_t j = i;
+        while (j < rs.size() && IsNameKanji(rs[j])) j++;
+        const Runes run(rs.begin() + static_cast<std::ptrdiff_t>(i), rs.begin() + static_cast<std::ptrdiff_t>(j));
+        std::string surname;
+        const Entries entries = HistoricalName(snap, run, surname);
+        for (const auto& [key, value] : entries) {
+            if (j - i > out.found[key].run) out.found[key] = {value, j - i};
+        }
+        if (!surname.empty()) {
+            out.surnames.insert(surname);
+        } else if (entries.empty() && LineStartsList(rs, i) && j < rs.size() &&
+                   (rs[j] == U' ' || rs[j] == U'　' || rs[j] == U'\t')) {
+            out.listed.push_back(run);
+        }
+        i = j;
+    }
+    return out;
+}
+
+std::string HistoricalRows(const dict::Snapshot& snap, std::span<const HistoricalLine* const> lines) {
+    std::map<std::string, HistoricalReading> found;
+    std::set<std::string> surnames;
+    for (const HistoricalLine* line : lines) {
+        for (const auto& [key, reading] : line->found) {
+            if (reading.run > found[key].run) found[key] = reading;
+        }
+        surnames.insert(line->surnames.begin(), line->surnames.end());
+    }
+    for (const HistoricalLine* line : lines) {
+        for (const Runes& run : line->listed) {
+            for (const auto& [key, value] : ListedName(snap, run, surnames)) {
+                if (run.size() > found[key].run) found[key] = {value, run.size()};
             }
-            std::size_t j = i;
-            while (j < rs.size() && IsNameKanji(rs[j])) j++;
-            const Runes run(rs.begin() + static_cast<std::ptrdiff_t>(i), rs.begin() + static_cast<std::ptrdiff_t>(j));
-            std::string surname;
-            const Entries entries = HistoricalName(snap, run, surname);
-            add(entries, j - i);
-            if (!surname.empty()) {
-                surnames.insert(surname);
-            } else if (entries.empty() && LineStartsList(rs, i) && j < rs.size() &&
-                       (rs[j] == U' ' || rs[j] == U'　' || rs[j] == U'\t')) {
-                listed.push_back(run);
-            }
-            i = j;
         }
     }
-    for (const Runes& rs : listed) add(ListedName(snap, rs, surnames), rs.size());
     std::string out;
-    for (const auto& [k, v] : found) out += k + "\t" + v + "\tname\n";
+    for (const auto& [key, reading] : found) out += key + "\t" + reading.text + "\tname\n";
     return out;
+}
+
+std::string HistoricalNames(const dict::Snapshot& snap, std::span<const std::string> lines) {
+    std::vector<HistoricalLine> facts;
+    facts.reserve(lines.size());
+    for (const std::string& line : lines) facts.push_back(ReadHistoricalLine(snap, line));
+    std::vector<const HistoricalLine*> views;
+    for (const HistoricalLine& line : facts) views.push_back(&line);
+    return HistoricalRows(snap, views);
 }
 
 }  // namespace hdTrans::names

@@ -178,9 +178,8 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
         const auto replacement = NewGenerated(*fallback);
         return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
     }
-    std::vector<std::string> all = memory.lines;
-    all.insert(all.end(), lines.begin(), lines.end());
-    const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(snap, all, !options.reference && options.wordImprovements.extraBuiltin);
+    const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(
+        snap, lines, !options.reference && options.wordImprovements.extraBuiltin, &memory.document);
 
     Scratch s;
     word::SessionSenses pending;
@@ -206,7 +205,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
         return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
     }
     if (s.sessionSenses == &pending) memory.senses = std::move(pending);
-    memory.lines = std::move(all);
+    pipeline::RememberDocument(snap, lines, memory.document);
     return out;
 }
 

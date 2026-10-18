@@ -73,18 +73,25 @@ std::string ReplaceString(std::string_view s, std::string_view from, std::string
 
 }  // namespace
 
+SpeechCues ReadSpeechCues(std::string_view line) {
+    SpeechCues cues;
+    const auto utterances = Utterances(line);
+    for (std::string_view u : utterances) {
+        if (HasAny(u, kFemaleMarkers)) cues.female = true;
+        if (!HasAny(u, kMaleMarkers)) continue;
+        for (const KinTerm& k : kKinTerms) {
+            if (Contains(u, k.ja)) cues.maleKin = true;
+        }
+    }
+    return cues;
+}
+
 bool FemaleSpeech(std::span<const std::string> lines) {
     bool female = false;
-    for (const std::string& l : lines) {
-        for (std::string_view u : Utterances(l)) {
-            if (HasAny(u, kFemaleMarkers)) female = true;
-        }
-        for (const KinTerm& k : kKinTerms) {
-            if (!Contains(l, k.ja)) continue;
-            for (std::string_view u : Utterances(l)) {
-                if (Contains(u, k.ja) && HasAny(u, kMaleMarkers)) return false;
-            }
-        }
+    for (const std::string& line : lines) {
+        const SpeechCues cues = ReadSpeechCues(line);
+        if (cues.maleKin) return false;
+        female = female || cues.female;
     }
     return female;
 }

@@ -74,9 +74,16 @@ struct LineLookup {
     dict::KeySet persons;
 };
 
+// A bounded rolling window of line evidence and content-keyed expensive scans.
+struct DocumentHistory;
+
+void RememberDocument(const dict::Snapshot& snap, std::span<const std::string> lines,
+                      std::shared_ptr<DocumentHistory>& history);
+
 // Builds the context of the lines of a document (each may end in "\r").
 std::unique_ptr<DocumentContext> BuildDocument(const dict::Snapshot& snap, std::span<const std::string> lines,
-                                               bool extraBuiltin = false);
+                                               bool extraBuiltin = false,
+                                               std::shared_ptr<DocumentHistory>* history = nullptr);
 
 // The facts of one line of the document; line is the line without its "\r".
 LineFacts ReadLine(DocumentContext& doc, std::string_view line);

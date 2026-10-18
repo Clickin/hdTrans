@@ -5,6 +5,8 @@
 // tables loaded into it.
 #include <array>
 #include <cstddef>
+#include <cstdint>
+#include <deque>
 #include <map>
 #include <memory>
 #include <string>
@@ -65,7 +67,17 @@ public:
     // when a line is malformed; the other lines are kept.
     bool LoadReadings(std::string_view text);
     // Reads the evidence of one line.
-    void Add(std::string_view line);
+    struct Evidence {
+        uint64_t id = 0;
+        std::array<std::vector<std::string>, 8> counts;
+        std::vector<std::array<std::string, 3>> joined;
+        std::vector<std::string> readings, actors;
+    };
+    void Add(std::string_view line, Evidence* evidence = nullptr);
+    // Removes only the evidence recorded by this Add, without scanning its line again.
+    void Forget(const Evidence& evidence);
+    // Shares only immutable dictionary facts with subsequent document copies.
+    void CacheDictionaryFacts();
 
     // The accepted surfaces, in byte order.
     std::vector<std::string> Names();
@@ -111,6 +123,15 @@ private:
     std::string PersonName(std::string_view t);
     std::string PrefixForm(std::string_view x);
 
+    void SetReading(const std::string& key, const std::string& value);
+    void SetActor(const std::string& key, const std::string& value);
+    struct Sources {
+        using Values = std::map<std::string, std::deque<std::pair<uint64_t, std::string>>>;
+        Values readings, actors;
+        uint64_t next = 0;
+    };
+    std::shared_ptr<Sources> sources_;
+    Evidence* recording_ = nullptr;
     const dict::Snapshot* snap_;
     struct Tables {
         std::map<std::string, std::string> readings;  // surface to reading or Hangul
@@ -128,6 +149,11 @@ private:
     std::map<std::string, int> kana_;                   // katakana runs
     std::map<std::array<std::string, 3>, int> joined_;  // kanji and katakana pairs
     std::map<std::string, int> chains_;                 // katakana runs joined by ・ or ＝
+    struct FlagCache {
+        std::map<std::string, DictFlags> values;
+        std::size_t bytes = 0;
+    };
+    std::shared_ptr<FlagCache> sharedFlags_;
     std::map<std::string, DictFlags> flags_;
     std::map<std::string, Name> scores_;                // accepted names, valid while scoresValid_
     bool scoresValid_ = false;

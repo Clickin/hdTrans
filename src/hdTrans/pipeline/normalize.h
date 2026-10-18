@@ -53,6 +53,11 @@ std::string WriteKinTerms(std::string_view line, bool female);
 
 // A document whose utterances (「」 and 『』 text) show a woman's speech and whose lines
 // with a kin term never show a man's speech in an utterance holding the kin term.
+struct SpeechCues {
+    bool female = false;
+    bool maleKin = false;
+};
+SpeechCues ReadSpeechCues(std::string_view line);
 bool FemaleSpeech(std::span<const std::string> lines);
 
 // line without ruby markup, keeping the base text: |漢字《かな》, 漢字《かな》 and HTML

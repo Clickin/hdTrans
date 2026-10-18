@@ -1,7 +1,10 @@
 // Sessions of one Engine translating on several threads at once, with a Reload while they
 // translate. Every thread must produce the same output for the same text, and the output
 // must match a single-threaded run. Skipped without dictionaries.
+#include <algorithm>
+#include <chrono>
 #include <cstdio>
+#include <fstream>
 #include <cstdlib>
 #include <filesystem>
 #include <string>
@@ -288,4 +291,56 @@ HD_TEST(engine_causative_passive) {
         hdTrans::Session session(engine);
         HD_CHECK_EQ(session.Translate(c.in), std::string(c.want));
     }
+}
+
+HD_TEST(engine_session_incremental_history) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine engine(true);
+    HD_REQUIRE(engine.Open({dicts}));
+    hdTrans::Session session(engine);
+    session.Translate("光さん、\n光さん、\n光さん、");
+    HD_CHECK_EQ(session.Translate("光が来た。"), "히카루가 왔다.");
+    session.Reset();
+    HD_CHECK_EQ(session.Translate("光が来た。"), "빛이 왔다.");
+
+    const char* golden = std::getenv("HDTRANS_GOLDEN");
+    if (golden == nullptr || *golden == 0) return;
+    std::ifstream input(std::string(golden) + "/corpus2.each.in", std::ios::binary);
+    HD_REQUIRE(input.good());
+    std::string history, line;
+    for (int i = 0; i < 2048; i++) {
+        HD_REQUIRE(static_cast<bool>(std::getline(input, line)));
+        if (i > 0) history += '\n';
+        history += line;
+    }
+    session.Reset();
+    session.Translate(history);
+    std::vector<double> times;
+    for (int i = 0; i < 20; i++) {
+        const auto start = std::chrono::steady_clock::now();
+        HD_CHECK_EQ(session.Translate("今日はいい天気ですね。"), "오늘은 좋은 날씨군요.");
+        times.push_back(std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count());
+    }
+    std::sort(times.begin(), times.end());
+    std::printf("session after 2048 lines: median %.3f ms, max %.3f ms\n", times[times.size() / 2], times.back());
+}
+
+HD_TEST(engine_session_memory_bytes) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine engine(true);
+    HD_REQUIRE(engine.Open({dicts}));
+    const auto snap = engine.Dictionaries();
+    std::shared_ptr<hdTrans::pipeline::DocumentHistory> history;
+    const std::vector<std::string> cue{"「あたしが行くわよ」"};
+    const std::vector<std::string> probe{"お兄様！"};
+    hdTrans::pipeline::RememberDocument(*snap, cue, history);
+    HD_CHECK(hdTrans::pipeline::BuildDocument(*snap, probe, false, &history)->female);
+    const std::vector<std::string> padding(33, std::string(32768, ' '));
+    hdTrans::pipeline::RememberDocument(*snap, padding, history);
+    HD_CHECK(!hdTrans::pipeline::BuildDocument(*snap, probe, false, &history)->female);
+    auto document = padding;
+    document.insert(document.begin(), cue.front());
+    HD_CHECK(hdTrans::pipeline::BuildDocument(*snap, document)->female);
 }
