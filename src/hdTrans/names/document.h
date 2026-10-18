@@ -47,8 +47,12 @@ struct DocumentContext {
     userdict::Families families;
     // The plain entries of the registry and the historical names, before the skip filter.
     std::vector<dict::UserEntry> extra;
-    // The lookups' plain lists by their skip key, built on first use.
-    std::map<std::string, std::unique_ptr<dict::UserText>> plainByKey;
+    struct CachedLookup {
+        std::unique_ptr<dict::UserText> plain;
+        dict::KeySet confirmed;  // filtered accepted names, only for nonempty skip keys
+    };
+    // The lookups' plain lists and confirmed names by their skip key, built on first use.
+    std::map<std::string, CachedLookup> plainByKey;
 };
 
 // The facts of one line of a document.
@@ -62,9 +66,10 @@ struct LineFacts {
 };
 
 // The lookups of a line: its plain entries, the names it confirms and its person places.
+// The plain entries and confirmed names are borrowed from the document.
 struct LineLookup {
     const dict::UserText* plain = nullptr;
-    dict::KeySet confirmed;
+    const dict::KeySet* confirmed = nullptr;
     dict::KeySet persons;
 };
 

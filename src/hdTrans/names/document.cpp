@@ -238,12 +238,17 @@ LineLookup LookupOf(DocumentContext& doc, const LineFacts& facts) {
             if (!doc.data->dictKeys.contains(e.key) &&
                 !std::binary_search(facts.skip.begin(), facts.skip.end(), e.key)) entries.push_back(e);
         }
-        found = doc.plainByKey.emplace(key, std::make_unique<dict::UserText>(doc.snap->TextPlain(), std::move(entries))).first;
+        DocumentContext::CachedLookup cached;
+        cached.plain = std::make_unique<dict::UserText>(doc.snap->TextPlain(), std::move(entries));
+        if (!facts.skip.empty()) {
+            for (const std::string& t : doc.accepted) {
+                if (!std::binary_search(facts.skip.begin(), facts.skip.end(), t)) cached.confirmed.insert(t);
+            }
+        }
+        found = doc.plainByKey.emplace(key, std::move(cached)).first;
     }
-    out.plain = found->second.get();
-    for (const std::string& t : doc.accepted) {
-        if (!std::binary_search(facts.skip.begin(), facts.skip.end(), t)) out.confirmed.insert(t);
-    }
+    out.plain = found->second.plain.get();
+    out.confirmed = facts.skip.empty() ? &doc.accepted : &found->second.confirmed;
     out.persons.insert(facts.persons.begin(), facts.persons.end());
     return out;
 }
@@ -253,7 +258,7 @@ LineContext ContextOf(const DocumentContext& doc, const LineLookup& lookup) {
     ctx.document = true;
     ctx.female = doc.female;
     ctx.lookup.plain = lookup.plain;
-    ctx.lookup.confirmed = &lookup.confirmed;
+    ctx.lookup.confirmed = lookup.confirmed;
     ctx.lookup.persons = &lookup.persons;
     ctx.named = &doc.named;
     return ctx;

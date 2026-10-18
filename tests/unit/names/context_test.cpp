@@ -1,6 +1,7 @@
 // Table tests of the per-line facts that the golden sets do not exercise: the names cued
 // by speaker labels of a text without a document, and the whole-line rows of lines.tsv.
 // Needs the base dictionary ($HDTRANS_DICTS); skipped when it is absent.
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -62,4 +63,34 @@ HD_TEST(names_whole_line_rows) {
         HD_CHECK(facts.wholeLine.has_value() == !want.empty());
         if (facts.wholeLine) HD_CHECK(*facts.wholeLine == want);
     }
+}
+
+HD_TEST(names_confirmed_cache) {
+    const dict::Snapshot* snap = Base();
+    if (snap == nullptr) return;
+    const std::vector<std::string> lines = {"光さん、", "光さん、", "光さん、"};
+    auto doc = pipeline::BuildDocument(*snap, lines);
+    HD_REQUIRE(doc->accepted.contains("光"));
+    const std::vector<std::vector<std::string>> skips = {{}, {"光"}, {"光", "未登録"}};
+    std::vector<pipeline::LineLookup> saved;
+    for (const auto& skip : skips) {
+        pipeline::LineFacts facts = pipeline::ReadLine(*doc, lines[0]);
+        facts.skip = skip;
+        const pipeline::LineLookup first = pipeline::LookupOf(*doc, facts);
+        const pipeline::LineLookup again = pipeline::LookupOf(*doc, facts);
+        HD_REQUIRE(first.confirmed != nullptr);
+        HD_CHECK(first.confirmed == again.confirmed);
+        HD_CHECK(first.plain == again.plain);
+        HD_CHECK(pipeline::ContextOf(*doc, first).lookup.confirmed == first.confirmed);
+        if (skip.empty()) HD_CHECK(first.confirmed == &doc->accepted);
+        for (const std::string& name : doc->accepted) {
+            const bool omitted = std::find(skip.begin(), skip.end(), name) != skip.end();
+            HD_CHECK_EQ(first.confirmed->contains(name), !omitted);
+        }
+        saved.push_back(first);
+    }
+    HD_CHECK(saved[0].confirmed->contains("光"));
+    HD_CHECK(!saved[1].confirmed->contains("光"));
+    HD_CHECK(!saved[2].confirmed->contains("光"));
+    HD_CHECK(doc->accepted.contains("光"));
 }
