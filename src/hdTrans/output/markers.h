@@ -1,7 +1,8 @@
 #pragma once
 // Ending-family rows of the three marker tables: a key such as "&A1@0" (marker &, $ or
-// %, a two-character family name, '@', a form code '0'..'9', 'A', 'B') to the Korean
-// stem text of that form.
+// %, a two-character family name, '@', a form code '0'..'9', 'A'..'C') to the Korean
+// stem text of that form. Keys are literal bytes; spelling and form membership are
+// not normalized.
 #include <span>
 #include <string_view>
 
@@ -23,7 +24,7 @@ struct MarkerRow {
     const char* text;
 };
 
-// Sorted by key, each key once, no empty text.
+// Sorted by key, each key once, no empty text. Spans and row views have process lifetime.
 std::span<const MarkerRow> SourceMarkerTable();
 std::span<const MarkerRow> DollarMarkerTable();
 std::span<const MarkerRow> PercentMarkerTable();
