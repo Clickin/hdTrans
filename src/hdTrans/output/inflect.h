@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <span>
+#include <string>
 #include <string_view>
 
 namespace hdTrans::output::internal {
@@ -42,7 +43,22 @@ struct KoreanFamily {
     std::span<const InflectionException> exceptions;
 };
 
+constexpr uint16_t InflectionFormBit(char code) {
+    if (code >= '0' && code <= '9') return static_cast<uint16_t>(1u << (code - '0'));
+    if (code >= 'A' && code <= 'C') return static_cast<uint16_t>(1u << (10 + code - 'A'));
+    return 0;
+}
+
 // Sorted by the complete four-byte family key.
 std::span<const KoreanFamily> KoreanFamilies();
+const KoreanFamily* FindKoreanFamily(std::string_view key);
+
+// Marker '&' uses verb form codes; '$' and '%' use adjective form codes.
+// Non-Hangul stems and invalid form codes have no computed form.
+std::string InflectStem(std::string_view stem, KoreanPartOfSpeech partOfSpeech,
+                       InflectionClass inflectionClass, uint16_t flags, char marker, char code);
+
+// Exceptions take precedence; forms absent from the membership mask stay absent.
+std::string Inflect(const KoreanFamily& family, char code);
 
 }  // namespace hdTrans::output::internal
