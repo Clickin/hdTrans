@@ -104,6 +104,7 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
     const output::Settings composeSettings = ComposeSettings(text);
     for (std::size_t k = 0; k < analysis.sentences.size(); k++) {
         ResolveSentence(RulesProgram(), families, analysis, k);
+        if (observer.resolved) observer.resolved(observer.context, index, static_cast<int>(k), analysis.sentences[k].chain);
         const word::Sentence& sentence = analysis.sentences[k];
         ResolvedItems(sentence.chain, s.items);
         BuildTexts(s.tokens, analysis, sentence.first, sentence.last, s.texts);
@@ -119,7 +120,8 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
     }
 }
 
-// The line body (without "\r") through every stage of the text path.
+// One line through every stage of the text path; the line's trailing "\r" is written
+// back by the caller.
 std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext& doc, std::string_view body,
                           Scratch& s, const output::Families& families, const StageObserver& observer) {
     const pipeline::LineFacts facts = pipeline::ReadLine(doc, body);
@@ -159,10 +161,9 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, std::span
     out.reserve(lines.size());
     for (std::size_t i = 0; i < lines.size(); i++) {
         if (observer.line) observer.line(observer.context, static_cast<int>(i));
-        std::string_view body = lines[i];
-        const bool cr = !body.empty() && body.back() == '\r';
-        if (cr) body.remove_suffix(1);
-        std::string translated = TranslateBody(snap, *doc, body, s, memory.families, observer);
+        // ReadLine takes the line without its one trailing "\r"; the "\r" is written back.
+        const bool cr = !lines[i].empty() && lines[i].back() == '\r';
+        std::string translated = TranslateBody(snap, *doc, lines[i], s, memory.families, observer);
         if (cr) translated += '\r';
         out.push_back(std::move(translated));
     }
@@ -177,7 +178,9 @@ std::string TranslateRawLine(const dict::Snapshot& snap, std::string_view line, 
     if (observer.line) observer.line(observer.context, 0);
     std::vector<output::Sentence> sentences;
     const output::Families empty;
-    TranslateChunk(snap, dict::LookupContext{}, chunk, 0, false, s, empty, observer, sentences);
+    dict::LookupContext lookup;
+    lookup.plain = &snap.Plain();
+    TranslateChunk(snap, lookup, chunk, 0, false, s, empty, observer, sentences);
     output::Pieces result;
     for (const output::Sentence& sentence : sentences) output::Append(result, sentence.pieces);
     return output::String(result);

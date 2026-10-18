@@ -29,6 +29,8 @@ struct StageObserver {
     // The sentences of a chunk after the word analysis, before resolve.
     void (*analysis)(void* context, int chunk, const tokenizer::Tokens& tokens, const word::Analysis& analysis) =
         nullptr;
+    // The chain of a sentence after the resolve stage.
+    void (*resolved)(void* context, int chunk, int sentence, const word::Chain& chain) = nullptr;
 };
 
 // What a session keeps between its calls.
