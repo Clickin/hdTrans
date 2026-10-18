@@ -13,8 +13,8 @@ namespace {
 bool MaySelect(Provenance layer, bool rules) {
     switch (layer) {
         case Provenance::FirstXxx:
-        case Provenance::Digit:
             return true;
+        case Provenance::Digit:
         case Provenance::LocalRule:
         case Provenance::GlobalRule:
             return rules;

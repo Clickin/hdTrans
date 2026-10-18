@@ -72,7 +72,7 @@ struct Settings {
     std::span<const Scorer> scorers;
     std::span<const Scorer> shadowScorers;  // recorded only when selectShadow is set
     bool selectShadow = false;
-    bool selectRules = false;  // scorers may override rule choices, never sense rows
+    bool selectRules = false;  // scorers may override context or rule choices, never sense rows
     // The speech level (an output register, 0 for automatic) of sentence-final plain
     // and polite predicates; it selects the plain-dictionary end rows with a register.
     uint8_t registers[2] = {0, 0};

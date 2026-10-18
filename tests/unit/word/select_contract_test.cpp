@@ -3,6 +3,7 @@
 #include <string_view>
 
 #include "hdTrans/word/flush.h"
+#include "hdTrans/word/document_senses.h"
 #include "hdTrans/word/select.h"
 #include "hdtest.h"
 
@@ -72,6 +73,71 @@ HD_TEST(word_shadow_scorers_leave_active_scorers_effective) {
             HD_CHECK_EQ(choice.candidate, 2);
             HD_CHECK_EQ(choice.target, std::string("짧"));
             HD_CHECK(choice.eligible && choice.winner);
+        } else HD_CHECK(line.item->shadowChoices.empty());
+    }
+}
+
+HD_TEST(word_select_preserves_punctuation_choice_without_rules) {
+    using namespace hdTrans;
+    const auto loaded = dict::Load({{0, "base.tsv", "key\tko\tpos\tid\n"}});
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    const word::Scorer scorers[] = {{"shortest", word::ShortestTargetScore}};
+    for (const bool rules : {false, true}) {
+        for (const char punctuation : {',', '.'}) {
+            auto settings = word::Settings::Reference();
+            settings.scorers = scorers;
+            settings.shadowScorers = scorers;
+            settings.selectShadow = true;
+            settings.selectRules = rules;
+            const std::string input = std::string("人気") + punctuation;
+            SelectionLine line(*loaded.snapshot, settings, input, {{"짧", "J1"}, {"긴문장", "J2"}});
+            word::CleanupSelectors(line.flusher);
+            const int contextual = punctuation == '.' ? 1 : 0;
+            HD_REQUIRE(line.item->selected == contextual);
+            HD_REQUIRE(line.item->choice.layer == word::Provenance::Digit);
+            HD_CHECK_EQ(line.item->CheckJ(contextual), 1);
+            HD_CHECK_EQ(line.item->CheckJ(1 - contextual), -1);
+            word::Select(line.flusher);
+            const bool changed = rules && contextual == 1;
+            HD_CHECK_EQ(line.item->selected, changed ? 0 : contextual);
+            HD_CHECK(line.item->choice.layer == (changed ? word::Provenance::Scorer : word::Provenance::Digit));
+            HD_REQUIRE(line.item->shadowChoices.size() == 1);
+            const auto& choice = line.item->shadowChoices[0];
+            HD_CHECK_EQ(choice.from, contextual);
+            HD_CHECK_EQ(choice.candidate, 0);
+            HD_CHECK_EQ(choice.eligible, rules);
+            HD_CHECK_EQ(choice.winner, changed);
+        }
+    }
+}
+
+HD_TEST(document_senses_preserve_punctuation_choice_even_with_rules) {
+    using namespace hdTrans;
+    const auto loaded = dict::Load({{0, "base.tsv", "key\tko\tpos\tid\n"}});
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    for (const bool shadow : {false, true}) {
+        word::SessionSenses senses;
+        senses.choices.emplace("人気", word::SessionSense{"짧", "N110"});
+        auto settings = word::Settings::Reference();
+        settings.improvements.documentSenses = true;
+        settings.sessionSenses = &senses;
+        settings.selectRules = true;
+        settings.selectShadow = shadow;
+        SelectionLine line(*loaded.snapshot, settings, "人気.", {{"짧", "J1"}, {"긴문장", "J2"}});
+        word::CleanupSelectors(line.flusher);
+        HD_REQUIRE(line.item->selected == 1);
+        HD_REQUIRE(line.item->choice.layer == word::Provenance::Digit);
+        const word::SelectContext context{*loaded.snapshot, line.worker.chain};
+        HD_CHECK_EQ(word::DocumentSenseScore(*line.item, 0, context), 1);
+        HD_CHECK_EQ(word::DocumentSenseScore(*line.item, 1, context), 0);
+        word::Select(line.flusher);
+        HD_CHECK_EQ(line.item->selected, 1);
+        HD_CHECK(line.item->choice.layer == word::Provenance::Digit);
+        if (shadow) {
+            HD_REQUIRE(line.item->shadowChoices.size() == 1);
+            const auto& choice = line.item->shadowChoices[0];
+            HD_CHECK_EQ(choice.candidate, 0);
+            HD_CHECK(!choice.eligible && !choice.winner);
         } else HD_CHECK(line.item->shadowChoices.empty());
     }
 }
