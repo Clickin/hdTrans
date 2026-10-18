@@ -94,9 +94,12 @@ word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions&
     s.text = text;
     s.terminal = text;
     s.verse = verse;
-    s.scorers = options.scorers;
-    s.selectShadow = options.selectShadow;
-    s.selectRules = options.selectRules;
+    if (!options.reference) {
+        s.scorers = options.scorers;
+        s.shadowScorers = options.shadowScorers;
+        s.selectShadow = options.selectShadow;
+        s.selectRules = options.selectRules;
+    }
     s.sessionSenses = text ? sessionSenses : nullptr;
     return s;
 }
@@ -178,7 +181,7 @@ std::vector<std::string> TranslateDocumentPieces(const dict::Snapshot& snap, Gen
                                                  std::span<const std::string> sourceLines) {
     if (!snap.Healthy()) {
         const auto [fallback, replacement] = FallbackOf(snap);
-        if (!fallback) return {};
+        if (!fallback) return std::vector<std::string>(lines.begin(), lines.end());
         return TranslateDocumentPieces(*fallback, *replacement, lines, memory, observer, options, sourceLines);
     }
     if (std::any_of(lines.begin(), lines.end(), [](const std::string& line) {
@@ -191,7 +194,7 @@ std::vector<std::string> TranslateDocumentPieces(const dict::Snapshot& snap, Gen
             ends.push_back(bounded.size());
         }
         const auto translated = TranslateDocumentPieces(snap, generated, bounded, memory, observer, options, sourceLines);
-        if (translated.size() != bounded.size()) return {};
+        if (translated.size() != bounded.size()) return std::vector<std::string>(lines.begin(), lines.end());
         std::vector<std::string> joined(lines.size());
         for (std::size_t i = 0, piece = 0; i < ends.size(); i++) {
             while (piece < ends[i]) joined[i] += translated[piece++];
@@ -220,7 +223,7 @@ std::vector<std::string> TranslateDocumentPieces(const dict::Snapshot& snap, Gen
     }
     if (!snap.Healthy()) {
         const auto [fallback, replacement] = FallbackOf(snap);
-        if (!fallback) return {};
+        if (!fallback) return std::vector<std::string>(lines.begin(), lines.end());
         return TranslateDocumentPieces(*fallback, *replacement, lines, memory, observer, options, sourceLines);
     }
     if (s.sessionSenses == &pending) memory.senses = std::move(pending);
@@ -241,7 +244,7 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
                              const StageObserver& observer, const TranslationOptions& options) {
     if (!snap.Healthy()) {
         const auto [fallback, replacement] = FallbackOf(snap);
-        if (!fallback) return {};
+        if (!fallback) return std::string(line);
         return TranslateRawLine(*fallback, *replacement, line, observer, options);
     }
     Scratch s;
@@ -260,7 +263,7 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
     }
     if (!snap.Healthy()) {
         const auto [fallback, replacement] = FallbackOf(snap);
-        if (!fallback) return {};
+        if (!fallback) return std::string(line);
         return TranslateRawLine(*fallback, *replacement, line, observer, options);
     }
     return result;

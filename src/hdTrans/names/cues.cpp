@@ -642,7 +642,7 @@ bool Registry::Guarded(std::string_view line, std::size_t a, std::size_t b) {
     }
     const char32_t next = FirstRune(rest).cp;
     dict::LookupContext ctx;
-    ctx.plain = &snap_->Plain();
+    ctx.plain = &snap_->Plain();  // Lexical guards use base rows, never additional plain endings.
     const dict::Candidates cands = snap_->GetWordInfo(tail, dict::LookupMode::General, ctx);
     for (const dict::Candidate& c : cands.list) {
         if (c.user != nullptr || c.codes == nullptr) continue;

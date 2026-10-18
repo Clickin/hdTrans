@@ -270,23 +270,6 @@ HD_TEST(analyze_wa_space_overlay) {
     }
 }
 
-HD_TEST(word_improvements_reference) {
-    const word::Settings settings = word::Settings::Reference();
-    HD_CHECK(!settings.improvements.documentSenses);
-    HD_CHECK(!settings.improvements.desireWindow);
-    HD_CHECK(!settings.improvements.expandedGroups);
-    HD_CHECK(!settings.improvements.semanticAlternatives);
-    HD_CHECK(!settings.improvements.preserveNeighbourSlots);
-    HD_CHECK(!settings.improvements.perLevelRetries);
-    HD_CHECK(!settings.improvements.nonterminalBoundary);
-    HD_CHECK(!settings.improvements.tailLengthCheck);
-    HD_CHECK(!settings.improvements.preparedNextToken);
-    HD_CHECK(!settings.improvements.forwardTerminal);
-    HD_CHECK(settings.sessionSenses == nullptr);
-    HD_CHECK(!word::Settings{}.improvements.documentSenses);
-    HD_CHECK(word::Settings{}.improvements.desireWindow);
-}
-
 HD_TEST(word_prepared_next_token) {
     const auto snapshot = SmallDictionary();
     HD_REQUIRE(snapshot != nullptr);

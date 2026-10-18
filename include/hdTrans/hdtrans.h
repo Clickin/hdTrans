@@ -1,6 +1,7 @@
 /* C API of the hdtrans engine. Strings are UTF-8. Buffers returned through an out
  * parameter are released with hdTrans_FreeMem. One engine and one session per process:
- * names and context found in earlier calls shape later translations. */
+ * names and context found in earlier calls shape later translations.
+ * Calls are thread-safe, not reentrant; finish all calls before unloading the library. */
 #ifndef HDTRANS_H
 #define HDTRANS_H
 
@@ -19,15 +20,20 @@ extern "C" {
 #endif
 
 /* Loads the dictionary folders listed in dirs (NUL-separated, double NUL at the end),
- * later folders overriding earlier ones. Returns 0, or -1 when no dictionary loads. */
+ * later folders overriding earlier ones. Returns 0, or -1 when no dictionary loads or
+ * a concurrent Terminate, successful Initialize or successful Reload cancels this load. */
 HDTRANS_API int hdTrans_Initialize(const char* dirs);
+
+/* Releases the session and dictionaries. Repeated calls are harmless; Initialize may be called again. */
+HDTRANS_API void hdTrans_Terminate(void);
 
 /* Translates text[0..n), one or more "\n"-separated lines, in the process session.
  * Writes a NUL-terminated UTF-8 buffer to *out and its length (without the NUL) to
- * *outn. Returns 0, or -1 before a successful hdTrans_Initialize. */
+ * *outn. Returns 0, or -1 when uninitialized or terminated. */
 HDTRANS_API int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn);
 
-/* Reloads the dictionary folders of the last hdTrans_Initialize (user dictionary edits). */
+/* Reloads the dictionary folders (user dictionary edits). Returns 0, or -1 when
+ * uninitialized, terminated, or the reload fails. */
 HDTRANS_API int hdTrans_Reload(void);
 
 HDTRANS_API void hdTrans_FreeMem(void* p);

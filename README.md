@@ -36,3 +36,7 @@ WebAssembly: `emcmake cmake --preset wasm && cmake --build --preset wasm`.
 | `tools/` | `golden.sh` (expectation sets), `build.ps1` (Windows build) |
 
 Dictionaries are UTF-8 TSV folders and are not part of this repository.
+Cache validation trusts source size, timestamps and file identity; after edits that preserve them,
+use `-verify-dicts` or `HDTRANS_VERIFY_DICTS=1` to check source contents.
+`CacheWrite::Off` never publishes a cache generation, but may write a `.bad` marker and
+rename a generation proven corrupt.

@@ -43,9 +43,10 @@ file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/src/hdTrans/dict/builtin_gen.cpp" built
 file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/src/hdTrans/dict/builtin_extra_gen.cpp" builtinExtraHash)
 string(SHA256 HDTRANS_BUILTIN_ID "${builtinBaseHash}${builtinExtraHash}")
 string(SHA256 HDTRANS_COMPILER_ID "${CMAKE_CXX_COMPILER_ID}:${CMAKE_CXX_COMPILER_VERSION}:${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}:${CMAKE_SIZEOF_VOID_P}:${CMAKE_BUILD_TYPE}:${CMAKE_CXX_FLAGS}:${CMAKE_CXX_FLAGS_RELEASE}:${CMAKE_CXX_FLAGS_DEBUG}")
-target_compile_definitions(hdtrans PRIVATE HDTRANS_DATA_ID="${HDTRANS_DATA_ID}" HDTRANS_BUILTIN_ID="${HDTRANS_BUILTIN_ID}" HDTRANS_COMPILER_ID="${HDTRANS_COMPILER_ID}")
+file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dictionary_ids.h" CONTENT
+"#pragma once\n#define HDTRANS_DATA_ID \"${HDTRANS_DATA_ID}\"\n#define HDTRANS_BUILTIN_ID \"${HDTRANS_BUILTIN_ID}\"\n#define HDTRANS_COMPILER_ID \"${HDTRANS_COMPILER_ID}\"\n")
 set_target_properties(hdtrans PROPERTIES OUTPUT_NAME hdTransCore COMPILE_PDB_NAME hdTransCore)
-target_include_directories(hdtrans PUBLIC include PRIVATE src)
+target_include_directories(hdtrans PUBLIC include PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}")
 
 if(NOT EMSCRIPTEN)
     add_executable(hdtrans_cli src/cli/main.cpp)
@@ -59,6 +60,13 @@ if(NOT EMSCRIPTEN)
     target_link_libraries(hdtrans_tests PRIVATE hdtrans)
     enable_testing()
     add_test(NAME unit COMMAND hdtrans_tests)
+
+    find_package(Threads REQUIRED)
+    add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp)
+    target_link_libraries(admin_priority PRIVATE hdtrans Threads::Threads)
+    add_test(NAME host.admin_priority COMMAND admin_priority "${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/dict/testdata/folder")
+    set_tests_properties(host.admin_priority PROPERTIES TIMEOUT 60
+        ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/admin-priority-cache")
 
     # Dumps the dictionary lookups over corpus lines for comparison with a reference dump.
     add_executable(snapshot_check tests/snapshot_check/main.cpp)
@@ -85,8 +93,9 @@ elseif(WIN32)
 
     add_executable(j2k_host tests/host/j2k_host.c)
     target_compile_definitions(j2k_host PRIVATE UNICODE _UNICODE)
-    add_dependencies(j2k_host j2kengine)
+    add_dependencies(j2k_host j2kengine hdtrans_dll)
     add_test(NAME host.j2k COMMAND j2k_host $<TARGET_FILE:j2kengine>)
+    set_tests_properties(host.j2k PROPERTIES ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/host-cache")
 else()
     add_library(hdtrans_shared SHARED src/cshared/hdtrans_c.cpp)
     set_target_properties(hdtrans_shared PROPERTIES OUTPUT_NAME hdTransEngine)

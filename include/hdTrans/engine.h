@@ -18,11 +18,16 @@ struct Generated;
 struct SessionState;
 }
 
+// Off never publishes a cache generation; Sync attempts publication before Open returns.
+// Off can write a .bad marker and rename a generation proven corrupt.
+enum class CacheWrite { Off, Sync };
+
 // The loaded dictionaries. Shared by any number of sessions and threads.
 class Engine {
 public:
     // Reference mode disables translation improvements. Sessions inherit it.
-    explicit Engine(bool reference = false) : reference_(reference) {}
+    explicit Engine(bool reference = false, CacheWrite cacheWrite = CacheWrite::Sync)
+        : reference_(reference), cacheWrite_(cacheWrite) {}
 
     // Loads the folders in order; later folders override earlier ones. Returns false when
     // no dictionary could be loaded; the dictionaries loaded before stay.
@@ -42,8 +47,10 @@ private:
     friend class Session;
     friend struct internal::Access;
     const bool reference_;
+    const CacheWrite cacheWrite_;
     mutable std::mutex mu_;
     std::vector<std::string> dirs_;
+    bool verifyDicts_ = false;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;  // the marker families made on snapshot_
 };
@@ -63,9 +70,6 @@ public:
     // Lines over 64 KiB are translated in pieces of at most 16 KiB, split at sentence ends outside brackets where possible.
     std::string Translate(std::string_view text);
 
-    // Scores candidates without applying their choices. Disabled by default.
-    void SetSelectShadow(bool enabled) { selectShadow_ = enabled; }
-
     // Forgets everything learned from earlier text and takes the engine's current
     // dictionaries.
     void Reset();
@@ -76,7 +80,6 @@ private:
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;
     std::unique_ptr<internal::SessionState> state_;
-    bool selectShadow_ = false;
 };
 
 }  // namespace hdTrans

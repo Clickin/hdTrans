@@ -3,8 +3,7 @@
 //   - for every case or document line with an SN record, Protect of it must give the P
 //     records;
 //   - Segment of the P pieces must give the CH records.
-// Protect reads the dictionaries ($HDTRANS_DICTS, by default dicts/base next to the
-// repository) and the plain entries of each line, which a session builds from its
+// Protect reads the dictionaries ($HDTRANS_DICTS) and the plain entries of each line, which a session builds from its
 // dictionaries and the name registry of the document; here they come compiled in
 // $HDTRANS_GOLDEN/plain/: head.tsv and tail.tsv around the registry and historical
 // entries of each line (<set>.tsv, E rows under the case and line headers of the stage
@@ -27,6 +26,7 @@
 #include "hdTrans/pipeline/segment.h"
 #include "hdTrans/text/utf8.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "output/stage_records.h"
 
 using namespace hdTrans;
@@ -36,12 +36,7 @@ namespace {
 
 int Int(std::string_view s) { return std::atoi(std::string(s).c_str()); }
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
-}
+using hdtest::DictsDir;
 
 // Entry rows as written in the plain folder.
 bool ParseEntry(std::string_view row, dict::CodeTable& codes, dict::UserEntry& e) {
@@ -156,15 +151,17 @@ size_t Diff(const std::vector<std::string>& got, const std::vector<std::string_v
 }  // namespace
 
 HD_TEST(pipeline_protect_segment_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string dir = GoldenDir() + "/stages/";
     const std::string plainDir = GoldenDir() + "/plain/";
     std::error_code ec;
     if (!std::filesystem::exists(dir + "MANIFEST", ec)) {
-        std::printf("skip pipeline_protect_segment_golden: no %sMANIFEST\n", dir.c_str());
-        return;
+        HD_SKIP(std::string("no ") + dir + "MANIFEST");
     }
     const bool withProtect = std::filesystem::is_directory(plainDir, ec) && std::filesystem::is_directory(DictsDir(), ec);
-    if (!withProtect) std::printf("pipeline_protect_segment_golden: no %s or %s, Segment only\n", plainDir.c_str(), DictsDir().c_str());
+    HD_REQUIRE(withProtect);
 
     std::vector<std::string> sets;
     for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
@@ -176,6 +173,7 @@ HD_TEST(pipeline_protect_segment_golden) {
         sets.push_back(set);
     }
     std::sort(sets.begin(), sets.end());
+    HD_REQUIRE(!ec);
     HD_REQUIRE(!sets.empty());
 
     std::shared_ptr<const dict::Snapshot> snap;
@@ -265,6 +263,9 @@ HD_TEST(pipeline_protect_segment_golden) {
             const std::string sounded = UnescapeStageText(f[1]);
             t.pDiffering += Diff(PieceRecords("P", pipeline::Protect(sounded, lc, *snap)), wantP, where, shown);
         }
+        HD_CHECK_EQ(t.lines, hdtest::CountRecords(snFile, "SN"));
+        HD_CHECK_EQ(t.pRecords, hdtest::CountRecords(pFile, "P"));
+        HD_CHECK_EQ(t.chRecords, hdtest::CountRecords(pFile, "CH"));
         std::printf("pipeline golden %s: %zu lines, P %zu records %zu differing, CH %zu records %zu differing\n", set.c_str(),
                     t.lines, t.pRecords, t.pDiffering, t.chRecords, t.chDiffering);
         all.lines += t.lines;
@@ -276,6 +277,7 @@ HD_TEST(pipeline_protect_segment_golden) {
     std::printf("pipeline golden: %zu sets, %zu lines, P %zu records %zu differing%s, CH %zu records %zu differing\n",
                 sets.size(), all.lines, all.pRecords, all.pDiffering, withProtect ? "" : " (not run)", all.chRecords,
                 all.chDiffering);
+    HD_CHECK(all.lines > 0 && all.pRecords > 0 && all.chRecords > 0);
     HD_CHECK_EQ(all.pDiffering, size_t{0});
     HD_CHECK_EQ(all.chDiffering, size_t{0});
 }
@@ -283,10 +285,12 @@ HD_TEST(pipeline_protect_segment_golden) {
 // The span kinds of the protected-span cut of あcあ for every code point c but the
 // surrogates ($HDTRANS_GOLDEN/stages/sweep.cp.tsv: U+XXXX, two token columns, the kinds).
 HD_TEST(pipeline_cut_spans_sweep) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     std::string file;
     if (!ReadFile(GoldenDir() + "/stages/sweep.cp.tsv", file)) {
-        std::printf("skip pipeline_cut_spans_sweep: no sweep.cp.tsv\n");
-        return;
+        HD_SKIP("no sweep.cp.tsv");
     }
     size_t lines = 0, differing = 0;
     for (const auto line : Split(file, '\n')) {
@@ -309,5 +313,7 @@ HD_TEST(pipeline_cut_spans_sweep) {
         }
     }
     std::printf("pipeline cut spans sweep: %zu code points, %zu differing\n", lines, differing);
+    HD_CHECK_EQ(lines, hdtest::LineCount(file));
+    HD_CHECK_EQ(lines, size_t{1112064});
     HD_CHECK_EQ(differing, size_t{0});
 }

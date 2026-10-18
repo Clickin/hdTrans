@@ -147,9 +147,13 @@ struct LoadResult {
 
 // Lists the *.tsv files of the folders in order, those of each folder in name order,
 // and reads them.
-LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir = {}, bool verify = false);
+LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir = {}, bool verify = false,
+                       bool cacheWrite = true);
 // Loads the editable files without reading or writing a cache.
 LoadResult LoadFoldersTsv(const std::vector<std::string>& folders);
+// Finishes a new column-only snapshot with the folders' current noncolumn files.
+LoadResult LoadPlainFolders(std::shared_ptr<Snapshot> snapshot, const std::vector<std::string>& folders,
+                           std::vector<LoadError> errors);
 // Compiles the folders to an immutable resource; publishes only a fully validated file.
 bool CompileSnapshot(const std::vector<std::string>& folders, std::string_view outPath);
 // Loads files in load order.
@@ -260,6 +264,7 @@ private:
 
     std::shared_ptr<internal::SnapshotFile> backing_;
     bool hasDictionary_ = false;
+    std::shared_ptr<const CodeTable> columnCodes_;
     CodeTable codes_;
     Dict base_;
     Dict user_;

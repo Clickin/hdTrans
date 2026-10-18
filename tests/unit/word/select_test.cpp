@@ -113,7 +113,7 @@ HD_TEST(word_select_eligible_layers) {
     };
     const Case cases[] = {
         {word::Provenance::FirstXxx, true, true},
-        {word::Provenance::Digit, true, true},
+        {word::Provenance::Digit, false, true},
         {word::Provenance::LocalRule, false, true},
         {word::Provenance::GlobalRule, false, true},
         {word::Provenance::Fixed, false, false},
@@ -198,11 +198,11 @@ HD_TEST(word_select_ties) {
         word::Settings settings = word::Settings::Reference();
         settings.scorers = scorers;
         SelectLine line(*snapshot, settings);
-        word::Item& it = line.Add("人気", c.candidates, {word::Provenance::Digit, 23}, c.current);
+        word::Item& it = line.Add("人気", c.candidates, {word::Provenance::FirstXxx, 23}, c.current);
         word::Select(line.flusher);
         HD_CHECK_EQ(it.selected, c.selected);
         const bool changed = c.current != c.selected;
-        CheckChoice(it.choice, changed ? word::Provenance::Scorer : word::Provenance::Digit, changed ? 0 : 23);
+        CheckChoice(it.choice, changed ? word::Provenance::Scorer : word::Provenance::FirstXxx, changed ? 0 : 23);
     }
 }
 
@@ -242,11 +242,11 @@ HD_TEST(word_select_shadow_all_scorers_without_mutation) {
     const auto snapshot = Dictionary();
     HD_REQUIRE(snapshot != nullptr);
     word::Settings settings = word::Settings::Reference();
-    settings.scorers = scorers;
+    settings.shadowScorers = scorers;
     settings.selectShadow = true;
     SelectLine line(*snapshot, settings);
     word::Item& it = line.Add("書", {{"기입하", "M421"}, {"적", "M422"}, {"기록하", "M421"}},
-                              {word::Provenance::Digit, 19}, 2);
+                              {word::Provenance::FirstXxx, 19}, 2);
     it.AssignEntrySurface(0, "쓰", {word::Provenance::Rewrite, 8});
     it.detail->cls = word::kDetailVerb;
     it.detail->group = line.MakeGroup("く", {{"4다", "S500"}, {"4는다", "S500"}});
@@ -256,7 +256,7 @@ HD_TEST(word_select_shadow_all_scorers_without_mutation) {
     it.compUmiDI = 0;
     word::Select(line.flusher);
     HD_CHECK_EQ(it.selected, 2);
-    CheckChoice(it.choice, word::Provenance::Digit, 19);
+    CheckChoice(it.choice, word::Provenance::FirstXxx, 19);
     CheckTargets(it, {"쓰", "적", "기록하"});
     CheckChoice(it.group->At(0)->targetChoice, word::Provenance::Rewrite, 8);
     CheckChoice(it.group->At(1)->targetChoice, word::Provenance::None);
@@ -298,7 +298,7 @@ HD_TEST(word_select_shadow_all_scorers_without_mutation) {
 
 HD_TEST(word_select_shadow_blocked_recommendations) {
     const word::Provenance layers[] = {
-        word::Provenance::LocalRule, word::Provenance::GlobalRule,
+        word::Provenance::Digit, word::Provenance::LocalRule, word::Provenance::GlobalRule,
         word::Provenance::Sense, word::Provenance::SenseDefault, word::Provenance::Single,
         word::Provenance::Rewrite, word::Provenance::None,
     };
@@ -308,7 +308,7 @@ HD_TEST(word_select_shadow_blocked_recommendations) {
     for (word::Provenance layer : layers) {
         for (bool rules : {false, true}) {
             word::Settings settings = word::Settings::Reference();
-            settings.scorers = scorers;
+            settings.shadowScorers = scorers;
             settings.selectShadow = true;
             settings.selectRules = rules;
             SelectLine line(*snapshot, settings);
@@ -318,7 +318,8 @@ HD_TEST(word_select_shadow_blocked_recommendations) {
             CheckChoice(it.choice, layer, 43);
             CheckTargets(it, {"유명세", "인기"});
             HD_REQUIRE(it.shadowChoices.size() == 2);
-            const bool eligible = rules && (layer == word::Provenance::LocalRule || layer == word::Provenance::GlobalRule);
+            const bool eligible = rules && (layer == word::Provenance::Digit ||
+                                            layer == word::Provenance::LocalRule || layer == word::Provenance::GlobalRule);
             for (std::size_t i = 0; i < it.shadowChoices.size(); i++) {
                 const auto& choice = it.shadowChoices[i];
                 HD_CHECK_EQ(std::string(choice.scorer), std::string(scorers[i].name));
@@ -347,7 +348,8 @@ HD_TEST(word_select_skips_fixed_invalid_and_small_groups) {
     for (const Case& c : cases) {
         for (bool shadow : {false, true}) {
             word::Settings settings = word::Settings::Reference();
-            settings.scorers = scorers;
+            if (shadow) settings.shadowScorers = scorers;
+            else settings.scorers = scorers;
             settings.selectShadow = shadow;
             settings.selectRules = true;
             SelectLine line(*snapshot, settings);
@@ -369,7 +371,8 @@ HD_TEST(word_select_same_class_digit_only) {
     for (bool shadow : {false, true}) {
         for (bool compatible : {false, true}) {
             word::Settings settings = word::Settings::Reference();
-            settings.scorers = scorers;
+            if (shadow) settings.shadowScorers = scorers;
+            else settings.scorers = scorers;
             settings.selectShadow = shadow;
             SelectLine line(*snapshot, settings);
             word::Item& it = line.Add("人気", {{"유명세", "N110"}, {"인", "M421"}, {"", ""}, {"인기", "N130"}});
@@ -493,7 +496,7 @@ HD_TEST(document_senses_only_frequency_defaults) {
         SelectLine line(*snapshot, settings);
         word::Item& it = line.Add("人気", {{"유명세"}, {"인기"}}, {layer, 41});
         word::Select(line.flusher);
-        const bool changed = layer == word::Provenance::FirstXxx || layer == word::Provenance::Digit;
+        const bool changed = layer == word::Provenance::FirstXxx;
         HD_CHECK_EQ(it.selected, changed ? 1 : 0);
         CheckChoice(it.choice, changed ? word::Provenance::Scorer : layer, changed ? 0 : 41);
     }
@@ -554,7 +557,7 @@ HD_TEST(document_senses_first_trusted_target_and_exact_key) {
     }
     senses.FinishLine();
     SelectLine third(*snapshot, settings);
-    word::Item& reordered = third.Add("人気", {{"인기"}, {"유명세"}}, {word::Provenance::Digit}, 1);
+    word::Item& reordered = third.Add("人気", {{"인기"}, {"유명세"}}, {word::Provenance::FirstXxx}, 1);
     word::Item& other = third.Add("人気者", {{"유명세"}, {"인기"}});
     word::Select(third.flusher);
     HD_CHECK_EQ(reordered.selected, 0);
@@ -583,10 +586,10 @@ HD_TEST(document_senses_ties_missing_and_incompatible_targets) {
         settings.improvements.documentSenses = true;
         settings.sessionSenses = &senses;
         SelectLine line(*snapshot, settings);
-        word::Item& it = line.Add("人気", c.candidates, {word::Provenance::Digit, 19}, c.current);
+        word::Item& it = line.Add("人気", c.candidates, {word::Provenance::FirstXxx, 19}, c.current);
         word::Select(line.flusher);
         HD_CHECK_EQ(it.selected, c.selected);
-        CheckChoice(it.choice, c.current == c.selected ? word::Provenance::Digit : word::Provenance::Scorer,
+        CheckChoice(it.choice, c.current == c.selected ? word::Provenance::FirstXxx : word::Provenance::Scorer,
                     c.current == c.selected ? 19 : 0);
     }
 }
@@ -624,10 +627,11 @@ HD_TEST(document_senses_shadow_and_scorer_order) {
         settings.selectShadow = shadow;
         settings.selectRules = true;
         settings.scorers = scorers;
+        if (shadow) settings.shadowScorers = scorers;
         SelectLine line(*snapshot, settings);
-        word::Item& it = line.Add("人気", {{"유명세"}, {"인기"}, {"명성"}}, {word::Provenance::Digit, 9});
+        word::Item& it = line.Add("人気", {{"유명세"}, {"인기"}, {"명성"}}, {word::Provenance::FirstXxx, 9});
         word::Select(line.flusher);
-        HD_CHECK_EQ(it.selected, shadow ? 0 : 1);
+        HD_CHECK_EQ(it.selected, 1);
         CheckTargets(it, {"유명세", "인기", "명성"});
         HD_CHECK(senses.pending.empty());
         HD_CHECK_EQ(senses.choices.at("人気").target, std::string("인기"));
@@ -641,8 +645,8 @@ HD_TEST(document_senses_shadow_and_scorer_order) {
             HD_CHECK_EQ(choice.score, 1);
             HD_CHECK(choice.eligible && choice.winner);
             HD_CHECK(!it.shadowChoices[1].winner);
-            CheckChoice(it.choice, word::Provenance::Digit, 9);
-        } else CheckChoice(it.choice, word::Provenance::Scorer, 0);
+        } else HD_CHECK(it.shadowChoices.empty());
+        CheckChoice(it.choice, word::Provenance::Scorer, 0);
     }
 }
 
@@ -831,4 +835,100 @@ HD_TEST(document_senses_find_remembered_stem_in_current_form) {
     HD_CHECK_EQ(it.selected, 2);
     CheckChoice(it.choice, word::Provenance::Scorer, 0);
     HD_CHECK_EQ(senses.choices.at("求め").target, std::string("구&AV@"));
+}
+
+HD_TEST(word_selected_assignment_rule_provenance) {
+    const struct { bool global; bool neighbour; bool succeeds; int selected; } cases[] = {
+        {false, false, true, 0}, {false, false, true, 1}, {true, false, true, 1},
+        {false, true, true, 1}, {true, true, false, 1}, {false, false, false, 1},
+    };
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    for (const auto& c : cases) {
+        SelectLine line(*snapshot);
+        auto& anchor = line.Add("東京", {{"동경", "N130"}, {"도쿄", "N110"}}, {word::Provenance::FirstXxx, 17}, c.selected);
+        auto& neighbour = line.Add("大阪", {{"대판", "N130"}, {"오사카", "N110"}}, {word::Provenance::FirstXxx, 17}, c.selected);
+        auto& affected = c.neighbour ? neighbour : anchor;
+        anchor.compDI = c.selected;
+        for (auto* entry : affected.group->entries) {
+            entry->attr = "QPN";
+            entry->gattr = "J7";
+        }
+        const std::string body = "||1 &&2 D+" + std::string(c.neighbour ? "1" : "0") +
+                                 "= \"수도\" S+0== \"" + (c.succeeds ? "東京" : "missing") + "\"\n";
+        const std::string flat = c.global ? "rules 1 0 1\nG 0 1 1015 1 " + body
+                                          : "rules 1 1 0\nL 0 " + body;
+        rules::Program program;
+        rules::LoadError error{};
+        HD_REQUIRE(rules::Load(flat, program, error));
+        const bool result = c.global ? rules::RunGlobal(program, &anchor, true, '1', false)
+                                     : rules::RunLocal(program, &anchor, 0);
+        HD_CHECK_EQ(result, c.succeeds);
+        HD_CHECK_EQ(affected.selected, c.selected);
+        const auto layer = c.global ? word::Provenance::GlobalRule : word::Provenance::LocalRule;
+        const int id = c.global ? 1015 : 0;
+        CheckChoice(affected.choice, layer, id);
+        CheckChoice(affected.group->At(c.selected)->targetChoice, layer, id);
+        CheckChoice(affected.group->At(1 - c.selected)->targetChoice, word::Provenance::None);
+        CheckChoice(line.worker.ruleChoice, word::Provenance::None);
+        HD_CHECK_EQ(std::string(affected.EntryText(c.selected)), std::string("수도"));
+        const char* untouched = c.neighbour ? (c.selected == 0 ? "오사카" : "대판")
+                                           : (c.selected == 0 ? "도쿄" : "동경");
+        HD_CHECK_EQ(std::string(affected.EntryText(1 - c.selected)), std::string(untouched));
+        HD_CHECK_EQ(std::string(affected.Code(0)), std::string("130"));
+        HD_CHECK_EQ(std::string(affected.Code(1)), std::string("110"));
+        for (int i : {0, 1}) {
+            HD_CHECK_EQ(std::string(affected.Attr(i)), std::string("QPN"));
+            HD_CHECK_EQ(std::string(affected.GAttr(i)), std::string("J7"));
+        }
+    }
+}
+
+HD_TEST(word_punctuation_digit_matches) {
+    const struct { const char* attrs; const char* tail; int matches; } cases[] = {
+        {"J0", "あ", 1}, {"J1", ",", 1}, {"J2", ".", 1}, {"J3", "?", 1},
+        {"J4", "!", 1}, {"J5", ")", 1}, {"J6", "]", 1}, {"J7", ":", 1}, {"J7", "<", 1},
+        {"J7", "。", -1}, {"J8", ":", -1}, {"NJ7Wa", ":", 1}, {"J7J1", ":", 1},
+        {"J8J7", ":", -1}, {"JsJ7", ":", -1}, {"J", ":", -1}, {"", ":", -1},
+    };
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    for (const auto& c : cases) {
+        SelectLine line(*snapshot);
+        auto& item = line.Add("東京", {{"도쿄"}});
+        const std::string text = std::string("東京") + c.tail;
+        item.text = text;
+        item.group->At(0)->gattr = c.attrs;
+        HD_CHECK_EQ(item.CheckJ(0), c.matches);
+        HD_CHECK_EQ(item.CheckJ(-1), -1);
+    }
+}
+
+HD_TEST(document_senses_particle_and_prefix_stems) {
+    const struct { const char* target; const char* stem; } cases[] = {
+        {"학교에서는", "학교"}, {"친구에게서", "친구"}, {"집으로는", "집"},
+        {"학교에는", "학교"}, {"친구에게", "친구"}, {"학교에서", "학교"}, {"집으로", "집"},
+        {"집은", "집"}, {"나무는", "나무"}, {"집을", "집"}, {"나무를", "나무"},
+        {"서울의", "서울"}, {"학교에", "학교"}, {"의", "의"}, {"서울의는", "서울의"},
+        {"할 수 구&AV@", "구"}, {"(이)라고 말&AV@", "말"}, {"(을)를 향&AV@", "향"},
+        {"(으)로 향&AV@", "향"}, {"해 주&AE@", "주"}, {"해결&AV@", "해결"},
+    };
+    for (const auto& c : cases) {
+        HD_CHECK_EQ(std::string(word::DocumentSenseStem(c.target)), std::string(c.stem));
+    }
+    for (char code : std::string_view("0123456789ABC")) {
+        const std::string target = std::string(1, code) + "서울의&AV@5다";
+        HD_CHECK_EQ(std::string(word::DocumentSenseStem(target)), std::string("서울"));
+    }
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    word::SessionSenses senses;
+    senses.choices.emplace("東京", word::SessionSense{"서울", "N130"});
+    word::Settings settings;
+    settings.sessionSenses = &senses;
+    SelectLine line(*snapshot, settings);
+    auto& item = line.Add("東京", {{"동경의", "N130"}, {"서울의", "N130"}});
+    const word::SelectContext context{*snapshot, line.worker.chain};
+    HD_CHECK_EQ(word::DocumentSenseScore(item, 1, context), 1);
+    HD_CHECK_EQ(word::DocumentSenseScore(item, 0, context), 0);
 }

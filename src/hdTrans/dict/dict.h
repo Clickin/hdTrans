@@ -27,25 +27,36 @@ struct Record {
 class CodeTable {
 public:
     CodeTable() = default;
+    // The base must be complete, including all rewrite twins, and remain unchanged.
+    // Rejects a chained base or a base aliasing out, leaving out unchanged.
+    static bool WithBase(std::shared_ptr<const CodeTable> base, CodeTable& out);
     CodeTable(CodeTable&&) = default;
     CodeTable& operator=(CodeTable&&) = default;
 
-    // The number of the tuple, added when new.
+    // The number of the tuple, added when new after the immutable base prefix.
     int32_t Intern(std::string_view part, std::string_view sem, std::string_view gram, std::string_view dict);
-    const Codes* At(int32_t i) const { return &list_[static_cast<std::size_t>(i)]; }
-    std::size_t Size() const { return list_.size(); }
+    const Codes* At(int32_t i) const {
+        const auto index = static_cast<std::size_t>(i);
+        const std::size_t prefix = BaseSize();
+        return index < prefix ? &base_->list_[index] : &list_[index - prefix];
+    }
+    std::size_t Size() const { return BaseSize() + list_.size(); }
 
-    // Set Codes::withXXX and Codes::asPlain of tuple i, adding the tuples they point to.
+    // Set Codes::withXXX and Codes::asPlain of owned tuple i, adding their twins.
+    // Base indices are already complete and are not changed.
     void SetWithXXX(int32_t i);
     void SetAsPlain(int32_t i);
 
     std::size_t MemoryBytes() const;
 
 private:
+    std::size_t BaseSize() const { return base_ ? base_->list_.size() : 0; }
+    int32_t Find(std::string_view part, std::string_view sem, std::string_view gram, std::string_view dict) const;
     void Grow();
 
+    std::shared_ptr<const CodeTable> base_;
     std::deque<Codes> list_;
-    std::vector<int32_t> slots_;  // open addressing over list_; -1 for empty
+    std::vector<int32_t> slots_;  // open addressing over owned list_; -1 for empty
 };
 
 class Dict {

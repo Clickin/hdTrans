@@ -7,6 +7,7 @@
 #include <iterator>
 #include <map>
 #include <new>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -98,6 +99,43 @@ std::vector<std::pair<size_t, std::string>> BrutePrefixes(const std::map<std::st
         if (keys.count(q.substr(0, n))) out.push_back({n, q.substr(0, n)});
     }
     return out;
+}
+
+size_t SlowSelect0(std::span<const uint8_t> bits, size_t zero) {
+    for (size_t i = 0; i < bits.size(); i++) {
+        if (bits[i] == 0) {
+            if (zero == 0) return i;
+            zero--;
+        }
+    }
+    return bits.size();
+}
+
+void CheckTrieLookups(const Trie& trie, const std::map<std::string, int>& reference) {
+    auto check = [&](const std::string& query) {
+        const auto found = reference.find(query);
+        HD_CHECK_EQ(trie.Find(query), found == reference.end() ? -1 : found->second);
+        std::vector<std::pair<size_t, int>> want, got;
+        for (const auto& [key, number] : reference) {
+            if (query.starts_with(key)) want.emplace_back(key.size(), number);
+        }
+        trie.Prefixes(query, [&](int key, size_t length) { got.emplace_back(length, key); });
+        HD_CHECK(got == want);
+        const auto longest = trie.LongestPrefix(query);
+        HD_CHECK_EQ(longest.key, want.empty() ? -1 : want.back().second);
+        HD_CHECK_EQ(longest.length, want.empty() ? size_t{0} : want.back().first);
+    };
+    check("");
+    check("not-a-key");
+    for (const auto& [key, number] : reference) {
+        (void)number;
+        check(key);
+        check(key + "!");
+    }
+    std::vector<std::pair<std::string, int>> each;
+    trie.Each([&](std::string_view key, int number) { each.emplace_back(key, number); });
+    const std::vector<std::pair<std::string, int>> want(reference.begin(), reference.end());
+    HD_CHECK(each == want);
 }
 
 std::string SourceDir() {
@@ -357,6 +395,121 @@ HD_TEST(trie_children_in_high_word) {
     for (const auto key : keys) {
         HD_CHECK(borrowed.Find(key) >= 0);
         HD_CHECK_EQ(borrowed.LongestPrefix(std::string(key) + "!").length, key.size());
+    }
+}
+
+HD_TEST(trie_random_bit_vectors_against_slow_select) {
+    bool highSample = false, highStart = false, crossedWord = false;
+    for (uint64_t seed : {uint64_t{1}, uint64_t{17}, uint64_t{0x5A17C9E3}}) {
+        Rng rng{seed};
+        for (size_t nodes : {size_t{1}, size_t{2}, size_t{15}, size_t{16}, size_t{17}, size_t{31}, size_t{32},
+                             size_t{33}, size_t{63}, size_t{64}, size_t{65}, size_t{127}, size_t{128},
+                             size_t{129}, size_t{200}, size_t{257}, size_t{512}}) {
+            for (size_t density : {size_t{1}, size_t{4}, size_t{7}}) {
+                std::vector<uint8_t> bits;
+                size_t ones = 0, zeros = 0;
+                while (bits.size() < 2 * nodes - 1) {
+                    const bool one = ones < nodes - 1 && (ones == zeros || rng.N(8) < density);
+                    bits.push_back(one ? 1 : 0);
+                    if (one) ones++;
+                    else zeros++;
+                }
+                const size_t words = (2 * nodes + 63) / 64;
+                std::vector<uint64_t> tree(words + 1, 0), terminal(nodes / 64 + 1, 0);
+                std::vector<uint32_t> samples, rank(terminal.size());
+                std::vector<uint16_t> labels(nodes, 0);
+                std::vector<std::string> paths(nodes);
+                size_t parent = 0, child = 1, sibling = 0;
+                for (size_t p = 0; p < bits.size(); p++) {
+                    if (bits[p] != 0) {
+                        tree[p / 64] |= uint64_t{1} << (p % 64);
+                        labels[child] = static_cast<uint16_t>(0x100 + sibling++);
+                        paths[child] = paths[parent];
+                        hdTrans::text::AppendRune(paths[child], labels[child]);
+                        child++;
+                    } else {
+                        if (parent % 16 == 0) {
+                            samples.push_back(static_cast<uint32_t>(p));
+                            highSample |= p % 64 >= 32;
+                        }
+                        parent++;
+                        sibling = 0;
+                    }
+                }
+                std::map<std::string, int> reference;
+                for (size_t node = 0; node < nodes; node++) {
+                    terminal[node / 64] |= uint64_t{1} << (node % 64);
+                    reference.emplace(paths[node], static_cast<int>(node));
+                }
+                for (size_t w = 0; w < rank.size(); w++) rank[w] = static_cast<uint32_t>(std::min(w * 64, nodes));
+                Trie::ViewData data{std::span(tree).first(words), samples, labels, terminal, rank, nodes};
+                const Trie trie = Trie::FromView(data);
+                HD_REQUIRE(trie.Validate());
+                for (size_t node = 0; node < nodes; node++) {
+                    const size_t start = node == 0 ? 0 : SlowSelect0(bits, node - 1) + 1;
+                    const size_t end = SlowSelect0(bits, node);
+                    const size_t first = start - node + 1;
+                    highStart |= start % 64 >= 32;
+                    crossedWord |= start / 64 != end / 64;
+                    HD_CHECK_EQ(trie.Next(static_cast<int>(node), 0xFF), -1);
+                    for (size_t i = 0; i <= end - start; i++) {
+                        const int want = i < end - start ? static_cast<int>(first + i) : -1;
+                        HD_CHECK_EQ(trie.Next(static_cast<int>(node), static_cast<char32_t>(0x100 + i)), want);
+                    }
+                }
+                CheckTrieLookups(trie, reference);
+            }
+        }
+    }
+    HD_CHECK(highSample);
+    HD_CHECK(highStart);
+    HD_CHECK(crossedWord);
+}
+
+HD_TEST(trie_chain_and_fan_shapes_against_sorted_keys) {
+    for (size_t count = 1; count <= 200; count++) {
+        for (int shape : {0, 1, 2}) {
+            std::vector<std::string> keys;
+            for (size_t i = 0; i < count; i++) {
+                std::string key;
+                if (shape == 0) key.assign(i + 1, 'a');
+                else {
+                    if (shape == 2) key = "a";
+                    hdTrans::text::AppendRune(key, static_cast<char32_t>(0x100 + i));
+                    if (shape == 2) key.append(i % 7, 'x');
+                }
+                keys.push_back(std::move(key));
+            }
+            std::sort(keys.begin(), keys.end());
+            const std::vector<std::string_view> views(keys.begin(), keys.end());
+            std::vector<int32_t> order;
+            const Trie trie = Trie::Build(views, &order);
+            HD_REQUIRE(trie.Validate());
+            HD_REQUIRE(order.size() == keys.size());
+            std::map<std::string, int> reference;
+            for (size_t number = 0; number < order.size(); number++) {
+                HD_REQUIRE(order[number] >= 0 && static_cast<size_t>(order[number]) < keys.size());
+                reference.emplace(keys[static_cast<size_t>(order[number])], static_cast<int>(number));
+            }
+            HD_CHECK_EQ(reference.size(), keys.size());
+            CheckTrieLookups(trie, reference);
+        }
+    }
+}
+
+HD_TEST(trie_select_zero_rejects_invalid_sample_positions) {
+    const std::string_view keys[] = {"a", "aa", "ab", "b"};
+    const Trie owned = Trie::Build(keys, nullptr);
+    const auto data = owned.View();
+    std::vector<uint32_t> samples(data.zeros.begin(), data.zeros.end());
+    const uint32_t invalid[] = {0, static_cast<uint32_t>(2 * data.label.size() - 1),
+                                static_cast<uint32_t>(data.tree.size() * 64), UINT32_MAX};
+    for (uint32_t position : invalid) {
+        auto view = data;
+        samples[0] = position;
+        view.zeros = samples;
+        const Trie trie = Trie::FromView(view);
+        HD_CHECK_EQ(trie.Next(1, U'a'), -1);
     }
 }
 

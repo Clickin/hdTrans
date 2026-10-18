@@ -1,6 +1,6 @@
-/* Host-side test for J2KEngine.dll: loads the DLL the way translator front ends do and runs the
-   J2K_* call sequence, twice, then from two threads at once. Usage: j2k_host <path to J2KEngine.dll>
-   Every translation is also written as UTF-8, one per line, to j2k_host.out.txt next to this executable. */
+/* Exercises J2KEngine.dll and sibling hdTransEngine.dll lifecycle and concurrent translation.
+   Usage: j2k_host <path to J2KEngine.dll>
+   Sample translations are written as UTF-8 to j2k_host.out.txt next to this executable. */
 #include <windows.h>
 #include <psapi.h>
 #include <stdio.h>
@@ -93,8 +93,11 @@ static int LoadEngine(Engine* e, const wchar_t* path) {
     e->stop = (StopTranslationFn)GetProcAddress(e->module, "J2K_StopTranslation");
     e->terminate = (TerminateFn)GetProcAddress(e->module, "J2K_Terminate");
     e->reloadUserDict = (ReloadUserDictFn)GetProcAddress(e->module, "J2K_ReloadUserDict");
-    return e->initializeEx && e->translate && e->translateW && e->freeMem && e->stop && e->terminate &&
-           e->reloadUserDict;
+    if (e->initializeEx && e->translate && e->translateW && e->freeMem && e->stop && e->terminate &&
+        e->reloadUserDict) return 1;
+    FreeLibrary(e->module);
+    memset(e, 0, sizeof(*e));
+    return 0;
 }
 
 /* Converts a UTF-8 string to a newly allocated string in the given code page. */
@@ -221,6 +224,101 @@ static int InitEngine(Engine* e) {
     return ret;
 }
 
+static void CheckTerminated(Engine* e) {
+    char text[] = "text";
+    char* result;
+    wchar_t* wide;
+    e->reloadUserDict();
+    result = e->translate(NULL, text);
+    wide = e->translateW(NULL, kWideLine);
+    Check(result == NULL && wide == NULL, "reload and both translations are safe after Terminate");
+    e->freeMem(result);
+    e->freeMem(wide);
+}
+
+typedef int (__cdecl *CInitializeFn)(const char*);
+typedef void (__cdecl *CTerminateFn)(void);
+typedef int (__cdecl *CTranslateFn)(const char*, size_t, char**, size_t*);
+typedef int (__cdecl *CReloadFn)(void);
+typedef void (__cdecl *CFreeMemFn)(void*);
+
+typedef struct {
+    CInitializeFn initialize;
+    CTerminateFn terminate;
+    CTranslateFn translate;
+    CReloadFn reload;
+    CFreeMemFn freeMem;
+} CEngine;
+
+static void CheckCTerminated(CEngine* e) {
+    char* out = NULL;
+    size_t n = 0;
+    Check(e->reload() == -1, "C API Reload fails after Terminate");
+    Check(e->translate(kLines[0], strlen(kLines[0]), &out, &n) == -1,
+          "C API Translate fails after Terminate");
+    e->freeMem(out);
+}
+
+static void CheckCTranslation(CEngine* e) {
+    char* out = NULL;
+    size_t n = 0;
+    int ret = e->translate(kLines[0], strlen(kLines[0]), &out, &n);
+    wchar_t* wide = out ? WideFrom(out, CP_UTF8) : NULL;
+    Check(ret == 0 && out && n == strlen(out) && ContainsHangul(wide), "C API translates after Initialize");
+    if (wide) HeapFree(GetProcessHeap(), 0, wide);
+    e->freeMem(out);
+}
+
+static void RunCApi(const wchar_t* j2kPath, const wchar_t* dictsPath, int hasDicts) {
+    wchar_t path[MAX_PATH];
+    char dirs[MAX_PATH * 4 + 1];
+    int n, round;
+    SiblingPath(j2kPath, L"hdTransEngine.dll", path, MAX_PATH);
+    n = WideCharToMultiByte(CP_UTF8, 0, dictsPath, -1, dirs, (int)sizeof(dirs) - 1, NULL, NULL);
+    Check(n > 0, "C API dictionary path is UTF-8");
+    if (n == 0) return;
+    dirs[n] = '\0';
+    for (round = 0; round < 20; round++) {
+        HMODULE module = LoadLibraryW(path);
+        CEngine e;
+        int ret;
+        Check(module != NULL, "load sibling C API DLL");
+        if (!module) return;
+        e.initialize = (CInitializeFn)GetProcAddress(module, "hdTrans_Initialize");
+        e.terminate = (CTerminateFn)GetProcAddress(module, "hdTrans_Terminate");
+        e.translate = (CTranslateFn)GetProcAddress(module, "hdTrans_Translate");
+        e.reload = (CReloadFn)GetProcAddress(module, "hdTrans_Reload");
+        e.freeMem = (CFreeMemFn)GetProcAddress(module, "hdTrans_FreeMem");
+        Check(e.initialize && e.terminate && e.translate && e.reload && e.freeMem, "C API lifecycle exports resolve");
+        if (!e.initialize || !e.terminate || !e.translate || !e.reload || !e.freeMem) {
+            FreeLibrary(module);
+            return;
+        }
+        if (round == 0) {
+            e.terminate();
+            e.terminate();
+            CheckCTerminated(&e);
+        }
+        ret = e.initialize(dirs);
+        if (hasDicts) Check(ret == 0, "C API Initialize loads dictionaries");
+        if (ret == 0) CheckCTranslation(&e);
+        if (round == 0) {
+            e.terminate();
+            e.terminate();
+            CheckCTerminated(&e);
+            ret = e.initialize(dirs);
+            if (hasDicts) Check(ret == 0, "C API reinitializes in the same load");
+            if (ret == 0) CheckCTranslation(&e);
+        }
+        if (round % 2 == 0) {
+            e.terminate();
+            e.terminate();
+            CheckCTerminated(&e);
+        }
+        Check(FreeLibrary(module) != 0, round % 2 == 0 ? "C API unload with Terminate" : "C API unload without Terminate");
+    }
+}
+
 typedef struct {
     Engine* engine;
     int crashed;
@@ -302,7 +400,7 @@ int wmain(int argc, wchar_t** argv) {
     printf("  J2K_InitializeEx returned %d\n", ret);
     printf("memory after first init:\n");
     PrintMemory();
-    Check(1, "J2K_InitializeEx call returns");
+    Check(!DirExists(dictsPath) || ret == 1, "J2K_InitializeEx loads dictionaries when present");
     timing.calls = 0;
     timing.ms = 0.0;
     TranslateAll(&e, &timing, results);
@@ -319,19 +417,33 @@ int wmain(int argc, wchar_t** argv) {
     Check(e.stop(NULL) || 1, "J2K_StopTranslation(NULL) returns");
     ret = e.terminate();
     printf("  J2K_Terminate returned %d\n", ret);
-    Check(1, "J2K_Terminate returns");
-    Check(FreeLibrary(e.module) != 0, "FreeLibrary after first session");
-
-    Check(LoadEngine(&e, argv[1]), "load DLL again");
-    if (!e.module) return 1;
-    InitEngine(&e);
+    Check(ret == 1, "J2K_Terminate succeeds");
+    Check(e.terminate() == 1, "J2K_Terminate succeeds twice");
+    CheckTerminated(&e);
+    ret = InitEngine(&e);
+    if (DirExists(dictsPath)) Check(ret == 1, "reinitialize in the same DLL load");
     timing.calls = 0;
     timing.ms = 0.0;
     TranslateAll(&e, &timing, results);
-    PrintTiming(&timing);
+    if (DirExists(dictsPath)) Check(AllContainHangul(results), "translations work after reinitializing");
     FreeResults(results);
-    Check(1, "second session translates");
-    Check(FreeLibrary(e.module) != 0, "FreeLibrary after second session (no Terminate)");
+    Check(FreeLibrary(e.module) != 0, "FreeLibrary after reinitializing (no Terminate)");
+
+    for (round = 0; round < 20; round++) {
+        wchar_t* result;
+        Check(LoadEngine(&e, argv[1]), "load DLL for lifecycle cycle");
+        if (!e.module) return 1;
+        ret = InitEngine(&e);
+        if (DirExists(dictsPath)) Check(ret == 1, "lifecycle Initialize loads dictionaries");
+        result = e.translateW(NULL, kWideLine);
+        if (ret == 1) Check(ContainsHangul(result), "lifecycle translation succeeds");
+        e.freeMem(result);
+        if (round % 2 == 0) {
+            Check(e.terminate() == 1, "lifecycle Terminate succeeds");
+            CheckTerminated(&e);
+        }
+        Check(FreeLibrary(e.module) != 0, round % 2 == 0 ? "unload with Terminate" : "unload without Terminate");
+    }
 
     for (round = 1; round <= 2; round++) {
         char what[64];
@@ -346,6 +458,8 @@ int wmain(int argc, wchar_t** argv) {
         e.terminate();
         Check(FreeLibrary(e.module) != 0, "FreeLibrary after the concurrent run");
     }
+
+    RunCApi(argv[1], dictsPath, DirExists(dictsPath));
 
     printf("memory at end:\n");
     PrintMemory();

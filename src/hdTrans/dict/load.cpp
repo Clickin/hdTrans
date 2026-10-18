@@ -6,10 +6,11 @@
 #include <unordered_set>
 
 #include "hdTrans/dict/builtin.h"
+#include "hdTrans/dict/integrity.h"
 #include "hdTrans/dict/layer.h"
 #include "hdTrans/dict/names.h"
-#include "hdTrans/dict/parallel.h"
 #include "hdTrans/dict/snapshot.h"
+#include "hdTrans/dict/snapshot_file.h"
 #include "hdTrans/text/hangul.h"
 #include "hdTrans/text/utf8.h"
 #include "hdTrans/userdict/userdict.h"
@@ -27,13 +28,66 @@ std::string Utf8Of(const std::filesystem::path& p) {
     return std::string(reinterpret_cast<const char*>(s.data()), s.size());
 }
 
-bool ReadFile(const std::filesystem::path& path, std::string& out) {
+// With prefix, keeps every chunk read so a plain file can continue on the same handle.
+bool ReadColumnHeaderFromFile(std::FILE* f, bool& column, std::string* prefix) {
+    column = false;
+    char buf[4096];
+    bool first = true, comment = false, carriage = false;
+    std::size_t matched = 0;
+    for (;;) {
+        const std::size_t n = std::fread(buf, 1, sizeof buf, f);
+        if (std::ferror(f)) return false;
+        if (prefix) prefix->append(buf, n);
+        std::string_view bytes(buf, n);
+        if (first && bytes.starts_with("\xEF\xBB\xBF")) bytes.remove_prefix(3);
+        first = false;
+        for (const char c : bytes) {
+            if (c == '\n') {
+                if (!comment && matched > 0) {
+                    column = matched == 3;
+                    return true;
+                }
+                comment = carriage = false;
+                matched = 0;
+            } else if (comment) {
+                continue;
+            } else if (c == '\r') {
+                carriage = true;
+            } else if (carriage) {
+                return true;
+            } else if (matched == 0 && c == '#') {
+                comment = true;
+            } else if (c == '\t') {
+                column = matched == 3;
+                return true;
+            } else if (matched == 3 || c != std::string_view("key")[matched]) {
+                return true;
+            } else {
+                matched++;
+            }
+        }
+        if (n < sizeof buf) {
+            column = !comment && matched == 3;
+            return true;
+        }
+    }
+}
+
+bool ReadFile(const std::filesystem::path& path, std::string& out, bool* column = nullptr) {
 #ifdef _WIN32
     std::FILE* f = _wfopen(path.c_str(), L"rb");
 #else
     std::FILE* f = std::fopen(path.c_str(), "rb");
 #endif
     if (!f) return false;
+    if (column) {
+        const bool ok = ReadColumnHeaderFromFile(f, *column, &out);
+        if (!ok || *column) {
+            out.clear();
+            std::fclose(f);
+            return ok;
+        }
+    }
     std::error_code ec;
     const auto size = std::filesystem::file_size(path, ec);
     if (!ec) out.reserve(static_cast<std::size_t>(size));
@@ -56,19 +110,69 @@ std::string_view BaseName(std::string_view name) {
     return slash == std::string_view::npos ? name : name.substr(slash + 1);
 }
 
+// Returns whether the physical line decides the file's column/plain membership.
+bool ColumnLine(std::string_view line, bool first, bool& column) {
+    while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.remove_suffix(1);
+    if (first && line.starts_with("\xEF\xBB\xBF")) line.remove_prefix(3);
+    if (line.empty() || line.starts_with("#")) return false;
+    column = line.substr(0, line.find('\t')) == "key";
+    return true;
+}
+
 // Whether text starts, after blank and "#" lines, with a header line whose first
 // column is key.
 bool ColumnFile(std::string_view text) {
+    bool column = false;
     for (std::size_t pos = 0, n = 0; pos < text.size(); n++) {
         const std::size_t nl = text.find('\n', pos);
-        std::string_view line = text.substr(pos, nl == std::string_view::npos ? std::string_view::npos : nl - pos);
+        const std::string_view line = text.substr(pos, nl == std::string_view::npos ? std::string_view::npos : nl - pos);
         pos = nl == std::string_view::npos ? text.size() : nl + 1;
-        while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.remove_suffix(1);
-        if (n == 0 && line.starts_with("\xEF\xBB\xBF")) line.remove_prefix(3);
-        if (line.empty() || line.starts_with("#")) continue;
-        return line.substr(0, line.find('\t')) == "key";
+        if (ColumnLine(line, n == 0, column)) return column;
     }
     return false;
+}
+
+void CloseCodes(CodeTable& codes, std::size_t first) {
+    for (int32_t c = static_cast<int32_t>(first); c < static_cast<int32_t>(codes.Size()); c++) {
+        codes.SetWithXXX(c);
+        codes.SetAsPlain(c);
+    }
+}
+
+bool ReadFolderFiles(const std::vector<std::string>& folders, bool plainOnly, std::vector<File>& files,
+                     std::vector<LoadError>& errors) {
+    for (std::size_t f = 0; f < folders.size(); f++) {
+        if (folders[f].find('\0') != std::string::npos || !internal::ValidUtf8(folders[f])) {
+            errors.push_back({folders[f], LoadErrorKind::Folder, 0, TsvErrorKind::Read, {}});
+            return false;
+        }
+        const std::filesystem::path dir = PathOf(folders[f]);
+        std::vector<std::string> names;
+        std::error_code ec;
+        for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+            const std::string name = Utf8Of(it->path().filename());
+            std::error_code fileEc;
+            if (name.ends_with(".tsv") && it->is_regular_file(fileEc)) names.push_back(name);
+        }
+        if (ec) {
+            errors.push_back({folders[f], LoadErrorKind::Folder, 0, TsvErrorKind::Read, {}});
+            return false;
+        }
+        std::sort(names.begin(), names.end());
+        for (const std::string& name : names) {
+            File file;
+            file.folder = static_cast<int>(f);
+            file.name = Utf8Of(dir / PathOf(name));
+            bool column = false;
+            if ((plainOnly && !internal::ValidUtf8(file.name)) ||
+                !ReadFile(dir / PathOf(name), file.text, plainOnly ? &column : nullptr)) {
+                errors.push_back({file.name, LoadErrorKind::Read, 0, TsvErrorKind::Read, {}});
+                return false;
+            }
+            if (!column) files.push_back(std::move(file));
+        }
+    }
+    return true;
 }
 
 // Interns the codes of the senses of a load, remembering the codes of each pos value.
@@ -208,6 +312,21 @@ struct ParsedNames {
 
 }  // namespace
 
+bool internal::ReadColumnHeader(std::string_view utf8Path, bool& column) {
+    column = false;
+    if (utf8Path.find('\0') != std::string_view::npos || !internal::ValidUtf8(utf8Path)) return false;
+    const auto path = PathOf(utf8Path);
+#ifdef _WIN32
+    std::FILE* f = _wfopen(path.c_str(), L"rb");
+#else
+    std::FILE* f = std::fopen(path.c_str(), "rb");
+#endif
+    if (!f) return false;
+    const bool ok = ReadColumnHeaderFromFile(f, column, nullptr);
+    std::fclose(f);
+    return ok;
+}
+
 // Builds a Snapshot (Load).
 struct SnapshotLoader {
     std::vector<File> files;
@@ -215,7 +334,11 @@ struct SnapshotLoader {
     std::shared_ptr<Snapshot> snap{new Snapshot()};
     CodeReader reader{snap->codes_};
 
+    SnapshotLoader() = default;
+    explicit SnapshotLoader(std::shared_ptr<Snapshot> existing) : snap(std::move(existing)) {}
+
     LoadResult Run();
+    LoadResult FinishPlain(const std::vector<std::size_t>& rest);
     bool CompilePlain(const std::vector<std::size_t>& rest);
     bool Compile(const std::string& name, std::string_view text, int file, userdict::Context& ctx,
                  std::vector<UserEntry>& out);
@@ -322,8 +445,7 @@ std::string SnapshotLoader::PersonSpelling(std::string_view ko, const std::vecto
 }
 
 LoadResult SnapshotLoader::Run() {
-    // The name files are parsed while the base dictionary is built; their senses join
-    // the name layer one file at a time afterwards, as each is processed.
+    // Name senses join the name layer in file order after the base is built.
     std::vector<std::size_t> baseFiles, nameFiles, rest;
     for (std::size_t i = 0; i < files.size(); i++) {
         if (!ColumnFile(files[i].text)) rest.push_back(i);
@@ -332,14 +454,14 @@ LoadResult SnapshotLoader::Run() {
     }
     std::vector<ParsedNames> parsed(nameFiles.size());
     CodeTable nameCodes;
-    internal::Background nameReader([&] {
+    {
         CodeReader r(nameCodes);
         for (std::size_t j = 0; j < nameFiles.size(); j++) {
             ParsedNames& p = parsed[j];
             p.ok = ReadColumnFile(files[nameFiles[j]], r, p.layer, &p.replacing, p.errors);
             if (!p.ok) break;
         }
-    });
+    }
 
     internal::Layer base(true), user(false), names(false);
     for (const std::size_t i : baseFiles) {
@@ -363,7 +485,6 @@ LoadResult SnapshotLoader::Run() {
         s.base_ = base.Build(s.codes_);
     }
     for (const std::size_t i : baseFiles) std::string().swap(files[i].text);
-    nameReader.Wait();
     std::vector<int32_t> nameCode(nameCodes.Size());
     for (std::size_t c = 0; c < nameCode.size(); c++) {
         const Codes* x = nameCodes.At(static_cast<int32_t>(c));
@@ -394,15 +515,7 @@ LoadResult SnapshotLoader::Run() {
         }
         names.Compact();
         names.ByPrio(start);
-        internal::NameKeyCounts parts[4], dropped;
-        internal::ParallelFor(rows.size() - start, [&](std::size_t part, std::size_t begin, std::size_t end) {
-            parts[part] = internal::DropNameKeys(rows.data() + start + begin, end - begin, s.base_);
-        });
-        for (const auto& part : parts) {
-            dropped.punct += part.punct;
-            dropped.inflected += part.inflected;
-            dropped.longKorean += part.longKorean;
-        }
+        const auto dropped = internal::DropNameKeys(rows.data() + start, rows.size() - start, s.base_);
         if (dropped.punct + dropped.inflected + dropped.longKorean > 0) {
             s.warnings_.push_back(files[i].name + ": name senses dropped: " + std::to_string(dropped.punct) +
                                   " keys with 、 or 。, " + std::to_string(dropped.inflected) + " inflected keys, " +
@@ -416,12 +529,16 @@ LoadResult SnapshotLoader::Run() {
         sp.person = PersonSpelling(sp.ko, s.base_.Records(key));
         if (sp.person.empty()) sp.person = PersonSpelling(sp.ko, s.names_.Records(key));
     }
+    CloseCodes(s.codes_, 0);
+    s.columnCodes_ = std::make_shared<const CodeTable>(std::move(s.codes_));
+    if (!CodeTable::WithBase(s.columnCodes_, s.codes_)) return {nullptr, std::move(errors)};
+    return FinishPlain(rest);
+}
+
+LoadResult SnapshotLoader::FinishPlain(const std::vector<std::size_t>& rest) {
     if (!CompilePlain(rest)) return {nullptr, std::move(errors)};
-    // The codes of the lookups' rewritten candidates.
-    for (int32_t c = 0; c < static_cast<int32_t>(s.codes_.Size()); c++) {
-        s.codes_.SetWithXXX(c);
-        s.codes_.SetAsPlain(c);
-    }
+    Snapshot& s = *snap;
+    CloseCodes(s.codes_, s.columnCodes_->Size());
     for (const std::size_t i : rest) s.plain_.push_back(std::move(files[i]));
     files.clear();
     return {std::move(snap), std::move(errors)};
@@ -436,32 +553,20 @@ LoadResult Load(std::vector<File> files) {
 LoadResult LoadFoldersTsv(const std::vector<std::string>& folders) {
     std::vector<File> files;
     std::vector<LoadError> errors;
-    for (std::size_t f = 0; f < folders.size(); f++) {
-        const std::filesystem::path dir = PathOf(folders[f]);
-        std::vector<std::string> names;
-        std::error_code ec;
-        for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
-            const std::string name = Utf8Of(it->path().filename());
-            std::error_code fileEc;
-            if (name.ends_with(".tsv") && it->is_regular_file(fileEc)) names.push_back(name);
-        }
-        if (ec) {
-            errors.push_back({folders[f], LoadErrorKind::Folder, 0, TsvErrorKind::Read, {}});
-            return {nullptr, std::move(errors)};
-        }
-        std::sort(names.begin(), names.end());
-        for (const std::string& name : names) {
-            File file;
-            file.folder = static_cast<int>(f);
-            file.name = Utf8Of(dir / PathOf(name));
-            if (!ReadFile(dir / PathOf(name), file.text)) {
-                errors.push_back({file.name, LoadErrorKind::Read, 0, TsvErrorKind::Read, {}});
-                return {nullptr, std::move(errors)};
-            }
-            files.push_back(std::move(file));
-        }
-    }
+    if (!ReadFolderFiles(folders, false, files, errors)) return {nullptr, std::move(errors)};
     return Load(std::move(files));
+}
+
+LoadResult LoadPlainFolders(std::shared_ptr<Snapshot> snapshot, const std::vector<std::string>& folders,
+                           std::vector<LoadError> errors) {
+    SnapshotLoader loader(std::move(snapshot));
+    std::vector<LoadError> readErrors;
+    if (!ReadFolderFiles(folders, true, loader.files, readErrors)) return {nullptr, std::move(readErrors)};
+    loader.errors = std::move(errors);
+    std::vector<std::size_t> rest;
+    rest.reserve(loader.files.size());
+    for (std::size_t i = 0; i < loader.files.size(); i++) rest.push_back(i);
+    return loader.FinishPlain(rest);
 }
 
 }  // namespace hdTrans::dict

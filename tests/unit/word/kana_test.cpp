@@ -5,6 +5,7 @@
 
 #include "hdTrans/word/kana.h"
 #include "hdtest.h"
+#include "golden.h"
 
 using namespace hdTrans::word;
 
@@ -51,15 +52,15 @@ HD_TEST(kana_hiragana_cases) {
 // three or more in the corpus2 text) with its expected transliteration, or "fault".
 // Read from $HDTRANS_GOLDEN/analyze; skipped when absent.
 HD_TEST(kana_katakana_fixture) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/analyze/"));
     const char* golden = std::getenv("HDTRANS_GOLDEN");
     if (golden == nullptr || *golden == 0) {
-        std::printf("skip kana_katakana_fixture: HDTRANS_GOLDEN not set\n");
-        return;
+        HD_SKIP("HDTRANS_GOLDEN not set");
     }
     std::string data;
     if (!ReadFile(std::string(golden) + "/analyze/katakana.tsv", data)) {
-        std::printf("skip kana_katakana_fixture: no katakana.tsv in HDTRANS_GOLDEN/analyze\n");
-        return;
+        HD_SKIP("no katakana.tsv in HDTRANS_GOLDEN/analyze");
     }
     int n = 0, bad = 0;
     std::size_t pos = 0;
@@ -76,5 +77,8 @@ HD_TEST(kana_katakana_fixture) {
         if (Katakana(in) != want) bad++;
     }
     HD_CHECK_EQ(bad, 0);
-    HD_CHECK(n >= 9000);
+    size_t expectedRecords = 0;
+    for (const auto& [tag, count] : hdtest::RecordCounts(data)) expectedRecords += count;
+    HD_CHECK_EQ(n, 9481);
+    HD_CHECK_EQ(static_cast<size_t>(n), expectedRecords);
 }

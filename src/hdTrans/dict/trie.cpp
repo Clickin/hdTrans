@@ -231,11 +231,11 @@ bool Trie::Select0(std::size_t k, std::size_t& position) const {
     if (k >= label_.size() || k / kZeroSample >= zeros_.size()) return guard_.Fail();
     const std::size_t bits = 2 * label_.size() - 1;
     const std::size_t p = zeros_[k / kZeroSample];
-    bool bit;
-    if (!Bit(p, bit)) return false;
-    if (bit) return guard_.Fail();
+    if (p >= bits || p / 64 >= tree_.size()) return guard_.Fail();
     std::size_t w = p / 64;
-    uint64_t x = ~tree_[w] & ~((uint64_t{1} << (p % 64)) - 1);
+    const uint64_t word = tree_[w];
+    if (((word >> (p % 64)) & 1) != 0) return guard_.Fail();
+    uint64_t x = ~word & ~((uint64_t{1} << (p % 64)) - 1);
     k %= kZeroSample;
     for (;;) {
         if (bits - w * 64 < 64) x &= (uint64_t{1} << (bits - w * 64)) - 1;

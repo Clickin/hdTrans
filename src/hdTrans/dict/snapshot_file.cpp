@@ -1,4 +1,5 @@
 #include "hdTrans/dict/snapshot_file.h"
+#include "dictionary_ids.h"
 
 #include <algorithm>
 #include <array>
@@ -42,8 +43,24 @@ constexpr uint32_t kStarts = 15, kCodeRefs = 16, kBlob = 17;
 constexpr uint32_t kNoLayer = 3;
 constexpr std::string_view kMagic = "HDSNAP\r\n";
 
+// Header (256 bytes, little endian): magic[8]; format/data/header-size/flags u32
+// at 8/12/16/20; file-size/directory-offset u64 at 24/32; section/segment counts
+// u32 at 40/44; segment-directory u64 at 48; SHA256 content/builtin/data at
+// 64/96/128; layer key counts u64 at 160/168/176; header/directory CRC32C u32 at
+// 192/196; minimum-reader/pointer-size u32 at 200/204; compiler SHA256 at 208.
+// Section descriptors (64 bytes): kind/layer u32, offset/length/count u64,
+// width/alignment/first-segment/segment-count u32, then 16 zero bytes.
+// Segment descriptors (64 bytes): section u32, 4 zero bytes, start/length u64,
+// CRC32C u32, then 36 zero bytes. Segments cover at most 256 KiB each.
+
+
 bool SafePath(std::string_view path) {
     return path.find('\0') == std::string_view::npos && internal::ValidUtf8(path);
+}
+
+bool CacheDisabled(std::string_view value) {
+    return value.empty() || (value.size() == 3 && (value[0] == 'o' || value[0] == 'O') &&
+                            (value[1] == 'f' || value[1] == 'F') && (value[2] == 'f' || value[2] == 'F'));
 }
 
 std::filesystem::path PathOf(std::string_view s) {
@@ -53,6 +70,41 @@ std::filesystem::path PathOf(std::string_view s) {
 std::string Utf8Of(const std::filesystem::path& p) {
     const auto s = p.u8string();
     return {reinterpret_cast<const char*>(s.data()), s.size()};
+}
+
+std::string CanonicalFolder(std::string_view folder) {
+    std::error_code ec;
+    const auto absolute = std::filesystem::absolute(PathOf(folder), ec);
+    if (ec) return {};
+    auto path = std::filesystem::weakly_canonical(absolute, ec);
+    if (ec) return {};
+#ifdef _WIN32
+    const HANDLE handle = CreateFileW(path.c_str(), FILE_READ_ATTRIBUTES,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (handle != INVALID_HANDLE_VALUE) {
+        const DWORD size = GetFinalPathNameByHandleW(handle, nullptr, 0, FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+        if (!size || size > static_cast<DWORD>(std::numeric_limits<int>::max())) {
+            CloseHandle(handle);
+            return {};
+        }
+        std::wstring finalPath(size, L'\0');
+        const DWORD length = GetFinalPathNameByHandleW(handle, finalPath.data(), size,
+                                                       FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
+        CloseHandle(handle);
+        if (!length || length >= size) return {};
+        finalPath.resize(length);
+        const int count = LCMapStringEx(LOCALE_NAME_INVARIANT, LCMAP_LOWERCASE, finalPath.data(),
+                                       static_cast<int>(length), nullptr, 0, nullptr, nullptr, 0);
+        if (!count) return {};
+        std::wstring folded(static_cast<std::size_t>(count), L'\0');
+        if (LCMapStringEx(LOCALE_NAME_INVARIANT, LCMAP_LOWERCASE, finalPath.data(),
+                          static_cast<int>(length), folded.data(), count, nullptr, nullptr, 0) != count) return {};
+        path = std::move(folded);
+    }
+#endif
+    if (!path.has_filename() && path != path.root_path()) path = path.parent_path();
+    return Utf8Of(path);
 }
 
 std::optional<std::string> EnvironmentPath(const char* name) {
@@ -102,6 +154,7 @@ std::FILE* OpenFile(const std::filesystem::path& path, bool write) {
     return std::fopen(path.c_str(), write ? "wb" : "rb");
 #endif
 }
+
 
 Bytes ByteView(std::string_view s) { return std::as_bytes(std::span(s.data(), s.size())); }
 
@@ -219,6 +272,9 @@ bool ListSources(const std::vector<std::string>& folders, std::vector<Source>& s
             source.folder = static_cast<uint32_t>(folder);
             source.relative = std::move(name);
             const auto path = SourcePath(folders, source);
+            bool column = false;
+            if (!internal::ReadColumnHeader(path, column)) return false;
+            if (!column) continue;
             if (!internal::ReadStamp(path, source.stamp) || (hash && !HashFile(path, source.hash))) return false;
             sources.push_back(std::move(source));
         }
@@ -312,19 +368,9 @@ std::vector<std::byte> Directory(const std::vector<OutputSection>& sections, con
     return out;
 }
 
-bool Publish(const std::filesystem::path& from, const std::filesystem::path& to) {
-#ifdef _WIN32
-    return MoveFileExW(from.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
-#else
-    std::error_code ec;
-    std::filesystem::rename(from, to, ec);
-    return !ec;
-#endif
-}
+bool ValidateImage(std::string_view path, const std::vector<std::string>& folders, const Snapshot& expected, const std::vector<LoadError>& errors);
 
-bool ValidateImage(std::string_view path, const std::vector<std::string>& folders, const Snapshot& expected);
-
-bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name, const std::vector<std::string>& folders) {
+bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name, const std::vector<std::string>& folders, const std::vector<LoadError>& errors) {
     if constexpr (std::endian::native != std::endian::little) return false;
     if (!writer.ok) return false;
     std::vector<Segment> segments;
@@ -368,11 +414,8 @@ bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name
     std::error_code ec;
     if (!path.parent_path().empty()) std::filesystem::create_directories(path.parent_path(), ec);
     if (ec) return false;
-    static std::atomic<uint64_t> sequence{0};
-    const auto token = std::chrono::steady_clock::now().time_since_epoch().count();
-    auto temp = path;
-    temp += ".tmp." + std::to_string(token) + "." + std::to_string(sequence.fetch_add(1));
-    std::FILE* f = OpenFile(temp, true);
+    std::filesystem::path temp;
+    std::FILE* f = internal::OpenCacheTemp(path, temp);
     if (!f) return false;
     bool ok = std::fwrite(header.data(), 1, header.size(), f) == header.size();
     ok = ok && std::fwrite(directory.data(), 1, directory.size(), f) == directory.size();
@@ -384,7 +427,7 @@ bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name
         ok = ok && std::fwrite(s.bytes.data(), 1, s.bytes.size(), f) == s.bytes.size();
         at = s.desc.offset + s.bytes.size();
     }
-    if (std::fclose(f) != 0) ok = false;
+    if (!internal::CloseCacheTemp(f)) ok = false;
     // Verify every stored byte before publishing the immutable generation.
     if (ok) {
         const auto mapped = internal::MappedFile::Open(Utf8Of(temp));
@@ -394,8 +437,8 @@ bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name
             ok = ok && Crc32c(mapped->Bytes().subspan(static_cast<std::size_t>(offset), static_cast<std::size_t>(segment.length))) == segment.crc;
         }
     }
-    if (ok) ok = ValidateImage(Utf8Of(temp), folders, snap);
-    if (ok) ok = Publish(temp, path);
+    if (ok) ok = ValidateImage(Utf8Of(temp), folders, snap, errors);
+    if (ok) ok = internal::PublishCacheTemp(temp, path);
     if (!ok) std::filesystem::remove(temp, ec);
     return ok;
 }
@@ -404,9 +447,18 @@ bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name
 
 struct SnapshotStorage {
     static std::shared_ptr<internal::SnapshotFile> Backing(const Snapshot& s) { return s.backing_; }
-    static LoadResult Read(const std::vector<std::string>& folders, std::string_view path, bool full);
+    struct Columns {
+        std::shared_ptr<Snapshot> snapshot;
+        std::vector<LoadError> errors;
+    };
+    static Columns Read(const std::vector<std::string>& folders, std::string_view path, bool full);
+    static bool Matches(const Snapshot& expected, const std::vector<LoadError>& errors,
+                        const Columns& actual, const std::vector<std::string>& folders);
     static bool RestoreAux(Reader& r, Snapshot& s, std::vector<LoadError>& errors, const std::vector<std::string>& folders);
     static Buffer Aux(const Snapshot& s, const std::vector<LoadError>& errors, const std::vector<std::string>& folders);
+    static bool WriteCache(const Snapshot& s, const std::vector<LoadError>& errors,
+                           const std::vector<Source>& sources, std::string_view index,
+                           const std::vector<std::string>& folders);
     static bool Write(const Snapshot& s, const std::vector<LoadError>& errors, const std::vector<Source>& sources,
                       std::string_view path, const std::vector<std::string>& folders);
 };
@@ -421,41 +473,33 @@ Buffer SnapshotStorage::Aux(const Snapshot& s, const std::vector<LoadError>& err
     }
     b.Number(s.warnings_.size());
     for (const auto& warning : s.warnings_) StorePath(b, warning, folders);
-    b.Number(s.places_.size());
-    for (const auto& [key, sp] : s.places_) {
+    std::vector<std::string_view> places;
+    for (const auto& [key, sp] : s.places_) { (void)sp; places.push_back(key); }
+    std::sort(places.begin(), places.end());
+    b.Number(places.size());
+    for (const auto key : places) {
+        const auto& sp = s.places_.find(key)->second;
         b.Text(key); b.Text(sp.ko); b.Text(sp.person); b.Number(static_cast<uint8_t>(sp.mode));
     }
-    b.Number(s.plain_.size());
-    for (const auto& f : s.plain_) { b.Signed(f.folder); StorePath(b, f.name, folders); b.Text(f.text); }
-    std::unordered_map<const Codes*, uint32_t> codeIds;
-    for (std::size_t i = 0; i < s.codes_.Size(); i++) codeIds.emplace(s.codes_.At(static_cast<int32_t>(i)), static_cast<uint32_t>(i));
-    for (const auto* u : {s.rawPlain_.get(), s.textPlain_.get(), s.rawExtraPlain_.get(), s.textExtraPlain_.get()}) {
-        b.Number(u->Entries().size());
-        for (const auto& e : u->Entries()) {
-            b.Text(e.key); b.Text(e.target); b.Text(e.negative);
-            b.Number(e.codes ? codeIds.at(e.codes) : std::numeric_limits<uint32_t>::max());
-            b.Signed(e.prio); b.Signed(e.file); b.Signed(e.line); b.Signed(e.order);
-            const bool flags[] = {e.name, e.nameLayer, e.kana, e.force, e.hidden, e.honorific, e.end, e.polite, e.stative, e.euImperative};
-            uint32_t bits = 0;
-            for (std::size_t i = 0; i < std::size(flags); i++) if (flags[i]) bits |= uint32_t{1} << i;
-            b.Number(bits); b.Number(static_cast<unsigned char>(e.finalClass), 1); b.Number(e.registerLevel, 1);
-        }
-    }
-    b.Number(s.senses_.size());
-    for (const auto& [key, list] : s.senses_) {
-        b.Text(key); b.Number(list.size());
-        for (const auto& sense : list) {
-            b.Text(sense.key); b.Text(sense.target); b.Number(static_cast<unsigned char>(sense.classDigit), 1);
-            b.Number(static_cast<uint8_t>(sense.side), 1); b.Number(sense.adjective ? 1 : 0, 1); b.Signed(sense.row);
-            b.Number(sense.triggers.size());
-            for (const auto& trigger : sense.triggers) b.Text(trigger);
-        }
-    }
-    auto families = s.families_.GeneratedFamilies();
-    std::sort(families.begin(), families.end(), [](const auto& a, const auto& c) { return a.first < c.first; });
-    b.Number(families.size());
-    for (const auto& [id, rows] : families) { b.Text(id); for (const auto& row : rows) b.Text(row); }
     return b;
+}
+
+bool SnapshotStorage::Matches(const Snapshot& expected, const std::vector<LoadError>& errors,
+                              const Columns& actual, const std::vector<std::string>& folders) {
+    if (!actual.snapshot || !expected.columnCodes_ || !actual.snapshot->columnCodes_) return false;
+    const auto a = Aux(expected, errors, folders);
+    const auto b = Aux(*actual.snapshot, actual.errors, folders);
+    if (!a.ok || !b.ok || a.data != b.data) return false;
+    const auto& wanted = *expected.columnCodes_;
+    const auto& got = *actual.snapshot->columnCodes_;
+    if (wanted.Size() != got.Size()) return false;
+    for (std::size_t i = 0; i < wanted.Size(); i++) {
+        const auto* x = wanted.At(static_cast<int32_t>(i));
+        const auto* y = got.At(static_cast<int32_t>(i));
+        if (x->partText != y->partText || x->sem.Text() != y->sem.Text() ||
+            x->gram.Text() != y->gram.Text() || x->dict.Text() != y->dict.Text()) return false;
+    }
+    return true;
 }
 
 bool SnapshotStorage::Write(const Snapshot& s, const std::vector<LoadError>& errors,
@@ -466,10 +510,12 @@ bool SnapshotStorage::Write(const Snapshot& s, const std::vector<LoadError>& err
     for (const auto& source : sources) { identity.Number(source.folder); identity.Text(source.relative); identity.Raw(source.hash); }
     writer.contentIdentity = internal::Hash256(identity.data);
     Buffer codes;
-    codes.Number(s.codes_.Size());
+    if (!s.columnCodes_) return false;
+    const auto& columns = *s.columnCodes_;
+    codes.Number(columns.Size());
     std::unordered_map<const Codes*, uint32_t> codeIds;
-    for (std::size_t i = 0; i < s.codes_.Size(); i++) {
-        const auto* code = s.codes_.At(static_cast<int32_t>(i));
+    for (std::size_t i = 0; i < columns.Size(); i++) {
+        const auto* code = columns.At(static_cast<int32_t>(i));
         codeIds.emplace(code, static_cast<uint32_t>(i));
         for (const auto text : {std::string_view(code->partText), code->sem.Text(), code->gram.Text(), code->dict.Text()}) codes.Text(text);
     }
@@ -490,7 +536,48 @@ bool SnapshotStorage::Write(const Snapshot& s, const std::vector<LoadError>& err
         writer.sections.back().bytes = writer.sections.back().owned;
         writer.Add(kBlob, layer, ByteView(view.blob), view.blob.size(), 1);
     }
-    return WriteImage(writer, s, path, folders);
+    return WriteImage(writer, s, path, folders, errors);
+}
+
+
+bool SnapshotStorage::WriteCache(const Snapshot& s, const std::vector<LoadError>& errors,
+                                 const std::vector<Source>& sources, std::string_view index,
+                                 const std::vector<std::string>& folders) {
+    const auto path = PathOf(index);
+    std::error_code ec;
+    const bool created = std::filesystem::create_directories(path.parent_path(), ec);
+    if (ec) return false;
+#ifndef _WIN32
+    if (created) std::filesystem::permissions(path.parent_path(), std::filesystem::perms::owner_all, ec);
+    if (ec) return false;
+#else
+    (void)created;
+#endif
+    std::filesystem::path reservation;
+    std::FILE* f = internal::OpenCacheTemp(path, reservation);
+    if (!f) return false;
+    bool ok = internal::CloseCacheTemp(f);
+    const auto name = Utf8Of(reservation.filename());
+    const auto token = name.substr(name.find_last_of('.') + 1);
+    const auto generation = path.parent_path() / (Utf8Of(path.stem()) + "." + token + ".hdsnap");
+    if (ok) ok = Write(s, errors, sources, Utf8Of(generation), folders);
+    std::filesystem::path temp;
+    if (ok) {
+        f = internal::OpenCacheTemp(path, temp);
+        ok = f != nullptr;
+        if (f) {
+            const auto text = Utf8Of(generation.filename()) + "\n";
+            ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
+            if (!internal::CloseCacheTemp(f)) ok = false;
+            if (ok) ok = internal::PublishCacheTemp(temp, path);
+        }
+    }
+    std::filesystem::remove(reservation, ec);
+    if (!ok) {
+        if (!temp.empty()) std::filesystem::remove(temp, ec);
+        if (internal::SnapshotResourcePath(index) != Utf8Of(generation)) std::filesystem::remove(generation, ec);
+    } else internal::MaintainCache(path, generation);
+    return ok;
 }
 
 
@@ -500,10 +587,45 @@ struct BadResource { std::string path; FileStamp stamp; };
 std::mutex& BadMutex() { static std::mutex mutex; return mutex; }
 std::vector<BadResource>& BadResources() { static std::vector<BadResource> list; return list; }
 
+bool Quarantined(std::string_view path, const FileStamp& stamp) {
+    std::string text;
+    if (!internal::ReadCacheSmall(PathOf(std::string(path) + ".bad"), text)) return false;
+    const auto bytes = ByteView(text);
+    return bytes.size() == 48 && std::memcmp(bytes.data(), "HDBAD\r\n\0", 8) == 0 &&
+        Crc32c(bytes.first(44)) == Get(bytes, 44, 4) && Get(bytes, 8, 8) == stamp.size &&
+        Get(bytes, 16, 8) == static_cast<uint64_t>(stamp.mtimeNs) &&
+        Get(bytes, 24, 8) == stamp.identityHigh && Get(bytes, 32, 8) == stamp.identityLow &&
+        Get(bytes, 40, 4) == stamp.platform;
+}
+
 bool IsBad(std::string_view path, const FileStamp& stamp) {
-    std::lock_guard lock(BadMutex());
-    for (const auto& entry : BadResources()) if (entry.path == path && entry.stamp == stamp) return true;
-    return false;
+    {
+        std::lock_guard lock(BadMutex());
+        for (const auto& entry : BadResources()) if (entry.path == path && entry.stamp == stamp) return true;
+    }
+    return Quarantined(path, stamp);
+}
+
+void Quarantine(std::string_view path, const FileStamp& stamp) {
+    FileStamp current;
+    if (!internal::ReadStamp(path, current) || current != stamp) return;
+    Buffer b;
+    b.Raw(ByteView(std::string_view("HDBAD\r\n\0", 8)));
+    b.Number(stamp.size, 8); b.Number(static_cast<uint64_t>(stamp.mtimeNs), 8);
+    b.Number(stamp.identityHigh, 8); b.Number(stamp.identityLow, 8); b.Number(stamp.platform);
+    b.Number(Crc32c(b.data));
+    const auto marker = PathOf(std::string(path) + ".bad");
+    std::filesystem::path temp;
+    if (auto* f = internal::OpenCacheTemp(marker, temp)) {
+        bool ok = std::fwrite(b.data.data(), 1, b.data.size(), f) == b.data.size();
+        if (!internal::CloseCacheTemp(f)) ok = false;
+        if (ok) ok = internal::PublishCacheTemp(temp, marker);
+        if (!ok) { std::error_code ec; std::filesystem::remove(temp, ec); }
+    }
+    if (internal::ReadStamp(path, current) && current == stamp) {
+        std::error_code ec;
+        std::filesystem::rename(PathOf(path), PathOf(std::string(path) + ".quarantine"), ec);
+    }
 }
 
 std::string RestorePath(Reader& r, const std::vector<std::string>& folders) {
@@ -568,10 +690,13 @@ public:
 
     void Fail() {
         if (bad.exchange(true, std::memory_order_relaxed)) return;
-        std::lock_guard lock(BadMutex());
-        auto& list = BadResources();
-        if (list.size() == 128) list.erase(list.begin());
-        list.push_back({path, stamp});
+        {
+            std::lock_guard lock(BadMutex());
+            auto& list = BadResources();
+            if (list.size() == 128) list.erase(list.begin());
+            list.push_back({path, stamp});
+        }
+        Quarantine(path, stamp);
     }
     const Section* Find(uint32_t kind, uint32_t layer = kNoLayer) const {
         for (const auto& s : sections) if (s.kind == kind && s.layer == layer) return &s;
@@ -629,7 +754,10 @@ public:
         static_cast<const LayerGuard*>(context)->file->Fail();
     }
     std::shared_ptr<const Snapshot> Fallback() {
-        std::call_once(fallbackOnce, [&] { fallback = LoadFoldersTsv(folders).snapshot; });
+        std::call_once(fallbackOnce, [&] {
+            auto loaded = LoadFoldersTsv(folders);
+            if (loaded.snapshot && loaded.snapshot->HasDictionary()) fallback = std::move(loaded.snapshot);
+        });
         return fallback;
     }
     template<class T> std::span<const T> Array(uint32_t kind, uint32_t layer) const {
@@ -641,18 +769,19 @@ public:
         if constexpr (std::endian::native != std::endian::little) return false;
         path = name; folders = dirs;
         if (!ReadStamp(name, stamp) || IsBad(name, stamp)) return false;
+        if (stamp.size < kHeaderSize) { Fail(); return false; }
         mapped = MappedFile::Open(name);
         FileStamp after;
         if (!mapped || !ReadStamp(name, after) || stamp != after) return false;
         const auto bytes = mapped->Bytes();
-        if (bytes.size() < kHeaderSize || std::memcmp(bytes.data(), kMagic.data(), 8) != 0 ||
-            Get(bytes, 8, 4) != kFormatVersion || Get(bytes, 12, 4) != kDataVersion ||
-            Get(bytes, 16, 4) != kHeaderSize || Get(bytes, 20, 4) != 0 ||
-            Get(bytes, 24, 8) != bytes.size() || Get(bytes, 32, 8) != kHeaderSize || Get(bytes, 200, 4) != 1) return false;
+        if (bytes.size() < kHeaderSize || std::memcmp(bytes.data(), kMagic.data(), 8) != 0) { Fail(); return false; }
         auto header = std::array<std::byte, kHeaderSize>{};
         std::copy_n(bytes.begin(), kHeaderSize, header.begin());
         Put(header, 192, 0, 4);
-        if (Crc32c(header) != Get(bytes, 192, 4)) return false;
+        if (Crc32c(header) != Get(bytes, 192, 4)) { Fail(); return false; }
+        if (Get(bytes, 8, 4) != kFormatVersion || Get(bytes, 12, 4) != kDataVersion || Get(bytes, 200, 4) != 1) return false;
+        if (Get(bytes, 16, 4) != kHeaderSize || Get(bytes, 20, 4) != 0 ||
+            Get(bytes, 24, 8) != bytes.size() || Get(bytes, 32, 8) != kHeaderSize) { Fail(); return false; }
         const auto builtin = HexDigest(HDTRANS_BUILTIN_ID), rules = HexDigest(HDTRANS_DATA_ID);
         const auto compiler = HexDigest(HDTRANS_COMPILER_ID);
         if (!std::equal(builtin.begin(), builtin.end(), bytes.begin() + 96) ||
@@ -660,10 +789,10 @@ public:
             Get(bytes, 204, 4) != sizeof(void*) || !std::equal(compiler.begin(), compiler.end(), bytes.begin() + 208)) return false;
         const auto sectionCount = Get(bytes, 40, 4), segmentCount = Get(bytes, 44, 4);
         if (sectionCount != 27 || segmentCount > (bytes.size() - kHeaderSize) / kDescriptorSize ||
-            sectionCount > (bytes.size() - kHeaderSize) / kDescriptorSize - segmentCount) return false;
+            sectionCount > (bytes.size() - kHeaderSize) / kDescriptorSize - segmentCount) { Fail(); return false; }
         const auto directorySize = static_cast<std::size_t>((sectionCount + segmentCount) * kDescriptorSize);
         if (Get(bytes, 48, 8) != kHeaderSize + sectionCount * kDescriptorSize ||
-            Crc32c(bytes.subspan(kHeaderSize, directorySize)) != Get(bytes, 196, 4)) return false;
+            Crc32c(bytes.subspan(kHeaderSize, directorySize)) != Get(bytes, 196, 4)) { Fail(); return false; }
         uint64_t end = kHeaderSize + directorySize;
         uint64_t nextSegment = 0;
         for (std::size_t i = 0; i < sectionCount; i++) {
@@ -681,39 +810,40 @@ public:
                 s.offset % 8 != 0 || s.offset < end || s.offset > bytes.size() || s.length > bytes.size() - s.offset ||
                 s.count > std::numeric_limits<std::size_t>::max() / width || s.count * width != s.length ||
                 s.first != nextSegment || s.segments > segmentCount - nextSegment ||
-                s.segments != (s.length + kSegmentSize - 1) / kSegmentSize) return false;
-            for (std::size_t reserved = at + 48; reserved < at + kDescriptorSize; reserved++) if (bytes[reserved] != std::byte{0}) return false;
+                s.segments != (s.length + kSegmentSize - 1) / kSegmentSize) { Fail(); return false; }
+            for (std::size_t reserved = at + 48; reserved < at + kDescriptorSize; reserved++) if (bytes[reserved] != std::byte{0}) { Fail(); return false; }
             nextSegment += s.segments;
             end = s.offset + s.length;
             sections.push_back(s);
         }
-        if (nextSegment != segmentCount || end != bytes.size()) return false;
+        if (nextSegment != segmentCount || end != bytes.size()) { Fail(); return false; }
         for (std::size_t i = 0; i < segmentCount; i++) {
             const auto at = kHeaderSize + (static_cast<std::size_t>(sectionCount) + i) * kDescriptorSize;
             Segment segment;
             segment.section = static_cast<uint32_t>(Get(bytes, at, 4)); segment.start = Get(bytes, at + 8, 8);
             segment.length = Get(bytes, at + 16, 8); segment.crc = static_cast<uint32_t>(Get(bytes, at + 24, 4));
-            if (segment.section >= sections.size()) return false;
+            if (segment.section >= sections.size()) { Fail(); return false; }
             const auto& owner = sections[segment.section];
             if (i < owner.first || i >= std::size_t{owner.first} + owner.segments ||
                 segment.start != (i - owner.first) * kSegmentSize || segment.start >= owner.length ||
-                segment.length != std::min<uint64_t>(kSegmentSize, owner.length - segment.start)) return false;
-            if (Get(bytes, at + 4, 4) != 0) return false;
-            for (std::size_t reserved = at + 28; reserved < at + kDescriptorSize; reserved++) if (bytes[reserved] != std::byte{0}) return false;
+                segment.length != std::min<uint64_t>(kSegmentSize, owner.length - segment.start)) { Fail(); return false; }
+            if (Get(bytes, at + 4, 4) != 0) { Fail(); return false; }
+            for (std::size_t reserved = at + 28; reserved < at + kDescriptorSize; reserved++) if (bytes[reserved] != std::byte{0}) { Fail(); return false; }
             segments.push_back(segment);
         }
         checked = std::make_unique<std::atomic<uint8_t>[]>(segments.size());
         for (std::size_t i = 0; i < segments.size(); i++) checked[i].store(0, std::memory_order_relaxed);
         for (uint32_t layer = 0; layer < 3; layer++) {
             keys[layer] = static_cast<std::size_t>(Get(bytes, 160 + 8 * layer, 8));
-            if (Get(bytes, 160 + 8 * layer, 8) > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) return false;
+            if (Get(bytes, 160 + 8 * layer, 8) > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) { Fail(); return false; }
             guards[layer].file = this; guards[layer].layer = layer;
-            for (uint32_t kind = kTree; kind <= kBlob; kind++) if (!Find(kind, layer)) return false;
+            for (uint32_t kind = kTree; kind <= kBlob; kind++) if (!Find(kind, layer)) { Fail(); return false; }
         }
         const auto* manifest = Find(kManifest);
-        if (!manifest || !Find(kCodes) || !Find(kAux) || !Ensure(*manifest) || !ReadManifest(Raw(*manifest), sources, folders.size())) return false;
+        if (!manifest || !Find(kCodes) || !Find(kAux) || !Ensure(*manifest) || !ReadManifest(Raw(*manifest), sources, folders.size())) { Fail(); return false; }
         const auto identity = ContentIdentity(sources);
-        return std::equal(identity.begin(), identity.end(), bytes.begin() + 64);
+        if (!std::equal(identity.begin(), identity.end(), bytes.begin() + 64)) { Fail(); return false; }
+        return true;
     }
 };
 
@@ -743,93 +873,38 @@ bool SnapshotStorage::RestoreAux(Reader& r, Snapshot& s, std::vector<LoadError>&
         sp.mode = static_cast<Snapshot::Respelling::Mode>(mode);
         if (!s.places_.emplace(key, std::move(sp)).second) return false;
     }
-    count = r.Count(16);
-    for (std::size_t i = 0; i < count && r.ok; i++) {
-        File file;
-        file.folder = r.Signed(); file.name = RestorePath(r, folders); file.text = r.Text();
-        if (file.folder < 0 || static_cast<std::size_t>(file.folder) >= folders.size()) return false;
-        s.plain_.push_back(std::move(file));
-    }
-    for (auto* output : {&s.rawPlain_, &s.textPlain_, &s.rawExtraPlain_, &s.textExtraPlain_}) {
-        count = r.Count(38);
-        std::vector<UserEntry> entries;
-        entries.reserve(count);
-        for (std::size_t i = 0; i < count && r.ok; i++) {
-            UserEntry e;
-            e.key = r.Text(); e.target = r.Text(); e.negative = r.Text();
-            const auto code = r.Number();
-            if (code >= s.codes_.Size()) return false;
-            e.codes = s.codes_.At(static_cast<int32_t>(code));
-            e.prio = r.Signed(); e.file = r.Signed(); e.line = r.Signed(); e.order = r.Signed();
-            const auto flags = r.Number();
-            if (flags >= (1 << 10)) return false;
-            e.name = (flags & 1) != 0; e.nameLayer = (flags & 2) != 0; e.kana = (flags & 4) != 0;
-            e.force = (flags & 8) != 0; e.hidden = (flags & 16) != 0; e.honorific = (flags & 32) != 0;
-            e.end = (flags & 64) != 0; e.polite = (flags & 128) != 0; e.stative = (flags & 256) != 0;
-            e.euImperative = (flags & 512) != 0;
-            e.finalClass = static_cast<char>(r.Number(1)); e.registerLevel = static_cast<uint8_t>(r.Number(1));
-            entries.push_back(std::move(e));
-        }
-        if (!r.ok) return false;
-        *output = std::make_unique<const UserText>(std::move(entries));
-    }
-    count = r.Count(8);
-    for (std::size_t i = 0; i < count && r.ok; i++) {
-        std::string key(r.Text());
-        const auto senses = r.Count(19);
-        std::vector<userdict::Sense> list;
-        list.reserve(senses);
-        for (std::size_t j = 0; j < senses && r.ok; j++) {
-            userdict::Sense sense;
-            sense.key = r.Text(); sense.target = r.Text(); sense.classDigit = static_cast<char>(r.Number(1));
-            const auto side = r.Number(1), adjective = r.Number(1);
-            if (side > static_cast<unsigned>(userdict::Side::Sentence) || adjective > 1) return false;
-            sense.side = static_cast<userdict::Side>(side); sense.adjective = adjective != 0; sense.row = r.Signed();
-            const auto triggers = r.Count(4);
-            for (std::size_t k = 0; k < triggers && r.ok; k++) sense.triggers.emplace_back(r.Text());
-            list.push_back(std::move(sense));
-        }
-        if (!s.senses_.emplace(std::move(key), std::move(list)).second) return false;
-    }
-    count = r.Count(52);
-    for (std::size_t i = 0; i < count && r.ok; i++) {
-        const auto id = r.Text();
-        userdict::FamilyRows rows;
-        for (auto& row : rows) row = r.Text();
-        if (!r.ok || id.empty()) return false;
-        std::string restored;
-        if (!s.families_.Generate(id[0], rows, restored).empty() || restored != id) return false;
-    }
     return r.Done();
 }
 
-LoadResult SnapshotStorage::Read(const std::vector<std::string>& folders, std::string_view path, bool full) {
+SnapshotStorage::Columns SnapshotStorage::Read(const std::vector<std::string>& folders, std::string_view path, bool full) {
     auto file = std::make_shared<internal::SnapshotFile>();
     if (!file->Open(path, folders)) return {};
     auto snap = std::shared_ptr<Snapshot>(new Snapshot());
     snap->backing_ = file;
     const auto* codeSection = file->Find(kCodes);
-    if (!file->Ensure(*codeSection)) return {};
+    if (!file->Ensure(*codeSection)) { file->Fail(); return {}; }
     Reader codes{file->Raw(*codeSection)};
     const auto count = codes.Count(16);
     for (std::size_t i = 0; i < count && codes.ok; i++) {
         const auto part = codes.Text(), sem = codes.Text(), gram = codes.Text(), dict = codes.Text();
-        if (!codes.ok || snap->codes_.Intern(part, sem, gram, dict) != static_cast<int32_t>(i)) return {};
+        if (!codes.ok || snap->codes_.Intern(part, sem, gram, dict) != static_cast<int32_t>(i)) { file->Fail(); return {}; }
     }
-    if (!codes.Done() || count > static_cast<std::size_t>(std::numeric_limits<int32_t>::max())) return {};
+    if (!codes.Done() || count > static_cast<std::size_t>(std::numeric_limits<int32_t>::max())) { file->Fail(); return {}; }
     for (std::size_t i = 0; i < count; i++) { snap->codes_.SetWithXXX(static_cast<int32_t>(i)); snap->codes_.SetAsPlain(static_cast<int32_t>(i)); }
-    if (snap->codes_.Size() != count) return {};
+    if (snap->codes_.Size() != count) { file->Fail(); return {}; }
+    snap->columnCodes_ = std::make_shared<const CodeTable>(std::move(snap->codes_));
+    if (!CodeTable::WithBase(snap->columnCodes_, snap->codes_)) { file->Fail(); return {}; }
     Dict* layers[] = {&snap->base_, &snap->user_, &snap->names_};
     for (uint32_t layer = 0; layer < 3; layer++) {
         const auto* refs = file->Find(kCodeRefs, layer);
-        if (!file->Ensure(*refs)) return {};
+        if (!file->Ensure(*refs)) { file->Fail(); return {}; }
         auto& pointers = file->codeRefs[layer];
-        if (refs->count > count) return {};
+        if (refs->count > count) { file->Fail(); return {}; }
         pointers.reserve(static_cast<std::size_t>(refs->count));
         const auto bytes = file->Raw(*refs);
         for (std::size_t i = 0; i < refs->count; i++) {
             const auto code = Get(bytes, 4 * i, 4);
-            if (code >= count) return {};
+            if (code >= count) { file->Fail(); return {}; }
             pointers.push_back(snap->codes_.At(static_cast<int32_t>(code)));
         }
         Dict::ViewData data;
@@ -843,24 +918,25 @@ LoadResult SnapshotStorage::Read(const std::vector<std::string>& folders, std::s
         *layers[layer] = Dict::FromView(data);
     }
     const auto* auxSection = file->Find(kAux);
-    if (!file->Ensure(*auxSection)) return {};
+    if (!file->Ensure(*auxSection)) { file->Fail(); return {}; }
     Reader aux{file->Raw(*auxSection)};
-    LoadResult loaded;
-    if (!RestoreAux(aux, *snap, loaded.errors, folders)) return {};
+    Columns loaded;
+    if (!RestoreAux(aux, *snap, loaded.errors, folders)) { file->Fail(); return {}; }
     if (full) {
-        for (const auto& section : file->sections) if (!file->Ensure(section)) return {};
+        for (const auto& section : file->sections) if (!file->Ensure(section)) { file->Fail(); return {}; }
         for (const auto* layer : layers) if (!layer->Validate()) { file->Fail(); return {}; }
     }
-    if (file->bad.load(std::memory_order_relaxed)) return {};
+    if (file->bad.load(std::memory_order_relaxed)) { file->Fail(); return {}; }
     loaded.snapshot = std::move(snap);
     return loaded;
 }
 
 namespace {
 
-bool ValidateImage(std::string_view path, const std::vector<std::string>& folders, const Snapshot& expected) {
+bool ValidateImage(std::string_view path, const std::vector<std::string>& folders, const Snapshot& expected,
+                   const std::vector<LoadError>& errors) {
     const auto loaded = SnapshotStorage::Read(folders, path, true);
-    if (!loaded.snapshot || loaded.snapshot->Warnings() != expected.Warnings()) return false;
+    if (!SnapshotStorage::Matches(expected, errors, loaded, folders)) return false;
     const Dict* wanted[] = {&expected.Base(), expected.User(), expected.Names()};
     const Dict* actual[] = {&loaded.snapshot->Base(), loaded.snapshot->User(), loaded.snapshot->Names()};
     for (std::size_t layer = 0; layer < 3; layer++) {
@@ -899,40 +975,88 @@ bool Snapshot::Mapped() const { return backing_ != nullptr; }
 
 namespace internal {
 
+bool RelativeCacheOverride() {
+    const auto value = EnvironmentPath("HDTRANS_CACHE_DIR");
+    return value && !CacheDisabled(*value) && SafePath(*value) && PathOf(*value).is_relative();
+}
+
 std::string SnapshotPath(const std::vector<std::string>& folders, std::string_view cacheDir) {
+    const auto mode = EnvironmentPath("HDTRANS_SNAPSHOT");
+    if (mode && *mode == "off") return {};
     const auto overrideDir = EnvironmentPath("HDTRANS_CACHE_DIR");
-    if (overrideDir && overrideDir->empty()) return {};
+    if (overrideDir) {
+        const auto& value = *overrideDir;
+        if (CacheDisabled(value) || !SafePath(value) || PathOf(value).is_relative()) return {};
+    }
     const auto dir = !cacheDir.empty() ? std::string(cacheDir) : overrideDir ? *overrideDir : DefaultCacheDirectory();
     if (folders.empty() || dir.empty() || !SafePath(dir)) return {};
     Buffer key;
+    key.Number(kFormatVersion);
     key.Number(kDataVersion);
+    key.Number(sizeof(void*));
+    key.Raw(HexDigest(HDTRANS_DATA_ID));
+    key.Raw(HexDigest(HDTRANS_BUILTIN_ID));
+    key.Raw(HexDigest(HDTRANS_COMPILER_ID));
     for (const auto& folder : folders) {
         if (!SafePath(folder)) return {};
-        std::error_code ec;
-        auto absolute = std::filesystem::absolute(PathOf(folder), ec).lexically_normal();
-        if (ec) return {};
-        if (!absolute.has_filename() && absolute != absolute.root_path()) absolute = absolute.parent_path();
-        key.Text(Utf8Of(absolute));
+        const auto canonical = CanonicalFolder(folder);
+        if (canonical.empty()) return {};
+        key.Text(canonical);
     }
     const auto hash = Hash256(key.data);
-    return Utf8Of(PathOf(dir) / (Hex(hash) + ".hdsnap"));
+    return Utf8Of(PathOf(dir) / (Hex(hash) + ".latest"));
+}
+
+std::string SnapshotResourcePath(std::string_view index) {
+    if (!SafePath(index)) return {};
+    const auto path = PathOf(index);
+    const auto key = Utf8Of(path.stem());
+    if (key.size() != 64 || path.extension() != ".latest") return {};
+    std::string text;
+    if (!internal::ReadCacheSmall(path, text) || text.size() != 105 || text.substr(0, 64) != key ||
+        text[64] != '.' || text.substr(97) != ".hdsnap\n") return {};
+    for (std::size_t i = 0; i < 97; i++) {
+        if (i == 64) continue;
+        if (!(text[i] >= '0' && text[i] <= '9') && !(text[i] >= 'a' && text[i] <= 'f')) return {};
+    }
+    return Utf8Of(path.parent_path() / PathOf(std::string_view(text).substr(0, 104)));
 }
 
 }  // namespace internal
 
-bool CompileSnapshot(const std::vector<std::string>& folders, std::string_view outPath) {
+namespace {
+
+bool Compile(const std::vector<std::string>& folders, std::string_view outPath, bool cache) {
     if (!SafePath(outPath)) return false;
     for (const auto& folder : folders) if (!SafePath(folder)) return false;
     std::vector<Source> sources;
     if (!ListSources(folders, sources, true)) return false;
     const auto loaded = LoadFoldersTsv(folders);
-    if (!loaded.snapshot) return false;
+    if (!loaded.snapshot || !loaded.snapshot->HasDictionary()) return false;
     std::vector<Source> after;
     if (!ListSources(folders, after, false) || after.size() != sources.size()) return false;
     for (std::size_t i = 0; i < sources.size(); i++) {
         if (sources[i].folder != after[i].folder || sources[i].relative != after[i].relative || sources[i].stamp != after[i].stamp) return false;
     }
-    return SnapshotStorage::Write(*loaded.snapshot, loaded.errors, sources, outPath, folders);
+    return cache ? SnapshotStorage::WriteCache(*loaded.snapshot, loaded.errors, sources, outPath, folders)
+                 : SnapshotStorage::Write(*loaded.snapshot, loaded.errors, sources, outPath, folders);
+}
+
+}  // namespace
+
+bool CompileSnapshot(const std::vector<std::string>& folders, std::string_view outPath) {
+    return Compile(folders, outPath, false);
+}
+
+bool internal::CompileCache(const std::vector<std::string>& folders, std::string_view cacheDir) {
+    const auto index = SnapshotPath(folders, cacheDir);
+    if (index.empty()) return false;
+    if (!SnapshotResourcePath(index).empty()) {
+        const auto checked = LoadFolders(folders, cacheDir, true, false);
+        if (checked.snapshot && checked.snapshot->Mapped() && checked.snapshot->Healthy() &&
+            checked.snapshot->HasDictionary()) return true;
+    }
+    return Compile(folders, index, true);
 }
 
 namespace {
@@ -972,48 +1096,59 @@ void RefreshManifest(const internal::SnapshotFile& file, const std::vector<Sourc
     b.Raw(ByteView("HDMETA\r\n")); b.Raw(ContentIdentity(sources)); b.Raw(Manifest(sources).data);
     b.Number(Crc32c(b.data));
     const auto path = PathOf(file.path + ".meta");
-    auto temp = path;
-    static std::atomic<uint64_t> sequence{0};
-    temp += ".tmp." + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
-            "." + std::to_string(sequence.fetch_add(1));
-    std::FILE* f = OpenFile(temp, true);
+    std::filesystem::path temp;
+    std::FILE* f = internal::OpenCacheTemp(path, temp);
     if (!f) return;
     bool ok = std::fwrite(b.data.data(), 1, b.data.size(), f) == b.data.size();
-    if (std::fclose(f) != 0) ok = false;
-    if (ok) ok = Publish(temp, path);
+    if (!internal::CloseCacheTemp(f)) ok = false;
+    if (ok) ok = internal::PublishCacheTemp(temp, path);
     if (!ok) { std::error_code ec; std::filesystem::remove(temp, ec); }
 }
 
 }  // namespace
 
-LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify) {
+LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify, bool cacheWrite) {
     for (const auto& folder : folders) if (!SafePath(folder)) return {nullptr, {{folder, LoadErrorKind::Folder, 0, TsvErrorKind::Read, {}}}};
-    const char* mode = std::getenv("HDTRANS_SNAPSHOT");
-    if (mode && std::string_view(mode) == "off") return LoadFoldersTsv(folders);
-    const char* strict = std::getenv("HDTRANS_VERIFY_DICTS");
-    verify = verify || (strict && std::string_view(strict) == "1");
+    const auto mode = EnvironmentPath("HDTRANS_SNAPSHOT");
+    if (mode && *mode == "off") return LoadFoldersTsv(folders);
+    const auto strict = EnvironmentPath("HDTRANS_VERIFY_DICTS");
+    verify = verify || (strict && *strict == "1");
     const auto path = internal::SnapshotPath(folders, cacheDir);
     if (path.empty()) return LoadFoldersTsv(folders);
     std::vector<Source> sources;
     if (!ListSources(folders, sources, false)) return LoadFoldersTsv(folders);
-    if (auto cached = SnapshotStorage::Read(folders, path, verify); cached.snapshot) {
-        auto& file = *SnapshotStorage::Backing(*cached.snapshot);
+    const auto resource = internal::SnapshotResourcePath(path);
+    if (auto cached = SnapshotStorage::Read(folders, resource, verify); cached.snapshot) {
+        const auto file = SnapshotStorage::Backing(*cached.snapshot);
         bool refresh = false;
-        if (CheckSources(folders, CachedManifest(file), sources, verify, refresh)) {
-            if (refresh) RefreshManifest(file, sources);
-            return cached;
+        if (CheckSources(folders, CachedManifest(*file), sources, verify, refresh)) {
+            if (refresh && cacheWrite) RefreshManifest(*file, sources);
+            auto loaded = LoadPlainFolders(std::move(cached.snapshot), folders, std::move(cached.errors));
+            if (!file->bad.load(std::memory_order_relaxed)) {
+                if (!loaded.snapshot) return loaded;
+                std::vector<Source> after;
+                bool unchanged = ListSources(folders, after, false) && after.size() == sources.size();
+                for (std::size_t i = 0; unchanged && i < sources.size(); i++) {
+                    unchanged = after[i].folder == sources[i].folder && after[i].relative == sources[i].relative &&
+                                after[i].stamp == sources[i].stamp;
+                }
+                if (!unchanged) return LoadFoldersTsv(folders);
+                if (cacheWrite) internal::MaintainCache(PathOf(path), PathOf(resource));
+                return loaded;
+            }
         }
     }
+    if (!cacheWrite) return LoadFoldersTsv(folders);
     sources.clear();
     bool write = ListSources(folders, sources, true);
     auto loaded = LoadFoldersTsv(folders);
-    if (loaded.snapshot && write) {
+    if (loaded.snapshot && loaded.snapshot->HasDictionary() && write) {
         std::vector<Source> after;
         write = ListSources(folders, after, false) && after.size() == sources.size();
         for (std::size_t i = 0; write && i < sources.size(); i++) {
             write = sources[i].folder == after[i].folder && sources[i].relative == after[i].relative && sources[i].stamp == after[i].stamp;
         }
-        if (write) SnapshotStorage::Write(*loaded.snapshot, loaded.errors, sources, path, folders);
+        if (write) SnapshotStorage::WriteCache(*loaded.snapshot, loaded.errors, sources, path, folders);
     }
     return loaded;
 }

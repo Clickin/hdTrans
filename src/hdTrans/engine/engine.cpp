@@ -16,8 +16,8 @@ namespace hdTrans {
 namespace {
 
 // The dictionaries of dirs; null when the load fails or finds no dictionary file.
-std::shared_ptr<const dict::Snapshot> LoadDictionaries(const std::vector<std::string>& dirs, bool verify = false) {
-    dict::LoadResult r = dict::LoadFolders(dirs, {}, verify);
+std::shared_ptr<const dict::Snapshot> LoadDictionaries(const std::vector<std::string>& dirs, bool verify, CacheWrite cacheWrite) {
+    dict::LoadResult r = dict::LoadFolders(dirs, {}, verify, cacheWrite == CacheWrite::Sync);
     if (!r.snapshot || !r.snapshot->HasDictionary()) return nullptr;
     return std::move(r.snapshot);
 }
@@ -57,10 +57,11 @@ struct Access {
 
 bool Engine::Open(const std::vector<std::string>& dirs, bool verifyDicts) {
     if (!internal::RulesLoaded()) return false;
-    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs, verifyDicts);
+    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs, verifyDicts, cacheWrite_);
     if (!s) return false;
     std::lock_guard<std::mutex> lock(mu_);
     dirs_ = dirs;
+    verifyDicts_ = verifyDicts;
     snapshot_ = std::move(s);
     generated_ = internal::NewGenerated(*snapshot_);
     return true;
@@ -68,12 +69,14 @@ bool Engine::Open(const std::vector<std::string>& dirs, bool verifyDicts) {
 
 bool Engine::Reload() {
     std::vector<std::string> dirs;
+    bool verify;
     {
         std::lock_guard<std::mutex> lock(mu_);
         if (!snapshot_) return false;
         dirs = dirs_;
+        verify = verifyDicts_;
     }
-    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs);
+    std::shared_ptr<const dict::Snapshot> s = LoadDictionaries(dirs, verify, cacheWrite_);
     if (!s) return false;
     std::lock_guard<std::mutex> lock(mu_);
     snapshot_ = std::move(s);
@@ -107,7 +110,6 @@ std::string Session::Translate(std::string_view text) {
     for (const std::string_view line : text::Lines(text)) lines.emplace_back(line);
     internal::TranslationOptions options;
     options.reference = reference_;
-    options.selectShadow = selectShadow_;
     const std::vector<std::string> translated =
         internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, {}, options);
     std::string out;

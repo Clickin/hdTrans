@@ -37,12 +37,7 @@ std::shared_ptr<const dict::Snapshot> Snapshot(const std::string& rows) {
     return dict::Load({f}).snapshot;
 }
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
-}
+using hdtest::DictsDir;
 
 }  // namespace
 
@@ -215,10 +210,10 @@ HD_TEST(pipeline_kata_speech) {
 
 // The katakana rules on the dictionaries of dicts/base, when present.
 HD_TEST(pipeline_katakana_dictionary) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::LoadResult r = dict::LoadFolders({DictsDir()});
     if (r.snapshot == nullptr || !r.snapshot->HasDictionary()) {
-        std::printf("skip pipeline_katakana_dictionary: no dictionaries at %s\n", DictsDir().c_str());
-        return;
+        HD_SKIP(std::string("no dictionaries at ") + DictsDir());
     }
     const dict::Snapshot& snap = *r.snapshot;
     const LineContext ctx;

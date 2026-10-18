@@ -1,5 +1,5 @@
-// Path hashes of all rules in $HDTRANS_GOLDEN/rules/rules.flat (default
-// ../hdtrans-golden next to the repository) against rules/path_hashes.tsv there,
+// Path hashes of all rules in $HDTRANS_GOLDEN/rules/rules.flat against
+// rules/path_hashes.tsv there,
 // which lists "ID\tPATHS\tHASH" per rule: Ln for local rule n, Gk for global rule k,
 // the hash as 16 hex digits. Skipped when the files are absent.
 #include <cinttypes>
@@ -10,16 +10,12 @@
 
 #include "hdTrans/rules/rules.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "scripted_item.h"
 
 namespace {
 
-std::string GoldenDir() {
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) return g;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../hdtrans-golden";
-}
+using hdtest::GoldenDir;
 
 bool ReadFile(const std::string& path, std::string& text) {
     std::FILE* f = std::fopen(path.c_str(), "rb");
@@ -33,11 +29,11 @@ bool ReadFile(const std::string& path, std::string& text) {
 }  // namespace
 
 HD_TEST(rules_path_hashes) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const std::string dir = GoldenDir() + "/rules/";
     std::string flat, hashes;
     if (!ReadFile(dir + "rules.flat", flat) || !ReadFile(dir + "path_hashes.tsv", hashes)) {
-        std::printf("skip rules_path_hashes: no %srules.flat and path_hashes.tsv\n", dir.c_str());
-        return;
+        HD_SKIP(std::string("no ") + dir + "rules.flat and path_hashes.tsv");
     }
     hdTrans::rules::Program p;
     hdTrans::rules::LoadError e{};
@@ -77,5 +73,7 @@ HD_TEST(rules_path_hashes) {
     }
     std::printf("rules_path_hashes: %lld rules, %lld paths, %lld mismatches\n", rules, paths, mismatches);
     HD_CHECK_EQ(rules, static_cast<long long>(p.localRules.size() + p.globalRules.size()));
+    HD_CHECK(rules > 0 && paths > 0);
+    HD_CHECK_EQ(static_cast<size_t>(rules), hdtest::LineCount(hashes));
     HD_CHECK_EQ(mismatches, 0LL);
 }

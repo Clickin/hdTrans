@@ -29,12 +29,27 @@ if (-not $vs) { 'no Visual Studio with the C++ tools'; exit 1 }
 $cmakeDir = "$vs\Common7\IDE\CommonExtensions\Microsoft\CMake"
 $vcvars = "$vs\VC\Auxiliary\Build\vcvarsall.bat"
 $archs = if ($arch -eq 'all') { @('x86', 'x64') } else { @($arch) }
+# Ninja tracks header dependencies by matching the prefix of the compiler's /showIncludes lines,
+# so the console runs in UTF-8 and the prefix CMake recorded must be one the compiler prints.
+$utf8 = New-Object System.Text.UTF8Encoding($false)
+$knownPrefixes = @('Note: including file:',
+    $utf8.GetString([byte[]](0xec,0xb0,0xb8,0xea,0xb3,0xa0,0x3a,0x20,0xed,0x8f,0xac,0xed,0x95,0xa8,0x20,0xed,0x8c,0x8c,0xec,0x9d,0xbc,0x3a)))
+function DepsPrefixKnown([string]$rules) {
+    $line = [System.IO.File]::ReadAllLines($rules, $utf8) | Where-Object { $_ -like 'msvc_deps_prefix = *' } | Select-Object -First 1
+    return $line -and ($knownPrefixes -contains $line.Substring('msvc_deps_prefix = '.Length).Trim())
+}
 $exit = 0
 foreach ($a in $archs) {
     $preset = "msvc-$a"
     New-Item -ItemType Directory -Force "$root\build" | Out-Null
+    $rules = "$root\build\$preset\CMakeFiles\rules.ninja"
+    if ((Test-Path $rules) -and -not (DepsPrefixKnown $rules)) {
+        Remove-Item -LiteralPath "$root\build\$preset" -Recurse -Force
+        "${preset}: removed a build tree with an unrecognised include prefix"
+    }
     $bat = "$root\build\run-$preset.bat"
     @(
+        "@chcp 65001 >nul",
         "@call `"$vcvars`" $a >nul",
         "@set PATH=$cmakeDir\CMake\bin;$cmakeDir\Ninja;%PATH%",
         "@cd /d `"$root`"",
@@ -44,6 +59,7 @@ foreach ($a in $archs) {
     ) | Set-Content -Encoding ASCII $bat
     & cmd /c $bat 2>&1
     $buildExit = $LASTEXITCODE
+    if ($buildExit -eq 0 -and -not (DepsPrefixKnown $rules)) { "${preset}: unrecognised include prefix in rules.ninja"; $buildExit = 1 }
     "$preset exit=$buildExit"
     if ($buildExit -ne 0) { $exit = 1 }
     if ($buildExit -eq 0 -and $Golden) {

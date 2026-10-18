@@ -15,6 +15,7 @@
 #include "hdTrans/pipeline/line_context.h"
 #include "hdTrans/names/document.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "output/stage_records.h"
 
 using namespace hdTrans;
@@ -24,12 +25,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
-}
+using hdtest::DictsDir;
 
 // The lines of a set as the dump splits them at each "\n": a final "\n" leaves an
 // empty last line. The lines keep their "\r".
@@ -206,22 +202,25 @@ std::vector<std::string> ContextSets(const std::string& golden) {
 }  // namespace
 
 HD_TEST(names_context_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string golden = GoldenDir();
     if (!fs::exists(golden + "/stages/MANIFEST")) {
-        std::printf("  skipped: no stage goldens in %s\n", golden.c_str());
-        return;
+        HD_SKIP(std::string("no stage goldens in ") + golden);
     }
     dict::LoadResult loaded = dict::LoadFolders({DictsDir()});
     if (loaded.snapshot == nullptr) {
-        std::printf("  skipped: dictionaries not loaded from %s\n", DictsDir().c_str());
-        return;
+        HD_SKIP(std::string("dictionaries not loaded from ") + DictsDir());
     }
     const dict::Snapshot& snap = *loaded.snapshot;
     size_t total = 0, totalRecords = 0;
     for (const std::string& set : ContextSets(golden)) {
         std::string want, in;
-        if (!ReadFile(golden + "/stages/" + set + ".CTX.tsv", want) || !ReadFile(golden + "/" + set + ".in", in)) continue;
+        HD_REQUIRE(ReadFile(golden + "/stages/" + set + ".CTX.tsv", want));
+        HD_REQUIRE(ReadFile(golden + "/" + set + ".in", in));
         const std::vector<std::string> got = ContextStream(snap, set, false, DumpLines(in), 0);
+        HD_CHECK_EQ(got.size(), hdtest::LineCount(want));
         const size_t diff = Compare(got, FlatBlocks(want), set);
         total += diff;
         totalRecords += got.size();
@@ -229,19 +228,24 @@ HD_TEST(names_context_golden) {
     }
     // corpus2.each: every line is a document of its own.
     std::string want, in;
-    if (ReadFile(golden + "/stages/corpus2.each.CTX.tsv", want) && ReadFile(golden + "/corpus2.each.in", in)) {
+    HD_REQUIRE(ReadFile(golden + "/stages/corpus2.each.CTX.tsv", want));
+    HD_REQUIRE(ReadFile(golden + "/corpus2.each.in", in));
+    {
         const std::vector<std::string> lines = EachLines(in);
         std::vector<std::string> got;
         for (size_t n = 0; n < lines.size(); n++) {
             const std::vector<std::string> one = ContextStream(snap, "corpus2.each", true, {lines[n]}, n + 1);
             got.insert(got.end(), one.begin(), one.end());
         }
+        HD_CHECK_EQ(got.size(), hdtest::LineCount(want));
         const size_t diff = Compare(got, FlatBlocks(want), "corpus2.each");
         total += diff;
         totalRecords += got.size();
         std::printf("  context %-28s %6zu records, %zu differing\n", "corpus2.each", got.size(), diff);
     }
+    HD_CHECK(totalRecords > 0);
     std::printf("  context total: %zu records, %zu differing\n", totalRecords, total);
+    HD_CHECK(!want.empty());
     HD_CHECK_EQ(total, size_t{0});
 }
 
@@ -274,39 +278,50 @@ std::vector<std::string> PlainStream(const dict::Snapshot& snap, bool each, cons
 }  // namespace
 
 HD_TEST(names_plain_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    HD_REQUIRE(hdtest::CheckManifest(hdtest::GoldenDir() + "/stages/"));
     const std::string golden = GoldenDir();
     if (!fs::exists(golden + "/stages/MANIFEST")) {
-        std::printf("  skipped: no stage goldens in %s\n", golden.c_str());
-        return;
+        HD_SKIP(std::string("no stage goldens in ") + golden);
     }
     dict::LoadResult loaded = dict::LoadFolders({DictsDir()});
     if (loaded.snapshot == nullptr) {
-        std::printf("  skipped: dictionaries not loaded from %s\n", DictsDir().c_str());
-        return;
+        HD_SKIP(std::string("dictionaries not loaded from ") + DictsDir());
     }
     const dict::Snapshot& snap = *loaded.snapshot;
-    size_t total = 0;
+    size_t total = 0, totalRecords = 0;
     for (const char* set : {"doc-lyrics-01", "doc-n8558fh-1", "doc-oos-n5024ms-2", "x-control", "x-names", "x-hangul"}) {
         std::string want, in;
-        if (!ReadFile(golden + "/plain/" + set + ".tsv", want) || !ReadFile(golden + "/" + set + ".in", in)) continue;
+        HD_REQUIRE(ReadFile(golden + "/plain/" + set + ".tsv", want));
+        HD_REQUIRE(ReadFile(golden + "/" + set + ".in", in));
         const std::vector<std::string> got = PlainStream(snap, false, DumpLines(in), 0, set);
+        HD_CHECK_EQ(got.size(), hdtest::LineCount(want));
         const size_t diff = Compare(got, FlatBlocks(want), set);
         total += diff;
+        totalRecords += got.size();
         std::printf("  plain %-28s %6zu records, %zu differing\n", set, got.size(), diff);
     }
     // Every case of corpus2.each.
     std::string want, in;
-    if (ReadFile(golden + "/plain/corpus2.each.tsv", want) && ReadFile(golden + "/corpus2.each.in", in)) {
+    HD_REQUIRE(ReadFile(golden + "/plain/corpus2.each.tsv", want));
+    HD_REQUIRE(ReadFile(golden + "/corpus2.each.in", in));
+    {
         const std::vector<std::string> lines = EachLines(in);
         std::vector<std::string> got;
         for (size_t k = 0; k < lines.size(); k++) {
             const std::vector<std::string> one = PlainStream(snap, true, {lines[k]}, k + 1, "corpus2.each");
             got.insert(got.end(), one.begin(), one.end());
         }
+        HD_CHECK_EQ(got.size(), hdtest::LineCount(want));
         const size_t diff = Compare(got, FlatBlocks(want), "corpus2.each");
         total += diff;
+        totalRecords += got.size();
         std::printf("  plain %-28s %6zu records, %zu differing\n", "corpus2.each", got.size(), diff);
     }
+    HD_CHECK(totalRecords > 0);
+    std::printf("  plain total: %zu records compared\n", totalRecords);
+    HD_CHECK(!want.empty());
     HD_CHECK_EQ(total, size_t{0});
 }
 

@@ -14,6 +14,7 @@
 #include "hdTrans/word/document_senses.h"
 #include "hdTrans/word/item.h"
 #include "hdtest.h"
+#include "golden.h"
 #include "tokenizer/stage_records.h"
 
 using namespace hdTrans;
@@ -152,15 +153,11 @@ HD_TEST(document_senses_session_reset_isolation_and_reference) {
     HD_REQUIRE(!dictionary.path.empty());
     Engine engine;
     HD_REQUIRE(engine.Open({dictionary.path.string()}));
-    Session first(engine), independent(engine), reference(engine, true), shadow(engine);
+    Session first(engine), independent(engine), reference(engine, true);
     HD_CHECK_EQ(first.Translate("東京、"), std::string("도쿄,"));
     HD_CHECK_EQ(first.Translate("東京。"), std::string("동경."));
     HD_CHECK_EQ(independent.Translate("東京。"), std::string("동경."));
     HD_CHECK_EQ(reference.Translate("東京、\n東京。"), std::string("도쿄,\n동경."));
-    shadow.SetSelectShadow(true);
-    HD_CHECK_EQ(shadow.Translate("東京、\n東京。"), std::string("도쿄,\n동경."));
-    shadow.SetSelectShadow(false);
-    HD_CHECK_EQ(shadow.Translate("東京。"), std::string("동경."));
     first.Reset();
     HD_CHECK_EQ(first.Translate("東京。"), std::string("동경."));
     HD_CHECK(engine.Reload());
@@ -172,15 +169,14 @@ HD_TEST(document_senses_session_reset_isolation_and_reference) {
     HD_CHECK_EQ(inherited.Translate("東京、\n東京。"), std::string("도쿄,\n동경."));
 }
 
-HD_TEST(document_senses_shadow_golden) {
+HD_TEST(document_senses_shadow_consistency) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const char* root = std::getenv("HDTRANS_GOLDEN");
     if (root == nullptr || *root == 0) {
-        std::printf("skip document_senses_shadow_golden: no HDTRANS_GOLDEN\n");
-        return;
+        HD_SKIP("no HDTRANS_GOLDEN");
     }
-    const char* dicts = std::getenv("HDTRANS_DICTS");
-    const auto loaded = dict::LoadFolders({dicts != nullptr && *dicts != 0 ? std::string(dicts)
-                                                                 : std::string(root) + "/dicts/base"});
+    const auto loaded = dict::LoadFolders({hdtest::DictsDir()});
     HD_REQUIRE(loaded.snapshot != nullptr && loaded.snapshot->HasDictionary());
     std::error_code error;
     std::vector<std::filesystem::path> paths;
@@ -191,6 +187,11 @@ HD_TEST(document_senses_shadow_golden) {
     }
     HD_REQUIRE(!error && !paths.empty());
     std::sort(paths.begin(), paths.end());
+    size_t expectedSets = 0;
+    for (const auto& set : hdtest::ManifestSets(std::string(root) + "/stages/", ".S.tsv")) {
+        if (set.starts_with("doc-")) ++expectedSets;
+    }
+    HD_REQUIRE(paths.size() == expectedSets);
     Choices total;
     for (const auto& path : paths) {
         std::string input;
@@ -206,7 +207,18 @@ HD_TEST(document_senses_shadow_golden) {
         observer.resolved = Observe;
         const auto expected = internal::TranslateDocument(*loaded.snapshot, *generated, lines, plainMemory, {}, defaults);
         const auto out = internal::TranslateDocument(*loaded.snapshot, *generated, lines, shadowMemory, observer, shadow);
+        HD_REQUIRE(!expected.empty());
         HD_CHECK(out == expected);
+        std::string frozen;
+        HD_REQUIRE(stagetest::ReadFile((path.parent_path() / (path.stem().string() + ".expected")).string(), frozen));
+        HD_REQUIRE(!frozen.empty());
+        HD_CHECK_EQ(out.size(), Lines(frozen).size());
+        internal::Memory referenceMemory;
+        internal::TranslationOptions reference;
+        reference.reference = true;
+        reference.selectShadow = true;
+        const auto referenceOut = internal::TranslateDocument(*loaded.snapshot, *generated, lines, referenceMemory, {}, reference);
+        HD_CHECK(referenceOut == Lines(frozen));
         total.scored += observed.scored;
         total.wouldChange += observed.wouldChange;
         total.blocked += observed.blocked;
@@ -215,7 +227,9 @@ HD_TEST(document_senses_shadow_golden) {
     }
     std::printf("document_senses_shadow total: sets=%zu scored=%zu would-change=%zu blocked=%zu\n",
                 paths.size(), total.scored, total.wouldChange, total.blocked);
-    HD_CHECK(total.scored > 0);
+    HD_CHECK_EQ(total.scored, size_t{57168});
+    HD_CHECK_EQ(total.wouldChange, size_t{2});
+    HD_CHECK_EQ(total.blocked, size_t{4});
 }
 
 HD_TEST(document_senses_memory_calls_and_reset) {

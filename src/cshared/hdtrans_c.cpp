@@ -1,7 +1,11 @@
 #include "hdTrans/hdtrans.h"
 
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -11,8 +15,29 @@
 namespace {
 
 std::mutex g_mutex;
-hdTrans::Engine* g_engine = nullptr;
-hdTrans::Session* g_session = nullptr;
+std::condition_variable g_adminsDone;
+std::atomic<unsigned> g_waitingAdmins{0};
+std::uint64_t g_generation = 0;
+std::vector<std::string> g_dirs;
+std::unique_ptr<hdTrans::Engine> g_engine;
+std::unique_ptr<hdTrans::Session> g_session;
+
+// Queued state changes run before new translations.
+class AdminLock {
+public:
+    AdminLock() : lock_(g_mutex, std::defer_lock) {
+        ++g_waitingAdmins;
+        lock_.lock();
+    }
+    ~AdminLock() {
+        --g_waitingAdmins;
+        lock_.unlock();
+        g_adminsDone.notify_all();
+    }
+
+private:
+    std::unique_lock<std::mutex> lock_;
+};
 
 std::vector<std::string> SplitNul(const char* dirs) {
     std::vector<std::string> out;
@@ -35,31 +60,57 @@ int Copy(const std::string& s, char** out, size_t* outn) {
 extern "C" {
 
 int hdTrans_Initialize(const char* dirs) {
-    std::lock_guard<std::mutex> lock(g_mutex);
-    auto* e = new hdTrans::Engine;
-    if (!e->Open(SplitNul(dirs))) {
-        delete e;
-        return -1;
+    std::uint64_t generation;
+    {
+        AdminLock lock;
+        generation = g_generation;
     }
-    delete g_session;
-    delete g_engine;
-    g_engine = e;
-    g_session = new hdTrans::Session(*g_engine);
+    auto paths = SplitNul(dirs);
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
+    if (!e->Open(paths)) return -1;
+    AdminLock lock;
+    if (generation != g_generation) return -1;
+    g_session.reset();
+    g_engine = std::move(e);
+    g_session = std::make_unique<hdTrans::Session>(*g_engine);
+    g_dirs = std::move(paths);
+    ++g_generation;
     return 0;
 }
 
+void hdTrans_Terminate(void) {
+    AdminLock lock;
+    ++g_generation;
+    g_session.reset();
+    g_engine.reset();
+    g_dirs.clear();
+}
+
 int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
-    std::lock_guard<std::mutex> lock(g_mutex);
+    std::unique_lock<std::mutex> lock(g_mutex);
+    g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
     if (!g_session) return -1;
     return Copy(g_session->Translate(std::string_view(text, n)), out, outn);
 }
 
 int hdTrans_Reload(void) {
-    std::lock_guard<std::mutex> lock(g_mutex);
-    if (!g_engine) return -1;
-    const bool ok = g_engine->Reload();
-    g_session->Reset();
-    return ok ? 0 : -1;
+    std::uint64_t generation;
+    std::vector<std::string> dirs;
+    {
+        AdminLock lock;
+        if (!g_engine) return -1;
+        generation = g_generation;
+        dirs = g_dirs;
+    }
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
+    if (!e->Open(dirs)) return -1;
+    AdminLock lock;
+    if (generation != g_generation) return -1;
+    g_session.reset();
+    g_engine = std::move(e);
+    g_session = std::make_unique<hdTrans::Session>(*g_engine);
+    ++g_generation;
+    return 0;
 }
 
 void hdTrans_FreeMem(void* p) { std::free(p); }

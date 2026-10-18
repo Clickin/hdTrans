@@ -63,6 +63,7 @@ struct TranslationOptions {
     bool reference = false;
     word::Improvements wordImprovements;
     std::span<const word::Scorer> scorers;
+    std::span<const word::Scorer> shadowScorers;
     bool selectShadow = false;
     bool selectRules = false;
 };
