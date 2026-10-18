@@ -19,8 +19,8 @@ void AdjectiveNeighbours(Flusher& f) {
             Entry* ending = it->DirectEntry(it->DirectIndex());
             const std::string_view entry = n->EntryText(n->selected);
             if (ending != nullptr && entry.starts_with("이겠") && ending->dst == "4") {
-                ending->dst = "1";
-                if (Entry* e = n->group->At(n->selected)) e->dst = "겠" + std::string(entry.substr(std::string_view("이겠").size()));
+                it->AssignDirectSlot(it->DirectIndex(), "1");
+                if (n->group->At(n->selected) != nullptr) n->AssignEntrySurface(n->selected, "겠" + std::string(entry.substr(std::string_view("이겠").size())));
             }
         } else if ((cls == '7' || cls == '8') && it->DirectSurface() == "く" && it->DirectText(it->DirectIndex()) == "6" &&
                    n->group->surface == kJaNa && At(n->Code(n->selected), 0) == '4' &&
@@ -35,14 +35,16 @@ void AdjectiveNeighbours(Flusher& f) {
 
 void GeotBeforeMitai(Flusher& f) {
     for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
-        const Item* p = it->prev;
+        Item* p = it->prev;
         if (p == nullptr || p->DirectIndex() == -1 || !it->EntryText(it->selected).starts_with("%") || !it->MitaiLike()) {
             continue;
         }
         const char cls = At(p->Code(p->selected), 0);
         if (cls != '4' && cls != '7') continue;
         Entry* ending = p->DirectEntry(p->DirectIndex());
-        if (ending != nullptr && ending->dst.ends_with(kKoDeon)) ending->dst += std::string(" ") + std::string(kKoGeot);
+        if (ending != nullptr && ending->dst.ends_with(kKoDeon)) {
+            p->AssignDirectSlot(p->DirectIndex(), ending->dst + std::string(" ") + std::string(kKoGeot));
+        }
     }
 }
 
