@@ -345,6 +345,21 @@ HD_TEST(trie_borrowed_arrays_and_moves) {
     HD_CHECK_EQ(borrowed.Find("𠮷野家"), owned.Find("𠮷野家"));
 }
 
+HD_TEST(trie_children_in_high_word) {
+    const std::string_view keys[] = {"ax", "bxx", "cxxx", "dxxxx", "exxxxx"};
+    const Trie owned = Trie::Build(keys, nullptr);
+    auto view = owned.View();
+    HD_REQUIRE(view.tree.size() == 1);
+    const uint64_t tree[] = {view.tree[0], 0};
+    view.tree = std::span(tree).first(1);
+    const Trie borrowed = Trie::FromView(view);
+    HD_REQUIRE(borrowed.Validate());
+    for (const auto key : keys) {
+        HD_CHECK(borrowed.Find(key) >= 0);
+        HD_CHECK_EQ(borrowed.LongestPrefix(std::string(key) + "!").length, key.size());
+    }
+}
+
 HD_TEST(trie_guarded_views_and_validation) {
     const std::string_view keys[] = {"", "学", "学生", "東京", "𠮷野家"};
     const Trie owned = Trie::Build(keys, nullptr);

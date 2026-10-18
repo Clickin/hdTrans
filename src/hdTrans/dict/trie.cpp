@@ -258,8 +258,8 @@ bool Trie::Children(int node, std::size_t& start, std::size_t& end, std::size_t&
         if (!Select0(n - 1, start)) return false;
         start++;
     }
-    bool bit;
-    if (!Bit(start, bit)) return false;
+    // Separate bounds and bit access avoid incorrect inlining under MSVC x86 /O2.
+    if (start >= 2 * label_.size() - 1 || start / 64 >= tree_.size()) return guard_.Fail();
     const uint64_t x = ~tree_[start / 64] >> (start % 64);
     if (x != 0) end = start + static_cast<std::size_t>(std::countr_zero(x));
     else if (!Select0(n, end)) return false;
