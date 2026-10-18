@@ -104,6 +104,7 @@ public:
             e.strategy = Int(f[2]) == 1 ? dict::Strategy::UserFirst : dict::Strategy::LongestMatch;
             e.prior = stagetest::UnescapeStageText(f[3]);
             e.settings.text = f[4] == "1";
+            e.settings.terminal = f[5] == "1";
             e.settings.hanjaToHangul = Int(f[6]);
             e.settings.deleteJapan = Int(f[7]);
             e.settings.registers[0] = static_cast<uint8_t>(Int(f[8]));

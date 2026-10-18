@@ -76,12 +76,12 @@ public:
     bool CutsWord(std::string_view ending, std::string_view after) const;
     uint8_t Register(const dict::UserEntry& u) const;
     Record* CreateSyntheticRecord(int token, std::string_view source, bool emptyTarget);
+    bool Transliterate(std::string_view s, std::string& out);
 
 private:
     void Insert(Item* it);
     void BuildTokenTransformText(int i);
     void BuildSyntheticTransform(std::string_view surface, int token, int offset, bool emptyTarget);
-    bool Transliterate(std::string_view s, std::string& out);
     std::string FilterKana(std::string_view text) const;
     Record* LookupFallbackRecord(int token, std::string_view source, int left, int right);
     Record* ProbeNumericPrefix(int token, std::string_view source);

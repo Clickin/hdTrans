@@ -1,0 +1,388 @@
+// Sentence passes that rewrite the chain before and after the selection: katakana
+// runs and noun phrases are replaced by one longer item, class-3 words take the
+// selection of the word they attach to, and negated plain verbs take their negative.
+#include <string>
+#include <string_view>
+
+#include "hdTrans/word/conjugation.h"
+#include "hdTrans/word/flush.h"
+#include "hdTrans/word/kana.h"
+#include "hdTrans/word/strings.h"
+#include "hdTrans/word/util.h"
+
+namespace hdTrans::word {
+namespace {
+
+constexpr std::string_view kNegativeFamily = "&NF@";
+constexpr std::string_view kNegativeAdjective = "$DH@";
+
+// The text of the group's surface and the ending is not a sequence containing kanji.
+bool NoKanji(std::string_view s) {
+    for (std::string_view rest = s; !rest.empty(); rest.remove_prefix(FirstChar(rest).size())) {
+        if (NameClassOf(FirstChar(rest)) == kClassKanji) return false;
+    }
+    return true;
+}
+
+// A katakana word with katakana neighbours of its token: one word of the run, or
+// nullptr.
+Item* BuildNmTail(Flusher& f) {
+    Worker& w = f.w;
+    auto katakana = [&](std::string_view s) { return Classify(s) == 14 && (!w.settings.text || NoKanji(s)); };
+    for (Item* it = w.chain.tail; it != nullptr; it = it->prev) {
+        if (Classify(it->group->surface) != 14 || !Has(it->GAttr(0), "Nm")) continue;
+        int start = it->start;
+        int length = it->length;
+        int neighbours = 0;
+        if (Item* n = it->next; n != nullptr && katakana(n->group->surface) && it->tokenIndex == n->tokenIndex) {
+            neighbours = 1;
+            length += n->length;
+        }
+        if (Item* p = it->prev; p != nullptr && katakana(p->group->surface) && it->tokenIndex == p->tokenIndex) {
+            start = p->start;
+            neighbours++;
+            length += p->length;
+        }
+        if (neighbours < 1) continue;
+        const std::string_view raw = it->text.substr(static_cast<std::size_t>(start), static_cast<std::size_t>(length));
+        Record* record = w.CreateSyntheticRecord(it->tokenIndex, raw, false);
+        if (!w.Transliterate(raw, record->target)) w.fault = true;
+        return w.InsertLateCandidate(it->text, start, it->tokenIndex, record);
+    }
+    return nullptr;
+}
+
+// phraseFollowsNi: after a word に, the phrase is accepted unless the next
+// conjugating word has a UMv attribute (an empty group does not count).
+bool PhraseFollowsNi(Item* ni) {
+    Item* scan = ni->next;
+    while (scan != nullptr && !scan->detail->Yougo()) scan = scan->next;
+    if (scan == nullptr || scan->group->entries.empty()) return true;
+    for (int slot = 0; slot < static_cast<int>(scan->group->entries.size()); slot++) {
+        if (Has(scan->Attr(slot), "UMv")) return false;
+    }
+    return true;
+}
+
+struct Phrase {
+    std::string_view text;
+    int start = 0;
+    int token = 0;
+    Record* record = nullptr;
+};
+
+// findPhrase looks for a word whose unused records hold a noun entry for the word
+// itself or for the word plus its ending, and returns the text, start and token to
+// insert it at, with that record.
+Phrase FindPhrase(Flusher& f) {
+    Worker& w = f.w;
+    Chain& chain = w.chain;
+    for (Item* it = chain.head; it != nullptr; it = it->next) {
+        if (!it->detail->Yougo()) continue;
+        int mode = 1;
+        if (it->DirectCount() >= 20) {
+            for (int slot = 0; slot < it->DirectCount(); slot++) {
+                if (!it->detail->enabled[slot]) continue;
+                const char sub = At(it->DirectCode(slot), 1);
+                if (sub == '0' || sub == '6') {
+                    if (it->next != nullptr && At(it->next->Code(0), 0) == '4') mode = 2;
+                    break;
+                }
+                if (sub == ':') {
+                    Item* prev = it->prev;
+                    Item* next = it->next;
+                    if (prev != nullptr && prev->group->surface == kJaO && next != nullptr &&
+                        next->group->surface.starts_with(PrefixGate(14))) {
+                        mode = 0;
+                    } else if (prev != nullptr && At(prev->Code(0), 0) == '3') {
+                        mode = 0;
+                    } else if (prev == nullptr || At(prev->Code(0), 0) != '2' || prev->prev == nullptr ||
+                               At(prev->prev->Code(0), 0) != '1' || prev->group->surface == kJaNo) {
+                        mode = 3;
+                    } else if (next != nullptr && At(next->Code(0), 0) == '2') {
+                        mode = 3;
+                    } else if (next == nullptr || !Has(next->GAttr(0), "Pj")) {
+                        mode = 0;
+                    } else {
+                        mode = 3;
+                    }
+                    break;
+                }
+            }
+        }
+        switch (mode) {
+            case 1: {
+                Group* g = it->group;
+                if (g->surface == kJaKudasaKanji || g->surface == kJaKudasa || it->Code(0).empty()) continue;
+                std::size_t slot = 0;
+                for (; slot < g->entries.size(); slot++) {
+                    const char sub = At(it->Code(static_cast<int>(slot)), 1);
+                    if (sub == '1' || sub == '3' || sub == '5') break;
+                }
+                if (slot == g->entries.size()) continue;
+                Record* record = g->records;
+                g->records = nullptr;
+                const std::string_view raw = it->text.substr(static_cast<std::size_t>(it->start), static_cast<std::size_t>(it->length));
+                for (; record != nullptr; record = record->child) {
+                    const bool noun = At(record->partCode, 0) == 'N';
+                    bool accepted = false;
+                    if (noun && raw == record->source) {
+                        Item* prev = it->prev;
+                        Item* next = it->next;
+                        if (prev != nullptr && prev->group->surface.ends_with(kJaNo) && At(prev->Code(0), 0) == '2') {
+                            accepted = true;
+                        } else if (next != nullptr) {
+                            if (At(next->Code(0), 0) == '2' || Has(next->GAttr(0), "Pj")) {
+                                accepted = true;
+                            } else if (At(next->Code(0), 0) == '1' && At(it->Code(0), 2) == '7') {
+                                for (int direct = 0; direct < it->DirectCount(); direct++) {
+                                    if (it->detail->enabled[direct]) {
+                                        accepted = At(it->DirectCode(direct), 1) == '8';
+                                        break;
+                                    }
+                                }
+                            }
+                        } else if (it->text.size() == static_cast<std::size_t>(it->length + it->start)) {
+                            const int t = it->tokenIndex + 1;
+                            if (t < w.TokenCount()) {
+                                const tokenizer::TokenView view = w.Tok(t);
+                                if (view.type == 17 && At(view.text, 0) == ',') accepted = true;
+                            }
+                        }
+                    } else if (noun && raw == std::string(record->source) + std::string(kJaComma)) {
+                        Item* prev = it->prev;
+                        accepted = prev != nullptr && prev->group->surface.ends_with(kJaNo) && At(prev->Code(0), 0) == '2';
+                    }
+                    if (accepted) return {it->text, it->start, it->tokenIndex, record};
+                }
+                break;
+            }
+            case 2: {
+                Item* next = it->next;
+                if (next == nullptr || !next->detail->Yougo()) break;
+                const std::string combined = next->group->surface + std::string(next->DirectSurface());
+                Record* record = next->group->records;
+                next->group->records = nullptr;
+                for (; record != nullptr; record = record->child) {
+                    if (combined == record->source && At(record->partCode, 0) == 'N') {
+                        return {next->text, next->start, next->tokenIndex, record};
+                    }
+                }
+                break;
+            }
+            case 3: {
+                const std::string combined = it->group->surface + std::string(it->DirectSurface());
+                Record* record = it->group->records;
+                it->group->records = nullptr;
+                for (; record != nullptr; record = record->child) {
+                    if (combined != record->source || At(record->partCode, 0) != 'N') continue;
+                    Item* next = it->next;
+                    if (next != nullptr) {
+                        const char k = At(next->Code(0), 0);
+                        if (!(k == '2' || k == '1' || Has(next->GAttr(0), "Pj") || (k == '6' && next->EntryText(0) != ","))) {
+                            continue;
+                        }
+                    }
+                    if (next == nullptr || next->group->surface != kJaNi || PhraseFollowsNi(next)) {
+                        return {it->text, it->start, it->tokenIndex, record};
+                    }
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    return {};
+}
+
+// cleanupClass3Item: for a class-3 word with a Zn candidate, look right for the word
+// it attaches to and select the Zn candidate (or, before an Sp ending, move away from
+// it).
+void CleanupClass3Item(Item* it) {
+    const int count = static_cast<int>(it->group->entries.size());
+    for (int index = 0; index < count; index++) {
+        if (!Has(it->GAttr(index), "Zn")) continue;
+        bool accepted = false;
+        for (Item* next = it->next; next != nullptr; next = next->next) {
+            const char kind = At(next->Code(next->selected), 0);
+            bool marker = false;
+            switch (kind) {
+                case '0': case '1': case '9':
+                    marker = Has(next->GAttr(next->selected), "Xn");
+                    break;
+                case '4': case '7': case '8':
+                    marker = Has(next->GAttr(next->selected), "Xn") || Has(next->DirectGAttr(next->DirectIndex()), "Yn");
+                    if (Item* nn = next->next; !marker && nn != nullptr && At(nn->Code(nn->selected), 0) == '7') {
+                        marker = Has(nn->GAttr(nn->selected), "Xn") || Has(nn->DirectGAttr(nn->DirectIndex()), "Yn");
+                    }
+                    break;
+                case '6':
+                    accepted = true;
+                    break;
+                default:
+                    break;
+            }
+            if (marker) {
+                accepted = true;
+                it->selected = index;
+            }
+            if (Has(next->DirectGAttr(next->DirectIndex()), "Sp")) {
+                accepted = true;
+                if (index == it->selected) {
+                    // The XXX test reads the attributes of the word on the right, slot by slot
+                    // over this item's slots.
+                    int fallback = -1, xxx = -1;
+                    for (int slot = 0; slot < count; slot++) {
+                        if (slot == index) continue;
+                        if (!Has(next->Attr(slot), "XXX")) {
+                            if (fallback == -1) fallback = slot;
+                        } else {
+                            xxx = slot;
+                        }
+                    }
+                    if (xxx != -1) it->selected = xxx;
+                    else if (fallback != -1) it->selected = fallback;
+                }
+            }
+            const char k = At(next->Code(next->selected), 0);
+            if (k == '7' || k == '8' || accepted) return;
+        }
+    }
+}
+
+// insertParenthesized finds a proper noun (code 13...) followed by a parenthesised
+// hiragana reading of its target and makes one word of the noun and the reading.
+Item* InsertParenthesized(Flusher& f) {
+    Worker& w = f.w;
+    Chain& chain = w.chain;
+    auto cursorNext = [&] { return chain.cursor == nullptr ? nullptr : (chain.cursor = chain.cursor->next); };
+    chain.cursor = chain.head;
+    for (Item* it = chain.cursor; it != nullptr; it = cursorNext()) {
+        if (!it->Code(it->selected).starts_with("13")) continue;
+        const int index = it->tokenIndex;
+        const std::string_view sourceText = it->text;
+        std::string translated(it->EntryText(it->selected));
+        std::string spaced(it->EntryText(it->selected));
+        chain.cursor = it->next;
+        Item* open = chain.cursor;
+        if (open == nullptr) continue;
+        while (index == open->tokenIndex) {
+            if (!open->Code(open->selected).starts_with("13")) break;
+            translated += open->EntryText(open->selected);
+            spaced += " ";
+            spaced += open->EntryText(open->selected);
+            open = cursorNext();
+            if (open == nullptr) break;
+        }
+        if (open == nullptr || open->EntryText(open->selected) != "(") continue;
+        Item* inner = cursorNext();
+        if (inner == nullptr || Classify(inner->group->surface) != 13) continue;
+        const int start = inner->start;
+        std::string raw(inner->text.substr(static_cast<std::size_t>(inner->start), static_cast<std::size_t>(inner->length)));
+        std::string innerTranslation(inner->EntryText(inner->selected));
+        Item* closing = cursorNext();
+        while (closing != nullptr && index == closing->tokenIndex) {
+            if (closing->EntryText(closing->selected) == ")" || Classify(closing->group->surface) != 13) break;
+            raw += closing->text.substr(static_cast<std::size_t>(closing->start), static_cast<std::size_t>(closing->length));
+            innerTranslation += closing->EntryText(closing->selected);
+            closing = cursorNext();
+        }
+        if (raw.empty() || innerTranslation == spaced) continue;
+        if (TransliterateHiragana(raw) != translated || innerTranslation == translated) continue;
+        int recordToken = index;
+        if (closing != nullptr) recordToken = closing->tokenIndex;
+        Record* record = w.CreateSyntheticRecord(recordToken, raw, false);
+        record->target = spaced;
+        Item* result = w.InsertLateCandidate(sourceText, start, index, record);
+        if (result == nullptr) continue;
+        result->selected = 0;
+        return result;
+    }
+    return nullptr;
+}
+
+}  // namespace
+
+void DrainNmTail(Flusher& f) {
+    for (Item* it = BuildNmTail(f); it != nullptr; it = BuildNmTail(f)) f.w.chain.Insert(it, true);
+}
+
+void ReinsertPhrases(Flusher& f) {
+    for (;;) {
+        const Phrase p = FindPhrase(f);
+        if (p.record == nullptr) return;
+        Item* it = f.w.InsertLateCandidate(p.text, p.start, p.token, p.record);
+        if (it == nullptr) return;
+        f.w.chain.Insert(it, false);
+    }
+}
+
+void CleanupClass3(Flusher& f) {
+    Chain& chain = f.w.chain;
+    for (Item* it = chain.tail; it != nullptr; it = it->prev) {
+        if (At(it->Code(it->selected), 0) == '3') CleanupClass3Item(it);
+    }
+    for (;;) {
+        Item* it = InsertParenthesized(f);
+        if (it == nullptr) return;
+        chain.Insert(it, true);
+    }
+}
+
+void ApplyNegatives(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        Entry* e = it->group->At(it->selected);
+        if (e == nullptr || e->user == nullptr || e->user->negative.empty() || it->DirectIndex() == -1) continue;
+        Entry* ending = it->DirectEntry(it->DirectIndex());
+        if (ending == nullptr) continue;
+        char code = 0;
+        std::string after;
+        const std::string jiSpace = std::string("1") + std::string(kKoJi) + " ";
+        if (ending->dst.starts_with(jiSpace) && std::string_view(ending->dst).substr(jiSpace.size()).starts_with(kKoAnh)) {
+            const std::string_view rest = std::string_view(ending->dst).substr(jiSpace.size());
+            std::string_view row;
+            for (const char k : std::string_view("0123456789AB")) {
+                const std::string key = std::string(kNegativeFamily) + k;
+                const std::string_view r = LookupSource(key, f.families);
+                if (rest.starts_with(r) && r.size() > row.size()) {
+                    code = k;
+                    row = r;
+                }
+            }
+            after = std::string(rest.substr(row.size()));
+        } else if (Item* n = it->next; ending->dst == std::string("1") + std::string(kKoJi) && n != nullptr &&
+                                       n->DirectIndex() != -1 && n->EntryText(n->selected) == kNegativeAdjective) {
+            const std::string_view text = n->DirectText(n->DirectIndex());
+            if (text.empty()) continue;
+            switch (text[0]) {
+                case '1': code = '1'; break;
+                case '2': code = '2'; break;
+                case '3': code = '3'; break;
+                case '4': code = '0'; break;
+                case '5': code = '5'; break;
+                case '6': code = '6'; break;
+                case '7': code = '7'; break;
+                case '8': code = 'B'; break;
+                default: code = 0; break;
+            }
+            if (code != 0) after = std::string(text.substr(1));
+            if (code == '1' && std::string_view(after).starts_with(kKoDa)) code = '4';
+            n->AssignEntrySurface(n->selected, "");
+        } else {
+            continue;
+        }
+        const std::string_view afterView(after);
+        if (code == 0) continue;
+        if (code == '0' && afterView.starts_with(kKoDa)) {
+            code = '4';
+        } else if (code == '2' && !afterView.starts_with(kKoMyeon) && !afterView.starts_with(kKoReo) &&
+                   !afterView.starts_with(kKoRyeo)) {
+            code = 'A';
+        }
+        e->dst = e->user->negative;
+        ending->dst = std::string(1, code) + after;
+    }
+}
+
+}  // namespace hdTrans::word
