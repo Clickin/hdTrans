@@ -41,6 +41,12 @@ bool PredicateFollows(const Item* it) {
     return false;
 }
 
+// Verb stems of the compound particles in て after に, と or を (について 에 대해, によって).
+constexpr std::string_view kParticleVerbs[] = {
+    "つ", "対し", "よ", "因", "依", "と", "関し", "通し", "お", "於", "めぐ", "巡", "際し", "沿", "向け", "比べ", "あた",
+    "当た", "わた", "渡", "かけ", "掛け", "従", "した", "伴", "とも", "応じ",
+};
+
 }  // namespace
 
 bool UtteranceEnd(const Worker& w, const Item* it) {
@@ -64,6 +70,38 @@ void TeSequence(Flusher& f) {
         }
         e->dst = "1고";
     }
+}
+
+void VerseTe(Flusher& f) {
+    if (!f.w.settings.verse) return;
+    for (const Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        if (AnyRuneIn(it->group->surface, "、。！？!?…‥「」『』（）()―")) return;
+    }
+    const Item* it = f.w.chain.tail;
+    if (it == nullptr || it->prev == nullptr || !it->detail->Yougo() || it->DirectIndex() < 0 ||
+        it->detail->cls != kDetailVerb) {
+        return;
+    }
+    std::string_view rest = From(it->text, it->start + it->length);
+    if (rest.empty() && it->tokenIndex + 1 < f.w.TokenCount()) rest = f.w.Tok(it->tokenIndex + 1).text;
+    if (!TrimSpace(rest).empty()) return;
+    Entry* e = it->DirectEntry(it->DirectIndex());
+    if (e == nullptr) return;
+    const std::string_view d = ItemText(it);
+    const std::string_view surface = it->group->surface;
+    if ((e->dst != "6" && e->dst != "2며") || (!d.ends_with("て") && !d.ends_with("で")) || d.ends_with("ないで") ||
+        ItemLemma(f, it, it->selected).starts_with("있") || surface.ends_with("しま") || surface.ends_with("ちゃ")) {
+        return;
+    }
+    const Item* p = it->prev;
+    const char cls = At(p->Code(p->selected), 0);
+    const std::string_view pSurface = p->group->surface;
+    const bool particleBefore = Has(" に と を ", " " + std::string(pSurface) + " ") && InSet(kParticleVerbs, surface);
+    if ((cls != '1' && cls != '2' && !(p->detail->Yougo() && (p->DirectSurface() == "もの" || p->DirectSurface() == "こと"))) ||
+        particleBefore || (pSurface == "と" && surface == "し") || pSurface == "って" || f.w.Span(p->tokenIndex) != 0) {
+        return;
+    }
+    e->dst = "1고";
 }
 
 void TeRequest(Flusher& f) {

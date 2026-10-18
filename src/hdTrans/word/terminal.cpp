@@ -4,49 +4,21 @@
 #include <string_view>
 
 #include "hdTrans/word/flush.h"
+#include "hdTrans/word/terminal.h"
 #include "hdTrans/word/strings.h"
 #include "hdTrans/word/util.h"
 
 namespace hdTrans::word {
 namespace {
 
-// The attributive endings the pass rewrites: for a verb ('4') or adjective ('7') item
-// whose text ends in one of last, the attributive and the terminal form of the same
-// tense.
-struct TerminalForm {
-    char cls;
-    std::string_view attributive;
-    std::string_view terminal;
-    std::string_view last[9];  // the characters before which the form applies
-    int lastCount;
-};
-
-constexpr TerminalForm kTerminalForms[] = {
-    {'4', "0", "4다", {"う", "く", "ぐ", "す", "つ", "ぬ", "ぶ", "む", "る"}, 9},
-    {'4', "8", "5다", {"た", "だ"}, 2},
-    {'7', "4", "1다", {"い"}, 1},
-};
-
-// The punctuation the pass looks past and stops at.
-constexpr std::string_view kCommas[] = {kJaComma, kJaFullComma, ","};
-constexpr std::string_view kClosingQuotes[] = {"」", "』", "）", "】", "”", "’", "〉", "》", "］", "｝", "〕", ")", "]"};
-constexpr std::string_view kSentenceEnds[] = {"？", "！", "?", "!"};
 constexpr std::string_view kCopulaStarts[] = {"で", "じゃ", "に", "を", "が", "へ", "っ"};
 constexpr std::string_view kPhraseParticles[] = {"が", "を", "は", "に", "で", "と", "も", "へ", "の"};
 
-template <std::size_t N>
-bool Contains(const std::string_view (&set)[N], std::string_view s) {
-    for (const std::string_view w : set) {
-        if (w == s) return true;
-    }
-    return false;
-}
+bool IsOneOfClosing(const Item* it) { return it != nullptr && InSet(kClosingQuoteItems, it->group->surface); }
 
-bool IsOneOfClosing(const Item* it) { return it != nullptr && Contains(kClosingQuotes, it->group->surface); }
+bool IsOneOfCommas(const Item* it) { return it != nullptr && InSet(kCommaItems, it->group->surface); }
 
-bool IsOneOfCommas(const Item* it) { return it != nullptr && Contains(kCommas, it->group->surface); }
-
-bool IsOneOfSentenceEnds(const Item* it) { return it != nullptr && Contains(kSentenceEnds, it->group->surface); }
+bool IsOneOfSentenceEnds(const Item* it) { return it != nullptr && InSet(kSentenceEndItems, it->group->surface); }
 
 // A verb or adjective item that does not start with a noun.
 bool IsPredicate(const Item* it) {
@@ -63,7 +35,7 @@ bool IsPredicate(const Item* it) {
     // A particle after the first character makes a phrase that starts with a noun.
     for (std::size_t i = FirstChar(s).size(); i < s.size();) {
         const std::string_view r = FirstChar(s.substr(i));
-        if (Contains(kPhraseParticles, r)) return false;
+        if (InSet(kPhraseParticles, r)) return false;
         i += r.size();
     }
     return true;
