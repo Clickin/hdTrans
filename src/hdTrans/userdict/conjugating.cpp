@@ -370,6 +370,19 @@ std::string Families::Generate(char marker, const FamilyRows& rows, std::string&
     return {};
 }
 
+std::vector<std::pair<std::string, FamilyRows>> Families::GeneratedFamilies() const {
+    std::vector<std::pair<std::string, FamilyRows>> out;
+    for (const auto& [sig, id] : ids_) {
+        FamilyRows rows;
+        for (std::size_t c = 0; c < rows.size(); c++) {
+            const auto it = rows_.find(id + std::string(kFormCodes.substr(c, 1)));
+            if (it != rows_.end()) rows[c] = it->second;
+        }
+        out.emplace_back(id, std::move(rows));
+    }
+    return out;
+}
+
 std::size_t Families::MemoryBytes() const {
     std::size_t n = sizeof(Families);
     for (const auto& [k, v] : rows_) n += 64 + k.capacity() + v.capacity();

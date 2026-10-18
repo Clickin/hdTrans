@@ -2,6 +2,7 @@
 // The driver: the stages of the pipeline in order, over the lines of a document (the text
 // path) or over one line as a single piece (the raw path).
 #include <cstddef>
+#include <memory>
 #include <mutex>
 #include <span>
 #include <string>
@@ -46,6 +47,9 @@ struct Generated {
     std::mutex mu;
     output::Families families;
 };
+
+// The marker families of a loaded dictionary, with the families the dictionaries made at load.
+std::shared_ptr<Generated> NewGenerated(const dict::Snapshot& snap);
 
 // What a session keeps between its calls.
 struct Memory {

@@ -59,7 +59,9 @@ using Records = std::map<std::string, std::map<int, std::vector<std::string>>>;
 struct Collector {
     Records records;
     int key = 0;
-    int caseBase = 0;  // the case number before the line of a call
+    int caseBase = 0;          // the case number before the line of a call
+    std::vector<bool> crs;     // per line of the call: the line ended in "\r"
+    bool cr = false;           // the line being translated ends in "\r"
 
     void Add(std::string record) {
         std::string tag = record.substr(0, record.find('\t'));
@@ -72,6 +74,7 @@ std::string Esc(std::string_view s) { return EscapeStageText(s); }
 void OnLine(void* context, int line) {
     auto* c = static_cast<Collector*>(context);
     c->key = c->caseBase + line + 1;
+    c->cr = static_cast<size_t>(line) < c->crs.size() && c->crs[static_cast<size_t>(line)];
 }
 
 void OnText(void* context, std::string_view tag, std::string_view text) {
@@ -179,7 +182,7 @@ void OnRestored(void* context, const pipeline::RestoreSteps& steps) {
     AddPieces(*c, "R1", steps.spaced);
     AddPieces(*c, "R2", steps.bracketed);
     AddPieces(*c, "R3", steps.korean);
-    c->Add("OUT\t" + Esc(steps.line));
+    c->Add("OUT\t" + Esc(steps.line + (c->cr ? "\r" : "")));
 }
 
 internal::StageObserver ObserverFor(Collector& c) {
@@ -293,18 +296,22 @@ void RunSet(const std::string& set, const std::vector<std::string>& lines, bool 
     const internal::StageObserver observer = ObserverFor(c);
     const dict::Snapshot& snap = *Dictionaries();
     const bool each = set.ends_with(".each") || raw;
-    internal::Generated generated;
+    const std::shared_ptr<internal::Generated> generated = internal::NewGenerated(snap);
+    std::vector<bool> crs;
+    for (const std::string& line : lines) crs.push_back(!line.empty() && line.back() == '\r');
     if (!each) {
         internal::Memory memory;
-        internal::TranslateDocument(snap, generated, lines, memory, observer);
+        c.crs = crs;
+        internal::TranslateDocument(snap, *generated, lines, memory, observer);
     } else {
         for (size_t i = 0; i < lines.size(); i++) {
             c.caseBase = static_cast<int>(i);
+            c.crs = {crs[i]};
             if (raw) {
-                internal::TranslateRawLine(snap, generated, lines[i], observer);
+                internal::TranslateRawLine(snap, *generated, lines[i], observer);
             } else {
                 internal::Memory fresh;
-                internal::TranslateDocument(snap, generated, std::vector<std::string>{lines[i]}, fresh, observer);
+                internal::TranslateDocument(snap, *generated, std::vector<std::string>{lines[i]}, fresh, observer);
             }
         }
     }

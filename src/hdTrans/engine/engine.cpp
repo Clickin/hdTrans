@@ -32,44 +32,10 @@ struct SessionState {
     Memory memory;
 };
 
-// Copies the marker families the dictionaries made at load into out. A family keeps the id
-// the dictionaries gave it: the n-th family of a marker gets the id that out gives the n-th
-// Generate of that marker, so the copy is made in the order the dictionaries made them. Static
-// rows are not copied; a family whose rows the copy cannot place stops the copy of its marker.
+// Copies the marker families the dictionaries made at load into out, under the ids they have
+// there; the dictionaries' targets refer to these ids.
 void CopyGenerated(const userdict::Families& from, output::Families& out) {
-    constexpr char kMarkers[] = {'&', '$', '%'};
-    const output::Families none;
-    for (const char marker : kMarkers) {
-        output::Families ids;
-        for (int n = 0;; n++) {
-            output::FamilyRows probe;
-            probe[0] = std::to_string(n + 1);
-            const std::string id = ids.Generate(marker, probe);
-            if (id.empty()) return;
-            output::FamilyRows rows;
-            bool any = false;
-            for (std::size_t c = 0; c < rows.size(); c++) {
-                const std::string key = id + output::kFormCodes[c];
-                std::string_view row;
-                std::string_view staticRow;
-                if (marker == '&') {
-                    row = from.SourceRow(key);
-                    staticRow = output::LookupSource(key, none);
-                } else if (marker == '$') {
-                    row = from.DollarRow(key);
-                    staticRow = output::LookupDollar(key, none);
-                } else {
-                    row = from.PercentRow(key);
-                    staticRow = output::LookupPercent(key, none);
-                }
-                if (row.empty() || !staticRow.empty()) continue;
-                rows[c] = std::string(row);
-                any = true;
-            }
-            if (!any) return;
-            if (out.Generate(marker, rows) != id) return;
-        }
-    }
+    for (const auto& [id, rows] : from.GeneratedFamilies()) out.Insert(id[0], id, rows);
 }
 
 std::shared_ptr<Generated> NewGenerated(const dict::Snapshot& snap) {

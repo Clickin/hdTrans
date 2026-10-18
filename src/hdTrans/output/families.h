@@ -37,6 +37,11 @@ public:
     // marker are used up.
     std::string Generate(char marker, const FamilyRows& rows);
 
+    // Adds the family with the given id ("&Ba@") and rows, the id the dictionaries gave it.
+    // Returns false when id is not a generated id of marker, is taken, or when the rows
+    // are already a family; later Generate calls do not give the id again.
+    bool Insert(char marker, std::string_view id, const FamilyRows& rows);
+
     size_t Size() const;
 
     // Every key and row, in no order; not safe while Generate runs.
@@ -45,6 +50,8 @@ public:
     }
 
 private:
+    bool IdTaken(std::string_view id) const;
+
     mutable std::mutex mutex_;
     std::unordered_map<std::string, std::string, dict::StringHash, std::equal_to<>> rows_;  // "&Ba@5" -> row
     std::unordered_map<std::string, std::string, dict::StringHash, std::equal_to<>> ids_;   // marker and rows -> id

@@ -7,6 +7,8 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace hdTrans::userdict {
 
@@ -38,6 +40,9 @@ public:
     // The number of generated families.
     std::size_t Size() const { return ids_.size(); }
     std::size_t MemoryBytes() const;
+
+    // The generated families: each id with its rows, in no order.
+    std::vector<std::pair<std::string, FamilyRows>> GeneratedFamilies() const;
 
 private:
     std::string_view Generated(std::string_view key) const;

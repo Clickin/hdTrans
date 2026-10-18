@@ -29,6 +29,29 @@ std::string_view Families::Row(std::string_view key) const {
     return it == rows_.end() ? std::string_view() : std::string_view(it->second);
 }
 
+namespace {
+
+// The id of the n-th family of marker that Generate makes; "" when the ids are used up.
+std::string IdAt(char marker, int n) {
+    constexpr std::string_view kSecond = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const std::string_view used = MarkerFamilyLetters(marker);
+    for (char first = 'A'; first <= 'z'; first++) {
+        if (used.find(first) != std::string_view::npos || (first > 'Z' && first < 'a')) continue;
+        if (n < static_cast<int>(kSecond.size())) return {marker, first, kSecond[n], '@'};
+        n -= static_cast<int>(kSecond.size());
+    }
+    return {};
+}
+
+}  // namespace
+
+bool Families::IdTaken(std::string_view id) const {
+    for (size_t c = 0; c < kFormCodes.size(); c++) {
+        if (rows_.count(std::string(id) + kFormCodes[c]) > 0) return true;
+    }
+    return false;
+}
+
 std::string Families::Generate(char marker, const FamilyRows& rows) {
     const int m = MarkerIndex(marker);
     if (m < 0) return {};
@@ -39,15 +62,8 @@ std::string Families::Generate(char marker, const FamilyRows& rows) {
     }
     std::lock_guard<std::mutex> lock(mutex_);
     if (const auto it = ids_.find(sig); it != ids_.end()) return it->second;
-    constexpr std::string_view kSecond = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    const std::string_view used = MarkerFamilyLetters(marker);
-    int n = count_[m];
     std::string id;
-    for (char first = 'A'; first <= 'z' && id.empty(); first++) {
-        if (used.find(first) != std::string_view::npos || (first > 'Z' && first < 'a')) continue;
-        if (n < static_cast<int>(kSecond.size())) id = {marker, first, kSecond[n], '@'};
-        n -= static_cast<int>(kSecond.size());
-    }
+    for (id = IdAt(marker, count_[m]); !id.empty() && IdTaken(id); id = IdAt(marker, count_[m])) count_[m]++;
     if (id.empty()) return {};
     count_[m]++;
     ids_.emplace(std::move(sig), id);
@@ -55,6 +71,23 @@ std::string Families::Generate(char marker, const FamilyRows& rows) {
         if (!rows[c].empty()) rows_[id + kFormCodes[c]] = rows[c];
     }
     return id;
+}
+
+bool Families::Insert(char marker, std::string_view id, const FamilyRows& rows) {
+    const int m = MarkerIndex(marker);
+    if (m < 0 || id.size() != 4 || id[0] != marker || id[3] != '@') return false;
+    std::string sig(1, marker);
+    for (const auto& row : rows) {
+        sig += '\0';
+        sig += row;
+    }
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (IdTaken(id) || ids_.count(sig) > 0) return false;
+    ids_.emplace(std::move(sig), std::string(id));
+    for (size_t c = 0; c < rows.size(); c++) {
+        if (!rows[c].empty()) rows_[std::string(id) + kFormCodes[c]] = rows[c];
+    }
+    return true;
 }
 
 std::string_view LookupSource(std::string_view key, const Families& generated) {
