@@ -433,7 +433,7 @@ LoadResult Load(std::vector<File> files) {
     return loader.Run();
 }
 
-LoadResult LoadFolders(const std::vector<std::string>& folders) {
+LoadResult LoadFoldersTsv(const std::vector<std::string>& folders) {
     std::vector<File> files;
     std::vector<LoadError> errors;
     for (std::size_t f = 0; f < folders.size(); f++) {
