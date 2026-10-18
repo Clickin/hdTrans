@@ -29,6 +29,9 @@ void Flush(Flusher& f) {
         SeeAnd(f);
         TeSequence(f);
         PastSequence(f);
+        QuoteTo(f);
+        NodaTo(f);
+        TerminalBeforeQuote(f);
         EvenBeforePassive(f);
     }
     if (f.w.settings.terminal) PreferTerminal(f);
