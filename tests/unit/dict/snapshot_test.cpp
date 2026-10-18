@@ -189,6 +189,24 @@ HD_TEST(SnapshotFolderWithoutLaterFolder) {
                 "[行] 행차 N110|||GN r0 id1");
 }
 
+HD_TEST(SnapshotAdditiveFolderPriority) {
+    const std::string header = "key\tko\tpos\tsem\tgram\tdict\tprio\tid\n";
+    File base = MakeFile("base/words.tsv", header + "黙殺\t곡살\tN110\t\t\tGN\t0\t0\n");
+    File extra = MakeFile("extra/words-extra.tsv", header + "黙殺\t묵살\tN110\t\t\tGN\t1\t0\n");
+    extra.folder = 1;
+    File names = MakeFile("extra/names-extra.tsv", header + "アメリア\t아멜리아\tN130\tQPN\t\tGN\t0\t0\n");
+    names.folder = 1;
+    const LoadResult r = Load({base, extra, names});
+    HD_REQUIRE(r.snapshot != nullptr);
+    const auto records = r.snapshot->RetrieveRecords("黙殺", LookupMode::General);
+    HD_REQUIRE(records.size() == 2);
+    HD_CHECK_EQ(std::string(records[0].target), "묵살");
+    HD_CHECK_EQ(std::string(records[1].target), "곡살");
+    HD_CHECK_EQ(Targets(r.snapshot->NameRecords("アメリア")), "아멜리아");
+    HD_CHECK_EQ(Show(r.snapshot->GetWordInfo("アメリアさん", LookupMode::General, {})),
+                "count 1\n[アメリア] 아멜리아 N130|QPN||GN r0 id0 name");
+}
+
 HD_TEST(SnapshotFileErrors) {
     // A malformed line fails the load.
     std::vector<File> files;
