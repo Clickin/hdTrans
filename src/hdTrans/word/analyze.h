@@ -26,6 +26,7 @@ struct Improvements {
     bool perLevelRetries = false;
     bool nonterminalBoundary = true;
     bool tailLengthCheck = true;
+    bool preparedNextToken = false;
 
     static Improvements Reference() {
         Improvements improvements;
@@ -37,6 +38,7 @@ struct Improvements {
         improvements.perLevelRetries = false;
         improvements.nonterminalBoundary = false;
         improvements.tailLengthCheck = false;
+        improvements.preparedNextToken = false;
         return improvements;
     }
 };

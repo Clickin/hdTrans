@@ -1,6 +1,7 @@
 #include "hdTrans/word/worker.h"
 
 #include "hdTrans/word/strings.h"
+#include "hdTrans/tokenizer/tokenize.h"
 
 namespace hdTrans::word {
 
@@ -14,6 +15,15 @@ tokenizer::TokenView Worker::Tok(int j) const {
     if (spaced[static_cast<std::size_t>(j)]) return {tokenizer::kTypeWideSpace, " "};
     if (current < 0) return {tokens[static_cast<std::size_t>(j)].type, tokens.Raw(static_cast<std::size_t>(j))};
     return tokens.View(static_cast<std::size_t>(j), static_cast<std::size_t>(current));
+}
+
+std::string_view Worker::NextText(int j) const {
+    const tokenizer::TokenView token = Tok(j);
+    if (!settings.improvements.preparedNextToken || j <= current || Span(j) != 0 ||
+        !tokenizer::CanonicalType(token.type) || token.text.empty()) return token.text;
+    std::string canonical;
+    tokenizer::AppendCanonicalText(canonical, token.text);
+    return arena.Keep(std::move(canonical));
 }
 
 std::string_view Worker::Typed(int j) const {
@@ -119,7 +129,7 @@ Detail* Worker::NewDetail(int cls, int token) {
     if (token + 1 < TokenCount()) {
         const tokenizer::TokenView next = Tok(token + 1);
         d->nextType = next.type;
-        d->nextText = next.text;
+        d->nextText = NextText(token + 1);
     }
     return d;
 }

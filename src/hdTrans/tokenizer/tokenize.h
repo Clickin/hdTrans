@@ -26,6 +26,9 @@ void Tokenize(std::string_view input, Tokens& out);
 // and the markers.
 void Prepare(Tokens& tokens);
 
+// Whether visiting a token replaces its text by its canonical form.
+bool CanonicalType(int type);
+
 // The canonical form of a non-empty token text: the FirstForm of its first character,
 // or the concatenated canonical forms of its characters; trailing spaces dropped.
 void AppendCanonicalText(std::string& out, std::string_view s);

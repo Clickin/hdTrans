@@ -48,6 +48,8 @@ public:
 
     // Token j as the token loop sees it while processing current.
     tokenizer::TokenView Tok(int j) const;
+    // Text read by ending lookahead, optionally canonical before the token is visited.
+    std::string_view NextText(int j) const;
     int TokenCount() const { return static_cast<int>(tokens.size()); }
     int Span(int j) const { return tokens[static_cast<std::size_t>(j)].span; }
     // Token j as typed once visited (j before current): "" for a token emptied or

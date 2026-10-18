@@ -280,7 +280,28 @@ HD_TEST(word_improvements_reference) {
     HD_CHECK(!settings.improvements.perLevelRetries);
     HD_CHECK(!settings.improvements.nonterminalBoundary);
     HD_CHECK(!settings.improvements.tailLengthCheck);
+    HD_CHECK(!settings.improvements.preparedNextToken);
     HD_CHECK(settings.sessionSenses == nullptr);
     HD_CHECK(word::Settings{}.improvements.documentSenses);
     HD_CHECK(word::Settings{}.improvements.desireWindow);
+}
+
+HD_TEST(word_prepared_next_token) {
+    const auto snapshot = SmallDictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    tokenizer::Tokens tokens;
+    tokenizer::Tokenize("作るってー？", tokens);
+    HD_REQUIRE(tokens.size() >= 3);
+    for (bool prepared : {false, true}) {
+        word::Arena arena;
+        word::Settings settings = word::Settings::Reference();
+        settings.improvements.preparedNextToken = prepared;
+        word::Worker worker(tokens, *snapshot, {}, settings, arena, {});
+        worker.current = 0;
+        HD_CHECK_EQ(std::string(worker.NextText(1)), prepared ? "―？" : "ー？");
+        const auto* detail = worker.NewDetail(word::kDetailInfo, 0);
+        HD_CHECK_EQ(std::string(detail->nextText), prepared ? "―？" : "ー？");
+        worker.current = 1;
+        HD_CHECK_EQ(std::string(worker.NextText(1)), "―？");
+    }
 }

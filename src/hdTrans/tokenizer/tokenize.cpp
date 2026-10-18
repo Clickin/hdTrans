@@ -370,15 +370,6 @@ void Scan(Tokens& out, std::span<const Piece> pieces, bool dashes, uint32_t offs
     Prepare(out);
 }
 
-bool CanonicalType(int type) {
-    switch (type) {
-        case 3: case 6: case 9: case 17: case 18: case 20: case 22: case 23: case 26: case 78:
-            return true;
-        default:
-            return false;
-    }
-}
-
 // The per-token stage's view of the tokens: the current text of a token is its merged
 // view and its current type TypeAfter.
 class Preparer {
@@ -495,6 +486,16 @@ private:
 };
 
 }  // namespace
+
+bool CanonicalType(int type) {
+    switch (type) {
+        case 3: case 6: case 9: case 17: case 18: case 20: case 22: case 23: case 26: case 78:
+            return true;
+        default:
+            return false;
+    }
+}
+
 
 void TokenizeSpans(std::span<const Piece> pieces, bool dashes, Tokens& out) {
     Reset(out);

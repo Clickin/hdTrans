@@ -278,7 +278,7 @@ bool Worker::EndRowFits(const dict::UserEntry& u, std::string_view query) const 
         }
         if (particleRow && !NounBefore(left.substr(0, static_cast<std::size_t>(before)))) return false;
         std::string_view next = after;
-        if (next.empty() && current + 1 < TokenCount() && Span(current + 1) == 0) next = Tok(current + 1).text;
+        if (next.empty() && current + 1 < TokenCount() && Span(current + 1) == 0) next = NextText(current + 1);
         if (next.starts_with(kJaEllipsis) || next.starts_with(kJaTwoDots)) return false;
     }
     // やられたって…まだ: concessive; 長すぎるってぇ？: a question
@@ -293,7 +293,7 @@ bool Worker::TrailsOff(std::string_view rest) const {
     constexpr std::string_view kLengthen = "ぁぃぅぇぉっー";
     rest = TrimLeftChars(rest, kLengthen);
     if (rest.empty() && current + 1 < TokenCount() && Span(current + 1) == 0) {
-        rest = TrimLeftChars(Tok(current + 1).text, kLengthen);
+        rest = TrimLeftChars(NextText(current + 1), kLengthen);
     }
     for (const std::string_view p : {kJaEllipsis, kJaTwoDots, std::string_view("？"), std::string_view("?")}) {
         if (rest.starts_with(p)) return true;
@@ -471,7 +471,8 @@ bool Worker::SentenceFinal(std::string_view rest, int token, bool comma) const {
     if (comma && (rest.starts_with(kJaComma) || rest.starts_with(kJaFullComma))) return true;
     if (!rest.empty()) return closing(rest);
     if (token + 1 >= TokenCount()) return true;
-    const tokenizer::TokenView next = Tok(token + 1);
+    tokenizer::TokenView next = Tok(token + 1);
+    next.text = NextText(token + 1);
     if (comma && (next.text.starts_with(kJaComma) || next.text.starts_with(kJaFullComma))) return true;
     switch (next.type) {
     case tokenizer::kTypeAsciiPunct:
