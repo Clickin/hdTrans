@@ -12,10 +12,11 @@
 #include "hdTrans/word/util.h"
 
 namespace hdTrans::word {
-namespace {
 
-constexpr int kSenseWindow = 3;
+namespace {
+// The kana that end a verb in its dictionary form.
 constexpr std::string_view kVerbFinals = "うくぐすつぬぶむる";
+}  // namespace
 
 // Whether the item is word, a key or the dictionary form of the verb or adjective the item
 // is a stem of.
@@ -33,12 +34,9 @@ bool IsWord(const Item* it, std::string_view word) {
     return false;
 }
 
-bool IsAny(const Item* it, const std::vector<std::string>& words) {
-    for (const std::string& w : words) {
-        if (IsWord(it, w)) return true;
-    }
-    return false;
-}
+namespace {
+
+constexpr int kSenseWindow = 3;
 
 // A noun item between kanji nouns of its token: a noun right before it that ends in a kanji,
 // or one right after it that starts with one.

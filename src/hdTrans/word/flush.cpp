@@ -32,6 +32,11 @@ void Flush(Flusher& f) {
         QuoteTo(f);
         NodaTo(f);
         TerminalBeforeQuote(f);
+        HodoDegree(f);
+        QuestionCopula(f);
+        GenitiveBetweenNames(f);
+        LongVowelAfterKatakana(f);
+        ReturnTo(f);
         EvenBeforePassive(f);
     }
     if (f.w.settings.terminal) PreferTerminal(f);

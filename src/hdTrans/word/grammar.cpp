@@ -5,7 +5,9 @@
 
 #include "hdTrans/output/korean.h"
 #include "hdTrans/output/families.h"
+#include "hdTrans/output/particle.h"
 #include "hdTrans/text/hangul.h"
+#include "hdTrans/text/unicode.h"
 #include "hdTrans/text/utf8.h"
 #include "hdTrans/word/flush.h"
 #include "hdTrans/word/strings.h"
@@ -656,6 +658,95 @@ void TerminalBeforeQuote(Flusher& f) {
                     break;
                 }
             }
+        }
+    }
+}
+
+namespace {
+
+// Question words that questionCopula reads.
+constexpr std::string_view kQuestionWords[] = {"何", "なに", "誰", "だれ", "何故", "なぜ", "どこ", "いつ", "どれ"};
+
+// Adverbs of degree that the 程 of hodoDegree follows.
+constexpr std::string_view kDegreeTails[] = {"に", "の", "だ", "で", "まで"};
+
+}  // namespace
+
+void HodoDegree(Flusher& f) {
+    bool conditional = false;
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        if (it->DirectIndex() < 0) continue;
+        const std::string_view d = it->DirectSurface();
+        Entry* e = it->DirectEntry(it->DirectIndex());
+        if (d.ends_with("ば")) conditional = true;
+        const bool ok = d.ends_with("に");
+        const std::string_view stem = ok ? d.substr(0, d.size() - std::string_view("に").size()) : d;
+        if (conditional || (!stem.ends_with("程") && !stem.ends_with("ほど")) || e == nullptr) continue;
+        const bool ni = it->next != nullptr && it->next->group->surface == "に";
+        bool degree = ok;
+        if (!degree && it->next != nullptr) {
+            for (const std::string_view p : kDegreeTails) degree = degree || it->next->group->surface.starts_with(p);
+        }
+        if (!degree || (!Has(e->dst, "수록") && !(Has(e->dst, "만큼") && ni))) continue;
+        e->dst = ok ? "3 정도로" : "3 정도";
+        if (!ok && ni) SelectLemma(f, it->next, "(으)로");
+    }
+}
+
+void QuestionCopula(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        Item* p = it->prev;
+        if (p == nullptr || it->group->surface != "だ" || ItemLemma(f, it, it->selected) != "(이)다" ||
+            !InSet(kQuestionWords, p->group->surface)) {
+            continue;
+        }
+        if (!QuoteEnd(f.w, it) && !From(it->text, it->start + it->length).starts_with(kJaComma)) continue;
+        std::string word = ItemLemma(f, p, p->selected);
+        if (word == "무엇") {
+            if (Entry* pe = p->group->At(p->selected)) pe->dst = "뭐";
+            word = "뭐";
+        }
+        Entry* e = it->group->At(it->selected);
+        if (e == nullptr) continue;
+        e->dst = "냐";
+        const char particle = output::ParticleClass(word);
+        if (particle == 'c' || particle == 'l') e->dst = "이냐";
+    }
+}
+
+void GenitiveBetweenNames(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* p = it->prev;
+        const Item* n = it->next;
+        if (p != nullptr && n != nullptr && it->group->surface == "の" && ItemLemma(f, it, it->selected).empty() &&
+            p->Attr(p->selected).starts_with("QPN") && n->Attr(n->selected).starts_with("QPN")) {
+            SelectLemma(f, it, "의");
+        }
+    }
+}
+
+void LongVowelAfterKatakana(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        if (it->group->surface != "ー" || it->selected < 0 || ItemLemma(f, it, it->selected) != "-") continue;
+        const std::string_view before = std::string_view(it->text).substr(0, static_cast<std::size_t>(it->start));
+        if (before.empty()) continue;
+        const char32_t r = DecodeLastRune(before).cp;
+        const std::string_view after = From(it->text, it->start + static_cast<long>(std::string_view("ー").size()));
+        const char32_t next = after.empty() ? U'\0' : text::DecodeRune(after).cp;
+        if (r >= U'ァ' && r <= U'ヺ' &&
+            ((next >= U'ぁ' && next <= U'ヺ') || text::IsKanji(next) || RuneIn(next, "、。！？」』）…"))) {
+            if (Entry* e = it->group->At(it->selected)) e->dst.clear();
+        }
+    }
+}
+
+void ReturnTo(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* p = it->prev;
+        const Item* n = it->next;
+        if (p != nullptr && n != nullptr && it->group->surface == "に" && ItemLemma(f, it, it->selected) == "하러" &&
+            n->group->surface.starts_with("戻")) {
+            SelectLemma(f, it, "(으)로");
         }
     }
 }

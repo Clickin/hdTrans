@@ -70,6 +70,11 @@ void PastSequence(Flusher& f);
 void QuoteTo(Flusher& f);
 void NodaTo(Flusher& f);
 void TerminalBeforeQuote(Flusher& f);
+void HodoDegree(Flusher& f);
+void QuestionCopula(Flusher& f);
+void GenitiveBetweenNames(Flusher& f);
+void LongVowelAfterKatakana(Flusher& f);
+void ReturnTo(Flusher& f);
 void EvenBeforePassive(Flusher& f);
 void TeSequence(Flusher& f);
 bool UtteranceEnd(const Worker& w, const Item* it);
@@ -77,6 +82,17 @@ bool UtteranceEnd(const Worker& w, const Item* it);
 // Text-path adjectival neighbours (neighbours.cpp).
 void AdjectiveNeighbours(Flusher& f);
 void GeotBeforeMitai(Flusher& f);
+
+// Whether the item is word, a key or the dictionary form of the verb or adjective the item is a
+// stem of (sense.cpp). IsAny is IsWord over a list of words.
+bool IsWord(const Item* it, std::string_view word);
+template <class Words>
+bool IsAny(const Item* it, const Words& words) {
+    for (const auto& w : words) {
+        if (IsWord(it, w)) return true;
+    }
+    return false;
+}
 
 // Text-path senses and conjunctions (sense.cpp).
 void ChooseSenses(Flusher& f);
