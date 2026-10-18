@@ -1,0 +1,273 @@
+#include "hdTrans/pipeline/protect.h"
+
+#include <cstdio>
+#include <cstdlib>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "hdTrans/dict/snapshot.h"
+#include "hdtest.h"
+
+using namespace hdTrans;
+using namespace hdTrans::pipeline;
+
+namespace {
+
+// Pieces written as text, with spans as 〖kind text〗.
+std::string Show(const output::Pieces& pieces) {
+    std::string s;
+    for (const output::Piece& p : pieces) {
+        if (p.span == output::SpanText) {
+            s += p.text;
+        } else {
+            s += "〖" + std::to_string(static_cast<int>(p.span)) + p.text + "〗";
+        }
+    }
+    return s;
+}
+
+output::Pieces Text(std::string s) { return {{std::move(s), output::SpanText}}; }
+
+// A snapshot of one base file with the rows (key ko pos).
+std::shared_ptr<const dict::Snapshot> Snapshot(const std::string& rows) {
+    dict::File f;
+    f.name = "base.tsv";
+    f.text = "key\tko\tpos\tsem\tgram\tdict\tid\n" + rows;
+    return dict::Load({f}).snapshot;
+}
+
+std::string DictsDir() {
+    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
+    std::string f = __FILE__;
+    const size_t slash = f.find_last_of("/\\");
+    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
+}
+
+}  // namespace
+
+HD_TEST(pipeline_cut_spans) {
+    const struct {
+        const char* in;
+        const char* want;
+    } cases[] = {
+        {"김철수が来た", "〖1김철수〗が来た"},
+        {"「안녕 하세요」", "「〖1안녕 하세요〗」"},
+        {"ᄒᆞᆫ글", "〖1ᄒᆞᆫ글〗"},
+        {"ㅋㅋ です", "〖1ㅋㅋ〗 です"},
+        {"🍣を", "〖1🍣〗を"},
+        {"ゔぁいゕゔ", "〖1ゔぁ〗い〖1ゕゔ〗"},
+        {"<b>김</b>", "〖2<b>〗〖1김〗〖3</b>〗"},
+        {"[color=red]x[/color]", "〖2[color=red]〗x〖3[/color]〗"},
+        {"[b x]y[color=a\nb]", "[b x]y[color=a\nb]"},
+        {"a&amp;b&#169;&#x1F363;&x;", "a〖2&amp;〗b〖2&#169;〗〖2&#x1F363;〗&x;"},
+        {"&#12345678;&#X41;&a12345678901234567890123456789012;", "&#12345678;&#X41;&a12345678901234567890123456789012;"},
+        // A tag wins over a BBCode tag and Hangul inside it.
+        {"<a title=\"[b]김\">", "〖2<a title=\"[b]김\">〗"},
+        // Not tags: no letter after <, < inside.
+        {"1 < 2 <a <b>", "1 < 2 <a 〖2<b>〗"},
+        // <BR> and <LI> stay sentence ends.
+        {"a<BR>b<li>c<br/>", "a<BR>b<li>c〖2<br/>〗"},
+        {"<!-- x --><?xml?>", "〖2<!-- x -->〗〖2<?xml?>〗"},
+        // Hangul runs do not take leading or trailing spaces.
+        {" 김 　치 ", " 〖1김 　치〗 "},
+        // Stutter marks with their separators.
+        {"\xEE\x80\x80、\xEE\x80\x80、あ", "〖2\xEE\x80\x80、\xEE\x80\x80、〗あ"},
+        {"\xEE\x80\x80……あ\xEE\x80\x80・あ", "〖2\xEE\x80\x80……〗あ〖2\xEE\x80\x80〗・あ"},
+        // Foreign runs end at white space; ASCII, half-width forms and CP932 symbols are
+        // not foreign; invalid bytes are.
+        {"Ωé αβ☆ｱ ไทย", "Ω〖1é〗 αβ☆ｱ 〖1ไทย〗"},
+        {"あ\xFFい", "あ〖1\xFF〗い"},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(Show(internal::CutSpans(c.in, {})), std::string(c.want));
+
+    const std::vector<std::string> markers = {"@@", "@@@", "#"};
+    HD_CHECK_EQ(Show(internal::CutSpans("a@@@b#c@d", markers)), std::string("a〖2@@@〗b〖2#〗c@d"));
+    // A marker never cuts into a tag.
+    HD_CHECK_EQ(Show(internal::CutSpans("<a #>#", markers)), std::string("〖2<a #>〗〖2#〗"));
+}
+
+HD_TEST(pipeline_is_foreign) {
+    HD_CHECK(internal::IsForeign(U'가'));
+    HD_CHECK(internal::IsForeign(U'é'));
+    HD_CHECK(!internal::IsForeign(U'μ'));
+    HD_CHECK(internal::IsForeign(U'ゔ'));
+    HD_CHECK(internal::IsForeign(U'\U0001F363'));
+    HD_CHECK(!internal::IsForeign(U'A'));
+    HD_CHECK(!internal::IsForeign(U'ｱ'));
+    HD_CHECK(!internal::IsForeign(U'ヺ'));
+    HD_CHECK(!internal::IsForeign(U'漢'));
+    HD_CHECK(!internal::IsForeign(U'Ω'));
+    HD_CHECK(!internal::IsForeign(U'☆'));
+}
+
+HD_TEST(pipeline_rewrite_conjunctions) {
+    const struct {
+        const char* in;
+        const char* want;
+    } cases[] = {
+        {"なら行こう", "それなら行こう"},
+        {"ならない", "ならない"},  // before hiragana
+        {"「ならば、行く」", "「それならば、行く」"},
+        // The 。 after a match is taken by it, so it starts no second one.
+        {"ですから。にもかかわらず彼は", "だから。にもかかわらず彼は"},
+        {"それ。　…対して彼は", "それ。　…反面彼は"},
+        {"彼なら行く", "彼なら行く"},  // not at a sentence start
+        {"なら", "なら"},            // nothing after it
+        {"ならば\n", "ならば\n"},  // なら before the hiragana ば
+        {"であれば\nなら行く", "であれば\nそれなら行く"},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(Show(internal::RewriteConjunctions(Text(c.in))), std::string(c.want));
+
+    // A span before a piece hides the start of the text; a span after it is a character.
+    const output::Pieces spans = {{"<b>", output::SpanOpen}, {"なら行く。なら", output::SpanText}, {"김", output::SpanWord}};
+    HD_CHECK_EQ(Show(internal::RewriteConjunctions(spans)), std::string("〖2<b>〗なら行く。それなら〖1김〗"));
+}
+
+HD_TEST(pipeline_lines_and_brackets) {
+    const output::Pieces p = {{"a\n", output::SpanText}, {"김", output::SpanWord}, {"\nb\n", output::SpanText}};
+    const auto lines = internal::Lines(p);
+    HD_REQUIRE(lines.size() == 4);
+    HD_CHECK_EQ(Show(lines[0]), std::string("a"));
+    HD_CHECK_EQ(Show(lines[1]), std::string("〖1김〗"));
+    HD_CHECK_EQ(Show(lines[2]), std::string("b"));
+    HD_CHECK(lines[3].empty());
+    HD_CHECK_EQ(Show(internal::JoinLines(lines)), Show(p));
+    HD_CHECK_EQ(internal::JoinLines(lines).size(), p.size());
+
+    HD_CHECK_EQ(Show(MarkCornerBrackets({{"｢a｣", output::SpanText}, {"｢", output::SpanOpen}})),
+                std::string("「a」〖2｢〗"));
+}
+
+HD_TEST(pipeline_kata_words) {
+    const auto snap = Snapshot("からだ\t몸\tN110\t\t\tGN\t1\n");
+    HD_REQUIRE(snap != nullptr);
+    LineContext ctx;
+    const struct {
+        const char* in;
+        const char* want;
+    } cases[] = {
+        {"アレは何だ？", "あれは何だ？"},
+        {"これナニ？", "これなに？"},
+        {"食べちゃダメ！", "食べちゃだめ！"},
+        {"ダメ", "だめ"},
+        {"アレさん、おはよう。", "アレさん、おはよう。"},  // not followed by a particle
+        {"アレ・ハインツが来た。", "アレ・ハインツが来た。"},
+        {"ハインツ・アレが来た。", "ハインツ・アレが来た。"},
+        {"原発のアレだ。", "原発のアレだ。"},
+        {"ひょっとしてアレ？", "ひょっとしてアレ？"},
+        {"せまいからダメ？", "せまいからダメ？"},  // からだ joins the text around it
+        {"アレックスは来た。", "アレックスは来た。"},
+        {"スゴイね。", "スゴイね。"},
+    };
+    for (const auto& c : cases) {
+        HD_CHECK_EQ(Show(internal::KataWordsToHiragana(Text(c.in), ctx, *snap)), std::string(c.want));
+    }
+    // After a span, and an adjective before a span.
+    const output::Pieces spans = {{"<b>", output::SpanOpen}, {"アレは。ダメ", output::SpanText}, {"</b>", output::SpanClose}};
+    HD_CHECK_EQ(Show(internal::KataWordsToHiragana(spans, ctx, *snap)), std::string("〖2<b>〗アレは。ダメ〖3</b>〗"));
+
+    // A name of the document stays.
+    const dict::KeySet named = {"アレ"};
+    ctx.named = &named;
+    HD_CHECK_EQ(Show(internal::KataWordsToHiragana(Text("アレは何だ？ダメだ"), ctx, *snap)), std::string("アレは何だ？だめだ"));
+    ctx.named = nullptr;
+
+    // So does a word with a plain sense.
+    dict::CodeTable codes;
+    dict::UserEntry e;
+    e.key = "アレ";
+    e.target = "알레";
+    e.codes = codes.At(codes.Intern("N130", "QPN", "", "GN"));
+    e.name = true;
+    std::vector<dict::UserEntry> entries;
+    entries.push_back(e);
+    const dict::UserText plain(std::move(entries));
+    ctx.lookup.plain = &plain;
+    HD_CHECK_EQ(Show(internal::KataWordsToHiragana(Text("アレは何だ？"), ctx, *snap)), std::string("アレは何だ？"));
+    HD_CHECK_EQ(internal::KeyTags("アレ", ctx, *snap), std::string("N"));
+    HD_CHECK_EQ(internal::KeyTags("からだ", ctx, *snap), std::string("N"));
+    HD_CHECK_EQ(internal::KeyTags("から", ctx, *snap), std::string());
+}
+
+HD_TEST(pipeline_kata_speech) {
+    const auto snap = Snapshot("わたし\t나\tN110\t\t\tGN\t1\nねこ\t고양이\tN110\t\t\tGN\t2\nロボット\t로봇\tN110\t\t\tGN\t3\n");
+    HD_REQUIRE(snap != nullptr);
+    const LineContext ctx;
+    const struct {
+        const char* in;
+        const char* want;
+    } cases[] = {
+        {"ワタシハ ネコデス", "わたしは ねこです"},
+        {"ワタシハロボットデス", "わたしはロボットです"},  // a katakana word inside a run stays
+        {"ワタシハ ネコデス\nエビフライ", "わたしは ねこです\nエビフライ"},  // line by line
+        {"ネコ", "ネコ"},
+        {"エビフライ", "エビフライ"},
+        {"アハハハハ！", "アハハハハ！"},
+        {"ネバネバ", "ネバネバ"},
+        {"猫はネコデス、と言った。", "猫はネコデス、と言った。"},  // mostly not katakana
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(Show(internal::KataSpeech(Text(c.in), ctx, *snap)), std::string(c.want));
+    // Spans are passed over.
+    const output::Pieces spans = {{"ワタシハ ", output::SpanText}, {"김", output::SpanWord}, {"ネコデス", output::SpanText}};
+    HD_CHECK_EQ(Show(internal::KataSpeech(spans, ctx, *snap)), std::string("わたしは 〖1김〗ねこです"));
+}
+
+// The katakana rules on the dictionaries of dicts/base, when present.
+HD_TEST(pipeline_katakana_dictionary) {
+    const dict::LoadResult r = dict::LoadFolders({DictsDir()});
+    if (r.snapshot == nullptr || !r.snapshot->HasDictionary()) {
+        std::printf("skip pipeline_katakana_dictionary: no dictionaries at %s\n", DictsDir().c_str());
+        return;
+    }
+    const dict::Snapshot& snap = *r.snapshot;
+    const LineContext ctx;
+    const struct {
+        const char* in;
+        const char* want;
+    } speech[] = {
+        {"ワタシハ ニホンゴガ ワカリマセン", "わたしは にほんごが わかりません"},
+        {"ワタシハロボットデス", "わたしはロボットです"},
+        {"オマエヲ コロス", "おまえを ころす"},  // コロス is a katakana word, but reads as a verb
+        {"コンニチハ、ワタシハ アリスデス", "こんにちは、わたしは アリスです"},
+        {"モウ…トベナイノ……トベナイノヨ……ワカル？…ネェ", "もう…とべないの……とべないのよ……わかる？…ねぇ"},
+        {"ココ…ハ…トオレナイシ……。……トオサナイ……ヨ……ッ！", "ここ…は…とおれないし……。……とおさない……よ……ッ！"},
+        {"Adieu… ウソデショ……。ワタシ…マダ…ナニモ…… テキハ…いない、のね？",
+         "Adieu… うそでしょ……。わたし…まだ…なにも…… てきは…いない、のね？"},
+        {"ワタシハ ニホンゴガ ワカリマセン\nエビフライ", "わたしは にほんごが わかりません\nエビフライ"},
+        {"ヒトナナマルマル。提督、夕方です。", "ヒトナナマルマル。提督、夕方です。"},
+        {"ブレイダブリクへようこそ！最近お客さんが少なくってねえ。", "ブレイダブリクへようこそ！最近お客さんが少なくってねえ。"},
+        {"俺もおせっかいなヤツはキライなんだ。", "俺もおせっかいなヤツはキライなんだ。"},
+        {"エビフライ", "エビフライ"},
+        {"カケル", "カケル"},
+        {"デンジャラス！", "デンジャラス！"},
+        {"スルー", "スルー"},
+        {"チリンチリン", "チリンチリン"},
+        {"ネバネバ", "ネバネバ"},
+        {"アハハハハ！", "アハハハハ！"},
+    };
+    for (const auto& c : speech) HD_CHECK_EQ(Show(internal::KataSpeech(Text(c.in), ctx, snap)), std::string(c.want));
+    const struct {
+        const char* in;
+        const char* want;
+    } words[] = {
+        {"アレは何だ？", "あれは何だ？"},
+        {"ソレが問題なんだ。", "それが問題なんだ。"},
+        {"まぁ、ココだけの話だが", "まぁ、ここだけの話だが"},
+        {"アタシも行く。", "あたしも行く。"},
+        {"ヤバイか！？", "やばいか！？"},
+        {"カワイイだろ～？", "かわいいだろ～？"},
+        {"アレちゃんが来た。", "アレちゃんが来た。"},
+        {"アレに気をつけて。", "アレに気をつけて。"},
+        {"アレだけは苦手。", "アレだけは苦手。"},  // あれだけ is another word
+        {"せまいからダメ？", "せまいからダメ？"},
+        {"ダメですよ。", "ダメですよ。"},  // the base word conjugates already
+        {"オレは行く。", "オレは行く。"},
+        {"ドレスを着た。", "ドレスを着た。"},
+    };
+    for (const auto& c : words) {
+        HD_CHECK_EQ(Show(internal::KataWordsToHiragana(Text(c.in), ctx, snap)), std::string(c.want));
+    }
+    HD_CHECK_EQ(Show(Protect("｢アレは何だ？｣なら김치", ctx, snap)), std::string("「あれは何だ？」なら〖1김치〗"));
+    HD_CHECK_EQ(Show(ProtectTyped("｢アレは何だ？｣", ctx, snap)), std::string("｢あれは何だ？｣"));
+}
