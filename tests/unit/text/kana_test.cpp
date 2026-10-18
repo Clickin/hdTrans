@@ -1,0 +1,36 @@
+#include "hdTrans/text/kana.h"
+
+#include "hdtest.h"
+
+using hdTrans::text::FromKana;
+using hdTrans::text::Preset;
+
+HD_TEST(kana_from_kana) {
+    struct Case {
+        const char* reading;
+        const char* want[3];  // Fan, FanShort, Official
+    };
+    const Case cases[] = {
+        {"けいいち", {"케이이치", "케이이치", "게이치"}},
+        {"りゅうぐう", {"류우구우", "류구", "류구"}},
+        {"ほうじょう", {"호우죠우", "호죠", "호조"}},
+        {"さとこ", {"사토코", "사토코", "사토코"}},
+        {"みおん", {"미온", "미온", "미온"}},
+        {"ゆうや", {"유우야", "유야", "유야"}},
+        {"かつえ", {"카츠에", "카츠에", "가쓰에"}},
+        {"とうきょう", {"토우쿄우", "토쿄", "도쿄"}},
+        {"おおさか", {"오오사카", "오사카", "오사카"}},
+        {"さっぽろ", {"삿포로", "삿포로", "삿포로"}},
+        {"かみじょう", {"카미죠우", "카미죠", "가미조"}},
+        {"とうま", {"토우마", "토마", "도마"}},
+        {"ピカチュウ", {"피카츄우", "피카츄", "피카추"}},
+        {"ちはや", {"치하야", "치하야", "지하야"}},
+        {"リン", {"린", "린", "린"}},
+        {"ふみ", {"후미", "후미", "후미"}},
+        {"光", {"", "", ""}},
+    };
+    const Preset presets[] = {Preset::Fan, Preset::FanShort, Preset::Official};
+    for (const auto& c : cases) {
+        for (int p = 0; p < 3; p++) HD_CHECK_EQ(FromKana(c.reading, presets[p]), std::string(c.want[p]));
+    }
+}
