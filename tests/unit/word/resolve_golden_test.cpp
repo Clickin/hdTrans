@@ -94,6 +94,24 @@ const char* DetailName(int cls) {
     return names[cls];
 }
 
+// s with every marker family id ("&A6@", "$DH@", "%B3@") replaced by its marker. The ids
+// of generated families depend on the order of the process that wrote the expectation,
+// so this comparison reports the differences that are not only ids.
+std::string WithoutFamilyIds(std::string_view s) {
+    std::string out;
+    for (std::size_t i = 0; i < s.size(); i++) {
+        const char c = s[i];
+        if ((c == '&' || c == '$' || c == '%') && i + 3 < s.size() && s[i + 3] == '@') {
+            out += c;
+            out += '@';
+            i += 3;
+            continue;
+        }
+        out += c;
+    }
+    return out;
+}
+
 // U+AC00..U+D7A3 in s.
 bool HasHangul(std::string_view s) {
     for (std::size_t i = 0; i + 2 < s.size(); i++) {
@@ -168,7 +186,7 @@ std::string SRecord(const word::Item& it, int chunk, int sent) {
 }
 
 struct Totals {
-    long long chunks = 0, records = 0, differing = 0;
+    long long chunks = 0, records = 0, differing = 0, differingIgnoringIds = 0;
     double seconds = 0;
 };
 
@@ -227,6 +245,7 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
             const std::string_view wv = i < want.size() ? std::string_view(want[i]) : "<none>";
             if (g == wv) continue;
             totals.differing++;
+            if (WithoutFamilyIds(g) != WithoutFamilyIds(wv)) totals.differingIgnoringIds++;
             if (++shown <= 8) {
                 hdtest::Fail(__FILE__, __LINE__, set + " " + chunk.header + " record " + std::to_string(i) + "\n  got  " +
                                                      std::string(g) + "\n  want " + std::string(wv));
@@ -261,8 +280,8 @@ void RunSets(const char* name, bool (*select)(const std::string&), bool textPath
     analyzetest::Environments envs(dir);
     Totals totals;
     for (const std::string& set : sets) RunSet(dir, set, envs, totals);
-    std::printf("%s: %zu sets, %lld chunks, %lld S records, %lld differing, %.2f s\n", name, sets.size(), totals.chunks,
-                totals.records, totals.differing, totals.seconds);
+    std::printf("%s: %zu sets, %lld chunks, %lld S records, %lld differing (%lld ignoring family ids), %.2f s\n", name,
+                sets.size(), totals.chunks, totals.records, totals.differing, totals.differingIgnoringIds, totals.seconds);
     HD_CHECK_EQ(totals.differing, 0LL);
 }
 
