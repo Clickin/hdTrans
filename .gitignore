@@ -1,0 +1,10 @@
+build/
+dicts/
+*.o
+*.d
+*.a
+*.dll
+*.exe
+*.wasm
+*.pdb
+.DS_Store

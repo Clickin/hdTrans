@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "mac",
+      "displayName": "macOS clang, Release (core, CLI, tests)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/mac",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+    },
+    {
+      "name": "mac-debug",
+      "inherits": "mac",
+      "binaryDir": "${sourceDir}/build/mac-debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "linux",
+      "displayName": "Linux, Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux" }
+    },
+    {
+      "name": "msvc-x86",
+      "displayName": "MSVC x86, Release (hdtrans.dll for 32-bit hosts). Needs a vcvarsall x86 environment: tools/build.ps1.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/msvc-x86",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "msvc-x64",
+      "displayName": "MSVC x64, Release. Needs a vcvarsall x64 environment: tools/build.ps1.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/msvc-x64",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    },
+    {
+      "name": "wasm",
+      "displayName": "Emscripten (run as `emcmake cmake --preset wasm`)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/wasm",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "mac", "configurePreset": "mac" },
+    { "name": "mac-debug", "configurePreset": "mac-debug" },
+    { "name": "linux", "configurePreset": "linux" },
+    { "name": "msvc-x86", "configurePreset": "msvc-x86" },
+    { "name": "msvc-x64", "configurePreset": "msvc-x64" },
+    { "name": "wasm", "configurePreset": "wasm" }
+  ],
+  "testPresets": [
+    { "name": "mac", "configurePreset": "mac", "output": { "outputOnFailure": true } },
+    { "name": "mac-debug", "configurePreset": "mac-debug", "output": { "outputOnFailure": true } },
+    { "name": "linux", "configurePreset": "linux", "output": { "outputOnFailure": true } },
+    { "name": "msvc-x86", "configurePreset": "msvc-x86", "output": { "outputOnFailure": true } },
+    { "name": "msvc-x64", "configurePreset": "msvc-x64", "output": { "outputOnFailure": true } }
+  ]
+}

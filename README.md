@@ -1,0 +1,38 @@
+# hdtrans
+
+Rule-based Japanese→Korean translation engine in C++: a static library, a CLI, two
+Windows DLLs (`hdTransEngine.dll` with the C API, `J2KEngine.dll` with the J2K exports), and a
+WebAssembly module.
+
+Conventions: AGENTS.md.
+
+## Build
+
+```sh
+cmake --preset mac          # or linux
+cmake --build --preset mac
+ctest --preset mac
+```
+
+Windows (Visual Studio 2022 or later with the C++ tools):
+
+```powershell
+powershell -File tools\build.ps1 -arch x86   # builds build\msvc-x86\{hdTransEngine,J2KEngine}.dll and runs the tests
+```
+
+WebAssembly: `emcmake cmake --preset wasm && cmake --build --preset wasm`.
+
+## Layout
+
+| path | contents |
+|---|---|
+| `include/hdTrans/` | public headers: `engine.h` (C++), `hdtrans.h` (C) |
+| `src/hdTrans/` | the library, one directory per pipeline stage |
+| `src/cli/` | `hdtrans` command |
+| `src/cshared/` | `hdTransEngine.dll`: the C API |
+| `src/j2kengine/` | `J2KEngine.dll`: `J2K_*` exports |
+| `src/wasm/` | WebAssembly entry points |
+| `tests/unit/` | unit tests (`hdtest.h` runner) |
+| `tools/` | `golden.sh` (expectation sets), `build.ps1` (Windows build) |
+
+Dictionaries are UTF-8 TSV folders and are not part of this repository.

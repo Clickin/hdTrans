@@ -1,0 +1,64 @@
+# Static engine library, CLI and unit tests on any C++20 compiler; hdTransEngine.dll (C API) and
+# J2KEngine.dll (J2K_* exports) with MSVC; the wasm module with Emscripten. Presets: CMakePresets.json.
+cmake_minimum_required(VERSION 3.25)
+project(hdtrans LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(MSVC)
+    # Static CRT: the DLL is one file inside a host that ships no runtime of ours.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    # Replace CMake's defaults so the command line holds only what we ask for.
+    set(CMAKE_CXX_FLAGS "/EHs-c- /GR- /utf-8 /permissive- /W4 /WX /Zc:inline /diagnostics:column")
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Oi /Gy /DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "/Od /RTC1 /Zi /D_DEBUG")
+    add_compile_definitions(UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS _HAS_EXCEPTIONS=0)
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF /DEBUG")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF /DEBUG")
+else()
+    add_compile_options(-Wall -Wextra -Werror -fno-exceptions -fno-rtti)
+endif()
+
+file(GLOB_RECURSE HDTRANS_SOURCES CONFIGURE_DEPENDS src/hdTrans/*.cpp)
+add_library(hdtrans STATIC ${HDTRANS_SOURCES})
+set_target_properties(hdtrans PROPERTIES OUTPUT_NAME hdTransCore COMPILE_PDB_NAME hdTransCore)
+target_include_directories(hdtrans PUBLIC include PRIVATE src)
+
+if(NOT EMSCRIPTEN)
+    add_executable(hdtrans_cli src/cli/main.cpp)
+    target_include_directories(hdtrans_cli PRIVATE src)
+    target_link_libraries(hdtrans_cli PRIVATE hdtrans)
+    set_target_properties(hdtrans_cli PROPERTIES OUTPUT_NAME hdtrans PDB_NAME hdtrans_cli)
+
+    file(GLOB_RECURSE HDTRANS_TEST_SOURCES CONFIGURE_DEPENDS tests/unit/*.cpp)
+    add_executable(hdtrans_tests ${HDTRANS_TEST_SOURCES})
+    target_include_directories(hdtrans_tests PRIVATE tests/unit src)
+    target_link_libraries(hdtrans_tests PRIVATE hdtrans)
+    enable_testing()
+    add_test(NAME unit COMMAND hdtrans_tests)
+endif()
+
+if(EMSCRIPTEN)
+    add_executable(hdtrans_wasm src/wasm/main.cpp src/cshared/hdtrans_c.cpp)
+    set_target_properties(hdtrans_wasm PROPERTIES OUTPUT_NAME hdTransEngine)
+    target_link_libraries(hdtrans_wasm PRIVATE hdtrans)
+    target_link_options(hdtrans_wasm PRIVATE
+        -sMODULARIZE=1 -sEXPORT_ES6=1 -sALLOW_MEMORY_GROWTH=1 -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,UTF8ToString,stringToUTF8,lengthBytesUTF8
+        -sEXPORTED_FUNCTIONS=_hdTrans_Load,_hdTrans_Translate,_hdTrans_FreeMem,_hdTrans_Version,_malloc,_free)
+elseif(WIN32)
+    add_library(hdtrans_dll SHARED src/cshared/hdtrans_c.cpp src/cshared/hdtrans.def)
+    set_target_properties(hdtrans_dll PROPERTIES OUTPUT_NAME hdTransEngine PREFIX "")
+    target_compile_definitions(hdtrans_dll PRIVATE HDTRANS_BUILD_DLL)
+    target_link_libraries(hdtrans_dll PRIVATE hdtrans)
+
+    add_library(j2kengine SHARED src/j2kengine/j2kengine.cpp src/j2kengine/j2kengine.def)
+    set_target_properties(j2kengine PROPERTIES OUTPUT_NAME J2KEngine PREFIX "")
+    target_link_libraries(j2kengine PRIVATE hdtrans)
+else()
+    add_library(hdtrans_shared SHARED src/cshared/hdtrans_c.cpp)
+    set_target_properties(hdtrans_shared PROPERTIES OUTPUT_NAME hdTransEngine)
+    target_link_libraries(hdtrans_shared PRIVATE hdtrans)
+endif()
