@@ -5,6 +5,7 @@
 
 #include "hdTrans/text/utf8.h"
 #include "hdTrans/word/flush.h"
+#include "hdTrans/word/document_senses.h"
 
 namespace hdTrans::word {
 namespace {
@@ -27,20 +28,26 @@ bool MaySelect(Provenance layer, bool rules) {
 void Select(Flusher& f) {
     ChooseSenses(f);
     const Settings& settings = f.w.settings;
-    if (settings.scorers.empty()) return;
+    const bool documentSenses = settings.improvements.documentSenses && settings.sessionSenses != nullptr;
+    if (!documentSenses && settings.scorers.empty()) return;
+    const Scorer documentScorer{"document-senses", DocumentSenseScore};
+    const std::size_t documentCount = documentSenses ? 1 : 0;
     const SelectContext context{f.w.snapshot, f.w.chain};
     for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
         const int count = static_cast<int>(it->group->entries.size());
-        if (it->Fixed() || it->selected < 0 || it->selected >= count || count < 2) continue;
-        const bool eligible = MaySelect(it->choice.layer, settings.selectRules);
-        if (!eligible && !settings.selectShadow) continue;
+        if (it->Fixed() || it->selected < 0 || it->selected >= count) continue;
+        if (documentSenses) settings.sessionSenses->Remember(*it);
+        if (count < 2) continue;
+        if (!MaySelect(it->choice.layer, settings.selectRules) && !settings.selectShadow) continue;
         const int current = it->selected;
         const std::string_view code = it->Code(current);
         if (code.empty()) continue;
         bool decided = false;
-        for (std::size_t index = 0; index < settings.scorers.size(); index++) {
-            const Scorer& scorer = settings.scorers[index];
-            if (scorer.score == nullptr) continue;
+        for (std::size_t index = 0; index < documentCount + settings.scorers.size(); index++) {
+            const bool document = index < documentCount;
+            const Scorer& scorer = document ? documentScorer : settings.scorers[index - documentCount];
+            const bool eligible = MaySelect(it->choice.layer, !document && settings.selectRules);
+            if (scorer.score == nullptr || (!eligible && !settings.selectShadow)) continue;
             const int currentScore = scorer.score(*it, current, context);
             int best = current, bestScore = currentScore;
             for (int candidate = 0; candidate < count; candidate++) {

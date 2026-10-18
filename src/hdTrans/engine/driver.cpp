@@ -31,6 +31,7 @@ struct Scratch {
     std::vector<output::TokenText> texts;
     std::vector<tokenizer::ControlMarker> markers;
     output::Composer composer;
+    word::SessionSenses* sessionSenses = nullptr;
 };
 
 // The pieces of the output as the tokenizer reads them (the span kinds are the same numbers).
@@ -79,7 +80,8 @@ output::Settings ComposeSettings(bool text) {
     return s;
 }
 
-word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions& options) {
+word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions& options,
+                                word::SessionSenses* sessionSenses) {
     word::Settings s = options.reference ? word::Settings::Reference() : word::Settings{};
     s.text = text;
     s.terminal = text;
@@ -87,6 +89,7 @@ word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions&
     s.scorers = options.scorers;
     s.selectShadow = options.selectShadow;
     s.selectRules = options.selectRules;
+    s.sessionSenses = text ? sessionSenses : nullptr;
     return s;
 }
 
@@ -101,7 +104,7 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
     if (observer.tokens) observer.tokens(observer.context, index, s.tokens);
 
     word::Analysis analysis;
-    const word::Settings settings = AnalysisSettings(text, verse, options);
+    const word::Settings settings = AnalysisSettings(text, verse, options, s.sessionSenses);
     word::Analyze(s.tokens, snap, lookup, settings, s.arena, analysis);
     if (observer.analysis) observer.analysis(observer.context, index, s.tokens, analysis);
 
@@ -170,6 +173,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
     const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(snap, all);
 
     Scratch s;
+    if (!options.reference) s.sessionSenses = &memory.senses;
     std::vector<std::string> out;
     out.reserve(lines.size());
     for (std::size_t i = 0; i < lines.size(); i++) {
@@ -177,6 +181,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
         // ReadLine takes the line without its one trailing "\r"; the "\r" is written back.
         const bool cr = !lines[i].empty() && lines[i].back() == '\r';
         std::string translated = TranslateBody(snap, *doc, lines[i], s, generated, observer, options);
+        if (s.sessionSenses != nullptr) s.sessionSenses->FinishLine();
         if (cr) translated += '\r';
         out.push_back(std::move(translated));
     }

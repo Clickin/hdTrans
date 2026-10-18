@@ -15,6 +15,7 @@
 #include "hdTrans/pipeline/restore.h"
 #include "hdTrans/tokenizer/token.h"
 #include "hdTrans/word/analyze.h"
+#include "hdTrans/word/document_senses.h"
 
 namespace hdTrans::internal {
 
@@ -54,6 +55,7 @@ std::shared_ptr<Generated> NewGenerated(const dict::Snapshot& snap);
 // What a session keeps between its calls.
 struct Memory {
     std::vector<std::string> lines;  // the lines of earlier calls, read by the name registry
+    word::SessionSenses senses;
 };
 
 struct TranslationOptions {
