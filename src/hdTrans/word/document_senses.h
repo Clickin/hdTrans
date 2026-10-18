@@ -2,6 +2,7 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 
 #include "hdTrans/word/select.h"
 
@@ -21,6 +22,10 @@ struct SessionSenses {
     void FinishLine();
     void Remember(const Item& it);
 };
+
+// A view into target without its form code, marker suffix, auxiliary prefixes or
+// common particles. This is a spelling comparison, not a Korean lemmatizer.
+std::string_view DocumentSenseStem(std::string_view target);
 
 int DocumentSenseScore(const Item& it, int candidate, const SelectContext& context);
 

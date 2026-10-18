@@ -698,3 +698,111 @@ HD_TEST(document_senses_shadow_observes_disabled_improvement) {
     HD_CHECK(it.shadowChoices[0].winner);
     HD_CHECK_EQ(std::string(it.shadowChoices[0].scorer), std::string("document-senses"));
 }
+
+HD_TEST(document_senses_lexical_stem) {
+    struct Case { std::string_view target, stem; };
+    const Case cases[] = {
+        {"", ""}, {"   ", ""}, {"인기", "인기"}, {"사과", "사과"},
+        {"구&AV@", "구"}, {"요구&AV@5다", "요구"}, {"예%C9@", "예"},
+        {"할 수 $FA@", ""}, {"&HN@", ""}, {" 5할 수 구&AV@suffix ", "구"},
+        {"A요구&AV@", "요구"}, {"할 수&AV@", ""}, {"할 수확&AV@", "할 수확"},
+        {"(이)라고 말&AV@", "말"}, {"(이)라고 &AV@", ""},
+        {"(을)를 향&AV@", "향"}, {"(으)로 향&AV@", "향"},
+        {"해 주&AE@", "주"}, {"해결&AV@", "해결"},
+        {"이번에", "이번"}, {"이번에는 ", "이번"}, {"서울에서", "서울"},
+        {"마음을", "마음"}, {"마음 은", "마음"}, {"나무", "나무"},
+        {"단어&broken", "단어&broken"}, {"단어%A@", "단어%A@"}, {"R&D", "R&D"},
+    };
+    for (const auto& c : cases) {
+        HD_CHECK_EQ(std::string(word::DocumentSenseStem(c.target)), std::string(c.stem));
+    }
+}
+
+HD_TEST(document_senses_reject_grammar_only_changes) {
+    struct Case { const char* key; const char* earlier; const char* current; };
+    const Case cases[] = {
+        {"出来", "&HN@", "할 수 &HN@"},
+        {"出来な", "$FA@", "할 수 $FA@"},
+        {"今度", "이번에", "이번"},
+        {"と言", "(이)라고 &AV@", "(이)라고 말&AV@"},
+        {"に向か", "(을)를 향&AV@", "(으)로 향&AV@"},
+        {"下さ", "해 주&AE@", "주&AE@"},
+    };
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    for (const auto& c : cases) {
+        for (const bool reverse : {false, true}) {
+            word::SessionSenses senses;
+            const auto earlier = reverse ? c.current : c.earlier;
+            const auto current = reverse ? c.earlier : c.current;
+            senses.choices.emplace(c.key, word::SessionSense{earlier, "M421"});
+            word::Settings settings;
+            settings.improvements.documentSenses = true;
+            settings.sessionSenses = &senses;
+            SelectLine line(*snapshot, settings);
+            word::Item& it = line.Add(c.key, {{current, "M421"}, {earlier, "M421"}});
+            word::Select(line.flusher);
+            HD_CHECK_EQ(it.selected, 0);
+        }
+    }
+}
+
+HD_TEST(document_senses_keep_current_target_form) {
+    struct Case {
+        const char* earlier;
+        const char* current;
+        const char* proposed;
+        bool changed;
+    };
+    const Case cases[] = {
+        {"구&AV@", "요구&AV@", "구&AV@", true},
+        {"구&AV@", "5할 수 요구&AV@tail", "5할 수 구&AV@tail", true},
+        {"구&AV@", "요구&AV@", "구$AV@", false},
+        {"구&AV@", "요구&AV@", "구&CV@", false},
+        {"구&AV@", "요구&AV@", "구&A1@", false},
+        {"구&AV@", "5요구&AV@", "4구&AV@", false},
+        {"구&AV@", "요구&AV@tail", "구&AV@other", false},
+        {"구&AV@", "할 수 요구&AV@", "구&AV@", false},
+        {"기분", "마음에", "기분", false},
+        {"기분에", "마음에는", "기분에는", true},
+        {"구&AV@", "요구&AV@", "요구&AV@", false},
+        {"추구&AV@", "요구&AV@", "구&AV@", false},
+        {"&AV@", "요구&AV@", "구&AV@", false},
+    };
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    for (const auto& c : cases) {
+        word::SessionSenses senses;
+        senses.choices.emplace("求め", word::SessionSense{c.earlier, "M421"});
+        word::Settings settings;
+        settings.improvements.documentSenses = true;
+        settings.sessionSenses = &senses;
+        SelectLine line(*snapshot, settings);
+        word::Item& it = line.Add("求め", {{c.current, "M421"}, {c.proposed, "M421"}});
+        word::Select(line.flusher);
+        HD_CHECK_EQ(it.selected, c.changed ? 1 : 0);
+        CheckTargets(it, {c.current, c.proposed});
+    }
+}
+
+HD_TEST(document_senses_find_remembered_stem_in_current_form) {
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    word::SessionSenses senses;
+    word::Settings settings;
+    settings.improvements.documentSenses = true;
+    settings.sessionSenses = &senses;
+    {
+        SelectLine first(*snapshot, settings);
+        first.Add("求め", {{"요구&AV@", "M421"}, {"구&AV@", "M421"}}, {word::Provenance::Sense}, 1);
+        word::Select(first.flusher);
+    }
+    senses.FinishLine();
+    SelectLine second(*snapshot, settings);
+    word::Item& it = second.Add("求め", {{"5할 수 요구&AV@", "M421"}, {"구&AV@", "M421"},
+                                       {"5할 수 구&AV@", "M421"}, {"5할 수 구&AV@", "M421"}});
+    word::Select(second.flusher);
+    HD_CHECK_EQ(it.selected, 2);
+    CheckChoice(it.choice, word::Provenance::Scorer, 0);
+    HD_CHECK_EQ(senses.choices.at("求め").target, std::string("구&AV@"));
+}
