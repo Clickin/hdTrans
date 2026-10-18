@@ -4,6 +4,7 @@
 #include <string_view>
 
 #include "hdTrans/output/korean.h"
+#include "hdTrans/output/families.h"
 #include "hdTrans/word/flush.h"
 #include "hdTrans/word/strings.h"
 #include "hdTrans/word/util.h"
@@ -78,17 +79,6 @@ bool CompoundAction(std::string_view stem) {
     return false;
 }
 
-// Dictionary attributes of a thing: some, none of them a person, an animal or a god.
-bool Thing(std::string_view attr) {
-    if (attr.empty()) return false;
-    constexpr std::string_view kPersons = "VHn VQw VQm VGn VAm QPN QNP";
-    for (std::size_t i = 0; i + 3 <= attr.size(); i += 3) {
-        const std::string_view c = attr.substr(i, 3);
-        if (Has(kPersons, c) || (c >= "QAA" && c <= "QAH")) return false;
-    }
-    return true;
-}
-
 // A verb item with a record that takes an object (part code class 3 to 6).
 bool Transitive(const Item* it) {
     const int count = static_cast<int>(it->group->entries.size());
@@ -153,7 +143,51 @@ void WriteLexicalPassive(Flusher& f, Item* it) {
     for (Entry* e : it->group->entries) e->dst = lexical;
 }
 
+// Whether text starts like a negative ending: な, ね (ねえ), ませ, ず, ぬ, ん.
+bool NegativeStart(std::string_view text) {
+    constexpr std::string_view kStarts[] = {kJaNa, kJaNe, kJaMase, kJaZu, kJaNu, kJaN};
+    for (const std::string_view p : kStarts) {
+        if (text.starts_with(p)) return true;
+    }
+    return false;
+}
+
 }  // namespace
+
+// Dictionary attributes of a thing: some, none of them a person, an animal or a god.
+bool Thing(std::string_view attr) {
+    if (attr.empty()) return false;
+    constexpr std::string_view kPersons = "VHn VQw VQm VGn VAm QPN QNP";
+    for (std::size_t i = 0; i + 3 <= attr.size(); i += 3) {
+        const std::string_view c = attr.substr(i, 3);
+        if (Has(kPersons, c) || (c >= "QAA" && c <= "QAH")) return false;
+    }
+    return true;
+}
+
+bool Person(std::string_view attr) { return !attr.empty() && !Thing(attr); }
+
+bool SelectLemma(Flusher& f, Item* it, std::string_view lemma) {
+    const int count = static_cast<int>(it->group->entries.size());
+    for (int slot = 0; slot < count; slot++) {
+        if (output::Lemma(it->EntryText(slot), f.families) == lemma) {
+            it->selected = slot;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool SelectLemmaPrefix(Flusher& f, Item* it, std::string_view prefix) {
+    const int count = static_cast<int>(it->group->entries.size());
+    for (int slot = 0; slot < count; slot++) {
+        if (output::Lemma(it->EntryText(slot), f.families).starts_with(prefix)) {
+            it->selected = slot;
+            return true;
+        }
+    }
+    return false;
+}
 
 void PassiveRecords(Flusher& f) {
     for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
@@ -174,6 +208,38 @@ void PassiveRecords(Flusher& f) {
             if (e->gattr.ends_with("Ka")) e->gattr = e->gattr.substr(0, e->gattr.size() - 2) + "Pi";
         }
         WriteLexicalPassive(f, it);
+    }
+}
+
+
+void GoNotSay(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* p = it->prev;
+        if (p == nullptr || p->prev == nullptr || it->group->surface != "い" || !it->detail->Yougo() ||
+            !output::Lemma(it->EntryText(it->selected), f.families).starts_with("말하") ||
+            !Has(" に へ まで から ", " " + p->group->surface + " ") || Person(p->prev->Attr(p->prev->selected))) {
+            continue;
+        }
+        if (SelectLemma(f, it, "가다")) continue;
+        output::Conjugated c = output::Conjugating("가다", '&', "", f.families);
+        if (Entry* e = it->group->At(it->selected)) e->dst = c.target;
+    }
+}
+
+void PositiveIke(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        if (it->group->surface != kJaIke || !it->EntryText(it->selected).starts_with(kKoAn)) continue;
+        const std::string_view direct = it->DirectSurface();
+        if (NegativeStart(direct) || (direct.empty() && it->next != nullptr && NegativeStart(it->next->group->surface))) {
+            continue;
+        }
+        const int count = static_cast<int>(it->group->entries.size());
+        for (int slot = 0; slot < count; slot++) {
+            if (it->EntryText(slot).starts_with(kKoGalSu)) {
+                it->selected = slot;
+                break;
+            }
+        }
     }
 }
 

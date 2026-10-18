@@ -13,7 +13,11 @@ void Flush(Flusher& f) {
     if (f.w.settings.text) {
         ChooseSenses(f);
         ChooseInitialConjunctions(f);
+        GoNotSay(f);
         HanBeforeNa(f);
+        AdjectiveNeighbours(f);
+        GeotBeforeMitai(f);
+        PositiveIke(f);
     }
     if (f.w.settings.terminal) PreferTerminal(f);
 }

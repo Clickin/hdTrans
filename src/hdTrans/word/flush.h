@@ -4,6 +4,8 @@
 // resolved chain: the replacements of katakana runs and noun phrases, the selection
 // of each item's candidate and ending by the rules, and the passes that fix class-3
 // words, negatives and terminal forms.
+#include <string_view>
+
 #include "hdTrans/output/families.h"
 #include "hdTrans/rules/rules.h"
 #include "hdTrans/word/worker.h"
@@ -36,8 +38,24 @@ void ReinsertPhrases(Flusher& f);
 void CleanupClass3(Flusher& f);
 void ApplyNegatives(Flusher& f);
 
+// Helpers of the text-path passes. TakeTarget (sense.cpp) selects the candidate of class
+// with target, or writes target over the selected one. SelectLemma (grammar.cpp) selects
+// the first entry whose dictionary form is lemma (or starts with prefix) and reports
+// whether there was one. Thing and Person classify dictionary attributes.
+void TakeTarget(Item* it, char cls, std::string_view target);
+bool SelectLemma(Flusher& f, Item* it, std::string_view lemma);
+bool SelectLemmaPrefix(Flusher& f, Item* it, std::string_view prefix);
+bool Thing(std::string_view attr);
+bool Person(std::string_view attr);
+
 // Text-path grammar (grammar.cpp).
 void PassiveRecords(Flusher& f);
+void GoNotSay(Flusher& f);
+void PositiveIke(Flusher& f);
+
+// Text-path adjectival neighbours (neighbours.cpp).
+void AdjectiveNeighbours(Flusher& f);
+void GeotBeforeMitai(Flusher& f);
 
 // Text-path senses and conjunctions (sense.cpp).
 void ChooseSenses(Flusher& f);

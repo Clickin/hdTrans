@@ -17,31 +17,6 @@ namespace {
 constexpr int kSenseWindow = 3;
 constexpr std::string_view kVerbFinals = "うくぐすつぬぶむる";
 
-// Writes target as the target of the candidate of class that the item takes: the selected
-// candidate becomes the first of class with that target, else the selected candidate
-// takes it. The ending of an Av candidate (an adjective with verb endings) was chosen for
-// a verb, so another candidate of class takes the target in its place.
-void TakeTarget(Item* it, char cls, std::string_view target) {
-    const int count = static_cast<int>(it->group->entries.size());
-    for (int slot = 0; slot < count; slot++) {
-        const Entry* e = it->group->At(slot);
-        if (At(e->code, 0) == cls && e->dst == target) {
-            it->selected = slot;
-            return;
-        }
-    }
-    if (Has(it->GAttr(it->selected), "Av")) {
-        for (int slot = 0; slot < count; slot++) {
-            const Entry* e = it->group->At(slot);
-            if (At(e->code, 0) == cls && !Has(e->gattr, "Av")) {
-                it->selected = slot;
-                break;
-            }
-        }
-    }
-    if (Entry* e = it->group->At(it->selected)) e->dst = std::string(target);
-}
-
 // Whether the item is word, a key or the dictionary form of the verb or adjective the item
 // is a stem of.
 bool IsWord(const Item* it, std::string_view word) {
@@ -161,6 +136,31 @@ bool HadaRoot(Flusher& f, const Item* it) {
 }
 
 }  // namespace
+
+// Writes target as the target of the candidate of class that the item takes: the selected
+// candidate becomes the first of class with that target, else the selected candidate
+// takes it. The ending of an Av candidate (an adjective with verb endings) was chosen for
+// a verb, so another candidate of class takes the target in its place.
+void TakeTarget(Item* it, char cls, std::string_view target) {
+    const int count = static_cast<int>(it->group->entries.size());
+    for (int slot = 0; slot < count; slot++) {
+        const Entry* e = it->group->At(slot);
+        if (At(e->code, 0) == cls && e->dst == target) {
+            it->selected = slot;
+            return;
+        }
+    }
+    if (Has(it->GAttr(it->selected), "Av")) {
+        for (int slot = 0; slot < count; slot++) {
+            const Entry* e = it->group->At(slot);
+            if (At(e->code, 0) == cls && !Has(e->gattr, "Av")) {
+                it->selected = slot;
+                break;
+            }
+        }
+    }
+    if (Entry* e = it->group->At(it->selected)) e->dst = std::string(target);
+}
 
 void ChooseSenses(Flusher& f) {
     const dict::Snapshot& snapshot = f.w.snapshot;
