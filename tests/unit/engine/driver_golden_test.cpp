@@ -5,7 +5,7 @@
 //   - The chain after resolve (S), the sentence output (K), the cleanup (C), the restore
 //     steps (R1-R3) and the output line (OUT) are compared per line. A line that differs
 //     is counted under the first of these stages that differs, so a cause shows in the
-//     stage it starts in. These are reported, not gated.
+//     stage it starts in. These are printed, not gated.
 // Sets: corpus.raw (the raw path: T, L, S, K), corpus2.each (a session per line) and the
 // doc-* and x-* sets (one document each). Dictionaries: $HDTRANS_DICTS (default
 // $HDTRANS_GOLDEN/dicts/base). Skipped when the stages MANIFEST is absent. With
@@ -255,7 +255,7 @@ bool Differs(const std::string& tag, const std::vector<std::string>& got, const 
     return any;
 }
 
-// The stages reported per line, in the order their first difference is attributed to.
+// The stages checked per line, in the order a first difference is assigned to.
 const std::vector<std::string> kLineStages = {"S", "K", "C", "R1", "R2", "R3", "OUT"};
 
 struct Totals {
