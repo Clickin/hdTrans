@@ -298,7 +298,7 @@ bool Item::AcceptVerbContinuation(Record* following) {
         base.ResetDirect(g->entries.size());
         base.resultCount = static_cast<int>(g->entries.size());
         base.punct = base.ClassifyTrailingPunctuation(From(after(), g->length));
-        for (std::size_t i = 0; i < g->entries.size(); i++) base.classes[i] = base.punct;
+        for (std::size_t i = 0; i < g->entries.size(); i++) base.classes[i] = static_cast<uint8_t>(base.punct);
     };
 
     const std::string_view rest = after();

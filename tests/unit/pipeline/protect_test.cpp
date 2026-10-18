@@ -126,14 +126,14 @@ HD_TEST(pipeline_rewrite_conjunctions) {
 
 HD_TEST(pipeline_lines_and_brackets) {
     const output::Pieces p = {{"a\n", output::SpanText}, {"김", output::SpanWord}, {"\nb\n", output::SpanText}};
-    const auto lines = internal::Lines(p);
+    const auto lines = output::Lines(p);
     HD_REQUIRE(lines.size() == 4);
     HD_CHECK_EQ(Show(lines[0]), std::string("a"));
     HD_CHECK_EQ(Show(lines[1]), std::string("〖1김〗"));
     HD_CHECK_EQ(Show(lines[2]), std::string("b"));
     HD_CHECK(lines[3].empty());
-    HD_CHECK_EQ(Show(internal::JoinLines(lines)), Show(p));
-    HD_CHECK_EQ(internal::JoinLines(lines).size(), p.size());
+    HD_CHECK_EQ(Show(output::JoinLines(lines)), Show(p));
+    HD_CHECK_EQ(output::JoinLines(lines).size(), p.size());
 
     HD_CHECK_EQ(Show(MarkCornerBrackets({{"｢a｣", output::SpanText}, {"｢", output::SpanOpen}})),
                 std::string("「a」〖2｢〗"));

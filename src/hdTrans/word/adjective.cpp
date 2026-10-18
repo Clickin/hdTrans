@@ -89,7 +89,7 @@ bool Item::RunKeiyoTrieQuery() {
             base.resultCount = static_cast<int>(g->entries.size());
             const std::string_view after = From(remaining, offset + g->length);
             base.punct = base.ClassifyTrailingPunctuation(after);
-            for (std::size_t i = 0; i < g->entries.size(); i++) base.classes[i] = base.punct;
+            for (std::size_t i = 0; i < g->entries.size(); i++) base.classes[i] = static_cast<uint8_t>(base.punct);
             bool matched = false;
             for (int index = 0; keepScanning && index < static_cast<int>(g->entries.size()); index++) {
                 const Entry& e = *g->entries[static_cast<std::size_t>(index)];
@@ -197,7 +197,7 @@ bool Item::RunDakeiyoCase8Query() {
         base.resultCount = static_cast<int>(g->entries.size());
         const std::string_view after = From(tail, scanOffset + g->length);
         base.punct = base.ClassifyTrailingPunctuation(after);
-        for (std::size_t i = 0; i < g->entries.size(); i++) base.classes[i] = base.punct;
+        for (std::size_t i = 0; i < g->entries.size(); i++) base.classes[i] = static_cast<uint8_t>(base.punct);
         bool matched = false;
         const std::string_view scanned = From(tail, scanOffset);
         for (int entry = 0; entry < static_cast<int>(g->entries.size()); entry++) {

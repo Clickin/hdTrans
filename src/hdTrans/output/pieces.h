@@ -33,6 +33,10 @@ void Add(Pieces& p, std::string_view text);
 void Append(Pieces& p, const Pieces& q);
 void Append(Pieces& p, Pieces&& q);
 
+// Splits only text pieces at newlines, preserving empty lines and protected spans.
+std::vector<Pieces> Lines(const Pieces& text);
+Pieces JoinLines(const std::vector<Pieces>& lines);
+
 // The first piece when it is text, otherwise "".
 std::string_view Head(const Pieces& p);
 

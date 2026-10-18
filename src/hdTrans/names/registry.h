@@ -74,7 +74,7 @@ public:
         std::vector<std::string> readings, actors;
     };
     void Add(std::string_view line, Evidence* evidence = nullptr);
-    // Removes only the evidence recorded by this Add, without scanning its line again.
+    // Removes recorded lines in insertion order, without scanning their text again.
     void Forget(const Evidence& evidence);
     // Shares only immutable dictionary facts with subsequent document copies.
     void CacheDictionaryFacts();

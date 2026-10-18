@@ -14,12 +14,14 @@ struct SessionSense {
 };
 
 // Only choices from completed lines are visible to the scorer. The first trusted
-// target for a key lasts until the session is reset.
+// target for a key lasts until reset or a between-call memory trim.
 struct SessionSenses {
     std::map<std::string, SessionSense, std::less<>> choices;
     std::map<std::string, SessionSense, std::less<>> pending;
 
     void FinishLine();
+    // Bounds cross-call choices; call only after translating the whole document.
+    void Trim();
     void Remember(const Item& it);
 };
 

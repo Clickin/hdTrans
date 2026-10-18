@@ -25,6 +25,11 @@ namespace hdTrans::internal {
 
 namespace {
 
+auto FallbackOf(const dict::Snapshot& snap) {
+    const auto fallback = snap.Fallback();
+    return std::pair{fallback, fallback ? NewGenerated(*fallback) : nullptr};
+}
+
 // The buffers of one translation, reused from chunk to chunk.
 struct Scratch {
     tokenizer::Tokens tokens;
@@ -173,9 +178,8 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
                                            std::span<const std::string> lines, Memory& memory,
                                            const StageObserver& observer, const TranslationOptions& options) {
     if (!snap.Healthy()) {
-        const auto fallback = snap.Fallback();
+        const auto [fallback, replacement] = FallbackOf(snap);
         if (!fallback) return {};
-        const auto replacement = NewGenerated(*fallback);
         return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
     }
     if (std::any_of(lines.begin(), lines.end(), [](const std::string& line) {
@@ -216,12 +220,12 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
         out.push_back(std::move(translated));
     }
     if (!snap.Healthy()) {
-        const auto fallback = snap.Fallback();
+        const auto [fallback, replacement] = FallbackOf(snap);
         if (!fallback) return {};
-        const auto replacement = NewGenerated(*fallback);
         return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
     }
     if (s.sessionSenses == &pending) memory.senses = std::move(pending);
+    memory.senses.Trim();
     pipeline::RememberDocument(snap, lines, memory.document);
     return out;
 }
@@ -229,9 +233,8 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
 std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
                              const StageObserver& observer, const TranslationOptions& options) {
     if (!snap.Healthy()) {
-        const auto fallback = snap.Fallback();
+        const auto [fallback, replacement] = FallbackOf(snap);
         if (!fallback) return {};
-        const auto replacement = NewGenerated(*fallback);
         return TranslateRawLine(*fallback, *replacement, line, observer, options);
     }
     Scratch s;
@@ -249,9 +252,8 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
         result += output::String(composed);
     }
     if (!snap.Healthy()) {
-        const auto fallback = snap.Fallback();
+        const auto [fallback, replacement] = FallbackOf(snap);
         if (!fallback) return {};
-        const auto replacement = NewGenerated(*fallback);
         return TranslateRawLine(*fallback, *replacement, line, observer, options);
     }
     return result;

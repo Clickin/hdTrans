@@ -17,6 +17,7 @@
 #include "hdTrans/names/registry.h"
 #include "hdTrans/pipeline/normalize.h"
 #include "hdTrans/dict/builtin.h"
+#include "hdTrans/text/lines.h"
 #include "hdTrans/userdict/userdict.h"
 
 namespace hdTrans::pipeline {
@@ -57,22 +58,11 @@ void FinishCodes(dict::CodeTable& codes) {
     }
 }
 
-// Splits text at "\n", keeping the empty lines that end with a newline out.
-std::vector<std::string_view> Lines(std::string_view text) {
-    std::vector<std::string_view> out;
-    while (!text.empty()) {
-        const std::size_t nl = text.find('\n');
-        out.push_back(text.substr(0, nl));
-        text = nl == std::string_view::npos ? std::string_view() : text.substr(nl + 1);
-    }
-    return out;
-}
-
 // Lines of lines.tsv: the whole-line rows, JP TAB KR (builtin).
 std::map<std::string, std::string> WholeLineRows() {
     std::map<std::string, std::string> rows;
     const std::string text = dict::BuiltinText("lines.tsv");
-    for (const std::string_view raw : Lines(text)) {
+    for (const std::string_view raw : text::Lines(text)) {
         const std::string_view line = names::internal::TrimCR(raw);
         const std::size_t tab = line.find('\t');
         if (tab == std::string_view::npos) continue;
@@ -86,8 +76,7 @@ std::map<std::string, std::string> WholeLineRows() {
     return rows;
 }
 
-// The line of text with the whole-line row replaced in place (wholeLine): the trimmed part
-// of line is a row of lines.tsv (white space around it is kept).
+// Replaces a whole-line entry while preserving surrounding whitespace.
 std::optional<std::string> WholeLineOf(const std::map<std::string, std::string>& rows, std::string_view line) {
     const std::string_view t = names::internal::TrimLineSpace(line);
     const auto it = rows.find(std::string(t));
@@ -378,8 +367,9 @@ LineLookup LookupOf(DocumentContext& doc, const LineFacts& facts) {
     LineLookup out;
     std::string key;
     for (const std::string& t : facts.skip) {
+        key += std::to_string(t.size());
+        key += ':';
         key += t;
-        key += '\t';
     }
     auto found = doc.plainByKey.find(key);
     if (found == doc.plainByKey.end()) {

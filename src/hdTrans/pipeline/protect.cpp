@@ -107,34 +107,6 @@ std::string_view TextOf(const output::Piece& p) {
     return p.text;
 }
 
-std::vector<output::Pieces> Lines(const output::Pieces& text) {
-    std::vector<output::Pieces> out(1);
-    for (const output::Piece& p : text) {
-        if (p.span != output::SpanText) {
-            out.back().push_back(p);
-            continue;
-        }
-        std::string_view rest = p.text;
-        for (bool first = true;; first = false) {
-            if (!first) out.emplace_back();
-            const size_t nl = rest.find('\n');
-            output::Add(out.back(), rest.substr(0, nl));
-            if (nl == std::string_view::npos) break;
-            rest.remove_prefix(nl + 1);
-        }
-    }
-    return out;
-}
-
-output::Pieces JoinLines(const std::vector<output::Pieces>& lines) {
-    output::Pieces out;
-    for (size_t k = 0; k < lines.size(); k++) {
-        if (k > 0) output::Add(out, "\n");
-        output::Append(out, lines[k]);
-    }
-    return out;
-}
-
 }  // namespace internal
 
 output::Pieces MarkCornerBrackets(const output::Pieces& typed) {

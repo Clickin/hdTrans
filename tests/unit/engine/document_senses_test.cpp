@@ -219,3 +219,17 @@ HD_TEST(document_senses_memory_calls_and_reset) {
     internal::TranslateDocument(*snapshot, *generated, seed, disabled, {});
     HD_CHECK(disabled.senses.choices.empty() && disabled.senses.pending.empty());
 }
+
+HD_TEST(document_senses_memory_limits) {
+    word::SessionSenses memory;
+    for (int i = 0; i < 5000; i++) memory.choices[std::to_string(i)] = {"target", "N110"};
+    memory.Trim();
+    HD_CHECK_EQ(memory.choices.size(), std::size_t{4096});
+    memory.choices.clear();
+    for (int i = 0; i < 100; i++) memory.choices[std::to_string(i)] = {std::string(32768, 'a'), "N110"};
+    memory.Trim();
+    std::size_t bytes = 0;
+    for (const auto& [key, value] : memory.choices) bytes += key.size() + value.target.size() + value.partCode.size();
+    HD_CHECK(bytes <= 1024 * 1024);
+    HD_CHECK(!memory.choices.empty());
+}

@@ -77,12 +77,6 @@ output::Pieces RewriteConjunctions(const output::Pieces& text);
 // The text of a text piece, "" for a span.
 std::string_view TextOf(const output::Piece& p);
 
-// text cut at the line feeds of its text pieces; one line at least.
-std::vector<output::Pieces> Lines(const output::Pieces& text);
-
-// The inverse of Lines.
-output::Pieces JoinLines(const std::vector<output::Pieces>& lines);
-
 // The part-of-speech tags (first part-code bytes) of the base records and the plain
 // entries stored under exactly s, kana spellings left out; "" when s is no key.
 std::string KeyTags(std::string_view s, const LineContext& ctx, const dict::Snapshot& snap);

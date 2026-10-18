@@ -83,6 +83,20 @@ void SessionSenses::FinishLine() {
     pending.clear();
 }
 
+void SessionSenses::Trim() {
+    constexpr std::size_t kEntries = 4096, kBytes = 1024 * 1024;
+    auto size = [](const auto& entry) {
+        return entry.first.size() + entry.second.target.size() + entry.second.partCode.size();
+    };
+    std::size_t bytes = 0;
+    for (const auto& entry : choices) bytes += size(entry);
+    while (!choices.empty() && (choices.size() > kEntries || bytes > kBytes)) {
+        bytes -= size(*choices.begin());
+        choices.erase(choices.begin());
+    }
+    pending.clear();
+}
+
 void SessionSenses::Remember(const Item& it) {
     if (!EligibleKey(it, it.selected)) return;
     switch (it.choice.layer) {

@@ -29,16 +29,16 @@ struct DocumentContext {
 
     const dict::Snapshot* snap = nullptr;
     const struct DocumentData* data = nullptr;
-    // The registry key (the CTX record doc.key).
+    // Identifies the registry entries and speaker bindings.
     std::string registryKey;
     // The key the document is identified by: the registry key with the female, persons,
     // verse and historical parts appended.
     std::string key;
     bool female = false;
     bool extraBuiltin = false;
-    std::vector<std::string> persons;  // doc.persons, sorted
-    std::vector<std::string> verse;    // doc.verse, sorted
-    std::string historical;            // doc.historical: JP KR POS rows
+    std::vector<std::string> persons;  // sorted person surfaces
+    std::vector<std::string> verse;    // sorted verse lines
+    std::string historical;            // JP KR POS rows
     dict::KeySet persons_;             // the persons of the document, for the person places
     dict::KeySet accepted;             // the accepted names of the registry
     dict::KeySet named;                // the accepted names and the surfaces shown to be names
@@ -95,18 +95,17 @@ LineLookup LookupOf(DocumentContext& doc, const LineFacts& facts);
 LineContext ContextOf(const DocumentContext& doc, const LineLookup& lookup);
 
 // The names a text confirms as persons, from its speaker cues, for text without a
-// document (cuedNames).
+// document.
 std::vector<std::string> CuedNames(const dict::Snapshot& snap, std::string_view text);
 
 namespace internal {
 
-// The place keys of text with a person spelling that are named or shown to be persons
-// (personPlaces). With a registry, a key is named when registry names it or persons has
-// it; without one, only a title or a speaker cue shows a person.
+// Place keys shown as persons. With a registry, a key is named when the registry
+// names it or persons contains it; without one, a title or speaker cue is required.
 std::vector<std::string> PersonPlaces(const dict::Snapshot& snap, std::string_view text, names::Registry* registry,
                                       const dict::KeySet* persons);
 
-// The lines that run on into the next line (verseLines): a line that ends in て or で
+// The lines that run on into the next line: a line that ends in て or で
 // followed by a line that is not empty.
 std::set<std::string> VerseLines(std::span<const std::string> lines);
 

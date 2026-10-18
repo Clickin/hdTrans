@@ -309,3 +309,17 @@ HD_TEST(names_plain_golden) {
     }
     HD_CHECK_EQ(total, size_t{0});
 }
+
+HD_TEST(document_skip_cache_length_prefix) {
+    const auto loaded = dict::Load({{0, "base.tsv", "key\tko\tpos\tsem\tgram\tdict\trule\tid\n"}});
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    auto doc = pipeline::BuildDocument(*loaded.snapshot, {});
+    pipeline::LineFacts one, two;
+    one.skip = {"a\tb"};
+    two.skip = {"a", "b"};
+    const auto first = pipeline::LookupOf(*doc, one);
+    const auto second = pipeline::LookupOf(*doc, two);
+    HD_CHECK(first.plain != second.plain);
+    HD_CHECK_EQ(doc->plainByKey.size(), std::size_t{2});
+    HD_CHECK(pipeline::LookupOf(*doc, one).plain == first.plain);
+}

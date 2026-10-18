@@ -40,35 +40,6 @@ bool Contains(std::u32string_view set, char32_t r) { return set.find(r) != std::
 
 std::string_view TextOf(const Piece& p) { return p.span == SpanText ? std::string_view(p.text) : std::string_view(); }
 
-// text cut at the line feeds of its text pieces; one line at least.
-std::vector<Pieces> Lines(const Pieces& text) {
-    std::vector<Pieces> out(1);
-    for (const auto& p : text) {
-        if (p.span != SpanText) {
-            out.back().push_back(p);
-            continue;
-        }
-        std::string_view rest = p.text;
-        for (bool first = true;; first = false) {
-            if (!first) out.emplace_back();
-            const size_t nl = rest.find('\n');
-            output::Add(out.back(), rest.substr(0, nl));
-            if (nl == std::string_view::npos) break;
-            rest.remove_prefix(nl + 1);
-        }
-    }
-    return out;
-}
-
-Pieces JoinLines(const std::vector<Pieces>& lines) {
-    Pieces out;
-    for (size_t k = 0; k < lines.size(); k++) {
-        if (k > 0) output::Add(out, "\n");
-        output::Append(out, lines[k]);
-    }
-    return out;
-}
-
 template <class F>
 Pieces MapText(const Pieces& p, F f) {
     Pieces out;
@@ -217,8 +188,8 @@ int VowelOf(char32_t r) {
 }  // namespace
 
 Pieces DropAddedSpaces(const Pieces& typed, const Pieces& out) {
-    const std::vector<Pieces> inLines = Lines(typed);
-    std::vector<Pieces> outLines = Lines(out);
+    const std::vector<Pieces> inLines = output::Lines(typed);
+    std::vector<Pieces> outLines = output::Lines(out);
     if (inLines.size() != outLines.size()) return out;
     for (size_t i = 0; i < outLines.size(); i++) {
         Pieces& line = outLines[i];
@@ -227,15 +198,15 @@ Pieces DropAddedSpaces(const Pieces& typed, const Pieces& out) {
         for (const auto& p : inLines[i]) opening = opening || HasOpeningSpace(TextOf(p));
         if (!opening) line = MapText(line, DropOpeningSpaces);
     }
-    return JoinLines(outLines);
+    return output::JoinLines(outLines);
 }
 
 Pieces RestoreBrackets(const Pieces& typed, const Pieces& out) {
-    const std::vector<Pieces> inLines = Lines(typed);
-    std::vector<Pieces> outLines = Lines(out);
+    const std::vector<Pieces> inLines = output::Lines(typed);
+    std::vector<Pieces> outLines = output::Lines(out);
     if (inLines.size() != outLines.size()) return RestoreLineBrackets(typed, out);
     for (size_t i = 0; i < outLines.size(); i++) outLines[i] = RestoreLineBrackets(inLines[i], outLines[i]);
-    return JoinLines(outLines);
+    return output::JoinLines(outLines);
 }
 
 std::string KoreanForms(std::string_view s) {

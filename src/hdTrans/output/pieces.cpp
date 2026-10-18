@@ -1,5 +1,7 @@
 #include "hdTrans/output/pieces.h"
 
+#include "hdTrans/text/lines.h"
+
 namespace hdTrans::output {
 
 std::string String(const Pieces& p) {
@@ -37,6 +39,32 @@ void Append(Pieces& p, Pieces&& q) {
             Add(p, x.text);
         }
     }
+}
+
+std::vector<Pieces> Lines(const Pieces& pieces) {
+    std::vector<Pieces> out(1);
+    for (const Piece& piece : pieces) {
+        if (piece.span != SpanText) {
+            out.back().push_back(piece);
+            continue;
+        }
+        bool first = true;
+        for (std::string_view line : text::Lines(piece.text)) {
+            if (!first) out.emplace_back();
+            Add(out.back(), line);
+            first = false;
+        }
+    }
+    return out;
+}
+
+Pieces JoinLines(const std::vector<Pieces>& lines) {
+    Pieces out;
+    for (std::size_t i = 0; i < lines.size(); i++) {
+        if (i > 0) Add(out, "\n");
+        Append(out, lines[i]);
+    }
+    return out;
 }
 
 std::string_view Head(const Pieces& p) {
