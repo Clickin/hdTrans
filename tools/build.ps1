@@ -1,9 +1,19 @@
 # Windows build: check out <ref> from a bare repository into a work tree, configure and build the
 # MSVC preset(s) with the CMake and Ninja shipped in Visual Studio, run the unit tests.
-# Usage: powershell -File build.ps1 -ref main -arch x86|x64|all [-root DIR] [-bare DIR]
+# Usage: powershell -File build.ps1 -ref main -arch x86|x64|all [-root DIR] [-bare DIR] [-Golden DIR -Dicts DIR]
 # Defaults: HDTRANS_CPP_ROOT / HDTRANS_CPP_BARE, else the script's repository and no fetch.
-param([string]$ref = 'main', [string]$arch = 'all', [string]$root = $env:HDTRANS_CPP_ROOT, [string]$bare = $env:HDTRANS_CPP_BARE)
+# Golden sets are optional; HDTRANS_GOLDEN / HDTRANS_DICTS supply their locations.
+param(
+    [string]$ref = 'main',
+    [string]$arch = 'all',
+    [string]$root = $env:HDTRANS_CPP_ROOT,
+    [string]$bare = $env:HDTRANS_CPP_BARE,
+    [string]$Golden = $env:HDTRANS_GOLDEN,
+    [string]$Dicts = $env:HDTRANS_DICTS
+)
 $ErrorActionPreference = 'Continue'
+if ([bool]$Golden -ne [bool]$Dicts) { 'Golden and Dicts must be supplied together'; exit 2 }
+if ($Golden -and -not (Test-Path "$PSScriptRoot\golden.ps1" -PathType Leaf)) { 'no golden.ps1 beside build.ps1'; exit 2 }
 if (-not $root) { $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }
 if ($bare) {
     if (-not (Test-Path "$root\.git")) { git clone -q $bare $root 2>&1 | Out-Null }
@@ -33,8 +43,16 @@ foreach ($a in $archs) {
         "ctest --preset $preset"
     ) | Set-Content -Encoding ASCII $bat
     & cmd /c $bat 2>&1
-    "$preset exit=$LASTEXITCODE"
-    if ($LASTEXITCODE -ne 0) { $exit = 1 }
+    $buildExit = $LASTEXITCODE
+    "$preset exit=$buildExit"
+    if ($buildExit -ne 0) { $exit = 1 }
+    if ($buildExit -eq 0 -and $Golden) {
+        $timer = [System.Diagnostics.Stopwatch]::StartNew()
+        & "$PSScriptRoot\golden.ps1" -Build "$root\build\$preset" -Golden $Golden -Dicts $Dicts
+        $goldenExit = $LASTEXITCODE
+        "$preset golden exit=$goldenExit elapsed=$([Math]::Round($timer.Elapsed.TotalSeconds, 2))s"
+        if ($goldenExit -ne 0) { $exit = 1 }
+    }
     foreach ($dll in "$root\build\$preset\hdTransEngine.dll", "$root\build\$preset\J2KEngine.dll") {
         if (Test-Path $dll) { "$preset $(Split-Path $dll -Leaf) " + (Get-FileHash $dll).Hash + ' ' + (Get-Item $dll).Length }
     }
