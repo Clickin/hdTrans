@@ -1,9 +1,17 @@
 #include "hdTrans/dict/codes.h"
+#include "hdTrans/dict/dict.h"
 
+#include <iterator>
+#include <memory>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include "hdtest.h"
 
+using hdTrans::dict::Codes;
+using hdTrans::dict::CodeTable;
 using hdTrans::dict::DictCode;
 using hdTrans::dict::GramCodes;
 using hdTrans::dict::PartCode;
@@ -12,6 +20,23 @@ using hdTrans::dict::SemCodes;
 using hdTrans::dict::WordClass;
 
 namespace {
+
+void CloseCodes(CodeTable& table) {
+    for (std::size_t i = 0; i < table.Size(); i++) {
+        table.SetWithXXX(static_cast<int32_t>(i));
+        table.SetAsPlain(static_cast<int32_t>(i));
+    }
+}
+
+void CheckCodesUnchanged(const Codes& got, const Codes& want) {
+    HD_CHECK(got.part == want.part);
+    HD_CHECK_EQ(got.partText, want.partText);
+    HD_CHECK(got.sem.Text() == want.sem.Text());
+    HD_CHECK(got.gram.Text() == want.gram.Text());
+    HD_CHECK(got.dict.Text() == want.dict.Text());
+    HD_CHECK(got.withXXX == want.withXXX);
+    HD_CHECK(got.asPlain == want.asPlain);
+}
 
 std::string Pos(std::string_view pos) {
     std::string_view part, sem, gram;
@@ -167,4 +192,265 @@ HD_TEST(PosTags) {
     HD_CHECK_EQ(Pos("foo-bar"), "unknown");
     HD_CHECK_EQ(Pos("n110"), "unknown");
     HD_CHECK_EQ(Pos("N1,10"), "unknown");
+}
+
+HD_TEST(CodeTablePrefixTupleIdentity) {
+    using namespace std::string_view_literals;
+    struct Tuple {
+        std::string_view part, sem, gram, dict;
+    };
+    const Tuple tuples[] = {
+        {"N110", "QCT VPl", "Njd", "BZ"},
+        {"N1100X", "QPN", "Wa", "BZ"},
+        {"N110", "QPN\0VHn"sv, "Wa", "BZ"},
+        {"N110\0"sv, "QPN", "Wa", "BZ"},
+        {"N110", "QPN", "Wa\0"sv, "BZ"},
+        {"N110", "QPN", "Wa", "BZ\0"sv},
+        {"N110", "QCTVPl", "Njd", "BZ"},
+        {"N1100Y", "QPN", "Wa", "BZ"},
+        {"N110", "QPN", "Wa", "BZ"},
+        {"N110", "QPN\0VHm"sv, "Wa", "BZ"},
+        {"N110", "QPN", "Wa ", "BZ"},
+        {"N110", "QPN", "Wa", "Bz"},
+    };
+    CodeTable root, expected;
+    std::vector<int32_t> numbers;
+    for (std::size_t i = 0; i < 6; i++) {
+        const auto& t = tuples[i];
+        numbers.push_back(root.Intern(t.part, t.sem, t.gram, t.dict));
+        HD_CHECK_EQ(numbers.back(), expected.Intern(t.part, t.sem, t.gram, t.dict));
+    }
+    CloseCodes(root);
+    CloseCodes(expected);
+    const auto base = std::make_shared<const CodeTable>(std::move(root));
+    CodeTable table;
+    HD_REQUIRE(CodeTable::WithBase(base, table));
+    HD_CHECK_EQ(table.Size(), base->Size());
+    HD_CHECK_EQ(table.MemoryBytes(), base->MemoryBytes());
+    for (std::size_t i = 0; i < std::size(tuples); i++) {
+        const auto& t = tuples[i];
+        const std::size_t before = table.Size();
+        const int32_t number = table.Intern(t.part, t.sem, t.gram, t.dict);
+        HD_CHECK_EQ(number, expected.Intern(t.part, t.sem, t.gram, t.dict));
+        if (i < 6) {
+            HD_CHECK_EQ(number, numbers[i]);
+            HD_CHECK(table.At(number) == base->At(number));
+            HD_CHECK_EQ(table.Size(), before);
+            HD_CHECK_EQ(table.MemoryBytes(), base->MemoryBytes());
+        } else {
+            numbers.push_back(number);
+            HD_CHECK_EQ(static_cast<std::size_t>(number), before);
+            HD_CHECK_EQ(table.Size(), before + 1);
+        }
+        const Codes& c = *table.At(number);
+        HD_CHECK(c.partText == t.part);
+        HD_CHECK(c.sem.Text() == t.sem);
+        HD_CHECK(c.gram.Text() == t.gram);
+        HD_CHECK(c.dict.Text() == t.dict);
+    }
+    CloseCodes(table);
+    CloseCodes(expected);
+    const std::size_t size = table.Size();
+    HD_REQUIRE(size == expected.Size());
+    for (std::size_t i = 0; i < std::size(tuples); i++) {
+        const auto& t = tuples[i];
+        HD_CHECK_EQ(table.Intern(t.part, t.sem, t.gram, t.dict), numbers[i]);
+    }
+    for (std::size_t i = 0; i < size; i++) {
+        const Codes& c = *expected.At(static_cast<int32_t>(i));
+        HD_CHECK_EQ(table.Intern(c.partText, c.sem.Text(), c.gram.Text(), c.dict.Text()), static_cast<int32_t>(i));
+        const Codes* actual = table.At(static_cast<int32_t>(i));
+        HD_REQUIRE(c.withXXX != nullptr && c.asPlain != nullptr);
+        const int32_t xxx = table.Intern(c.withXXX->partText, c.withXXX->sem.Text(), c.withXXX->gram.Text(), c.withXXX->dict.Text());
+        const int32_t plain = table.Intern(c.asPlain->partText, c.asPlain->sem.Text(), c.asPlain->gram.Text(), c.asPlain->dict.Text());
+        HD_CHECK(table.At(xxx) == actual->withXXX);
+        HD_CHECK(table.At(plain) == actual->asPlain);
+    }
+    HD_CHECK_EQ(table.Size(), size);
+}
+
+HD_TEST(CodeTablePrefixRewritesDoNotChangeBase) {
+    CodeTable root;
+    root.Intern("N110", "QPNXXX", "Wa", "BZ");
+    root.Intern("M429", "VSs", "Hd", "GN");
+    CloseCodes(root);
+    const auto base = std::make_shared<const CodeTable>(std::move(root));
+    std::vector<Codes> saved;
+    for (std::size_t i = 0; i < base->Size(); i++) saved.push_back(*base->At(static_cast<int32_t>(i)));
+    const std::size_t memory = base->MemoryBytes();
+    CodeTable table;
+    HD_REQUIRE(CodeTable::WithBase(base, table));
+    for (std::size_t i = 0; i < base->Size(); i++) {
+        table.SetWithXXX(static_cast<int32_t>(i));
+        table.SetAsPlain(static_cast<int32_t>(i));
+        HD_CHECK(table.At(static_cast<int32_t>(i)) == base->At(static_cast<int32_t>(i)));
+    }
+    HD_CHECK_EQ(table.Size(), base->Size());
+    HD_CHECK_EQ(table.MemoryBytes(), memory);
+    struct Case {
+        std::string_view part, sem, gram, dict;
+        bool xxxInBase, plainInBase;
+    };
+    const Case cases[] = {
+        {"N110", "QPN", "Wa", "BZ", true, false},
+        {"M429", "VSs", "Hd", "BZ", false, true},
+        {"E300", "QCT", "Njd", "BZ", false, false},
+        {"N130", "QPNXXX", "Wa", "GN", false, false},
+    };
+    for (const auto& t : cases) {
+        const int32_t number = table.Intern(t.part, t.sem, t.gram, t.dict);
+        table.SetWithXXX(number);
+        table.SetAsPlain(number);
+        const Codes* c = table.At(number);
+        const std::string sem = c->sem.Contains("XXX") ? std::string(t.sem) : std::string(t.sem) + "XXX";
+        const int32_t xxx = table.Intern(t.part, sem, t.gram, t.dict);
+        const int32_t plain = table.Intern(t.part, t.sem, t.gram, "GN");
+        HD_CHECK(c->withXXX == table.At(xxx));
+        HD_CHECK(c->asPlain == table.At(plain));
+        HD_CHECK_EQ(static_cast<std::size_t>(xxx) < base->Size(), t.xxxInBase);
+        HD_CHECK_EQ(static_cast<std::size_t>(plain) < base->Size(), t.plainInBase);
+        HD_CHECK(c->withXXX->withXXX == c->withXXX);
+        HD_CHECK(c->asPlain->asPlain == c->asPlain);
+        if (c->sem.Contains("XXX")) HD_CHECK(c->withXXX == c);
+        if (c->dict == "GN") HD_CHECK(c->asPlain == c);
+    }
+    CloseCodes(table);
+    HD_CHECK_EQ(base->Size(), saved.size());
+    HD_CHECK_EQ(base->MemoryBytes(), memory);
+    for (std::size_t i = 0; i < saved.size(); i++) CheckCodesUnchanged(*base->At(static_cast<int32_t>(i)), saved[i]);
+}
+
+HD_TEST(CodeTableRejectsChainedBaseWithoutChangingOutput) {
+    CodeTable root;
+    root.Intern("N110", "QPN", "Wa", "BZ");
+    CloseCodes(root);
+    const auto base = std::make_shared<const CodeTable>(std::move(root));
+    std::vector<std::shared_ptr<const CodeTable>> chained;
+    for (bool addOverflow : {false, true}) {
+        CodeTable table;
+        HD_REQUIRE(CodeTable::WithBase(base, table));
+        if (addOverflow) {
+            table.Intern("M429", "VSs", "Hd", "BZ");
+            CloseCodes(table);
+        }
+        chained.push_back(std::make_shared<const CodeTable>(std::move(table)));
+    }
+    const std::shared_ptr<const CodeTable> previousBases[] = {nullptr, base};
+    for (const auto& previous : previousBases) {
+        CodeTable out;
+        HD_REQUIRE(CodeTable::WithBase(previous, out));
+        out.Intern("E300", "QCT", "Njd", "BZ");
+        CloseCodes(out);
+        std::vector<const Codes*> pointers;
+        std::vector<Codes> saved;
+        for (std::size_t i = 0; i < out.Size(); i++) {
+            pointers.push_back(out.At(static_cast<int32_t>(i)));
+            saved.push_back(*pointers.back());
+        }
+        const std::size_t memory = out.MemoryBytes();
+        for (const auto& invalid : chained) {
+            HD_CHECK(!CodeTable::WithBase(invalid, out));
+            HD_CHECK_EQ(out.Size(), saved.size());
+            HD_CHECK_EQ(out.MemoryBytes(), memory);
+            for (std::size_t i = 0; i < saved.size(); i++) {
+                HD_CHECK(out.At(static_cast<int32_t>(i)) == pointers[i]);
+                CheckCodesUnchanged(*out.At(static_cast<int32_t>(i)), saved[i]);
+            }
+        }
+        HD_REQUIRE(CodeTable::WithBase(nullptr, out));
+        HD_CHECK_EQ(out.Size(), std::size_t{0});
+        HD_CHECK_EQ(out.MemoryBytes(), std::size_t{0});
+        HD_CHECK_EQ(out.Intern("E300", "QCT", "Njd", "BZ"), 0);
+        HD_REQUIRE(CodeTable::WithBase(base, out));
+        HD_CHECK_EQ(out.Size(), base->Size());
+        HD_CHECK(out.At(0) == base->At(0));
+    }
+    auto alias = std::make_shared<CodeTable>();
+    const int32_t number = alias->Intern("N130", "QPN", "Wa", "GN");
+    CloseCodes(*alias);
+    const Codes* pointer = alias->At(number);
+    const Codes saved = *pointer;
+    const std::size_t size = alias->Size(), memory = alias->MemoryBytes();
+    HD_CHECK(!CodeTable::WithBase(alias, *alias));
+    HD_CHECK_EQ(alias->Size(), size);
+    HD_CHECK_EQ(alias->MemoryBytes(), memory);
+    HD_CHECK(alias->At(number) == pointer);
+    CheckCodesUnchanged(*alias->At(number), saved);
+}
+
+HD_TEST(CodeTableAddressesSurviveGrowthAndMoves) {
+    CodeTable root;
+    root.Intern("N110", "QPN", "Wa", "BZ");
+    CloseCodes(root);
+    const std::shared_ptr<const CodeTable> bases[] = {
+        nullptr, std::make_shared<const CodeTable>(), std::make_shared<const CodeTable>(std::move(root)),
+    };
+    for (const auto& base : bases) {
+        CodeTable table;
+        HD_REQUIRE(CodeTable::WithBase(base, table));
+        table.Intern("E300", "QCT", "Njd", "BZ");
+        CloseCodes(table);
+        std::vector<const Codes*> pointers;
+        std::vector<Codes> saved;
+        for (std::size_t i = 0; i < table.Size(); i++) {
+            pointers.push_back(table.At(static_cast<int32_t>(i)));
+            saved.push_back(*pointers.back());
+        }
+        for (int phase = 0; phase < 2; phase++) {
+            const std::size_t first = table.Size();
+            for (int i = 0; i < 2400; i++) {
+                const std::string sem = "QPN" + std::to_string(phase * 2400 + i);
+                const int32_t number = table.Intern("N130", sem, "Wa", "BZ");
+                HD_CHECK_EQ(static_cast<std::size_t>(number), first + static_cast<std::size_t>(i));
+            }
+            CloseCodes(table);
+            CodeTable moved(std::move(table));
+            table = CodeTable();
+            table.Intern("S5A0", "", "", "GN");
+            table = std::move(moved);
+            for (std::size_t i = 0; i < saved.size(); i++) {
+                const Codes* c = table.At(static_cast<int32_t>(i));
+                HD_CHECK(c == pointers[i]);
+                CheckCodesUnchanged(*c, saved[i]);
+                HD_CHECK_EQ(table.Intern(c->partText, c->sem.Text(), c->gram.Text(), c->dict.Text()), static_cast<int32_t>(i));
+            }
+            for (std::size_t i = saved.size(); i < table.Size(); i++) {
+                pointers.push_back(table.At(static_cast<int32_t>(i)));
+                saved.push_back(*pointers.back());
+            }
+        }
+    }
+}
+
+HD_TEST(CodeTableOwnsBaseLifetimeAndCountsItsMemoryOnce) {
+    CodeTable root;
+    const int32_t number = root.Intern("N1100-long-part-text-for-allocation", "QPNVHnQCTVP1VP2VP3VP4VP5", "WaWbWcWdWeWfWgWhWiWjWkWl", "BZ");
+    CloseCodes(root);
+    auto base = std::make_shared<const CodeTable>(std::move(root));
+    const std::weak_ptr<const CodeTable> held = base;
+    const Codes* pointer = base->At(number);
+    const Codes original = *pointer;
+    const std::size_t baseMemory = base->MemoryBytes();
+    {
+        CodeTable table;
+        HD_REQUIRE(CodeTable::WithBase(base, table));
+        HD_CHECK_EQ(table.MemoryBytes(), baseMemory);
+        const int32_t duplicate = table.Intern(pointer->partText, pointer->sem.Text(), pointer->gram.Text(), pointer->dict.Text());
+        HD_CHECK_EQ(duplicate, number);
+        HD_CHECK(table.At(duplicate) == pointer);
+        HD_CHECK_EQ(table.MemoryBytes(), baseMemory);
+        CodeTable owned;
+        owned.Intern("M429", "VSs", "Hd", "BZ");
+        table.Intern("M429", "VSs", "Hd", "BZ");
+        CloseCodes(owned);
+        CloseCodes(table);
+        HD_CHECK_EQ(table.MemoryBytes(), baseMemory + owned.MemoryBytes());
+        base.reset();
+        HD_CHECK(!held.expired());
+        CodeTable moved(std::move(table));
+        HD_CHECK(moved.At(number) == pointer);
+        CheckCodesUnchanged(*moved.At(number), original);
+        HD_CHECK_EQ(moved.MemoryBytes(), baseMemory + owned.MemoryBytes());
+    }
+    HD_CHECK(held.expired());
 }

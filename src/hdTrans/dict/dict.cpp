@@ -1,6 +1,7 @@
 #include "hdTrans/dict/dict.h"
 
 #include <limits>
+#include <utility>
 
 namespace hdTrans::dict {
 
@@ -17,7 +18,30 @@ uint64_t HashCodes(std::string_view part, std::string_view sem, std::string_view
 
 }  // namespace
 
+bool CodeTable::WithBase(std::shared_ptr<const CodeTable> base, CodeTable& out) {
+    if (base && (base->base_ || base.get() == &out)) return false;
+    CodeTable table;
+    table.base_ = std::move(base);
+    out = std::move(table);
+    return true;
+}
+
+int32_t CodeTable::Find(std::string_view part, std::string_view sem, std::string_view gram, std::string_view dict) const {
+    if (slots_.empty()) return -1;
+    const std::size_t mask = slots_.size() - 1;
+    for (std::size_t s = HashCodes(part, sem, gram, dict) & mask;; s = (s + 1) & mask) {
+        const int32_t i = slots_[s];
+        if (i < 0) return -1;
+        const Codes& c = list_[static_cast<std::size_t>(i)];
+        if (c.partText == part && c.sem.Text() == sem && c.gram.Text() == gram && c.dict.Text() == dict) return i;
+    }
+}
+
 int32_t CodeTable::Intern(std::string_view part, std::string_view sem, std::string_view gram, std::string_view dict) {
+    if (base_) {
+        const int32_t i = base_->Find(part, sem, gram, dict);
+        if (i >= 0) return i;
+    }
     if (slots_.empty() || list_.size() * 2 >= slots_.size()) Grow();
     const std::size_t mask = slots_.size() - 1;
     for (std::size_t s = HashCodes(part, sem, gram, dict) & mask;; s = (s + 1) & mask) {
@@ -30,10 +54,11 @@ int32_t CodeTable::Intern(std::string_view part, std::string_view sem, std::stri
             c.gram = GramCodes(gram);
             c.dict = DictCode(dict);
             slots_[s] = static_cast<int32_t>(list_.size() - 1);
-            return slots_[s];
+            return static_cast<int32_t>(BaseSize() + list_.size() - 1);
         }
         const Codes& c = list_[static_cast<std::size_t>(i)];
-        if (c.partText == part && c.sem.Text() == sem && c.gram.Text() == gram && c.dict.Text() == dict) return i;
+        if (c.partText == part && c.sem.Text() == sem && c.gram.Text() == gram && c.dict.Text() == dict)
+            return static_cast<int32_t>(BaseSize() + static_cast<std::size_t>(i));
     }
 }
 
@@ -53,7 +78,9 @@ void CodeTable::Grow() {
 }
 
 void CodeTable::SetWithXXX(int32_t i) {
-    Codes& c = list_[static_cast<std::size_t>(i)];
+    const std::size_t prefix = BaseSize();
+    if (static_cast<std::size_t>(i) < prefix) return;
+    Codes& c = list_[static_cast<std::size_t>(i) - prefix];
     if (c.withXXX) return;
     if (c.sem.Contains("XXX")) {
         c.withXXX = &c;
@@ -64,12 +91,15 @@ void CodeTable::SetWithXXX(int32_t i) {
     const std::string gram(c.gram.Text());
     const std::string dict(c.dict.Text());
     const int32_t twin = Intern(part, sem, gram, dict);
-    list_[static_cast<std::size_t>(twin)].withXXX = At(twin);
-    list_[static_cast<std::size_t>(i)].withXXX = At(twin);
+    if (static_cast<std::size_t>(twin) >= prefix)
+        list_[static_cast<std::size_t>(twin) - prefix].withXXX = At(twin);
+    c.withXXX = At(twin);
 }
 
 void CodeTable::SetAsPlain(int32_t i) {
-    Codes& c = list_[static_cast<std::size_t>(i)];
+    const std::size_t prefix = BaseSize();
+    if (static_cast<std::size_t>(i) < prefix) return;
+    Codes& c = list_[static_cast<std::size_t>(i) - prefix];
     if (c.asPlain) return;
     if (c.dict == "GN") {
         c.asPlain = &c;
@@ -79,12 +109,13 @@ void CodeTable::SetAsPlain(int32_t i) {
     const std::string sem(c.sem.Text());
     const std::string gram(c.gram.Text());
     const int32_t twin = Intern(part, sem, gram, "GN");
-    list_[static_cast<std::size_t>(twin)].asPlain = At(twin);
-    list_[static_cast<std::size_t>(i)].asPlain = At(twin);
+    if (static_cast<std::size_t>(twin) >= prefix)
+        list_[static_cast<std::size_t>(twin) - prefix].asPlain = At(twin);
+    c.asPlain = At(twin);
 }
 
 std::size_t CodeTable::MemoryBytes() const {
-    std::size_t n = slots_.size() * sizeof(int32_t) + list_.size() * sizeof(Codes);
+    std::size_t n = (base_ ? base_->MemoryBytes() : 0) + slots_.size() * sizeof(int32_t) + list_.size() * sizeof(Codes);
     for (const Codes& c : list_) {
         for (const std::string_view s : {std::string_view(c.partText), c.sem.Text(), c.gram.Text(), c.dict.Text()}) {
             if (s.size() > sizeof(std::string) - 2) n += s.size() + 1;
