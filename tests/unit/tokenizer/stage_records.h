@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "hdTrans/text/utf8.h"
+#include "hdtest.h"
 
 namespace stagetest {
 
@@ -97,18 +98,10 @@ inline bool ReadFile(const std::string& path, std::string& text) {
     return true;
 }
 
-// $HDTRANS_GOLDEN/stages/, by default hdtrans-golden next to the repository. Empty when
-// the set is absent or incomplete (it is complete once its MANIFEST exists).
+// The complete, explicitly configured stage folder.
 inline std::string StagesDir() {
-    std::string dir;
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) {
-        dir = g;
-    } else {
-        std::string f = __FILE__;
-        const size_t slash = f.find_last_of("/\\");
-        dir = (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../hdtrans-golden";
-    }
-    dir += "/stages/";
+    if (hdtest::GoldenDir().empty()) return {};
+    const std::string dir = hdtest::GoldenDir() + "/stages/";
     std::FILE* m = std::fopen((dir + "MANIFEST").c_str(), "rb");
     if (m == nullptr) return {};
     std::fclose(m);

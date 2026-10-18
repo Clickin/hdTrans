@@ -272,3 +272,27 @@ HD_TEST(rules_load_literals) {
     HD_CHECK_EQ(lit(3), std::string());
     HD_CHECK_EQ(p.nodes[3].delta, -1);
 }
+
+HD_TEST(rules_global_open_interval_boundaries) {
+    const struct { int number; bool last; bool normal; } cases[] = {
+        {-1, false, false}, {0, false, false}, {1, true, false}, {999, true, false},
+        {1000, false, false}, {1001, false, true}, {4999, false, true},
+        {5000, false, false}, {5001, false, false},
+    };
+    for (const auto& c : cases) {
+        for (bool last : {false, true}) {
+            for (bool stem : {false, true}) {
+                Program p;
+                p.nodes.push_back({hdTrans::rules::NodeKind::And, {}, 0, 0, 0, 1});
+                p.globalRules.push_back({'4', c.number, stem, 0});
+                int fired = 12345;
+                const bool expected = !stem || (last ? c.last : c.normal);
+                HD_CHECK_EQ(hdTrans::rules::RunGlobal(p, nullptr, stem, '4', last, &fired), expected);
+                HD_CHECK_EQ(fired, expected ? c.number : -1);
+                fired = 12345;
+                HD_CHECK(!hdTrans::rules::RunGlobal(p, nullptr, stem, '1', last, &fired));
+                HD_CHECK_EQ(fired, -1);
+            }
+        }
+    }
+}

@@ -454,3 +454,13 @@ HD_TEST(CodeTableOwnsBaseLifetimeAndCountsItsMemoryOnce) {
     }
     HD_CHECK(held.expired());
 }
+
+HD_TEST(GramCodesPunctuationDigits) {
+    const struct { const char* attrs; int digit; } cases[] = {
+        {"J0", '0'}, {"J1", '1'}, {"J2", '2'}, {"J3", '3'}, {"J4", '4'},
+        {"J5", '5'}, {"J6", '6'}, {"J7", '7'}, {"J8", 0},
+        {"NJ7Wa", '7'}, {"J7J1", '7'}, {"J8J7", 0}, {"JsJ7", 0},
+        {"J", 0}, {"", 0}, {"J/", 0}, {"J9", 0}, {"J00", '0'},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(static_cast<int>(GramCodes(c.attrs).PunctDigit()), c.digit);
+}

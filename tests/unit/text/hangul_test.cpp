@@ -58,3 +58,18 @@ HD_TEST(hangul_same_sound) {
         if (SameSound(c.a, c.b) != c.same) hdtest::Fail(__FILE__, __LINE__, std::string("SameSound(") + c.a + ", " + c.b + ")");
     }
 }
+
+HD_TEST(hangul_same_sound_vowel_pairs) {
+    const struct { const char* a; const char* b; bool same; } cases[] = {
+        {"져", "저", true}, {"쳐", "처", true}, {"쪄", "저", true},
+        {"져", "자", false}, {"쳐", "차", false},
+        {"쟈", "자", true}, {"챠", "차", true}, {"죠", "조", true}, {"쵸", "초", true},
+        {"쥬", "주", true}, {"츄", "추", true},
+        {"와", "오", false}, {"와", "와아", false}, {"겨", "거", false},
+        {"김", "기", false}, {"저", "처", true}, {"져!", "저!", true},
+    };
+    for (const auto& c : cases) {
+        HD_CHECK_EQ(SameSound(c.a, c.b), c.same);
+        HD_CHECK_EQ(SameSound(c.b, c.a), c.same);
+    }
+}

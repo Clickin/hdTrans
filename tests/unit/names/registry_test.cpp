@@ -1,5 +1,5 @@
-// Table tests of the name registry on the base dictionary ($HDTRANS_DICTS, by default
-// dicts/base next to the repository): speaker labels, honorifics, occurrences and their
+// Table tests of the name registry on the base dictionary ($HDTRANS_DICTS):
+// speaker labels, honorifics, occurrences and their
 // guards, the rendering of names and the plain rows. Skipped when the dictionaries are absent.
 #include <algorithm>
 #include <array>
@@ -18,12 +18,7 @@ using namespace hdTrans;
 
 namespace {
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
-}
+using hdtest::DictsDir;
 
 // The loaded base dictionary, or null (the tests then skip).
 const dict::Snapshot* Base() {
@@ -64,6 +59,7 @@ std::string Occurrences(names::Registry& r, const std::string& line) {
 }  // namespace
 
 HD_TEST(names_strip_ruby) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::vector<std::pair<std::string, std::string>> cases = {
         {"|梨花《りか》ちゃん", "梨花ちゃん"},
         {"｜幻晶騎士《シルエットナイト》", "幻晶騎士"},
@@ -76,13 +72,15 @@ HD_TEST(names_strip_ruby) {
 }
 
 HD_TEST(names_speaker_cues) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     HD_CHECK_EQ(names::SpeakerCues("魅音「おはよう」\n圭一です。").size(), size_t{2});
     HD_CHECK_EQ(names::SpeakerCues("そう言って、おはよう").size(), size_t{0});
 }
 
 HD_TEST(names_labels) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, bool>> cases = {
         {Repeat("魅音「おはよう」", 3), true},
         {Repeat("魅音「おはよう」", 2), false},  // a plain-text form must recur
@@ -113,8 +111,9 @@ HD_TEST(names_labels) {
 }
 
 HD_TEST(names_honorifics) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, std::vector<std::string>>> cases = {
         {Repeat("梨花ちゃん、おはよう。", 4), {"梨花"}},
         {Repeat("梨花ちゃん、おはよう。", 3), {}},  // a common word scores 0.5 per honorific
@@ -139,8 +138,9 @@ HD_TEST(names_honorifics) {
 }
 
 HD_TEST(names_occurrences_and_guards) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::array<std::string, 3>> cases = {
         {"", "光が来た。", ""},
         {Repeat("光さん、", 3), "光が来た。", "光"},
@@ -164,8 +164,9 @@ HD_TEST(names_occurrences_and_guards) {
 }
 
 HD_TEST(names_dict_rows) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     names::Registry r = Scan(snap, "竜宮レナ（りゅうぐうれな）\n" + Repeat("前原圭一「おはよう」", 3) + Repeat("圭一くん", 2));
     HD_CHECK_EQ(r.Dict(),
                 std::string("前原\t마에바라\tsurname\n前原圭一\t마에바라 케이이치\tname\n"
@@ -177,8 +178,9 @@ HD_TEST(names_dict_rows) {
 }
 
 HD_TEST(names_readings_without_table) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, std::pair<std::string, text::Preset>>> cases = {
         {"竜宮レナ（りゅうぐうれな）だ。", {"竜宮レナ", text::Preset::Fan}},
         {"竜宮レナ（りゅうぐうれな）だ。", {"竜宮レナ", text::Preset::FanShort}},
@@ -199,8 +201,9 @@ HD_TEST(names_readings_without_table) {
 }
 
 HD_TEST(names_katakana_full_names) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     names::Registry r = Scan(snap, Repeat("アル君、おはよう。", 2) + Repeat("アルガルド様が来た。", 2) +
                                        "王太子、アルガルド・ボナ・パレッティア。\nアルガルドは王子だ。");
     HD_CHECK_EQ(r.Render("アル"), std::string("아르"));
@@ -233,8 +236,9 @@ HD_TEST(names_katakana_full_names) {
 }
 
 HD_TEST(names_given_split) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, std::string>> cases = {
         {"椎名周が来た。\n周は笑った。", "周"},
         {"椎名樹、それが彼の名だ。", "樹"},
@@ -258,6 +262,7 @@ HD_TEST(names_given_split) {
 }
 
 HD_TEST(names_shared_tables) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     names::Registry seed(nullptr);
     HD_REQUIRE(seed.LoadReadings("風音\tかざね\n"));
     seed.SetName("風音", "카자네");

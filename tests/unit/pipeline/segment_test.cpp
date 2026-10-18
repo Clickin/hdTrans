@@ -112,3 +112,18 @@ HD_TEST(pipeline_segment_rules) {
     HD_CHECK(!internal::BetweenWords("　段落", 0));
     HD_CHECK(!internal::BetweenWords("終わり　\n次", std::string("終わり").size()));
 }
+
+HD_TEST(pipeline_conjunctive_conditional_endings) {
+    const struct { const char* text; bool endsClause; } cases[] = {
+        {"泳いで", true}, {"読んで", true}, {"学校で", false},
+        {"いいし", true}, {"走るし", true}, {"静かだし", true},
+        {"話すし", true}, {"思うし", true}, {"行くし", true}, {"わたし", false},
+        {"思ったが", true}, {"よいが", true}, {"あるが", true}, {"思うが", true},
+        {"話すが", true}, {"静かだが", true}, {"読まんが", true}, {"彼女が", false},
+        {"で", false}, {"し", false}, {"が", false}, {"", false},
+        {"行って", true}, {"言えば", true}, {"帰ったら", true}, {"呼んだら", true},
+        {"行っても", true}, {"読んでも", true}, {"けど", true}, {"けれど", true},
+        {"けれども", true}, {"から", true}, {"ので", true}, {"のに", true}, {"ながら", true},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(internal::Conjunctive(c.text), c.endsClause);
+}

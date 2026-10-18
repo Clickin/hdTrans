@@ -1,31 +1,17 @@
 #include "hdTrans/pipeline/normalize.h"
 #include "hdTrans/pipeline/pattern.h"
+#include "hdTrans/pipeline/spoken_forms_gen.h"
 
 namespace hdTrans::pipeline::internal {
 
 namespace {
-
-// Stems that fiction writes in katakana for emphasis and the dictionary does not have,
-// with their hiragana.
-struct KataStem {
-    std::string_view kata;
-    std::string_view hira;
-};
-constexpr KataStem kKataStems[] = {
-    {"イラつ", "いらつ"}, {"ショボ", "しょぼ"}, {"ウルサ", "うるさ"}, {"ウザ", "うざ"}, {"ダサ", "ださ"},
-    {"エグ", "えぐ"},     {"ダル", "だる"},     {"ヒド", "ひど"},     {"コワ", "こわ"}, {"ウマ", "うま"},
-    {"マズ", "まず"},     {"セコ", "せこ"},     {"ムズ", "むず"},     {"ハズ", "はず"},
-};
-
-// The first characters that let a text hold a katakana stem; ハ is not among them.
-constexpr std::u32string_view kKataStemStarts = U"イショウダエヒコマセム";
 
 // Group 1 a stem of kKataStems in their order, group 2 its ending.
 bool KataStemPattern(std::string_view s, size_t pos, Match& m) {
     for (const KataStem& k : kKataStems) {
         size_t p = pos;
         if (!Lit(s, p, k.kata)) continue;
-        for (std::string_view e : {"い", "く", "かっ", "かろ", "け", "さ", "すぎ", "そう", "む", "み", "ま", "め", "ん"}) {
+        for (std::string_view e : kKataEndings) {
             size_t q = p;
             if (!Lit(s, q, e)) continue;
             m.group[1] = Span(s, pos, p);
@@ -49,7 +35,7 @@ bool JaneQuestion(std::string_view s, size_t pos, Match& m) {
                 m.end = r;
                 return true;
             }
-            for (std::string_view w : {"の", "か", "よ", "だろ", "って"}) {
+            for (std::string_view w : kJaneQuestionAfter) {
                 r = q;
                 if (!Lit(s, r, w)) continue;
                 m.group[2] = Span(s, q, r);
@@ -72,7 +58,7 @@ bool ParticleNee(std::string_view s, size_t pos, Match& m) {
     m.group[1] = Span(s, pos, p);
     if (!Lit(s, p, "ね")) return false;
     return Repeat(s, p, InSet(U"ぇえー"), 1, kUnbounded, [&](size_t q) {
-        for (std::string_view w : {"だろ", "でしょ", "よ", "って", "し"}) {
+        for (std::string_view w : kParticleNeeAfter) {
             size_t r = q;
             if (!Lit(s, r, w)) continue;
             m.group[2] = Span(s, q, r);
@@ -142,7 +128,7 @@ bool AppealJanai(std::string_view s, size_t pos, Match& m) {
 
 // The words ending in い after which じゃない is the negative (嫌いじゃない), and てる.
 bool NotAppeal(std::string_view stem) {
-    for (std::string_view w : {"嫌い", "きらい", "きれい", "みたい", "くらい", "ぐらい", "せい", "てる", "でる"}) {
+    for (std::string_view w : kNotAppealStems) {
         if (stem.ends_with(w)) return true;
     }
     return false;
@@ -150,10 +136,7 @@ bool NotAppeal(std::string_view stem) {
 
 // (怖|寒|…|こわ)っ+([！!？?。、…‥」』]|$)
 bool ClippedAdjective(std::string_view s, size_t pos, Match& m) {
-    for (std::string_view w : {"怖", "寒", "痛", "熱", "暑", "重", "早", "速", "高", "狭", "臭", "硬", "固", "甘",
-                               "眩し", "遅", "深", "長", "短", "近", "遠", "細", "太", "汚", "酷", "小さ", "美味し",
-                               "旨", "凄", "弱", "強", "安", "暗", "広", "軽", "薄", "濃", "冷た", "すご", "うざ",
-                               "きも", "ださ", "えぐ", "ひど", "でか", "かわい", "しょぼ", "さむ", "こわ"}) {
+    for (std::string_view w : kClippedAdjectives) {
         size_t p = pos;
         if (!Lit(s, p, w)) continue;
         m.group[1] = Span(s, pos, p);
@@ -174,7 +157,7 @@ bool NegativeN(std::string_view s, size_t pos, Match& m) {
     };
     size_t p = pos;
     if (Take(s, p, IsKanjiClass) && OneOf(s, p, U"らわかがまば") && rest(p)) return true;
-    for (std::string_view w : {"許さ", "わから", "しら", "かまわ"}) {
+    for (std::string_view w : kNegativeNStems) {
         p = pos;
         if (Lit(s, p, w) && rest(p)) return true;
     }
@@ -183,7 +166,7 @@ bool NegativeN(std::string_view s, size_t pos, Match& m) {
 
 // (でき|得|足り|られ|させ|言え|見え|聞こえ)ん([！!？?。、…‥」』ぞよわがしけっ]|$)
 bool NegativeE(std::string_view s, size_t pos, Match& m) {
-    for (std::string_view w : {"でき", "得", "足り", "られ", "させ", "言え", "見え", "聞こえ"}) {
+    for (std::string_view w : kNegativeEStems) {
         size_t p = pos;
         if (!Lit(s, p, w)) continue;
         m.group[1] = Span(s, pos, p);
@@ -212,22 +195,19 @@ bool NegativeNee(std::string_view s, size_t pos, Match& m) {
     };
     size_t p = pos;
     if (Take(s, p, IsKanjiClass) && OneOf(s, p, U"らわさまばが") && rest(p)) return true;
-    for (std::string_view stem : {"動", "書", "聞", "行", "効", "届", "働", "開", "抜", "泣", "驚", "歩", "気付", "敵わ"}) {
+    for (std::string_view stem : kNegativeNeeKa) {
         p = pos;
         if (Lit(s, p, stem) && Lit(s, p, "か") && rest(p)) return true;
     }
-    for (std::string_view stem : {"待", "持", "立", "勝", "打", "育", "保"}) {
+    for (std::string_view stem : kNegativeNeeTa) {
         p = pos;
         if (Lit(s, p, stem) && Lit(s, p, "た") && rest(p)) return true;
     }
-    for (std::string_view stem : {"死な", "かまわ", "構わ", "わから", "わかん", "分かん", "しら", "いら", "たまら", "たまん",
-                                  "つまら", "つまん", "くだら", "くだん", "でき", "出来", "すま", "仕方", "しかた", "しょうが",
-                                  "しょーが", "ありえ", "あり得", "見え", "聞こえ"}) {
+    for (std::string_view stem : kNegativeNeeStems) {
         p = pos;
         if (Lit(s, p, stem) && rest(p)) return true;
     }
-    for (std::string_view stem : {"面白", "悪", "痛", "怖", "寒", "熱", "暑", "強", "弱", "早", "遅", "高", "安", "重", "軽",
-                                  "長", "短", "近", "遠", "多", "少", "狭", "広", "硬", "甘", "辛", "うま", "すご", "かわい", "おもしろ"}) {
+    for (std::string_view stem : kNegativeNeeKu) {
         p = pos;
         if (Lit(s, p, stem) && Lit(s, p, "く") && rest(p)) return true;
     }
@@ -257,13 +237,13 @@ bool KansaiNegative(std::string_view s, size_t pos, Match& m) {
     };
     size_t p = pos;
     if (Take(s, p, IsKanjiClass) && OneOf(s, p, U"わかがさたなまば") && rest(p)) return true;
-    for (std::string_view stem : {"知", "入", "帰", "要", "走", "乗", "取", "作", "守", "足", "分か", "変わ"}) {
+    for (std::string_view stem : kKansaiNegativeRa) {
         p = pos;
         if (Lit(s, p, stem) && Lit(s, p, "ら") && rest(p)) return true;
     }
     p = pos;
     if (OneOf(s, p, U"てで") && rest(p)) return true;
-    for (std::string_view stem : {"あら", "あれ", "せえ", "でき", "出来", "わから", "しれ", "知れ", "おら", "いら"}) {
+    for (std::string_view stem : kKansaiNegativeStems) {
         p = pos;
         if (Lit(s, p, stem) && rest(p)) return true;
     }
@@ -281,7 +261,7 @@ std::string ReplaceKansaiNegative(const Match& m) {
 bool ContractedToru(std::string_view s, size_t pos, Match& m) {
     auto rest = [&](size_t p) {
         m.group[1] = Span(s, pos, p);
-        for (std::string_view ending : {"る", "った", "らん", "れ"}) {
+        for (std::string_view ending : kToruEndings) {
             size_t q = p;
             if (!Lit(s, q, ending)) continue;
             const size_t end = q;
@@ -340,8 +320,7 @@ bool ExclamationNa(std::string_view s, size_t pos, Match& m) {
     if (NoneOf(s, p, U"\t\n\f\r 、。！？!?…‥「」『』（") && Lit(s, p, "が") && afterRun(p, 1, 8)) return true;
     p = pos;
     if (Lit(s, p, "よく") && afterRun(p, 0, 4)) return true;
-    for (std::string_view stem : {"気もする", "そうなる", "ことになる", "事になる", "なかなかやる", "違う", "困る", "助かる", "見える",
-                                  "聞こえる", "落ち着く"}) {
+    for (std::string_view stem : kExclamationNaStems) {
         p = pos;
         if (Lit(s, p, stem) && rest(p)) return true;
     }
@@ -350,7 +329,7 @@ bool ExclamationNa(std::string_view s, size_t pos, Match& m) {
 
 std::string ReplaceExclamationNa(const Match& m) {
     const Match g = Rematch(m, ExclamationNa);
-    for (std::string_view ending : {"言う", "よう", "そう", "です", "ます"}) {
+    for (std::string_view ending : kExclamationNaExcludedEndings) {
         if (g.group[1].ends_with(ending)) return std::string(m.group[0]);
     }
     size_t trim = 0;
