@@ -17,42 +17,35 @@ namespace hdTrans::word {
 class Worker;
 struct SessionSenses;
 
+// Each switch and its default; reference mode disables every switch.
+#define HDTRANS_IMPROVEMENTS(X) \
+    X(extraBuiltin, true)             /* Additional builtin dictionary rows. */ \
+    X(literalCleanup, true)           /* Literal output replacements. */ \
+    X(imperativeEu, true)             /* Imperative form of Korean stems ending in 으. */ \
+    X(causativePassive, true)         /* Short causative-passive verb endings. */ \
+    X(exclamationNa, true)            /* Exclamatory な after predicates. */ \
+    X(dialectForms, true)             /* Colloquial negative and contracted verb forms. */ \
+    X(documentSenses, false)          /* Reuse trusted lexical senses within a session. */ \
+    X(desireWindow, true)             /* Eight-character lookahead for desire endings. */ \
+    X(expandedGroups, true)           /* Allow more than 100 entries in a group. */ \
+    X(semanticAlternatives, true)     /* Check every alternative of a semantic attribute. */ \
+    X(preserveNeighbourSlots, false)  /* Preserve direct slots during neighbour traversal. */ \
+    X(perLevelRetries, false)         /* Give each candidate search level its own retry count. */ \
+    X(nonterminalBoundary, true)      /* End an unterminated ending at the query boundary. */ \
+    X(tailLengthCheck, true)          /* Measure the matched tail rather than the whole record. */ \
+    X(preparedNextToken, false)       /* Canonicalize lookahead token text before lookup. */ \
+    X(forwardTerminal, false)         /* Visit terminal-form candidates from left to right. */
+
 struct Improvements {
-    bool extraBuiltin = true;
-    bool literalCleanup = true;
-    bool imperativeEu = true;
-    bool causativePassive = true;
-    bool exclamationNa = true;
-    bool dialectForms = true;
-    bool documentSenses = false;
-    bool desireWindow = true;
-    bool expandedGroups = true;
-    bool semanticAlternatives = true;
-    bool preserveNeighbourSlots = false;
-    bool perLevelRetries = false;
-    bool nonterminalBoundary = true;
-    bool tailLengthCheck = true;
-    bool preparedNextToken = false;
-    bool forwardTerminal = false;
+#define HDTRANS_IMPROVEMENT_FIELD(name, defaultValue) bool name = defaultValue;
+    HDTRANS_IMPROVEMENTS(HDTRANS_IMPROVEMENT_FIELD)
+#undef HDTRANS_IMPROVEMENT_FIELD
 
     static Improvements Reference() {
         Improvements improvements;
-        improvements.extraBuiltin = false;
-        improvements.literalCleanup = false;
-        improvements.imperativeEu = false;
-        improvements.causativePassive = false;
-        improvements.exclamationNa = false;
-        improvements.dialectForms = false;
-        improvements.documentSenses = false;
-        improvements.desireWindow = false;
-        improvements.expandedGroups = false;
-        improvements.semanticAlternatives = false;
-        improvements.preserveNeighbourSlots = false;
-        improvements.perLevelRetries = false;
-        improvements.nonterminalBoundary = false;
-        improvements.tailLengthCheck = false;
-        improvements.preparedNextToken = false;
-        improvements.forwardTerminal = false;
+#define HDTRANS_REFERENCE_IMPROVEMENT(name, defaultValue) improvements.name = false;
+        HDTRANS_IMPROVEMENTS(HDTRANS_REFERENCE_IMPROVEMENT)
+#undef HDTRANS_REFERENCE_IMPROVEMENT
         return improvements;
     }
 };
