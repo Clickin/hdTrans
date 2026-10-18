@@ -21,12 +21,14 @@ struct Improvements {
     bool documentSenses = true;
     bool desireWindow = true;
     bool expandedGroups = true;
+    bool semanticAlternatives = true;
 
     static Improvements Reference() {
         Improvements improvements;
         improvements.documentSenses = false;
         improvements.desireWindow = false;
         improvements.expandedGroups = false;
+        improvements.semanticAlternatives = false;
         return improvements;
     }
 };

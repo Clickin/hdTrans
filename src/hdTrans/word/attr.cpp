@@ -101,13 +101,13 @@ bool Item::CheckPumsa(std::string_view s, int di) {
     return check(di);
 }
 
-// With nothing selected only the pattern's first 3-byte chunk is tried.
 bool Item::CheckAttr(std::string_view s, int di) {
     if (di == -1 && selected == -1) {
         if (s.empty()) return false;
         const std::string_view c = s.substr(0, std::min<std::size_t>(3, s.size()));
         for (int i = 0; i < Count(*this); i++) {
-            if (Has(Attr(i), c)) return true;
+            if (w->settings.improvements.semanticAlternatives
+                    ? rules::AttrChunksIn(Attr(i), s) : Has(Attr(i), c)) return true;
         }
         return false;
     }

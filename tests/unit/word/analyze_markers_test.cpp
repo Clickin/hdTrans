@@ -275,6 +275,7 @@ HD_TEST(word_improvements_reference) {
     HD_CHECK(!settings.improvements.documentSenses);
     HD_CHECK(!settings.improvements.desireWindow);
     HD_CHECK(!settings.improvements.expandedGroups);
+    HD_CHECK(!settings.improvements.semanticAlternatives);
     HD_CHECK(settings.sessionSenses == nullptr);
     HD_CHECK(word::Settings{}.improvements.documentSenses);
     HD_CHECK(word::Settings{}.improvements.desireWindow);

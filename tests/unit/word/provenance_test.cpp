@@ -394,3 +394,22 @@ HD_TEST(word_provenance_late_global_rule) {
         HD_CHECK_EQ(fired, 4);
     }
 }
+
+HD_TEST(word_unselected_semantic_alternatives) {
+    const auto snapshot = Dictionary("普通\t보통\tN110\tVHn\t\tGN\t0\t1\n");
+    HD_REQUIRE(snapshot != nullptr);
+    for (bool alternatives : {false, true}) {
+        word::Settings settings = word::Settings::Reference();
+        settings.improvements.semanticAlternatives = alternatives;
+        AnalyzedLine line;
+        HD_REQUIRE(line.Analyze("普通", *snapshot, settings));
+        word::Item* item = line.Find("普通");
+        HD_REQUIRE(item != nullptr);
+        HD_CHECK_EQ(item->selected, -1);
+        HD_CHECK_EQ(item->CheckAttr("QPNVHn", -1), alternatives);
+        HD_CHECK(item->CheckAttr("VHnQPN", -1));
+        HD_CHECK(item->CheckAttr("QPNVHn", 0));
+        HD_CHECK(!item->CheckAttr("", -1));
+        HD_CHECK(!item->CheckAttr("QPNXXX", -1));
+    }
+}
