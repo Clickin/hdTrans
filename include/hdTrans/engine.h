@@ -58,6 +58,9 @@ public:
 
     std::string Translate(std::string_view text);
 
+    // Scores candidates without applying their choices. Disabled by default.
+    void SetSelectShadow(bool enabled) { selectShadow_ = enabled; }
+
     // Forgets everything learned from earlier text and takes the engine's current
     // dictionaries.
     void Reset();
@@ -67,6 +70,7 @@ private:
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;
     std::unique_ptr<internal::SessionState> state_;
+    bool selectShadow_ = false;
 };
 
 }  // namespace hdTrans

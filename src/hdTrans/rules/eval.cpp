@@ -71,16 +71,26 @@ bool RunRule(const Program& program, uint32_t root, Item* pwi) { return Run(prog
 
 bool RunLocal(const Program& program, Item* pwi, int ruleIndex) {
     if (ruleIndex < 0 || static_cast<std::size_t>(ruleIndex) >= program.localRules.size()) return false;
-    return Run(program, program.localRules[static_cast<std::size_t>(ruleIndex)], pwi);
+    if (pwi) pwi->SetRuleContext(false, ruleIndex);
+    const bool result = Run(program, program.localRules[static_cast<std::size_t>(ruleIndex)], pwi);
+    if (pwi) pwi->SetRuleContext(false, -1);
+    return result;
 }
 
-bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char pumsa, bool last) {
+bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char pumsa, bool last, int* fired) {
+    if (fired) *fired = -1;
     const int lo = last ? 0 : 1000;
     const int hi = last ? 1000 : 5000;
     for (const GlobalRule& r : program.globalRules) {
         if (r.uganRule != uganRule || r.pumsa != pumsa) continue;
         if (uganRule && (r.number <= lo || r.number >= hi)) continue;
-        if (Run(program, r.root, pwi)) return true;
+        if (pwi) pwi->SetRuleContext(true, r.number);
+        const bool result = Run(program, r.root, pwi);
+        if (pwi) pwi->SetRuleContext(true, -1);
+        if (result) {
+            if (fired) *fired = r.number;
+            return true;
+        }
     }
     return false;
 }

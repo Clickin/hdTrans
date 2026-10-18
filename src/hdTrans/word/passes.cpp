@@ -225,7 +225,7 @@ void CleanupClass3Item(Item* it) {
             }
             if (marker) {
                 accepted = true;
-                it->selected = index;
+                it->SelectCandidate(index, {Provenance::Rewrite});
             }
             if (Has(next->DirectGAttr(next->DirectIndex()), "Sp")) {
                 accepted = true;
@@ -241,8 +241,8 @@ void CleanupClass3Item(Item* it) {
                             xxx = slot;
                         }
                     }
-                    if (xxx != -1) it->selected = xxx;
-                    else if (fallback != -1) it->selected = fallback;
+                    if (xxx != -1) it->SelectCandidate(xxx, {Provenance::Rewrite});
+                    else if (fallback != -1) it->SelectCandidate(fallback, {Provenance::Rewrite});
                 }
             }
             const char k = At(next->Code(next->selected), 0);
@@ -296,7 +296,7 @@ Item* InsertParenthesized(Flusher& f) {
         record->target = spaced;
         Item* result = w.InsertLateCandidate(sourceText, start, index, record);
         if (result == nullptr) continue;
-        result->selected = 0;
+        result->SelectCandidate(0, {Provenance::Rewrite});
         return result;
     }
     return nullptr;
@@ -380,8 +380,8 @@ void ApplyNegatives(Flusher& f) {
                    !afterView.starts_with(kKoRyeo)) {
             code = 'A';
         }
-        e->dst = e->user->negative;
-        ending->dst = std::string(1, code) + after;
+        it->AssignEntrySurface(it->selected, e->user->negative);
+        it->AssignDirectSlot(it->DirectIndex(), std::string(1, code) + after);
     }
 }
 

@@ -56,15 +56,21 @@ struct Memory {
     std::vector<std::string> lines;  // the lines of earlier calls, read by the name registry
 };
 
+struct TranslationOptions {
+    std::span<const word::Scorer> scorers;
+    bool selectShadow = false;
+    bool selectRules = false;
+};
+
 // Translates the lines of one call as one document: the registry and the document context
 // read the lines of memory and of this call. Returns the lines translated (each keeps its
 // "\r"). memory receives the lines.
 std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
                                            std::span<const std::string> lines, Memory& memory,
-                                           const StageObserver& observer);
+                                           const StageObserver& observer, const TranslationOptions& options = {});
 
 // Translates line (without "\n") as one piece with the word pipeline only.
 std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
-                             const StageObserver& observer);
+                             const StageObserver& observer, const TranslationOptions& options = {});
 
 }  // namespace hdTrans::internal

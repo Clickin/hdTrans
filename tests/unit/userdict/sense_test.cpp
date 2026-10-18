@@ -68,6 +68,28 @@ HD_TEST(userdict_senses) {
     }
 }
 
+HD_TEST(userdict_senses_rows) {
+    HD_CHECK_EQ(Sense{}.row, 0);
+    const struct {
+        const char* text;
+        std::vector<int> rows;
+    } cases[] = {
+        {"腕\t실력\n腕\t팔", {1, 2}},
+        {"// comment\n\n腕\t실력\n\n// comment\n腕\t팔", {3, 6}},
+        {"\xEF\xBB\xBF腕\t실력\n\n// comment\n腕\t팔", {1, 4}},
+        {"\xEF\xBB\xBF// comment\r\n\r\n腕\t실력\r\n\r\n// comment\r\n腕\t팔", {3, 6}},
+    };
+    for (const auto& c : cases) {
+        Families families;
+        const CompiledSenses s = ParseSenses(c.text, families);
+        HD_CHECK_EQ(Errors(s.errors), std::string());
+        HD_REQUIRE(s.table.contains("腕"));
+        const auto& senses = s.table.at("腕");
+        HD_REQUIRE(senses.size() == c.rows.size());
+        for (std::size_t i = 0; i < senses.size(); i++) HD_CHECK_EQ(senses[i].row, c.rows[i]);
+    }
+}
+
 HD_TEST(userdict_senses_errors) {
     const Case cases[] = {
         {"高い", "1: 1 columns, want 2 to 5"},

@@ -137,7 +137,8 @@ void WriteLexicalPassive(Flusher& f, Item* it) {
     if (!PassiveTarget(f, it->group->surface, lexical)) return;
     it->detail->record = 0;
     it->lexical = true;
-    for (Entry* e : it->group->entries) e->dst = lexical;
+    const int count = static_cast<int>(it->group->entries.size());
+    for (int slot = 0; slot < count; slot++) it->AssignEntrySurface(slot, lexical);
 }
 
 // The subject form of 나, 저 and 너 (before 가), or "" for other lemmas.
@@ -209,7 +210,7 @@ bool SelectLemma(Flusher& f, Item* it, std::string_view lemma) {
     const int count = static_cast<int>(it->group->entries.size());
     for (int slot = 0; slot < count; slot++) {
         if (output::Lemma(it->EntryText(slot), f.families) == lemma) {
-            it->selected = slot;
+            it->SelectCandidate(slot, {Provenance::Rewrite});
             return true;
         }
     }
@@ -220,7 +221,7 @@ bool SelectLemmaPrefix(Flusher& f, Item* it, std::string_view prefix) {
     const int count = static_cast<int>(it->group->entries.size());
     for (int slot = 0; slot < count; slot++) {
         if (output::Lemma(it->EntryText(slot), f.families).starts_with(prefix)) {
-            it->selected = slot;
+            it->SelectCandidate(slot, {Provenance::Rewrite});
             return true;
         }
     }
@@ -260,7 +261,7 @@ void GoNotSay(Flusher& f) {
         }
         if (SelectLemma(f, it, "가다")) continue;
         output::Conjugated c = output::Conjugating("가다", '&', "", f.families);
-        if (Entry* e = it->group->At(it->selected)) e->dst = c.target;
+        if (it->group->At(it->selected) != nullptr) it->AssignEntrySurface(it->selected, c.target);
     }
 }
 
@@ -274,7 +275,7 @@ void PositiveIke(Flusher& f) {
         const int count = static_cast<int>(it->group->entries.size());
         for (int slot = 0; slot < count; slot++) {
             if (it->EntryText(slot).starts_with(kKoGalSu)) {
-                it->selected = slot;
+                it->SelectCandidate(slot, {Provenance::Rewrite});
                 break;
             }
         }
@@ -320,7 +321,7 @@ void SubjectBeforeGa(Flusher& f) {
         if (it->group->surface == "が") {
             const std::string_view subject = SubjectPronoun(output::Lemma(p->EntryText(p->selected), f.families));
             if (!subject.empty() && !p->detail->Yougo()) {
-                if (Entry* e = p->group->At(p->selected)) e->dst = std::string(subject);
+                if (p->group->At(p->selected) != nullptr) p->AssignEntrySurface(p->selected, std::string(subject));
             }
         } else if (it->group->surface == "の") {
             const Item* n = it->next;
@@ -344,7 +345,7 @@ void SubjectNo(Flusher& f) {
         if (SelectLemma(f, it, "(이)가")) {
             const std::string_view subject = SubjectPronoun(output::Lemma(p->EntryText(p->selected), f.families));
             if (!subject.empty()) {
-                if (Entry* e = p->group->At(p->selected)) e->dst = std::string(subject);
+                if (p->group->At(p->selected) != nullptr) p->AssignEntrySurface(p->selected, std::string(subject));
             }
         }
     }
@@ -414,7 +415,7 @@ void ResultState(Flusher& f) {
         if (!lemma.starts_with("1고")) continue;
         const std::string_view rest = std::string_view(lemma).substr(std::string_view("1고").size());
         if (rest.starts_with(" 있") || (rest.empty() && it->next != nullptr && ItemLemma(f, it->next, it->next->selected).starts_with("있"))) {
-            e->dst = "6" + std::string(rest);
+            it->AssignDirectSlot(it->DirectIndex(), "6" + std::string(rest));
         }
     }
 }
@@ -430,12 +431,12 @@ void NotYet(Flusher& f) {
             continue;
         }
         output::Conjugated target = output::Conjugating("못하다", '$', "", f.families);
-        if (Entry* e = n->group->At(n->selected)) e->dst = target.target;
+        if (n->group->At(n->selected) != nullptr) n->AssignEntrySurface(n->selected, target.target);
         Entry* d = n->DirectEntry(n->DirectIndex());
         if (d == nullptr) continue;
         for (const std::string_view form : {std::string_view("1는다"), std::string_view("1다")}) {
             if (d->dst.starts_with(form)) {
-                d->dst = "4다" + d->dst.substr(form.size());
+                n->AssignDirectSlot(n->DirectIndex(), "4다" + d->dst.substr(form.size()));
                 break;
             }
         }
@@ -457,7 +458,7 @@ void SeeAnd(Flusher& f) {
             for (const std::string_view a : kTeAuxiliaries) stop = stop || next.starts_with(a);
             if (stop || Has(kSeeAndFollowers, " " + std::string(next) + " ")) continue;
         }
-        e->dst = "1고";
+        it->AssignDirectSlot(it->DirectIndex(), "1고");
     }
 }
 
@@ -492,15 +493,15 @@ void PastSequence(Flusher& f) {
         if (it->next == nullptr || it->next->group->surface != kJaComma) {
             continue;
         } else if (e->dst == "2면" && d.ends_with("ば") && output::Lemma(it->EntryText(it->selected), f.families).ends_with("보다")) {
-            e->dst = "2니";
+            it->AssignDirectSlot(it->DirectIndex(), "2니");
         } else if (e->dst != "2면(자)") {
             continue;
         } else if (d == "と" && RieulStem(output::Lemma(it->EntryText(it->selected), f.families))) {
-            e->dst = "1자";
+            it->AssignDirectSlot(it->DirectIndex(), "1자");
         } else if (d == "と") {
-            e->dst = "2니";
+            it->AssignDirectSlot(it->DirectIndex(), "2니");
         } else if (d.ends_with("ら")) {
-            e->dst = "5더니";
+            it->AssignDirectSlot(it->DirectIndex(), "5더니");
         }
     }
 }
@@ -591,11 +592,11 @@ void QuoteTo(Flusher& f) {
             continue;
         }
         if (e->dst.starts_with("1다면") || At(it->Code(it->selected), 0) == '7') {
-            e->dst = "1다고";
+            it->AssignDirectSlot(it->DirectIndex(), "1다고");
         } else if (d.starts_with("た") || d.starts_with("だ")) {
-            e->dst = "5다고";
+            it->AssignDirectSlot(it->DirectIndex(), "5다고");
         } else {
-            e->dst = "4다고";
+            it->AssignDirectSlot(it->DirectIndex(), "4다고");
         }
     }
 }
@@ -607,7 +608,9 @@ void NodaTo(Flusher& f) {
         const std::string lemma = ItemLemma(f, n, n->selected);
         if (!lemma.starts_with("(이)라고") && !lemma.starts_with("라고")) continue;
         Entry* e = it->DirectEntry(it->DirectIndex());
-        if (e != nullptr && e->dst.ends_with(" 것이다")) e->dst.resize(e->dst.size() - std::string_view("다").size());
+        if (e != nullptr && e->dst.ends_with(" 것이다")) {
+            it->AssignDirectSlot(it->DirectIndex(), std::string_view(e->dst).substr(0, e->dst.size() - std::string_view("다").size()));
+        }
     }
 }
 
@@ -677,7 +680,7 @@ void HodoDegree(Flusher& f) {
             for (const std::string_view p : kDegreeTails) degree = degree || it->next->group->surface.starts_with(p);
         }
         if (!degree || (!Has(e->dst, "수록") && !(Has(e->dst, "만큼") && ni))) continue;
-        e->dst = ok ? "3 정도로" : "3 정도";
+        it->AssignDirectSlot(it->DirectIndex(), ok ? "3 정도로" : "3 정도");
         if (!ok && ni) SelectLemma(f, it->next, "(으)로");
     }
 }
@@ -692,14 +695,14 @@ void QuestionCopula(Flusher& f) {
         if (!QuoteEnd(f.w, it) && !From(it->text, it->start + it->length).starts_with(kJaComma)) continue;
         std::string word = ItemLemma(f, p, p->selected);
         if (word == "무엇") {
-            if (Entry* pe = p->group->At(p->selected)) pe->dst = "뭐";
+            if (p->group->At(p->selected) != nullptr) p->AssignEntrySurface(p->selected, "뭐");
             word = "뭐";
         }
         Entry* e = it->group->At(it->selected);
         if (e == nullptr) continue;
-        e->dst = "냐";
+        it->AssignEntrySurface(it->selected, "냐");
         const char particle = output::ParticleClass(word);
-        if (particle == 'c' || particle == 'l') e->dst = "이냐";
+        if (particle == 'c' || particle == 'l') it->AssignEntrySurface(it->selected, "이냐");
     }
 }
 
@@ -724,7 +727,7 @@ void LongVowelAfterKatakana(Flusher& f) {
         const char32_t next = after.empty() ? U'\0' : text::DecodeRune(after).cp;
         if (r >= U'ァ' && r <= U'ヺ' &&
             ((next >= U'ぁ' && next <= U'ヺ') || text::IsKanji(next) || RuneIn(next, "、。！？」』）…"))) {
-            if (Entry* e = it->group->At(it->selected)) e->dst.clear();
+            if (it->group->At(it->selected) != nullptr) it->AssignEntrySurface(it->selected, "");
         }
     }
 }
@@ -835,10 +838,10 @@ void KaraSource(Flusher& f) {
         const Item* p = it->prev;
         const std::string_view rest = std::string_view("(으)로부터");
         if (EndsWithAny(before, kTimeWords) || text::IsDigit(last) || RuneIn(last, "番号")) {
-            e->dst = "부터" + e->dst.substr(rest.size());
+            it->AssignEntrySurface(it->selected, "부터" + e->dst.substr(rest.size()));
         } else if (p != nullptr && p->selected >= 0 && !p->detail->Yougo() && At(p->Code(p->selected), 0) == '1' &&
                    (Has(p->Attr(p->selected), "VPl") || Has(p->Attr(p->selected), "VBp") || InSet(kSceneWords, p->group->surface))) {
-            e->dst = "에서" + e->dst.substr(rest.size());
+            it->AssignEntrySurface(it->selected, "에서" + e->dst.substr(rest.size()));
         }
     }
 }
@@ -917,7 +920,7 @@ void JiBeforeJiman(Flusher& f) {
         }
         const Entry* direct = it->DirectEntry(it->DirectIndex());
         if (direct != nullptr && direct->dst.ends_with("겠지")) {
-            if (Entry* e = n->group->At(n->selected)) e->dst = "만";
+            if (n->group->At(n->selected) != nullptr) n->AssignEntrySurface(n->selected, "만");
         }
     }
 }
@@ -929,7 +932,7 @@ void ParticleInNext(Flusher& f) {
         Entry* e = it->group->At(it->selected);
         if (e == nullptr || e->cls != 'P') continue;
         const std::string lemma = ItemLemma(f, it, it->selected);
-        if (!lemma.empty() && ItemLemma(f, n, n->selected).starts_with(lemma + " ")) e->dst.clear();
+        if (!lemma.empty() && ItemLemma(f, n, n->selected).starts_with(lemma + " ")) it->AssignEntrySurface(it->selected, "");
     }
 }
 
@@ -1037,11 +1040,11 @@ void VerbNegative(Flusher& f) {
         Entry* e = it->DirectEntry(it->DirectIndex());
         if (e == nullptr) continue;
         if (stem.ends_with("く")) {
-            if (e->dst == "4") e->dst = "1은";
+            if (e->dst == "4") it->AssignDirectSlot(it->DirectIndex(), "1은");
         } else if (e->dst == "1다") {
-            e->dst = "1는다";
+            it->AssignDirectSlot(it->DirectIndex(), "1는다");
         } else if (e->dst == "4") {
-            e->dst = "1는";
+            it->AssignDirectSlot(it->DirectIndex(), "1는");
         }
     }
 }

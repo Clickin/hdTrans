@@ -79,11 +79,14 @@ output::Settings ComposeSettings(bool text) {
     return s;
 }
 
-word::Settings AnalysisSettings(bool text, bool verse) {
+word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions& options) {
     word::Settings s;
     s.text = text;
     s.terminal = text;
     s.verse = verse;
+    s.scorers = options.scorers;
+    s.selectShadow = options.selectShadow;
+    s.selectRules = options.selectRules;
     return s;
 }
 
@@ -91,14 +94,14 @@ word::Settings AnalysisSettings(bool text, bool verse) {
 // and the compose stage. The sentences are appended to out with the chunk index.
 void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& lookup, const output::Pieces& chunk,
                     int index, bool text, bool verse, Scratch& s, Generated& generated,
-                    const StageObserver& observer, std::vector<output::Sentence>& out) {
+                    const StageObserver& observer, const TranslationOptions& options, std::vector<output::Sentence>& out) {
     s.texts.clear();
     const std::vector<tokenizer::Piece> pieces = TokenizerPieces(chunk);
     tokenizer::TokenizeSpans(pieces, text, s.tokens);
     if (observer.tokens) observer.tokens(observer.context, index, s.tokens);
 
     word::Analysis analysis;
-    const word::Settings settings = AnalysisSettings(text, verse);
+    const word::Settings settings = AnalysisSettings(text, verse, options);
     word::Analyze(s.tokens, snap, lookup, settings, s.arena, analysis);
     if (observer.analysis) observer.analysis(observer.context, index, s.tokens, analysis);
 
@@ -128,7 +131,7 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
 // One line through every stage of the text path; the line's trailing "\r" is written
 // back by the caller.
 std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext& doc, std::string_view body,
-                          Scratch& s, Generated& generated, const StageObserver& observer) {
+                          Scratch& s, Generated& generated, const StageObserver& observer, const TranslationOptions& options) {
     const pipeline::LineFacts facts = pipeline::ReadLine(doc, body);
     if (facts.wholeLine) return *facts.wholeLine;
     const pipeline::LineLookup lookup = pipeline::LookupOf(doc, facts);
@@ -147,7 +150,7 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
     std::vector<output::Sentence> sentences;
     for (std::size_t i = 0; i < chunks.size(); i++) {
         if (observer.pieces) observer.pieces(observer.context, "CH", static_cast<int>(i), chunks[i]);
-        TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, facts.verse, s, generated, observer,
+        TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, facts.verse, s, generated, observer, options,
                        sentences);
     }
     const output::Pieces cleaned = output::Cleanup(sentences);
@@ -161,7 +164,7 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
 
 std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
                                            std::span<const std::string> lines, Memory& memory,
-                                           const StageObserver& observer) {
+                                           const StageObserver& observer, const TranslationOptions& options) {
     std::vector<std::string> all = memory.lines;
     all.insert(all.end(), lines.begin(), lines.end());
     const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(snap, all);
@@ -173,7 +176,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
         if (observer.line) observer.line(observer.context, static_cast<int>(i));
         // ReadLine takes the line without its one trailing "\r"; the "\r" is written back.
         const bool cr = !lines[i].empty() && lines[i].back() == '\r';
-        std::string translated = TranslateBody(snap, *doc, lines[i], s, generated, observer);
+        std::string translated = TranslateBody(snap, *doc, lines[i], s, generated, observer, options);
         if (cr) translated += '\r';
         out.push_back(std::move(translated));
     }
@@ -182,7 +185,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
 }
 
 std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
-                             const StageObserver& observer) {
+                             const StageObserver& observer, const TranslationOptions& options) {
     Scratch s;
     output::Pieces chunk;
     if (!line.empty()) chunk.push_back({std::string(line), output::SpanText});
@@ -190,7 +193,7 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
     std::vector<output::Sentence> sentences;
     dict::LookupContext lookup;
     lookup.plain = &snap.Plain();
-    TranslateChunk(snap, lookup, chunk, 0, false, false, s, generated, observer, sentences);
+    TranslateChunk(snap, lookup, chunk, 0, false, false, s, generated, observer, options, sentences);
     output::Pieces result;
     for (const output::Sentence& sentence : sentences) output::Append(result, sentence.pieces);
     return output::String(result);

@@ -47,6 +47,8 @@ namespace hdTrans::rules {
 // wi argument of the LL methods is nullptr in that case too.
 class Item {
 public:
+    // number is -1 when evaluation ends. Assignments may survive a false rule.
+    virtual void SetRuleContext(bool, int) {}
     virtual Item* GetObject(int delta) = 0;
     virtual int GetCurrentCompDI() = 0;
     virtual int GetCurrentCompUmiDI() = 0;
@@ -139,6 +141,7 @@ bool RunLocal(const Program& program, Item* pwi, int ruleIndex);
 // Tries, in order, every global rule whose uganRule flag and pumsa key match and
 // reports whether one fired. Stem rules are restricted by number: 1000 < number <
 // 5000, or 0 < number < 1000 when last is set.
-bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char pumsa, bool last);
+// fired receives the number of the rule that fired, or -1 when none did.
+bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char pumsa, bool last, int* fired = nullptr);
 
 }  // namespace hdTrans::rules

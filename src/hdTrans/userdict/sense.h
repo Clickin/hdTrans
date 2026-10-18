@@ -42,6 +42,7 @@ struct Sense {
     // A noun sense whose target is the root of a 하다 adjective (KR 중요하다, target
     // 중요): before な it takes 한.
     bool adjective = false;
+    int row = 0;  // 1-based source line in the sense table
 };
 
 // The senses of each key, in file order.

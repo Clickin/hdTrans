@@ -68,7 +68,7 @@ void TeSequence(Flusher& f) {
             !InSet(kSequenceVerbs, output::Lemma(it->EntryText(it->selected), f.families)) || !PredicateFollows(it)) {
             continue;
         }
-        e->dst = "1고";
+        it->AssignDirectSlot(it->DirectIndex(), "1고");
     }
 }
 
@@ -77,7 +77,7 @@ void VerseTe(Flusher& f) {
     for (const Item* it = f.w.chain.head; it != nullptr; it = it->next) {
         if (AnyRuneIn(it->group->surface, "、。！？!?…‥「」『』（）()―")) return;
     }
-    const Item* it = f.w.chain.tail;
+    Item* it = f.w.chain.tail;
     if (it == nullptr || it->prev == nullptr || !it->detail->Yougo() || it->DirectIndex() < 0 ||
         it->detail->cls != kDetailVerb) {
         return;
@@ -101,7 +101,7 @@ void VerseTe(Flusher& f) {
         particleBefore || (pSurface == "と" && surface == "し") || pSurface == "って" || f.w.Span(p->tokenIndex) != 0) {
         return;
     }
-    e->dst = "1고";
+    it->AssignDirectSlot(it->DirectIndex(), "1고");
 }
 
 void TeRequest(Flusher& f) {
@@ -115,7 +115,7 @@ void TeRequest(Flusher& f) {
             continue;
         }
         const std::string_view s = it->group->surface;
-        e->dst = s.ends_with("しま") || s.ends_with("ちゃ") ? "6서" : "6";
+        it->AssignDirectSlot(it->DirectIndex(), s.ends_with("しま") || s.ends_with("ちゃ") ? "6서" : "6");
     }
 }
 

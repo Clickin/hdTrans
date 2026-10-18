@@ -80,6 +80,7 @@ CompiledSenses ParseSenses(std::string_view text, Families& families) {
         if (std::string err = ParseSense(line, families, s, found); !err.empty()) {
             out.errors.push_back({n, std::move(err)});
         } else if (found) {
+            s.row = n;
             std::string key = s.key;
             out.table[key].push_back(std::move(s));
         }
