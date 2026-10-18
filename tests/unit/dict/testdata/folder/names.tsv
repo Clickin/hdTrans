@@ -1,0 +1,11 @@
+key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
+霧島	기리시마	N130	QPN		GN					names.1
+霧島	무엇	N130	QCT		GN					names.2
+京都	경도	N130	QCTVPl		GN					names.3
+アリス	앨리스	N130	QPN		GN					names.4
+カイト	가이토	N130	QPN		GN					names.5
+翔太	쇼타	N130	QPN		GN					names.6
+食べるの	먹는것	N130			GN					names.7
+はい、どうも	네	N130			GN					names.8
+猫	아주아주아주긴이름	N130			GN					names.9
+学生	가쿠세이	N130	QPN		GN					names.10
