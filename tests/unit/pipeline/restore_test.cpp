@@ -1,0 +1,213 @@
+#include "hdTrans/pipeline/restore.h"
+
+#include <string>
+#include <vector>
+
+#include "hdTrans/text/utf8.h"
+#include "hdtest.h"
+
+using namespace hdTrans;
+using output::Pieces;
+using output::SpanOpen;
+using output::SpanText;
+using output::SpanWord;
+using pipeline::kDropShift;
+
+namespace {
+
+std::string Show(const Pieces& p) {
+    std::string s = "{";
+    for (const auto& x : p) s += "{\"" + x.text + "\", " + std::to_string(static_cast<int>(x.span)) + "}";
+    return s + "}";
+}
+
+// The kana of s shifted as the composer writes the kana it drops.
+std::string Dropped(std::string_view s) {
+    std::string out;
+    for (size_t i = 0; i < s.size();) {
+        const auto r = text::DecodeRune(s.substr(i));
+        text::AppendRune(out, r.cp + kDropShift);
+        i += r.size;
+    }
+    return out;
+}
+
+struct PiecesCase {
+    Pieces typed, out, want;
+};
+
+}  // namespace
+
+HD_TEST(pipeline_drop_added_spaces) {
+    const std::vector<PiecesCase> cases = {
+        {{{"「世話になった。また来る」"}}, {{"「 신세를 졌다. 또 온다」"}}, {{"「신세를 졌다. 또 온다」"}}},
+        {{{"故に、エルフは狩りをしない。"}}, {{" 고로, 엘프는 사냥을 하지 않는다."}}, {{"고로, 엘프는 사냥을 하지 않는다."}}},
+        // Spaces typed at the start or after an opening bracket stay.
+        {{{" 故に"}}, {{" 고로"}}, {{" 고로"}}},
+        {{{"「 世話"}}, {{"「 신세"}}, {{"「 신세"}}},
+        // Line by line; a different line count leaves the text as it is.
+        {{{"「あ」\n「い」"}}, {{"「 아」\n 「 이」"}}, {{"「아」\n「이」"}}},
+        {{{"あ\nい"}}, {{" 아 이"}}, {{" 아 이"}}},
+        // Spans are left as they are and stop the trim at the start.
+        {{{"「"}, {"우와", SpanWord}, {"…柔らかい」"}},
+         {{"「 "}, {"우와", SpanWord}, {"…부드럽다」"}},
+         {{"「"}, {"우와", SpanWord}, {"…부드럽다」"}}},
+        {{{"<b>", SpanOpen}, {"「あ」"}}, {{"<b>", SpanOpen}, {" 「 아」"}}, {{"<b>", SpanOpen}, {" 「아」"}}},
+        {{{"딸랑", SpanWord}}, {{"( 딸랑", SpanWord}, {" ( 소리"}}, {{"( 딸랑", SpanWord}, {" (소리"}}},
+    };
+    for (const auto& c : cases) {
+        const Pieces got = pipeline::DropAddedSpaces(c.typed, c.out);
+        HD_CHECK_EQ(Show(got), Show(c.want));
+    }
+}
+
+HD_TEST(pipeline_restore_brackets) {
+    const std::vector<PiecesCase> cases = {
+        {{{"サラが『目的地』に"}}, {{"사라가 「목적지」에"}}, {{"사라가 『목적지』에"}}},
+        {{{"（アラーム！？）"}}, {{"(알람!)"}}, {{"（알람!）"}}},
+        // A form written more often than typed is left as it is.
+        {{{"『あ』"}}, {{"「아」「이」"}}, {{"「아」「이」"}}},
+        // The n-th form takes the n-th bracket typed in it.
+        {{{"「あ」『い』"}}, {{"「아」「이」"}}, {{"「아」『이』"}}},
+        {{{"〝あ〟’"}}, {{"˝아〃＇"}}, {{"“아”’"}}},
+        {{{"「あ」"}}, {{"『아』"}}, {{"『아』"}}},
+        {{{"『"}, {"딸랑", SpanWord}, {"』"}},
+         {{"「"}, {"「딸랑」", SpanWord}, {"」"}},
+         {{"『"}, {"「딸랑」", SpanWord}, {"』"}}},
+        {{{"『あ』\n「い」"}}, {{"「아」\n「이」"}}, {{"『아』\n「이」"}}},
+        {{{"『あ』\n「い」"}}, {{"「아」「이」"}}, {{"『아』「이」"}}},
+    };
+    for (const auto& c : cases) {
+        const Pieces got = pipeline::RestoreBrackets(c.typed, c.out);
+        HD_CHECK_EQ(Show(got), Show(c.want));
+    }
+}
+
+HD_TEST(pipeline_korean_forms) {
+    const struct {
+        const char* in;
+        const char* want;
+    } cases[] = {
+        {"（알람!）", "(알람!)"},
+        {"제일의“문제아”", "제일의 “문제아”"},
+        {"「“아”", "「“아”"},
+        {"　아", " 아"},
+        {"아　“이", "아 “이"},
+        {"＜아＞［이］｛우｝", "<아>[이]{우}"},
+        {"아““", "아 ““"},
+        {"아,“이”“우”", "아, “이” “우”"},
+        {"\t“아", "\t“아"},
+        {"“아", "“아"},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(pipeline::KoreanForms(c.in), std::string(c.want));
+}
+
+HD_TEST(pipeline_read_kana) {
+    const struct {
+        const char* in;
+        const char* want;
+    } cases[] = {
+        {"きょどきょど", "쿄도쿄도"},
+        {"ぬちゃっ", "누챳"},
+        {"んむっ", "음뭇"},
+        {"ぷぷっ", "푸풋"},
+        {"なぁ", "나아"},
+        {"ふーー", "후우우"},
+        {"ぅぅ", "우우"},
+        {"えぃ", "에이"},
+        {"ふぁっ", "팟"},
+        {"ん", "응"},
+        {"んっ", "읏"},
+        {"んか", "응카"},
+        {"んぱ", "음파"},
+        {"んた", "은타"},
+        {"んんふ", "응응후"},
+        {"ぼっち", "봇치"},
+        {"ゐゑヰヱ", "이에이에"},
+        {"ヌチャッ", "누챳"},
+        {"なぁぁぁぁぁぁ", "나아아아아"},
+        {"ふーーーーーー", "후우우우우"},
+        {"っち", "치"},
+        {"ょ", "요"},
+        {"ぅゅ", "유"},
+        {"ゔ", "부"},
+        {"ぁりゔ", "아리부"},
+        {"ー", ""},
+        {"ッ", ""},
+        // Kana the kana reading does not know are read by the katakana transliteration.
+        {"ふゎ", "후"},
+        {"ふゎぁ", "후"},
+        {"うゎぁぁ", "우"},
+        {"はわゎゎゎ", "하와"},
+        {"ヷ", "바"},
+        // Kept when that writes nothing.
+        {"ゎ", "ゎ"},
+        {"・", "・"},
+        {"ゝ", "ゝ"},
+        {"ヵヶ", "ヵヶ"},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(pipeline::internal::ReadKana(c.in), std::string(c.want));
+}
+
+HD_TEST(pipeline_write_dropped) {
+    HD_CHECK_EQ(pipeline::WriteDropped("「" + Dropped("ぷぷっ") + "」"), std::string("「푸풋」"));
+    HD_CHECK_EQ(pipeline::WriteDropped(Dropped("はむ") + "는 " + Dropped("ふゎ") + "~"), std::string("하무는 후~"));
+    HD_CHECK_EQ(pipeline::WriteDropped("그냥"), std::string("그냥"));
+}
+
+HD_TEST(pipeline_write_stutters) {
+    const struct {
+        const char* in;
+        const char* want;
+    } cases[] = {
+        {"「\uE000、알았다…」", "「아, 알았다…」"},
+        {"「……\uE000、엘군?」", "「……에, 엘군?」"},
+        {"「 \uE000，이봐」", "「이, 이봐」"},
+        {"  \uE000…어…", "어…어…"},
+        {"그 \uE000‥‥가다", "그 가‥‥가다"},
+        {"아 \uE000、 각", "아 가,  각"},
+        {"\uE000、 \uE000、아", "아,  아, 아"},
+        {"\uE000・・어", "어・・어"},
+        // A single ・ is no separator; a mark with no syllable after it goes.
+        {"\uE000・어", "・어"},
+        {"\uE000、!", "!"},
+        {"\uE000、", ""},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(pipeline::WriteStutters(c.in), std::string(c.want));
+}
+
+HD_TEST(pipeline_restore) {
+    // A stutter span and a Hangul span come back as text in the line.
+    {
+        const Pieces typed = {{"「"}, {"\uE000、", SpanOpen}, {"分かった…」"}};
+        const Pieces cleaned = {{"「"}, {"\uE000、", SpanOpen}, {"알았다…」"}};
+        HD_CHECK_EQ(pipeline::Restore(cleaned, typed, true), std::string("「아, 알았다…」"));
+    }
+    {
+        const Pieces typed = {{"「良かった。"}, {"그럼", SpanWord}, {"、適当に座ってください」"}};
+        const Pieces cleaned = {{"「좋았다. "}, {"그럼", SpanWord}, {", 적당하게 앉아 주세요」"}};
+        HD_CHECK_EQ(pipeline::Restore(cleaned, typed, true), std::string("「좋았다. 그럼, 적당하게 앉아 주세요」"));
+    }
+    // Brackets as typed, then the ASCII forms.
+    {
+        const Pieces typed = {{"（なんで氷なんぞがこんな場所に普通にあるのだ？）"}};
+        const Pieces cleaned = {{"( 어째서 얼음 따위가 이런 장소에 보통으로 있다?)"}};
+        const auto st = pipeline::RestoreAll(cleaned, typed, true);
+        HD_CHECK_EQ(Show(st.spaced), Show({{"(어째서 얼음 따위가 이런 장소에 보통으로 있다?)"}}));
+        HD_CHECK_EQ(Show(st.bracketed), Show({{"（어째서 얼음 따위가 이런 장소에 보통으로 있다?）"}}));
+        HD_CHECK_EQ(Show(st.korean), Show({{"(어째서 얼음 따위가 이런 장소에 보통으로 있다?)"}}));
+        HD_CHECK_EQ(st.line, std::string("(어째서 얼음 따위가 이런 장소에 보통으로 있다?)"));
+    }
+    {
+        const Pieces typed = {{"『目的地』"}};
+        const Pieces cleaned = {{"「목적지」"}};
+        HD_CHECK_EQ(pipeline::Restore(cleaned, typed, true), std::string("『목적지』"));
+        HD_CHECK_EQ(pipeline::Restore(cleaned, typed, false), std::string("「목적지」"));
+    }
+    // Dropped kana are read after the cleanup, stutters after them.
+    {
+        const Pieces typed = {{"「"}, {"\uE000、", SpanOpen}, {"ぷぷっ」"}};
+        const Pieces cleaned = {{"「"}, {"\uE000、", SpanOpen}, {Dropped("ぷぷっ") + "」"}};
+        HD_CHECK_EQ(pipeline::Restore(cleaned, typed, true), std::string("「푸, 푸풋」"));
+    }
+}
