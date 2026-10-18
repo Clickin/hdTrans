@@ -1,5 +1,5 @@
-// Normalize against the stage records in $HDTRANS_GOLDEN/stages (default ../hdtrans-golden
-// next to the repository): for every line of the each and doc sets listed in MANIFEST,
+// Normalize against the stage records in $HDTRANS_GOLDEN/stages:
+// for every line of the each and doc sets listed in MANIFEST,
 // the N record of <set>.N.tsv must equal the escaped Normalize of the IN record, with the
 // doc.female value of the set's CTX records; FemaleSpeech of the lines of each case must
 // give that value. A line with a line.wholeline CTX record has no N record. Skipped until
@@ -21,12 +21,7 @@ using hdTrans::pipeline::EscapeStageText;
 using hdTrans::pipeline::LineContext;
 using hdTrans::pipeline::Normalize;
 
-std::string GoldenDir() {
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) return g;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../hdtrans-golden";
-}
+using hdtest::GoldenDir;
 
 bool ReadFile(const std::string& path, std::string& text) {
     std::FILE* f = std::fopen(path.c_str(), "rb");
@@ -172,6 +167,7 @@ void CheckSet(const std::string& dir, const std::string& set, Totals& t) {
 }  // namespace
 
 HD_TEST(pipeline_normalize_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const std::string dir = GoldenDir() + "/stages/";
     std::string manifest;
     if (!ReadFile(dir + "MANIFEST", manifest)) {

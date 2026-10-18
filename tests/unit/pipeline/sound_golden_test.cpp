@@ -1,7 +1,7 @@
 // The sound stage against the stage records of the expectation sets of the text path
 // ($HDTRANS_GOLDEN/stages/<set>.{N,CTX,SN}.tsv): for every case or document line with
 // an N record, Sound of it must give the SN record. The dictionaries come from
-// $HDTRANS_DICTS (by default dicts/base next to the repository) and the plain entries
+// $HDTRANS_DICTS and the plain entries
 // of each line from $HDTRANS_GOLDEN/plain/ (head.tsv and tail.tsv around the E rows of
 // <set>.tsv); the confirmed names and person places from the CTX records. Skipped when
 // a folder is absent.
@@ -28,12 +28,7 @@ namespace {
 
 int Int(std::string_view s) { return std::atoi(std::string(s).c_str()); }
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
-}
+using hdtest::DictsDir;
 
 // An entry row of the plain folder: key target pos sem gram prio file line order flags
 // negative.
@@ -97,6 +92,8 @@ dict::KeySet AcceptedNames(std::string_view key) {
 }  // namespace
 
 HD_TEST(pipeline_sound_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dir = GoldenDir() + "/stages/";
     const std::string plainDir = GoldenDir() + "/plain/";
     std::error_code ec;

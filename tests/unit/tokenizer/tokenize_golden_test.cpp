@@ -74,6 +74,7 @@ size_t Capacities(const Tokens& t) {
 }  // namespace
 
 HD_TEST(tokenizer_golden_t_records) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const std::string dir = stagetest::StagesDir();
     if (dir.empty()) {
         HD_SKIP("no complete stage set (HDTRANS_GOLDEN/stages/MANIFEST)");
@@ -116,6 +117,7 @@ HD_TEST(tokenizer_golden_t_records) {
 }
 
 HD_TEST(tokenizer_golden_sweep) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const std::string dir = stagetest::StagesDir();
     std::string sweep;
     if (dir.empty() || !stagetest::ReadFile(dir + "sweep.cp.tsv", sweep)) {
@@ -154,6 +156,7 @@ HD_TEST(tokenizer_golden_sweep) {
 // Tokenizing the chunks of corpus2: time, and no buffer of the Tokens grows once they
 // have held every chunk (the tokenizer allocates nothing else).
 HD_TEST(tokenizer_golden_speed) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const std::string dir = stagetest::StagesDir();
     std::string input;
     if (dir.empty() || !stagetest::ReadFile(dir + "corpus2.each.P.tsv", input)) {

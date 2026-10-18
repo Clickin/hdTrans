@@ -24,12 +24,7 @@ namespace {
 
 namespace fs = std::filesystem;
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
-}
+using hdtest::DictsDir;
 
 // The lines of a set as the dump splits them at each "\n": a final "\n" leaves an
 // empty last line. The lines keep their "\r".
@@ -206,6 +201,8 @@ std::vector<std::string> ContextSets(const std::string& golden) {
 }  // namespace
 
 HD_TEST(names_context_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string golden = GoldenDir();
     if (!fs::exists(golden + "/stages/MANIFEST")) {
         HD_SKIP(std::string("no stage goldens in ") + golden);
@@ -272,6 +269,8 @@ std::vector<std::string> PlainStream(const dict::Snapshot& snap, bool each, cons
 }  // namespace
 
 HD_TEST(names_plain_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string golden = GoldenDir();
     if (!fs::exists(golden + "/stages/MANIFEST")) {
         HD_SKIP(std::string("no stage goldens in ") + golden);

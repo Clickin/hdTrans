@@ -3,8 +3,7 @@
 //   - for every case or document line with an SN record, Protect of it must give the P
 //     records;
 //   - Segment of the P pieces must give the CH records.
-// Protect reads the dictionaries ($HDTRANS_DICTS, by default dicts/base next to the
-// repository) and the plain entries of each line, which a session builds from its
+// Protect reads the dictionaries ($HDTRANS_DICTS) and the plain entries of each line, which a session builds from its
 // dictionaries and the name registry of the document; here they come compiled in
 // $HDTRANS_GOLDEN/plain/: head.tsv and tail.tsv around the registry and historical
 // entries of each line (<set>.tsv, E rows under the case and line headers of the stage
@@ -36,12 +35,7 @@ namespace {
 
 int Int(std::string_view s) { return std::atoi(std::string(s).c_str()); }
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
-}
+using hdtest::DictsDir;
 
 // Entry rows as written in the plain folder.
 bool ParseEntry(std::string_view row, dict::CodeTable& codes, dict::UserEntry& e) {
@@ -156,6 +150,8 @@ size_t Diff(const std::vector<std::string>& got, const std::vector<std::string_v
 }  // namespace
 
 HD_TEST(pipeline_protect_segment_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dir = GoldenDir() + "/stages/";
     const std::string plainDir = GoldenDir() + "/plain/";
     std::error_code ec;
@@ -282,6 +278,8 @@ HD_TEST(pipeline_protect_segment_golden) {
 // The span kinds of the protected-span cut of あcあ for every code point c but the
 // surrogates ($HDTRANS_GOLDEN/stages/sweep.cp.tsv: U+XXXX, two token columns, the kinds).
 HD_TEST(pipeline_cut_spans_sweep) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     std::string file;
     if (!ReadFile(GoldenDir() + "/stages/sweep.cp.tsv", file)) {
         HD_SKIP("no sweep.cp.tsv");

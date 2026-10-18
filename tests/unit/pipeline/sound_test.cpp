@@ -12,12 +12,7 @@ using namespace hdTrans::pipeline;
 
 namespace {
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
-}
+using hdtest::DictsDir;
 
 // The snapshot of the dictionary folder, null when it cannot be loaded.
 std::shared_ptr<const dict::Snapshot> Dicts() {
@@ -64,6 +59,7 @@ HD_TEST(pipeline_sound_lexicon) {
 // separator), grammar after a sound, words that are not sounds, the emphasis and casual
 // adjective rewrites and the lead interjections.
 HD_TEST(pipeline_sound) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const auto snap = Dicts();
     if (snap == nullptr) {
         HD_SKIP(std::string("no dictionaries at ") + DictsDir());
@@ -124,6 +120,7 @@ HD_TEST(pipeline_sound) {
 }
 
 HD_TEST(pipeline_sound_markers) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const auto snap = Dicts();
     if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::string markers[] = {"ドキ"};
@@ -134,6 +131,7 @@ HD_TEST(pipeline_sound_markers) {
 }
 
 HD_TEST(pipeline_rewrite_emphasis) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const auto snap = Dicts();
     if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     LineContext ctx;
@@ -159,6 +157,7 @@ HD_TEST(pipeline_rewrite_emphasis) {
 }
 
 HD_TEST(pipeline_rewrite_casual_adjectives) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const auto snap = Dicts();
     if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     LineContext ctx;

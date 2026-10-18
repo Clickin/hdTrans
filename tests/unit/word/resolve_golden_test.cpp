@@ -30,17 +30,9 @@ using namespace hdTrans;
 
 namespace {
 
-std::string GoldenDir() {
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) return g;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../hdtrans-golden";
-}
+using hdtest::GoldenDir;
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    return GoldenDir() + "/dicts/base";
-}
+using hdtest::DictsDir;
 
 const dict::Snapshot* Dictionaries() {
     static std::shared_ptr<const dict::Snapshot> snapshot = [] {
@@ -298,6 +290,8 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
 }
 
 void RunSets(const char* name, bool (*select)(const std::string&)) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dir = GoldenDir() + "/analyze/";
     if (!std::filesystem::exists(dir + "MANIFEST") || Dictionaries() == nullptr || RuleProgram() == nullptr) {
         HD_SKIP("no analyze fixtures, dictionaries or rule program");
@@ -324,13 +318,19 @@ void RunSets(const char* name, bool (*select)(const std::string&)) {
 }  // namespace
 
 HD_TEST(resolve_golden_raw) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     RunSets("resolve_golden_raw", [](const std::string& s) { return s == "corpus.raw"; });
 }
 
 HD_TEST(resolve_golden_each) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     RunSets("resolve_golden_each", [](const std::string& s) { return s == "corpus2.each"; });
 }
 
 HD_TEST(resolve_golden_docs) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     RunSets("resolve_golden_docs", [](const std::string& s) { return s.starts_with("doc-"); });
 }

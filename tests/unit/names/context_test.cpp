@@ -15,12 +15,7 @@ using namespace hdTrans;
 
 namespace {
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../dicts/base";
-}
+using hdtest::DictsDir;
 
 const dict::Snapshot* Base() {
     static const dict::LoadResult loaded = dict::LoadFolders({DictsDir()});
@@ -30,6 +25,7 @@ const dict::Snapshot* Base() {
 }  // namespace
 
 HD_TEST(names_cued_names) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
     if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, std::vector<std::string>>> cases = {
@@ -47,6 +43,7 @@ HD_TEST(names_cued_names) {
 }
 
 HD_TEST(names_whole_line_rows) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
     if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::string> lines = {"つづきから"};
@@ -66,6 +63,7 @@ HD_TEST(names_whole_line_rows) {
 }
 
 HD_TEST(names_confirmed_cache) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const dict::Snapshot* snap = Base();
     if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::string> lines = {"光さん、", "光さん、", "光さん、"};

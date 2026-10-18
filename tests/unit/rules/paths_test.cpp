@@ -1,5 +1,5 @@
-// Path hashes of all rules in $HDTRANS_GOLDEN/rules/rules.flat (default
-// ../hdtrans-golden next to the repository) against rules/path_hashes.tsv there,
+// Path hashes of all rules in $HDTRANS_GOLDEN/rules/rules.flat against
+// rules/path_hashes.tsv there,
 // which lists "ID\tPATHS\tHASH" per rule: Ln for local rule n, Gk for global rule k,
 // the hash as 16 hex digits. Skipped when the files are absent.
 #include <cinttypes>
@@ -14,12 +14,7 @@
 
 namespace {
 
-std::string GoldenDir() {
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) return g;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../hdtrans-golden";
-}
+using hdtest::GoldenDir;
 
 bool ReadFile(const std::string& path, std::string& text) {
     std::FILE* f = std::fopen(path.c_str(), "rb");
@@ -33,6 +28,7 @@ bool ReadFile(const std::string& path, std::string& text) {
 }  // namespace
 
 HD_TEST(rules_path_hashes) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const std::string dir = GoldenDir() + "/rules/";
     std::string flat, hashes;
     if (!ReadFile(dir + "rules.flat", flat) || !ReadFile(dir + "path_hashes.tsv", hashes)) {

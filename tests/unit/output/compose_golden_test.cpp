@@ -275,6 +275,7 @@ long long ReplayFamilies(const std::string& path, Families& generated, long long
 }  // namespace
 
 HD_TEST(output_compose_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const std::string golden = GoldenDir();
     const std::string dir = golden + "/stages/";
     std::error_code ec;

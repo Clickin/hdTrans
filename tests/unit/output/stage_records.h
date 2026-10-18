@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "hdTrans/text/utf8.h"
+#include "hdtest.h"
 
 namespace stagerecords {
 
@@ -106,12 +107,7 @@ inline std::vector<Block> Blocks(std::string_view file) {
     return blocks;
 }
 
-// $HDTRANS_GOLDEN, by default hdtrans-golden next to the repository.
-inline std::string GoldenDir() {
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) return g;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../hdtrans-golden";
-}
+// The explicitly configured expectation folder.
+using hdtest::GoldenDir;
 
 }  // namespace stagerecords

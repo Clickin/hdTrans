@@ -84,6 +84,7 @@ void Compare(const std::string& set, std::string_view header, int k, const std::
 }  // namespace
 
 HD_TEST(pipeline_restore_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const std::string dir = GoldenDir() + "/stages/";
     std::error_code ec;
     if (!std::filesystem::is_directory(dir, ec)) {

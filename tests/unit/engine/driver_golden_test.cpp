@@ -7,8 +7,8 @@
 //     is counted under the first of these stages that differs, so a cause shows in the
 //     stage it starts in. These are printed, not gated.
 // Sets: corpus.raw (the raw path: T, L, S, K), corpus2.each (a session per line) and the
-// doc-* and x-* sets (one document each). Dictionaries: $HDTRANS_DICTS (default
-// $HDTRANS_GOLDEN/dicts/base). Skipped when the stages MANIFEST is absent. With
+// doc-* and x-* sets (one document each). Dictionaries: $HDTRANS_DICTS.
+// Skipped when the stages MANIFEST is absent. With
 // HDTRANS_DRIVER_DUMP set to a directory, the records made are written there as
 // <set>.<TAG>.got.tsv.
 #include <algorithm>
@@ -33,17 +33,9 @@ using namespace stagerecords;
 
 namespace {
 
-std::string GoldenRoot() {
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) return g;
-    std::string f = __FILE__;
-    const size_t slash = f.find_last_of("/\\");
-    return (slash == std::string::npos ? std::string(".") : f.substr(0, slash)) + "/../../../../hdtrans-golden";
-}
+using hdtest::GoldenDir;
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    return GoldenRoot() + "/dicts/base";
-}
+using hdtest::DictsDir;
 
 const dict::Snapshot* Dictionaries() {
     static std::shared_ptr<const dict::Snapshot> snapshot = [] {
@@ -213,7 +205,7 @@ int HeaderKey(std::string_view header) {
 // of a sentence) and the lookup records are not compared.
 Records LoadGolden(const std::string& set, const std::vector<const char*>& files) {
     Records golden;
-    const std::string dir = GoldenRoot() + "/stages/";
+    const std::string dir = GoldenDir() + "/stages/";
     for (const char* file : files) {
         std::string text;
         if (!ReadFile(dir + set + "." + file + ".tsv", text)) continue;
@@ -388,7 +380,9 @@ std::vector<std::string> SplitLines(const std::string& text, bool keepTrailing) 
 }  // namespace
 
 HD_TEST(engine_driver_golden) {
-    const std::string golden = GoldenRoot();
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
+    const std::string golden = GoldenDir();
     std::error_code ec;
     if (!std::filesystem::exists(golden + "/stages/MANIFEST", ec) || Dictionaries() == nullptr) {
         HD_SKIP(std::string("no ") + golden + "/stages/MANIFEST or dictionaries");

@@ -154,13 +154,13 @@ HD_TEST(document_senses_session_reset_isolation_and_reference) {
 }
 
 HD_TEST(document_senses_shadow_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const char* root = std::getenv("HDTRANS_GOLDEN");
     if (root == nullptr || *root == 0) {
         HD_SKIP("no HDTRANS_GOLDEN");
     }
-    const char* dicts = std::getenv("HDTRANS_DICTS");
-    const auto loaded = dict::LoadFolders({dicts != nullptr && *dicts != 0 ? std::string(dicts)
-                                                                 : std::string(root) + "/dicts/base"});
+    const auto loaded = dict::LoadFolders({hdtest::DictsDir()});
     HD_REQUIRE(loaded.snapshot != nullptr && loaded.snapshot->HasDictionary());
     std::error_code error;
     std::vector<std::filesystem::path> paths;

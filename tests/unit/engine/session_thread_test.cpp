@@ -15,15 +15,12 @@
 
 namespace {
 
-std::string DictsDir() {
-    if (const char* d = std::getenv("HDTRANS_DICTS"); d != nullptr && *d != 0) return d;
-    if (const char* g = std::getenv("HDTRANS_GOLDEN"); g != nullptr && *g != 0) return std::string(g) + "/dicts/base";
-    return {};
-}
+using hdtest::DictsDir;
 
 }  // namespace
 
 HD_TEST(engine_session_threads) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dicts = DictsDir();
     std::error_code ec;
     if (dicts.empty() || !std::filesystem::exists(dicts, ec)) {
@@ -68,6 +65,8 @@ HD_TEST(engine_session_threads) {
 // Four threads, each translating the first 1000 lines of corpus2.each one session per line,
 // against the output of one thread. Skipped without the expectation set.
 HD_TEST(engine_session_threads_stress) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const char* golden = std::getenv("HDTRANS_GOLDEN");
     const std::string dicts = DictsDir();
     if (golden == nullptr || *golden == 0 || dicts.empty()) {
@@ -117,6 +116,7 @@ HD_TEST(engine_session_threads_stress) {
 }
 
 HD_TEST(engine_session_call_context) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dicts = DictsDir();
     if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine(true);
@@ -166,6 +166,7 @@ HD_TEST(engine_session_call_context) {
 }
 
 HD_TEST(engine_session_memory_window) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dicts = DictsDir();
     if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine(true);
@@ -182,6 +183,7 @@ HD_TEST(engine_session_memory_window) {
 }
 
 HD_TEST(engine_reference_mode) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dicts = DictsDir();
     if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine improved;
@@ -233,17 +235,20 @@ void CheckWordImprovement(bool hdTrans::word::Improvements::* flag, const std::s
 }  // namespace
 
 HD_TEST(engine_per_level_retries) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     CheckWordImprovement(&hdTrans::word::Improvements::perLevelRetries, "やなぎなぎ", "이네", "야나기나기");
     CheckWordImprovement(&hdTrans::word::Improvements::perLevelRetries, "（独り言）しなきゃにゃ",
                           "(혼잣말) 하지 않으면", "(혼잣말) 인");
 }
 
 HD_TEST(engine_forward_terminal) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     CheckWordImprovement(&hdTrans::word::Improvements::forwardTerminal, "食べたい、食べたい、食べたーい！",
                           "먹고 싶다, 먹고 싶다, 먹고 싶다!", "먹고 싶은, 먹고 싶다, 먹고 싶다!");
 }
 
 HD_TEST(engine_reference_session_builtin_isolation) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dicts = DictsDir();
     if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine;
@@ -258,6 +263,7 @@ HD_TEST(engine_reference_session_builtin_isolation) {
 }
 
 HD_TEST(engine_reference_session_cleanup_isolation) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dicts = DictsDir();
     if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine;
@@ -270,6 +276,7 @@ HD_TEST(engine_reference_session_cleanup_isolation) {
 }
 
 HD_TEST(engine_causative_passive) {
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const std::string dicts = DictsDir();
     if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine;

@@ -25,6 +25,16 @@ struct State {
     std::string skipReason;
 };
 
+inline std::string GoldenDir() {
+    const char* value = std::getenv("HDTRANS_GOLDEN");
+    return value == nullptr ? std::string{} : std::string(value);
+}
+
+inline std::string DictsDir() {
+    const char* value = std::getenv("HDTRANS_DICTS");
+    return value == nullptr ? std::string{} : std::string(value);
+}
+
 inline bool RequireAll() {
     const char* value = std::getenv("HDTRANS_REQUIRE_ALL");
     return value != nullptr && std::string(value) == "1";

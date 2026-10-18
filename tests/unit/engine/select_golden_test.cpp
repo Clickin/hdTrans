@@ -76,19 +76,18 @@ std::string TranslateSet(const dict::Snapshot& snapshot, const std::string& inpu
     return out;
 }
 
-std::string DictsDir(const std::string& golden) {
-    const char* dicts = std::getenv("HDTRANS_DICTS");
-    return dicts != nullptr && *dicts != 0 ? std::string(dicts) : golden + "/dicts/base";
-}
+using hdtest::DictsDir;
 
 }  // namespace
 
 HD_TEST(select_shadow_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const char* root = std::getenv("HDTRANS_GOLDEN");
     if (root == nullptr || *root == 0) {
         HD_SKIP("no HDTRANS_GOLDEN");
     }
-    const dict::LoadResult loaded = dict::LoadFolders({DictsDir(root)});
+    const dict::LoadResult loaded = dict::LoadFolders({DictsDir()});
     HD_REQUIRE(loaded.snapshot != nullptr && loaded.snapshot->HasDictionary());
     std::error_code error;
     std::vector<std::filesystem::path> inputs;
@@ -133,12 +132,14 @@ HD_TEST(select_shadow_golden) {
 }
 
 HD_TEST(engine_session_select_shadow) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
+    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
     const char* golden = std::getenv("HDTRANS_GOLDEN");
     if (golden == nullptr || *golden == 0) {
         HD_SKIP("no HDTRANS_GOLDEN");
     }
     Engine engine(true);
-    HD_REQUIRE(engine.Open({DictsDir(golden)}));
+    HD_REQUIRE(engine.Open({DictsDir()}));
     const std::string input = "今日はいい天気ですね。\n彼は静かに頷いた。\n";
     Session plain(engine), shadow(engine);
     const std::string expected = plain.Translate(input);

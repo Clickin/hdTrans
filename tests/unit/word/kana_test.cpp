@@ -51,6 +51,7 @@ HD_TEST(kana_hiragana_cases) {
 // three or more in the corpus2 text) with its expected transliteration, or "fault".
 // Read from $HDTRANS_GOLDEN/analyze; skipped when absent.
 HD_TEST(kana_katakana_fixture) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const char* golden = std::getenv("HDTRANS_GOLDEN");
     if (golden == nullptr || *golden == 0) {
         HD_SKIP("HDTRANS_GOLDEN not set");

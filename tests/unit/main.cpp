@@ -72,9 +72,19 @@ struct CacheGuard {
     fs::path temporary;
     CacheListing before;
     bool initialized = false;
+    bool watchReal = true;
 
     bool Init() {
-        if (!ListCache(real, before)) return false;
+        const auto requested = EnvironmentPath("HDTRANS_CACHE_DIR");
+        if (!requested.empty() && !real.empty()) {
+            std::error_code ec;
+            const auto canonicalReal = fs::weakly_canonical(real, ec);
+            if (ec) return false;
+            const auto canonicalRequested = fs::weakly_canonical(requested, ec);
+            if (ec) return false;
+            watchReal = canonicalReal != canonicalRequested;
+        }
+        if (watchReal && !ListCache(real, before)) return false;
 #ifdef _WIN32
         if (_wputenv_s(L"HDTRANS_SNAPSHOT", L"") != 0 || _wputenv_s(L"HDTRANS_VERIFY_DICTS", L"") != 0) return false;
         SetLastError(ERROR_SUCCESS);
@@ -95,6 +105,10 @@ struct CacheGuard {
                 if (ec) return false;
             }
             if (temporary.empty()) return false;
+#ifndef _WIN32
+            fs::permissions(temporary, fs::perms::owner_all, fs::perm_options::replace, ec);
+            if (ec) return false;
+#endif
 #ifdef _WIN32
             if (_wputenv_s(L"HDTRANS_CACHE_DIR", temporary.c_str()) != 0) return false;
 #else
@@ -106,6 +120,7 @@ struct CacheGuard {
     }
 
     bool Unchanged() const {
+        if (!watchReal) return true;
         CacheListing after;
         return ListCache(real, after) && after == before;
     }

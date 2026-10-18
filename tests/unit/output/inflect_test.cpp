@@ -212,6 +212,7 @@ HD_TEST(inflect_all_form_membership) {
 
 // $HDTRANS_GOLDEN/inflection_rows.tsv holds one key and surface per tab-separated line.
 HD_TEST(inflect_row_fixture) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const char* root = std::getenv("HDTRANS_GOLDEN");
     if (!root || !*root) HD_SKIP("HDTRANS_GOLDEN is not set");
     std::ifstream input(std::filesystem::path(root) / "inflection_rows.tsv", std::ios::binary);

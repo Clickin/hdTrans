@@ -47,6 +47,7 @@ std::vector<std::string> CleanupRecords(const std::vector<std::string_view>& kRe
 }  // namespace
 
 HD_TEST(output_cleanup_golden) {
+    if (hdtest::GoldenDir().empty()) HD_SKIP("HDTRANS_GOLDEN is not set; configure the expectation folder");
     const std::string dir = GoldenDir() + "/stages/";
     std::error_code ec;
     if (!std::filesystem::is_directory(dir, ec)) {
