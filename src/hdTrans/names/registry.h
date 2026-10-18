@@ -1,0 +1,139 @@
+#pragma once
+// The name registry of a document: the evidence that surfaces are person names, read
+// line by line, and the Hangul renderings of the accepted names. A registry reads the
+// name records and the base records of a snapshot (null for none) and the readings
+// tables loaded into it.
+#include <array>
+#include <cstddef>
+#include <map>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "hdTrans/dict/snapshot.h"
+#include "hdTrans/text/kana.h"
+
+namespace hdTrans::names {
+
+namespace internal {
+struct Run;
+}
+
+// A registered surface in a line, as byte offsets. noun is set where a guard expects
+// the common word instead of the name.
+struct Occurrence {
+    std::size_t start = 0, end = 0;
+    std::string surface;
+    bool noun = false;
+};
+
+// The evidence of a surface in the base dictionary.
+struct DictFlags {
+    int records = 0;
+    bool person = false, surname = false, given = false, city = false;
+    bool common = false;  // a record that is neither a name nor a place
+    bool role = false;    // a person, profession or animal noun with no name record
+    // The name-layer person records: a surname or given name, and the first Hangul
+    // target among them.
+    bool layerSurname = false, layerGiven = false;
+    std::string layerName;
+};
+
+// An accepted surface.
+struct Name {
+    double score = 0;
+    bool label = false;     // spoke as a speaker
+    bool person = false;    // label, honorific, gloss or full-name evidence
+    bool surname = false;   // left part of a full name
+    bool given = false;     // right part of a full name found by GivenSplit
+    bool hasParts = false;  // a full name; parts holds its parts
+    std::vector<std::string> parts;
+};
+
+class Registry {
+public:
+    // The registry of snap (null for none): the Fan preset writes the names, and ちゃん
+    // is written 짱.
+    explicit Registry(const dict::Snapshot* snap);
+
+    // Records the Hangul rendering kr of the name t of a plain dictionary (kr must be
+    // Hangul): t is written kr as a part of a full name.
+    void SetName(std::string_view t, std::string_view kr);
+    // Adds a readings table: JP <TAB> reading (kana or Hangul) per line. Returns false
+    // when a line is malformed; the other lines are kept.
+    bool LoadReadings(std::string_view text);
+    // Reads the evidence of one line.
+    void Add(std::string_view line);
+
+    // The accepted surfaces, in byte order.
+    std::vector<std::string> Names();
+    // Whether t is an accepted name or stands where a name stands in the lines added.
+    bool Named(std::string_view t);
+    // The surfaces the lines show to be names: the accepted names and the surfaces Named reports
+    // beyond them, in byte order.
+    std::vector<std::string> NamedSurfaces();
+    // Identifies the names of the registry: two registries on one snapshot with equal
+    // keys translate every line alike.
+    std::string Key();
+    // The plain-dictionary lines of the accepted names with a rendering: JP, KR and POS,
+    // then ちゃん as chan.
+    std::string Dict();
+    // The Korean of an accepted surface, or "".
+    std::string Render(std::string_view t);
+    // The registered names of line (ruby markup removed), leftmost-longest, that fill
+    // their kanji or katakana run.
+    std::vector<Occurrence> Occurrences(std::string_view line);
+
+    text::Preset preset = text::Preset::Fan;
+    // The rendering of ちゃん written to Dict; "" leaves ちゃん to the engine.
+    std::string chan = "짱";
+
+private:
+    // Labels and the evidence of a single run (cues.cpp).
+    std::string Label(std::string_view line, bool& script);
+    DictFlags Flags(std::string_view s);
+    std::string HonorificRun(std::string_view line, const internal::Run& run);
+    bool Addressed(std::string_view line, std::string_view t);
+    bool Guarded(std::string_view line, std::size_t a, std::size_t b);
+
+    // Scores, splits and the accepted names (registry.cpp).
+    const std::map<std::string, Name>& Accepted();
+    std::pair<std::string, std::string> GivenSplit(std::string_view t);
+    bool Crossed(std::string_view t, std::size_t i);
+    bool Split(std::string_view t, std::vector<std::string>& parts);
+    void SplitReading(const std::string& x, const std::string& y, const std::string& kana);
+
+    // Rendering (render.cpp).
+    std::string RenderName(std::string_view t, const Name& n);
+    std::string RenderPart(std::string_view t);
+    std::string PersonName(std::string_view t);
+    std::string PrefixForm(std::string_view x);
+
+    const dict::Snapshot* snap_;
+    std::map<std::string, std::string> readings_;       // readings tables: surface to reading or Hangul
+    std::map<std::string, std::string> fixed_;          // plain-dictionary names and their renderings
+    std::map<std::string, int> labels_;                 // script-format labels
+    std::map<std::string, int> prefixes_;               // line-start labels of plain-text forms
+    std::map<std::string, std::string> actors_;         // script actor variables
+    std::map<std::string, int> hon_;                    // surfaces before an honorific
+    std::map<std::string, int> gloss_;                  // surfaces with a kana gloss or ruby
+    std::map<std::string, std::string> reading_;        // first gloss or ruby reading
+    std::map<std::string, int> runs_;                   // kanji runs
+    std::map<std::string, int> ended_;                  // kanji runs before a particle, an honorific or no hiragana
+    std::map<std::string, int> kana_;                   // katakana runs
+    std::map<std::array<std::string, 3>, int> joined_;  // kanji and katakana pairs
+    std::map<std::string, int> chains_;                 // katakana runs joined by ・ or ＝
+    std::map<std::string, DictFlags> flags_;
+    std::map<std::string, Name> scores_;                // accepted names, valid while scoresValid_
+    bool scoresValid_ = false;
+};
+
+// The labels of the speaker cues of text: a name at a line start followed by 「, です,
+// でち, っす or a call to action, in order.
+std::vector<std::string> SpeakerCues(std::string_view text);
+
+// The text of line without ruby markup, keeping the base text.
+std::string StripRuby(std::string_view line);
+
+}  // namespace hdTrans::names

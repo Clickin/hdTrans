@@ -1,0 +1,101 @@
+#pragma once
+// The context of a document, built from all its lines before any of them is translated,
+// and the context of each line: what the stages of the text path read besides the
+// dictionaries (the name registry, the kin terms, the person places and the plain
+// entries of the names).
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "hdTrans/dict/codes.h"
+#include "hdTrans/dict/snapshot.h"
+#include "hdTrans/dict/user_text.h"
+#include "hdTrans/names/registry.h"
+#include "hdTrans/pipeline/line_context.h"
+#include "hdTrans/userdict/conjugating.h"
+
+namespace hdTrans::pipeline {
+
+// What the lines of a document show together. Build it with BuildDocument.
+struct DocumentContext {
+    DocumentContext() = default;
+    DocumentContext(const DocumentContext&) = delete;
+    DocumentContext& operator=(const DocumentContext&) = delete;
+
+    const dict::Snapshot* snap = nullptr;
+    // The registry key (the CTX record doc.key).
+    std::string registryKey;
+    // The key the document is identified by: the registry key with the female, persons,
+    // verse and historical parts appended.
+    std::string key;
+    bool female = false;
+    std::vector<std::string> persons;  // doc.persons, sorted
+    std::vector<std::string> verse;    // doc.verse, sorted
+    std::string historical;            // doc.historical: JP KR POS rows
+    dict::KeySet persons_;             // the persons of the document, for the person places
+    dict::KeySet accepted;             // the accepted names of the registry
+    dict::KeySet named;                // the accepted names and the surfaces shown to be names
+    std::set<std::string> verseLines;  // the lines that run on into the next (verse)
+    std::unique_ptr<names::Registry> registry;
+    std::unique_ptr<dict::CodeTable> codes;  // the codes of the entries compiled here
+    userdict::Families families;
+    // The plain entries of the registry and the historical names, before the skip filter.
+    std::vector<dict::UserEntry> extra;
+    // The lookups' plain lists by their skip key, built on first use.
+    std::map<std::string, std::unique_ptr<dict::UserText>> plainByKey;
+    std::map<std::string, std::string> wholeLines;  // lines.tsv: JP to KR
+};
+
+// The facts of one line of a document.
+struct LineFacts {
+    // The line as the stages read it: kin terms written, ruby markup removed.
+    std::string text;
+    std::vector<std::string> skip;         // registered names left out for the line, sorted
+    std::vector<std::string> persons;      // the place keys the line shows to be persons, sorted
+    std::optional<std::string> wholeLine;  // the line's KR row of lines.tsv, when it is one
+    bool verse = false;                    // the line runs on into the next line
+};
+
+// The lookups of a line: its plain entries, the names it confirms and its person places.
+struct LineLookup {
+    const dict::UserText* plain = nullptr;
+    dict::KeySet confirmed;
+    dict::KeySet persons;
+};
+
+// Builds the context of the lines of a document (each may end in "\r").
+std::unique_ptr<DocumentContext> BuildDocument(const dict::Snapshot& snap, std::span<const std::string> lines);
+
+// The facts of one line of the document; line is the line without its "\r".
+LineFacts ReadLine(DocumentContext& doc, std::string_view line);
+
+// The lookups of a line with its facts. The plain list is built once per skip list.
+LineLookup LookupOf(DocumentContext& doc, const LineFacts& facts);
+
+// The line context of a line with its lookups; markers are left empty.
+LineContext ContextOf(const DocumentContext& doc, const LineLookup& lookup);
+
+// The names a text confirms as persons, from its speaker cues, for text without a
+// document (cuedNames).
+std::vector<std::string> CuedNames(const dict::Snapshot& snap, std::string_view text);
+
+namespace internal {
+
+// The place keys of text with a person spelling that are named or shown to be persons
+// (personPlaces). With a registry, a key is named when registry names it or persons has
+// it; without one, only a title or a speaker cue shows a person.
+std::vector<std::string> PersonPlaces(const dict::Snapshot& snap, std::string_view text, names::Registry* registry,
+                                      const dict::KeySet* persons);
+
+// The lines that run on into the next line (verseLines): a line that ends in て or で
+// followed by a line that is not empty.
+std::set<std::string> VerseLines(std::span<const std::string> lines);
+
+}  // namespace internal
+
+}  // namespace hdTrans::pipeline
