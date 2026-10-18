@@ -181,3 +181,19 @@ HD_TEST(word_nonterminal_boundary_punctuation) {
         HD_CHECK_EQ(detail.ClassifyTrailingPunctuation(","), 1);
     }
 }
+
+HD_TEST(word_imperative_tail_length) {
+    for (bool tailLength : {false, true}) {
+        word::Record record;
+        record.source = "点";
+        record.partCode = "M429";
+        word::Detail detail;
+        detail.patternKind = 9;
+        detail.tailLengthCheck = tailLength;
+        HD_REQUIRE(word::MatchKind(detail, "しろ", record.source, record));
+        HD_CHECK_EQ(detail.kind, tailLength ? 11 : 10);
+        detail.patternMatched = 0;
+        HD_REQUIRE(word::MatchKind(detail, "し", record.source, record));
+        HD_CHECK_EQ(detail.kind, 10);
+    }
+}

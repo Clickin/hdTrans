@@ -82,8 +82,8 @@ bool MatchKind(Detail& d, std::string_view tail, std::string_view recordText, co
                     d.kind = 10;
                 }
             } else if (kind == 9 && (d.kind == 8 || d.kind == 10)) {
-                // The length test is on the record, not on the tail.
-                if (WidthOf(recordText) >= 4 && Cut(tail, 0, 4) == Conjugation(kind, 11)) d.kind = 11;
+                const auto lengthText = d.tailLengthCheck ? tail : recordText;
+                if (WidthOf(lengthText) >= 4 && Cut(tail, 0, 4) == Conjugation(kind, 11)) d.kind = 11;
             }
         }
         if (d.kind == 0) {

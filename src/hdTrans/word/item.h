@@ -82,6 +82,7 @@ struct Detail {
     int nextType = 0;             // type of the token after the item's token
     std::string_view nextText;    // its text when the detail was made
     bool nonterminalBoundary = false;
+    bool tailLengthCheck = false;
 
     // The conjugation branch 0..17 of a verb; '0', 'x' or 'X' for adjectives; -1 unset.
     int kind = -1;
