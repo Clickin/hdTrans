@@ -9,6 +9,11 @@
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 #include "hdTrans/engine.h"
 #include "hdTrans/engine/raw.h"
 
@@ -37,6 +42,11 @@ bool ReadAll(std::FILE* f, std::string& out) {
 }  // namespace
 
 int main(int argc, char** argv) {
+#ifdef _WIN32
+    // The output bytes are the same on every platform: no text-mode CRLF translation.
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
     std::string dicts = "dicts/base";
     std::string inPath;
     bool raw = false;
