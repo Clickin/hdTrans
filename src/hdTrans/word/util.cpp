@@ -4,6 +4,40 @@
 
 namespace hdTrans::word {
 
+bool RuneIn(char32_t r, std::string_view set) {
+    while (!set.empty()) {
+        const text::Rune c = text::DecodeRune(set);
+        if (c.cp == r) return true;
+        set.remove_prefix(c.size);
+    }
+    return false;
+}
+
+bool AnyRuneIn(std::string_view s, std::string_view set) {
+    while (!s.empty()) {
+        const text::Rune r = text::DecodeRune(s);
+        if (RuneIn(r.cp, set)) return true;
+        s.remove_prefix(r.size);
+    }
+    return false;
+}
+
+std::string_view TrimRunes(std::string_view s, std::string_view cutset) {
+    while (!s.empty() && RuneIn(text::DecodeRune(s).cp, cutset)) s.remove_prefix(text::DecodeRune(s).size);
+    while (!s.empty() && RuneIn(DecodeLastRune(s).cp, cutset)) s.remove_suffix(DecodeLastRune(s).size);
+    return s;
+}
+
+std::string_view TrimSpace(std::string_view s) {
+    auto space = [](char32_t r) {
+        return r == ' ' || (r >= '\t' && r <= '\r') || r == 0x85 || r == 0xA0 || r == 0x1680 ||
+               (r >= 0x2000 && r <= 0x200A) || r == 0x2028 || r == 0x2029 || r == 0x202F || r == 0x205F || r == 0x3000;
+    };
+    while (!s.empty() && space(text::DecodeRune(s).cp)) s.remove_prefix(text::DecodeRune(s).size);
+    while (!s.empty() && space(DecodeLastRune(s).cp)) s.remove_suffix(DecodeLastRune(s).size);
+    return s;
+}
+
 int Width(char32_t r) { return r < 0x80 || (r >= 0xFF61 && r <= 0xFF9F) ? 1 : 2; }
 
 int WidthOf(std::string_view s) {

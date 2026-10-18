@@ -20,6 +20,9 @@ struct Settings {
     bool text = false;
     // The preferTerminal pass of the sentence passes is on.
     bool terminal = false;
+    // The line of verse goes on in the next line of its document: a て form that ends it is
+    // the connective 고 rather than a request.
+    bool verse = false;
     // The speech level (an output register, 0 for automatic) of sentence-final plain
     // and polite predicates; it selects the plain-dictionary end rows with a register.
     uint8_t registers[2] = {0, 0};

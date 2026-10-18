@@ -46,6 +46,7 @@
 #include "hdTrans/dict/dict.h"
 #include "hdTrans/dict/tsv.h"
 #include "hdTrans/dict/user_text.h"
+#include "hdTrans/output/families.h"
 #include "hdTrans/userdict/conjugating.h"
 #include "hdTrans/userdict/sense.h"
 
@@ -164,6 +165,9 @@ public:
     // The marker families that the conjugating plain entries and senses use beyond
     // the static ones.
     const userdict::Families& GeneratedFamilies() const { return families_; }
+    // The marker families of the output lookups and the conjugating targets of the text
+    // path. Appended to under the families' own lock, so a const snapshot hands them out.
+    output::Families& OutputFamilies() const { return outputFamilies_; }
     // The name keys Load dropped, per file.
     const std::vector<std::string>& Warnings() const { return warnings_; }
 
@@ -241,6 +245,7 @@ private:
     std::vector<std::string> warnings_;
     std::vector<File> plain_;
     userdict::Families families_;
+    mutable output::Families outputFamilies_;
     std::unique_ptr<const UserText> rawPlain_, textPlain_;
     userdict::SenseTable senses_;
 };

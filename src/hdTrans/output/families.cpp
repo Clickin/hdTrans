@@ -17,7 +17,13 @@ int MarkerIndex(char marker) {
 
 }  // namespace
 
+std::size_t Families::Size() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return rows_.size();
+}
+
 std::string_view Families::Row(std::string_view key) const {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (rows_.empty()) return {};
     const auto it = rows_.find(key);
     return it == rows_.end() ? std::string_view() : std::string_view(it->second);
@@ -31,6 +37,7 @@ std::string Families::Generate(char marker, const FamilyRows& rows) {
         sig += '\0';
         sig += row;
     }
+    std::lock_guard<std::mutex> lock(mutex_);
     if (const auto it = ids_.find(sig); it != ids_.end()) return it->second;
     constexpr std::string_view kSecond = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     const std::string_view used = MarkerFamilyLetters(marker);
