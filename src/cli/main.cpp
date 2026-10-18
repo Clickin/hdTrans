@@ -1,5 +1,7 @@
-// hdtrans: reads UTF-8 from stdin (or -in FILE) and writes the translation to stdout.
+// hdtrans: reads UTF-8 from stdin (or -in FILE) and writes the translation to stdout. The
+// whole input is one session unless -each or -raw is given.
 //   -dicts DIR[,DIR...]   dictionary folders in load order (default: dicts/base next to the executable)
+//   -each                 a new session for every line
 //   -raw                  translate each line with the word pipeline only
 //   -in FILE              read the input from FILE
 #include <cstdio>
@@ -38,13 +40,15 @@ int main(int argc, char** argv) {
     std::string dicts = "dicts/base";
     std::string inPath;
     bool raw = false;
+    bool each = false;
     for (int i = 1; i < argc; i++) {
         const char* a = argv[i];
         if (!std::strcmp(a, "-dicts") && i + 1 < argc) dicts = argv[++i];
         else if (!std::strcmp(a, "-in") && i + 1 < argc) inPath = argv[++i];
         else if (!std::strcmp(a, "-raw")) raw = true;
+        else if (!std::strcmp(a, "-each")) each = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-raw] [-in FILE]\n");
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-in FILE]\n");
             return 2;
         }
     }
@@ -67,8 +71,9 @@ int main(int argc, char** argv) {
         std::fclose(f);
     }
 
-    if (!raw) {
-        const std::string out = engine.Translate(input);
+    if (!raw && !each) {
+        hdTrans::Session session(engine);
+        const std::string out = session.Translate(input);
         std::fwrite(out.data(), 1, out.size(), stdout);
         return 0;
     }

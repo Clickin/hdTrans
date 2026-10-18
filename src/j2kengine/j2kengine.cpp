@@ -33,8 +33,9 @@ constexpr UINT kShiftJis = 932;
 constexpr UINT kCp949 = 949;
 
 hdTrans::Engine* g_engine = nullptr;
+hdTrans::Session* g_session = nullptr;
 
-std::string TranslateUtf8(const std::string& text) { return g_engine ? g_engine->Translate(text) : std::string(); }
+std::string TranslateUtf8(const std::string& text) { return g_session ? g_session->Translate(text) : std::string(); }
 
 // Copies s into a NUL-terminated block the host releases with J2K_FreeMem.
 template <class Char>
@@ -74,6 +75,7 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
         return 0;
     }
     g_engine = e;
+    g_session = new hdTrans::Session(*g_engine);
     return 1;
 }
 

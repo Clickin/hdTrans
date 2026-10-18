@@ -1,5 +1,6 @@
 /* C API of the hdtrans engine. Strings are UTF-8. Buffers returned through an out
- * parameter are released with hdTrans_FreeMem. One engine per process. */
+ * parameter are released with hdTrans_FreeMem. One engine and one session per process:
+ * names and context found in earlier calls shape later translations. */
 #ifndef HDTRANS_H
 #define HDTRANS_H
 
@@ -21,9 +22,9 @@ extern "C" {
  * later folders overriding earlier ones. Returns 0, or -1 when no dictionary loads. */
 HDTRANS_API int hdTrans_Initialize(const char* dirs);
 
-/* Translates text[0..n) as one line of text. Writes a NUL-terminated UTF-8 buffer to
- * *out and its length (without the NUL) to *outn. Returns 0, or -1 before a
- * successful hdTrans_Initialize. */
+/* Translates text[0..n), one or more "\n"-separated lines, in the process session.
+ * Writes a NUL-terminated UTF-8 buffer to *out and its length (without the NUL) to
+ * *outn. Returns 0, or -1 before a successful hdTrans_Initialize. */
 HDTRANS_API int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn);
 
 /* Reloads the dictionary folders of the last hdTrans_Initialize (user dictionary edits). */

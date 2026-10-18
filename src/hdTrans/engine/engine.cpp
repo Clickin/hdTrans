@@ -12,10 +12,12 @@ bool Engine::Open(const std::vector<std::string>& dirs) {
 
 bool Engine::Reload() { return Open(dirs_); }
 
-std::string Engine::Translate(std::string_view text) const {
-    if (!loaded_) return {};
+std::string Session::Translate(std::string_view text) {
+    if (!engine_.loaded()) return {};
     return std::string(text);
 }
+
+void Session::Reset() {}
 
 namespace internal {
 

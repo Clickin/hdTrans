@@ -12,6 +12,7 @@ namespace {
 
 std::mutex g_mutex;
 hdTrans::Engine* g_engine = nullptr;
+hdTrans::Session* g_session = nullptr;
 
 std::vector<std::string> SplitNul(const char* dirs) {
     std::vector<std::string> out;
@@ -40,15 +41,17 @@ int hdTrans_Initialize(const char* dirs) {
         delete e;
         return -1;
     }
+    delete g_session;
     delete g_engine;
     g_engine = e;
+    g_session = new hdTrans::Session(*g_engine);
     return 0;
 }
 
 int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
     std::lock_guard<std::mutex> lock(g_mutex);
-    if (!g_engine) return -1;
-    return Copy(g_engine->Translate(std::string_view(text, n)), out, outn);
+    if (!g_session) return -1;
+    return Copy(g_session->Translate(std::string_view(text, n)), out, outn);
 }
 
 int hdTrans_Reload(void) {
