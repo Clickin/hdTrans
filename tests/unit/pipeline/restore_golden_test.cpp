@@ -87,8 +87,7 @@ HD_TEST(pipeline_restore_golden) {
     const std::string dir = GoldenDir() + "/stages/";
     std::error_code ec;
     if (!std::filesystem::is_directory(dir, ec)) {
-        std::printf("skip pipeline_restore_golden: no %s\n", dir.c_str());
-        return;
+        HD_SKIP(std::string("no ") + dir);
     }
     // The set is complete when its MANIFEST is written.
     HD_REQUIRE(std::filesystem::exists(dir + "MANIFEST", ec));

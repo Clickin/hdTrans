@@ -86,8 +86,7 @@ std::string DictsDir(const std::string& golden) {
 HD_TEST(select_shadow_golden) {
     const char* root = std::getenv("HDTRANS_GOLDEN");
     if (root == nullptr || *root == 0) {
-        std::printf("skip select_shadow_golden: no HDTRANS_GOLDEN\n");
-        return;
+        HD_SKIP("no HDTRANS_GOLDEN");
     }
     const dict::LoadResult loaded = dict::LoadFolders({DictsDir(root)});
     HD_REQUIRE(loaded.snapshot != nullptr && loaded.snapshot->HasDictionary());
@@ -136,8 +135,7 @@ HD_TEST(select_shadow_golden) {
 HD_TEST(engine_session_select_shadow) {
     const char* golden = std::getenv("HDTRANS_GOLDEN");
     if (golden == nullptr || *golden == 0) {
-        std::printf("skip engine_session_select_shadow: no HDTRANS_GOLDEN\n");
-        return;
+        HD_SKIP("no HDTRANS_GOLDEN");
     }
     Engine engine(true);
     HD_REQUIRE(engine.Open({DictsDir(golden)}));

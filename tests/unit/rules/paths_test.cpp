@@ -36,8 +36,7 @@ HD_TEST(rules_path_hashes) {
     const std::string dir = GoldenDir() + "/rules/";
     std::string flat, hashes;
     if (!ReadFile(dir + "rules.flat", flat) || !ReadFile(dir + "path_hashes.tsv", hashes)) {
-        std::printf("skip rules_path_hashes: no %srules.flat and path_hashes.tsv\n", dir.c_str());
-        return;
+        HD_SKIP(std::string("no ") + dir + "rules.flat and path_hashes.tsv");
     }
     hdTrans::rules::Program p;
     hdTrans::rules::LoadError e{};

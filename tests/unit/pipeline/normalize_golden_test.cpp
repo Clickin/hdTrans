@@ -175,8 +175,7 @@ HD_TEST(pipeline_normalize_golden) {
     const std::string dir = GoldenDir() + "/stages/";
     std::string manifest;
     if (!ReadFile(dir + "MANIFEST", manifest)) {
-        std::printf("skip pipeline_normalize_golden: no %sMANIFEST\n", dir.c_str());
-        return;
+        HD_SKIP(std::string("no ") + dir + "MANIFEST");
     }
     Totals t;
     int sets = 0;

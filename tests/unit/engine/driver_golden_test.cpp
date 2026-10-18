@@ -391,8 +391,7 @@ HD_TEST(engine_driver_golden) {
     const std::string golden = GoldenRoot();
     std::error_code ec;
     if (!std::filesystem::exists(golden + "/stages/MANIFEST", ec) || Dictionaries() == nullptr) {
-        std::printf("skip engine_driver_golden: no %s/stages/MANIFEST or dictionaries\n", golden.c_str());
-        return;
+        HD_SKIP(std::string("no ") + golden + "/stages/MANIFEST or dictionaries");
     }
     std::vector<std::string> sets;
     for (std::filesystem::directory_iterator it(golden, ec), end; !ec && it != end; it.increment(ec)) {

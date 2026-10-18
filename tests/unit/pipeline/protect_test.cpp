@@ -217,8 +217,7 @@ HD_TEST(pipeline_kata_speech) {
 HD_TEST(pipeline_katakana_dictionary) {
     const dict::LoadResult r = dict::LoadFolders({DictsDir()});
     if (r.snapshot == nullptr || !r.snapshot->HasDictionary()) {
-        std::printf("skip pipeline_katakana_dictionary: no dictionaries at %s\n", DictsDir().c_str());
-        return;
+        HD_SKIP(std::string("no dictionaries at ") + DictsDir());
     }
     const dict::Snapshot& snap = *r.snapshot;
     const LineContext ctx;

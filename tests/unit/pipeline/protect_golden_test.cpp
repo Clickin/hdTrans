@@ -160,8 +160,7 @@ HD_TEST(pipeline_protect_segment_golden) {
     const std::string plainDir = GoldenDir() + "/plain/";
     std::error_code ec;
     if (!std::filesystem::exists(dir + "MANIFEST", ec)) {
-        std::printf("skip pipeline_protect_segment_golden: no %sMANIFEST\n", dir.c_str());
-        return;
+        HD_SKIP(std::string("no ") + dir + "MANIFEST");
     }
     const bool withProtect = std::filesystem::is_directory(plainDir, ec) && std::filesystem::is_directory(DictsDir(), ec);
     if (!withProtect) std::printf("pipeline_protect_segment_golden: no %s or %s, Segment only\n", plainDir.c_str(), DictsDir().c_str());
@@ -285,8 +284,7 @@ HD_TEST(pipeline_protect_segment_golden) {
 HD_TEST(pipeline_cut_spans_sweep) {
     std::string file;
     if (!ReadFile(GoldenDir() + "/stages/sweep.cp.tsv", file)) {
-        std::printf("skip pipeline_cut_spans_sweep: no sweep.cp.tsv\n");
-        return;
+        HD_SKIP("no sweep.cp.tsv");
     }
     size_t lines = 0, differing = 0;
     for (const auto line : Split(file, '\n')) {

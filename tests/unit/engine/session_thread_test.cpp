@@ -27,8 +27,7 @@ HD_TEST(engine_session_threads) {
     const std::string dicts = DictsDir();
     std::error_code ec;
     if (dicts.empty() || !std::filesystem::exists(dicts, ec)) {
-        std::printf("skip engine_session_threads: no dictionaries (HDTRANS_DICTS)\n");
-        return;
+        HD_SKIP("no dictionaries (HDTRANS_DICTS)");
     }
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
@@ -72,13 +71,11 @@ HD_TEST(engine_session_threads_stress) {
     const char* golden = std::getenv("HDTRANS_GOLDEN");
     const std::string dicts = DictsDir();
     if (golden == nullptr || *golden == 0 || dicts.empty()) {
-        std::printf("skip engine_session_threads_stress: no HDTRANS_GOLDEN\n");
-        return;
+        HD_SKIP("no HDTRANS_GOLDEN");
     }
     std::FILE* f = std::fopen((std::string(golden) + "/corpus2.each.in").c_str(), "rb");
     if (f == nullptr) {
-        std::printf("skip engine_session_threads_stress: no corpus2.each.in\n");
-        return;
+        HD_SKIP("no corpus2.each.in");
     }
     std::string text;
     char buf[1 << 14];
@@ -121,7 +118,7 @@ HD_TEST(engine_session_threads_stress) {
 
 HD_TEST(engine_session_call_context) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     struct Case {
@@ -170,7 +167,7 @@ HD_TEST(engine_session_call_context) {
 
 HD_TEST(engine_session_memory_window) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     hdTrans::Session session(engine);
@@ -186,7 +183,7 @@ HD_TEST(engine_session_memory_window) {
 
 HD_TEST(engine_reference_mode) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine improved;
     hdTrans::Engine reference(true);
     HD_REQUIRE(improved.Open({dicts}));
@@ -218,7 +215,7 @@ namespace {
 void CheckWordImprovement(bool hdTrans::word::Improvements::* flag, const std::string& text,
                           const std::string& reference, const std::string& improved) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine(true);
     HD_REQUIRE(engine.Open({dicts}));
     const auto snap = engine.Dictionaries();
@@ -248,7 +245,7 @@ HD_TEST(engine_forward_terminal) {
 
 HD_TEST(engine_reference_session_builtin_isolation) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine;
     HD_REQUIRE(engine.Open({dicts}));
     hdTrans::Session improved(engine);
@@ -262,7 +259,7 @@ HD_TEST(engine_reference_session_builtin_isolation) {
 
 HD_TEST(engine_reference_session_cleanup_isolation) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine;
     HD_REQUIRE(engine.Open({dicts}));
     hdTrans::Session improved(engine);
@@ -274,7 +271,7 @@ HD_TEST(engine_reference_session_cleanup_isolation) {
 
 HD_TEST(engine_causative_passive) {
     const std::string dicts = DictsDir();
-    if (dicts.empty()) return;
+    if (dicts.empty()) HD_SKIP("HDTRANS_DICTS is not set");
     hdTrans::Engine engine;
     HD_REQUIRE(engine.Open({dicts}));
     const struct { const char* in; const char* want; } cases[] = {

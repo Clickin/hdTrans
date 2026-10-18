@@ -300,8 +300,7 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
 void RunSets(const char* name, bool (*select)(const std::string&)) {
     const std::string dir = GoldenDir() + "/analyze/";
     if (!std::filesystem::exists(dir + "MANIFEST") || Dictionaries() == nullptr || RuleProgram() == nullptr) {
-        std::printf("skip %s: no analyze fixtures, dictionaries or rule program\n", name);
-        return;
+        HD_SKIP("no analyze fixtures, dictionaries or rule program");
     }
     std::vector<std::string> sets;
     std::error_code ec;

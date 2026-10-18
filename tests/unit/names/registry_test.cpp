@@ -82,7 +82,7 @@ HD_TEST(names_speaker_cues) {
 
 HD_TEST(names_labels) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, bool>> cases = {
         {Repeat("魅音「おはよう」", 3), true},
         {Repeat("魅音「おはよう」", 2), false},  // a plain-text form must recur
@@ -114,7 +114,7 @@ HD_TEST(names_labels) {
 
 HD_TEST(names_honorifics) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, std::vector<std::string>>> cases = {
         {Repeat("梨花ちゃん、おはよう。", 4), {"梨花"}},
         {Repeat("梨花ちゃん、おはよう。", 3), {}},  // a common word scores 0.5 per honorific
@@ -140,7 +140,7 @@ HD_TEST(names_honorifics) {
 
 HD_TEST(names_occurrences_and_guards) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::array<std::string, 3>> cases = {
         {"", "光が来た。", ""},
         {Repeat("光さん、", 3), "光が来た。", "光"},
@@ -165,7 +165,7 @@ HD_TEST(names_occurrences_and_guards) {
 
 HD_TEST(names_dict_rows) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     names::Registry r = Scan(snap, "竜宮レナ（りゅうぐうれな）\n" + Repeat("前原圭一「おはよう」", 3) + Repeat("圭一くん", 2));
     HD_CHECK_EQ(r.Dict(),
                 std::string("前原\t마에바라\tsurname\n前原圭一\t마에바라 케이이치\tname\n"
@@ -178,7 +178,7 @@ HD_TEST(names_dict_rows) {
 
 HD_TEST(names_readings_without_table) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, std::pair<std::string, text::Preset>>> cases = {
         {"竜宮レナ（りゅうぐうれな）だ。", {"竜宮レナ", text::Preset::Fan}},
         {"竜宮レナ（りゅうぐうれな）だ。", {"竜宮レナ", text::Preset::FanShort}},
@@ -200,7 +200,7 @@ HD_TEST(names_readings_without_table) {
 
 HD_TEST(names_katakana_full_names) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     names::Registry r = Scan(snap, Repeat("アル君、おはよう。", 2) + Repeat("アルガルド様が来た。", 2) +
                                        "王太子、アルガルド・ボナ・パレッティア。\nアルガルドは王子だ。");
     HD_CHECK_EQ(r.Render("アル"), std::string("아르"));
@@ -234,7 +234,7 @@ HD_TEST(names_katakana_full_names) {
 
 HD_TEST(names_given_split) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, std::string>> cases = {
         {"椎名周が来た。\n周は笑った。", "周"},
         {"椎名樹、それが彼の名だ。", "樹"},

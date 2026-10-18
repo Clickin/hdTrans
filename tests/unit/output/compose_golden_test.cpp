@@ -279,8 +279,7 @@ HD_TEST(output_compose_golden) {
     const std::string dir = golden + "/stages/";
     std::error_code ec;
     if (!std::filesystem::exists(dir + "MANIFEST", ec)) {
-        std::printf("skip output_compose_golden: no %sMANIFEST\n", dir.c_str());
-        return;
+        HD_SKIP(std::string("no ") + dir + "MANIFEST");
     }
     std::vector<std::string> sets;
     for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {

@@ -102,8 +102,7 @@ HD_TEST(pipeline_sound_golden) {
     std::error_code ec;
     if (!std::filesystem::exists(dir + "MANIFEST", ec) || !std::filesystem::is_directory(plainDir, ec) ||
         !std::filesystem::is_directory(DictsDir(), ec)) {
-        std::printf("skip pipeline_sound_golden: no %sMANIFEST, %s or %s\n", dir.c_str(), plainDir.c_str(), DictsDir().c_str());
-        return;
+        HD_SKIP(std::string("no ") + dir + "MANIFEST, " + plainDir + " or " + DictsDir());
     }
     std::vector<std::string> sets;
     for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {

@@ -66,8 +66,7 @@ HD_TEST(pipeline_sound_lexicon) {
 HD_TEST(pipeline_sound) {
     const auto snap = Dicts();
     if (snap == nullptr) {
-        std::printf("skip pipeline_sound: no dictionaries at %s\n", DictsDir().c_str());
-        return;
+        HD_SKIP(std::string("no dictionaries at ") + DictsDir());
     }
     LineContext ctx;
     ctx.lookup.plain = &snap->TextPlain();
@@ -126,7 +125,7 @@ HD_TEST(pipeline_sound) {
 
 HD_TEST(pipeline_sound_markers) {
     const auto snap = Dicts();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::string markers[] = {"ドキ"};
     LineContext ctx;
     ctx.lookup.plain = &snap->TextPlain();
@@ -136,7 +135,7 @@ HD_TEST(pipeline_sound_markers) {
 
 HD_TEST(pipeline_rewrite_emphasis) {
     const auto snap = Dicts();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     LineContext ctx;
     ctx.lookup.plain = &snap->TextPlain();
     const Case cases[] = {
@@ -161,7 +160,7 @@ HD_TEST(pipeline_rewrite_emphasis) {
 
 HD_TEST(pipeline_rewrite_casual_adjectives) {
     const auto snap = Dicts();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     LineContext ctx;
     ctx.lookup.plain = &snap->TextPlain();
     const Case cases[] = {

@@ -108,8 +108,7 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
 void RunSets(const char* name, bool (*select)(const std::string&)) {
     const std::string dir = FixtureDir();
     if (dir.empty() || Dictionaries() == nullptr) {
-        std::printf("skip %s: no analyze fixtures (HDTRANS_GOLDEN/analyze/MANIFEST) or dictionaries\n", name);
-        return;
+        HD_SKIP("no analyze fixtures (HDTRANS_GOLDEN/analyze/MANIFEST) or dictionaries");
     }
     std::vector<std::string> sets;
     std::error_code ec;

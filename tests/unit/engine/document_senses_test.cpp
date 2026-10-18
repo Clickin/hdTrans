@@ -156,8 +156,7 @@ HD_TEST(document_senses_session_reset_isolation_and_reference) {
 HD_TEST(document_senses_shadow_golden) {
     const char* root = std::getenv("HDTRANS_GOLDEN");
     if (root == nullptr || *root == 0) {
-        std::printf("skip document_senses_shadow_golden: no HDTRANS_GOLDEN\n");
-        return;
+        HD_SKIP("no HDTRANS_GOLDEN");
     }
     const char* dicts = std::getenv("HDTRANS_DICTS");
     const auto loaded = dict::LoadFolders({dicts != nullptr && *dicts != 0 ? std::string(dicts)

@@ -3,6 +3,7 @@
 // use HD_CHECK (records and continues) or HD_REQUIRE (records and returns from the
 // test). No exceptions are used, so the library can be built with -fno-exceptions.
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -20,7 +21,14 @@ inline std::vector<Test>& Registry() {
 
 struct State {
     int failures = 0;
+    bool skipped = false;
+    std::string skipReason;
 };
+
+inline bool RequireAll() {
+    const char* value = std::getenv("HDTRANS_REQUIRE_ALL");
+    return value != nullptr && std::string(value) == "1";
+}
 
 inline State& Cur() {
     static State s;
@@ -30,6 +38,11 @@ inline State& Cur() {
 inline void Fail(const char* file, int line, const std::string& msg) {
     Cur().failures++;
     std::fprintf(stderr, "%s:%d: %s\n", file, line, msg.c_str());
+}
+
+inline void Skip(const std::string& reason) {
+    Cur().skipped = true;
+    Cur().skipReason = reason;
 }
 
 struct Register {
@@ -45,6 +58,9 @@ struct Register {
 
 #define HD_CHECK(cond) \
     do { if (!(cond)) hdtest::Fail(__FILE__, __LINE__, "check failed: " #cond); } while (0)
+
+#define HD_SKIP(reason) \
+    do { hdtest::Skip(reason); return; } while (0)
 
 #define HD_REQUIRE(cond) \
     do { if (!(cond)) { hdtest::Fail(__FILE__, __LINE__, "require failed: " #cond); return; } } while (0)

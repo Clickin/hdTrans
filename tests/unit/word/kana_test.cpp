@@ -53,13 +53,11 @@ HD_TEST(kana_hiragana_cases) {
 HD_TEST(kana_katakana_fixture) {
     const char* golden = std::getenv("HDTRANS_GOLDEN");
     if (golden == nullptr || *golden == 0) {
-        std::printf("skip kana_katakana_fixture: HDTRANS_GOLDEN not set\n");
-        return;
+        HD_SKIP("HDTRANS_GOLDEN not set");
     }
     std::string data;
     if (!ReadFile(std::string(golden) + "/analyze/katakana.tsv", data)) {
-        std::printf("skip kana_katakana_fixture: no katakana.tsv in HDTRANS_GOLDEN/analyze\n");
-        return;
+        HD_SKIP("no katakana.tsv in HDTRANS_GOLDEN/analyze");
     }
     int n = 0, bad = 0;
     std::size_t pos = 0;

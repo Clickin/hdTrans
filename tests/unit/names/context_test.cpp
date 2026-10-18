@@ -31,7 +31,7 @@ const dict::Snapshot* Base() {
 
 HD_TEST(names_cued_names) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::pair<std::string, std::vector<std::string>>> cases = {
         {"魅音「おはよう」", {"魅音"}},
         {"詩音さん", {}},
@@ -48,7 +48,7 @@ HD_TEST(names_cued_names) {
 
 HD_TEST(names_whole_line_rows) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::string> lines = {"つづきから"};
     auto doc = pipeline::BuildDocument(*snap, lines);
     HD_REQUIRE(doc != nullptr);
@@ -67,7 +67,7 @@ HD_TEST(names_whole_line_rows) {
 
 HD_TEST(names_confirmed_cache) {
     const dict::Snapshot* snap = Base();
-    if (snap == nullptr) return;
+    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
     const std::vector<std::string> lines = {"光さん、", "光さん、", "光さん、"};
     auto doc = pipeline::BuildDocument(*snap, lines);
     HD_REQUIRE(doc->accepted.contains("光"));

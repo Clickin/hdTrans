@@ -76,8 +76,7 @@ size_t Capacities(const Tokens& t) {
 HD_TEST(tokenizer_golden_t_records) {
     const std::string dir = stagetest::StagesDir();
     if (dir.empty()) {
-        std::printf("skip tokenizer_golden_t_records: no complete stage set (HDTRANS_GOLDEN/stages/MANIFEST)\n");
-        return;
+        HD_SKIP("no complete stage set (HDTRANS_GOLDEN/stages/MANIFEST)");
     }
     std::vector<std::string> sets;
     std::error_code ec;
@@ -120,8 +119,7 @@ HD_TEST(tokenizer_golden_sweep) {
     const std::string dir = stagetest::StagesDir();
     std::string sweep;
     if (dir.empty() || !stagetest::ReadFile(dir + "sweep.cp.tsv", sweep)) {
-        std::printf("skip tokenizer_golden_sweep: no complete stage set with sweep.cp.tsv\n");
-        return;
+        HD_SKIP("no complete stage set with sweep.cp.tsv");
     }
     Tokens tokens;
     std::vector<Piece> pieces(1);
@@ -159,8 +157,7 @@ HD_TEST(tokenizer_golden_speed) {
     const std::string dir = stagetest::StagesDir();
     std::string input;
     if (dir.empty() || !stagetest::ReadFile(dir + "corpus2.each.P.tsv", input)) {
-        std::printf("skip tokenizer_golden_speed: no corpus2.each.P.tsv\n");
-        return;
+        HD_SKIP("no corpus2.each.P.tsv");
     }
     std::vector<std::vector<Piece>> chunks;
     int chunk = -1;

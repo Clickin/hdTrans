@@ -208,13 +208,11 @@ std::vector<std::string> ContextSets(const std::string& golden) {
 HD_TEST(names_context_golden) {
     const std::string golden = GoldenDir();
     if (!fs::exists(golden + "/stages/MANIFEST")) {
-        std::printf("  skipped: no stage goldens in %s\n", golden.c_str());
-        return;
+        HD_SKIP(std::string("no stage goldens in ") + golden);
     }
     dict::LoadResult loaded = dict::LoadFolders({DictsDir()});
     if (loaded.snapshot == nullptr) {
-        std::printf("  skipped: dictionaries not loaded from %s\n", DictsDir().c_str());
-        return;
+        HD_SKIP(std::string("dictionaries not loaded from ") + DictsDir());
     }
     const dict::Snapshot& snap = *loaded.snapshot;
     size_t total = 0, totalRecords = 0;
@@ -276,13 +274,11 @@ std::vector<std::string> PlainStream(const dict::Snapshot& snap, bool each, cons
 HD_TEST(names_plain_golden) {
     const std::string golden = GoldenDir();
     if (!fs::exists(golden + "/stages/MANIFEST")) {
-        std::printf("  skipped: no stage goldens in %s\n", golden.c_str());
-        return;
+        HD_SKIP(std::string("no stage goldens in ") + golden);
     }
     dict::LoadResult loaded = dict::LoadFolders({DictsDir()});
     if (loaded.snapshot == nullptr) {
-        std::printf("  skipped: dictionaries not loaded from %s\n", DictsDir().c_str());
-        return;
+        HD_SKIP(std::string("dictionaries not loaded from ") + DictsDir());
     }
     const dict::Snapshot& snap = *loaded.snapshot;
     size_t total = 0;
