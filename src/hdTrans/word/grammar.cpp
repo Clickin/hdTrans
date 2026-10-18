@@ -1,5 +1,6 @@
 // Grammar passes of the text path: the readings of a verb's られ, and the conjugating
 // targets of passive verbs that have no static family.
+#include <algorithm>
 #include <string>
 #include <string_view>
 
