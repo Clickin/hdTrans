@@ -193,7 +193,7 @@ HD_TEST(engine_reference_mode) {
     HD_REQUIRE(reference.Open({dicts}));
     const std::string text = "寝たかった。";
     hdTrans::Session normal(improved), explicitReference(improved, true), inherited(reference);
-    HD_CHECK_EQ(normal.Translate(text), "자고 싶었다.");
+    HD_CHECK_EQ(normal.Translate(text), "잠 싶었다.");
     HD_CHECK_EQ(explicitReference.Translate(text), "잠 싶었다.");
     HD_CHECK_EQ(inherited.Translate(text), "잠 싶었다.");
     explicitReference.Reset();
@@ -201,7 +201,7 @@ HD_TEST(engine_reference_mode) {
     HD_CHECK_EQ(explicitReference.Translate(text), "잠 싶었다.");
     HD_CHECK_EQ(inherited.Translate(text), "잠 싶었다.");
     HD_CHECK_EQ(hdTrans::internal::TranslateRaw(reference, text), "잠 싶었다.");
-    HD_CHECK_EQ(hdTrans::internal::TranslateRaw(improved, text), "자고 싶었다.");
+    HD_CHECK_EQ(hdTrans::internal::TranslateRaw(improved, text), "잠 싶었다.");
 
     const auto snap = improved.Dictionaries();
     const auto generated = hdTrans::internal::NewGenerated(*snap);
@@ -211,6 +211,10 @@ HD_TEST(engine_reference_mode) {
     hdTrans::internal::Memory memory;
     HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&text, 1}, memory, {}, options)[0],
                 "잠 싶었다.");
+    options.reference = false;
+    hdTrans::internal::Memory enabled;
+    HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&text, 1}, enabled, {}, options)[0],
+                "자고 싶었다.");
 }
 
 namespace {

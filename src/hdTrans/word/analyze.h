@@ -26,7 +26,7 @@ struct SessionSenses;
     X(exclamationNa, true)            /* Exclamatory な after predicates. */ \
     X(dialectForms, true)             /* Colloquial negative and contracted verb forms. */ \
     X(documentSenses, false)          /* Reuse trusted lexical senses within a session. */ \
-    X(desireWindow, true)             /* Eight-character lookahead for desire endings. */ \
+    X(desireWindow, false)            /* Eight-character lookahead for desire endings. */ \
     X(expandedGroups, true)           /* Allow more than 100 entries in a group. */ \
     X(semanticAlternatives, true)     /* Check every alternative of a semantic attribute. */ \
     X(preserveNeighbourSlots, false)  /* Preserve direct slots during neighbour traversal. */ \
