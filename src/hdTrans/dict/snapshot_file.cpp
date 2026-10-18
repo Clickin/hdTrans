@@ -21,6 +21,7 @@
 
 #include "hdTrans/dict/integrity.h"
 #include "hdTrans/dict/mapped_file.h"
+#include "hdTrans/dict/runes.h"
 
 namespace hdTrans::dict {
 namespace {
@@ -39,6 +40,10 @@ constexpr uint32_t kTree = 10, kZeros = 11, kLabel = 12, kTerminal = 13, kRank =
 constexpr uint32_t kStarts = 15, kCodeRefs = 16, kBlob = 17;
 constexpr uint32_t kNoLayer = 3;
 constexpr std::string_view kMagic = "HDSNAP\r\n";
+
+bool SafePath(std::string_view path) {
+    return path.find('\0') == std::string_view::npos && internal::ValidUtf8(path);
+}
 
 std::filesystem::path PathOf(std::string_view s) {
     return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(s.data()), s.size()));
@@ -430,7 +435,7 @@ bool SnapshotStorage::Write(const Snapshot& s, const std::vector<LoadError>& err
     for (uint32_t layer = 0; layer < 3; layer++) {
         const auto view = layers[layer]->View();
         auto add = [&]<class T>(uint32_t kind, std::span<T> values) {
-            writer.Add(kind, layer, std::as_bytes(values), values.size(), sizeof(T));
+            writer.Add(kind, layer, std::as_bytes(values), values.size(), static_cast<uint32_t>(sizeof(T)));
         };
         add(kTree, view.keys.tree); add(kZeros, view.keys.zeros); add(kLabel, view.keys.label);
         add(kTerminal, view.keys.terminal); add(kRank, view.keys.rank); add(kStarts, view.starts);
@@ -460,6 +465,7 @@ bool IsBad(std::string_view path, const FileStamp& stamp) {
 std::string RestorePath(Reader& r, const std::vector<std::string>& folders) {
     const int folder = r.Signed();
     const auto name = r.Text();
+    if (!SafePath(name)) { r.ok = false; return {}; }
     if (folder == -1) return std::string(name);
     if (folder < 0 || static_cast<std::size_t>(folder) >= folders.size()) { r.ok = false; return {}; }
     return Utf8Of(PathOf(folders[static_cast<std::size_t>(folder)]) / PathOf(name));
@@ -473,6 +479,7 @@ bool ReadManifest(Bytes bytes, std::vector<Source>& sources, std::size_t folders
         Source source;
         source.folder = static_cast<uint32_t>(r.Number());
         source.relative = r.Text();
+        if (!SafePath(source.relative)) return false;
         const auto path = PathOf(source.relative);
         if (source.folder >= folders || source.relative.empty() || path.has_parent_path() ||
             path.is_absolute() || source.relative == "." || source.relative == ".." || !source.relative.ends_with(".tsv")) r.ok = false;
@@ -826,7 +833,8 @@ bool Snapshot::Mapped() const { return backing_ != nullptr; }
 namespace internal {
 
 std::string SnapshotPath(const std::vector<std::string>& folders, std::string_view cacheDir) {
-    if (folders.empty()) return {};
+    if (folders.empty() || !SafePath(cacheDir)) return {};
+    for (const auto& folder : folders) if (!SafePath(folder)) return {};
     Buffer key;
     for (const auto& folder : folders) key.Text(folder);
     const auto hash = Hash256(key.data);
@@ -837,6 +845,8 @@ std::string SnapshotPath(const std::vector<std::string>& folders, std::string_vi
 }  // namespace internal
 
 bool CompileSnapshot(const std::vector<std::string>& folders, std::string_view outPath) {
+    if (!SafePath(outPath)) return false;
+    for (const auto& folder : folders) if (!SafePath(folder)) return false;
     std::vector<Source> sources;
     if (!ListSources(folders, sources, true)) return false;
     const auto loaded = LoadFoldersTsv(folders);
@@ -901,6 +911,7 @@ void RefreshManifest(const internal::SnapshotFile& file, const std::vector<Sourc
 }  // namespace
 
 LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify) {
+    for (const auto& folder : folders) if (!SafePath(folder)) return {nullptr, {{folder, LoadErrorKind::Folder, 0, TsvErrorKind::Read, {}}}};
     const char* mode = std::getenv("HDTRANS_SNAPSHOT");
     if (mode && std::string_view(mode) == "off") return LoadFoldersTsv(folders);
     const char* strict = std::getenv("HDTRANS_VERIFY_DICTS");
