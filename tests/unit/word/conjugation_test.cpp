@@ -1,0 +1,43 @@
+#include "hdTrans/word/conjugation.h"
+
+#include <string>
+
+#include "fnv.h"
+#include "hdtest.h"
+
+using namespace hdTrans::word;
+
+// The expected values are the hashes of the tables the data was generated from: the
+// cells in table order, and Conjugation over kinds and branches -2..20.
+HD_TEST(conjugation_fingerprints) {
+    hdtest::Fnv cells;
+    cells.U32(kConjugationKinds);
+    cells.U32(kConjugationBranches);
+    for (int kind = 0; kind < kConjugationKinds; kind++) {
+        for (const char* c : internal::ConjugationRow(kind)) cells.Str(c);
+    }
+    HD_CHECK_EQ(cells.h, uint64_t{0xdfaa802e92689e7aull});
+
+    hdtest::Fnv lookups;
+    for (int kind = -2; kind <= 20; kind++) {
+        for (int branch = -2; branch <= 20; branch++) lookups.Str(Conjugation(kind, branch));
+    }
+    HD_CHECK_EQ(lookups.h, uint64_t{0x1497fa98657948e4ull});
+
+    hdtest::Fnv prefix;
+    prefix.U32(kPrefixForms);
+    for (int i = 0; i < kPrefixForms; i++) prefix.Str(PrefixForm(i));
+    HD_CHECK_EQ(prefix.h, uint64_t{0x5d66f2d7348c3f9dull});
+}
+
+HD_TEST(conjugation_samples) {
+    HD_CHECK_EQ(std::string(Conjugation(1, 6)), std::string("いた"));
+    HD_CHECK_EQ(std::string(Conjugation(kKindIku, 6)), std::string("った"));
+    HD_CHECK_EQ(std::string(Conjugation(kKindIku, 0)), std::string("く"));
+    HD_CHECK_EQ(std::string(Conjugation(9, 1)), std::string("(-X8|)"));
+    HD_CHECK(Conjugation(14, 0).empty());
+    HD_CHECK(Conjugation(0, 18).empty());
+    HD_CHECK_EQ(std::string(PrefixForm(50)), std::string("する"));
+    HD_CHECK_EQ(std::string(PrefixForm(150)), std::string("来る"));
+    HD_CHECK(PrefixForm(200).empty());
+}
