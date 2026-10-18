@@ -152,7 +152,7 @@ void CheckSet(const std::string& dir, const std::string& set, Totals& t) {
             for (std::string_view r : it->second) whole = whole || r.starts_with("CTX\tline.wholeline\t");
         }
         std::vector<std::string> got;
-        if (!whole) got.push_back("N\t" + EscapeStageText(Normalize(in, LineContext{true, female})));
+        if (!whole) got.push_back("N\t" + EscapeStageText(Normalize(in, LineContext{.document = true, .female = female})));
         t.records += static_cast<int>(want.size());
         bool same = want.size() == got.size();
         for (size_t i = 0; same && i < want.size(); i++) same = want[i] == got[i];
