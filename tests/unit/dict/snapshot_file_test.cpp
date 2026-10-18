@@ -375,7 +375,7 @@ HD_TEST(SnapshotCorruptFileFallback) {
         HD_CHECK(!loaded.snapshot->Mapped());
         HD_CHECK_EQ(loaded.snapshot->Base().Len(), built.snapshot->Base().Len());
     }
-    for (int variant = 0; variant < 6; variant++) {
+    for (int variant = 0; variant < 8; variant++) {
         auto bytes = good;
         switch (variant) {
         case 0: bytes[0] ^= std::byte{1}; break;
@@ -384,6 +384,8 @@ HD_TEST(SnapshotCorruptFileFallback) {
         case 3: SetField(bytes, 256 + 8, std::numeric_limits<uint64_t>::max() - 7, 8); break;
         case 4: SetField(bytes, 256 + 36, 3, 4); break;
         case 5: SetField(bytes, 256 + 64 + 8, Field(bytes, 256 + 8, 8), 8); break;
+        case 6: SetField(bytes, 204, sizeof(void*) == 8 ? 4 : 8, 4); break;
+        case 7: bytes[208] ^= std::byte{1}; break;
         }
         FixDirectories(bytes);
         HD_REQUIRE(WriteBytes(path, bytes));

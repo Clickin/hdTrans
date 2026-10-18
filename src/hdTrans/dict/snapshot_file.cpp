@@ -322,7 +322,7 @@ bool Publish(const std::filesystem::path& from, const std::filesystem::path& to)
 #endif
 }
 
-bool ValidateImage(std::string_view path, const std::vector<std::string>& folders);
+bool ValidateImage(std::string_view path, const std::vector<std::string>& folders, const Snapshot& expected);
 
 bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name, const std::vector<std::string>& folders) {
     if constexpr (std::endian::native != std::endian::little) return false;
@@ -359,6 +359,9 @@ bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name
     const Dict* layers[] = {&snap.Base(), snap.User(), snap.Names()};
     for (std::size_t i = 0; i < 3; i++) Put(header, 160 + 8 * i, layers[i] ? layers[i]->Len() : 0, 8);
     Put(header, 196, Crc32c(directory), 4); Put(header, 200, 1, 4);
+    Put(header, 204, sizeof(void*), 4);
+    const auto compiler = HexDigest(HDTRANS_COMPILER_ID);
+    std::copy(compiler.begin(), compiler.end(), header.begin() + 208);
     Put(header, 192, Crc32c(header), 4);
 
     const auto path = PathOf(name);
@@ -391,7 +394,7 @@ bool WriteImage(ImageWriter& writer, const Snapshot& snap, std::string_view name
             ok = ok && Crc32c(mapped->Bytes().subspan(static_cast<std::size_t>(offset), static_cast<std::size_t>(segment.length))) == segment.crc;
         }
     }
-    if (ok) ok = ValidateImage(Utf8Of(temp), folders);
+    if (ok) ok = ValidateImage(Utf8Of(temp), folders, snap);
     if (ok) ok = Publish(temp, path);
     if (!ok) std::filesystem::remove(temp, ec);
     return ok;
@@ -651,8 +654,10 @@ public:
         Put(header, 192, 0, 4);
         if (Crc32c(header) != Get(bytes, 192, 4)) return false;
         const auto builtin = HexDigest(HDTRANS_BUILTIN_ID), rules = HexDigest(HDTRANS_DATA_ID);
+        const auto compiler = HexDigest(HDTRANS_COMPILER_ID);
         if (!std::equal(builtin.begin(), builtin.end(), bytes.begin() + 96) ||
-            !std::equal(rules.begin(), rules.end(), bytes.begin() + 128)) return false;
+            !std::equal(rules.begin(), rules.end(), bytes.begin() + 128) ||
+            Get(bytes, 204, 4) != sizeof(void*) || !std::equal(compiler.begin(), compiler.end(), bytes.begin() + 208)) return false;
         const auto sectionCount = Get(bytes, 40, 4), segmentCount = Get(bytes, 44, 4);
         if (sectionCount != 27 || segmentCount > (bytes.size() - kHeaderSize) / kDescriptorSize ||
             sectionCount > (bytes.size() - kHeaderSize) / kDescriptorSize - segmentCount) return false;
@@ -853,14 +858,35 @@ LoadResult SnapshotStorage::Read(const std::vector<std::string>& folders, std::s
 
 namespace {
 
-bool ValidateImage(std::string_view path, const std::vector<std::string>& folders) {
+bool ValidateImage(std::string_view path, const std::vector<std::string>& folders, const Snapshot& expected) {
     const auto loaded = SnapshotStorage::Read(folders, path, true);
-    if (!loaded.snapshot) return false;
-    for (const Dict* layer : {&loaded.snapshot->Base(), loaded.snapshot->User(), loaded.snapshot->Names()}) {
-        if (!layer) continue;
+    if (!loaded.snapshot || loaded.snapshot->Warnings() != expected.Warnings()) return false;
+    const Dict* wanted[] = {&expected.Base(), expected.User(), expected.Names()};
+    const Dict* actual[] = {&loaded.snapshot->Base(), loaded.snapshot->User(), loaded.snapshot->Names()};
+    for (std::size_t layer = 0; layer < 3; layer++) {
+        if (!wanted[layer] || !actual[layer]) {
+            if (wanted[layer] != actual[layer]) return false;
+            continue;
+        }
+        if (wanted[layer]->Len() != actual[layer]->Len()) return false;
         std::size_t keys = 0;
-        layer->Each([&](std::string_view, const std::vector<Record>&) { keys++; });
-        if (keys != layer->Len() || !loaded.snapshot->Healthy()) return false;
+        bool equal = true;
+        wanted[layer]->Each([&](std::string_view key, const std::vector<Record>& records) {
+            keys++;
+            const auto got = actual[layer]->Records(key);
+            if (got.size() != records.size() || wanted[layer]->Find(key) != actual[layer]->Find(key)) {
+                equal = false;
+                return;
+            }
+            for (std::size_t i = 0; i < records.size(); i++) {
+                const auto& a = records[i];
+                const auto& b = got[i];
+                if (a.target != b.target || a.rule != b.rule || a.id != b.id || !a.codes || !b.codes ||
+                    a.codes->partText != b.codes->partText || a.codes->sem.Text() != b.codes->sem.Text() ||
+                    a.codes->gram.Text() != b.codes->gram.Text() || a.codes->dict.Text() != b.codes->dict.Text()) equal = false;
+            }
+        });
+        if (!equal || keys != wanted[layer]->Len() || !loaded.snapshot->Healthy()) return false;
     }
     return true;
 }
