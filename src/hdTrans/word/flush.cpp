@@ -10,6 +10,11 @@ void Flush(Flusher& f) {
     CleanupSelectors(f);
     CleanupClass3(f);
     ApplyNegatives(f);
+    if (f.w.settings.text) {
+        ChooseSenses(f);
+        ChooseInitialConjunctions(f);
+        HanBeforeNa(f);
+    }
     if (f.w.settings.terminal) PreferTerminal(f);
 }
 

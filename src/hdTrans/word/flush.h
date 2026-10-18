@@ -39,4 +39,9 @@ void ApplyNegatives(Flusher& f);
 // Text-path grammar (grammar.cpp).
 void PassiveRecords(Flusher& f);
 
+// Text-path senses and conjunctions (sense.cpp).
+void ChooseSenses(Flusher& f);
+void ChooseInitialConjunctions(Flusher& f);
+void HanBeforeNa(Flusher& f);
+
 }  // namespace hdTrans::word
