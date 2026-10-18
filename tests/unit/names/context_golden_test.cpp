@@ -294,21 +294,18 @@ HD_TEST(names_plain_golden) {
         total += diff;
         std::printf("  plain %-28s %6zu records, %zu differing\n", set, got.size(), diff);
     }
-    // The first 2000 cases of corpus2.each.
+    // Every case of corpus2.each.
     std::string want, in;
     if (ReadFile(golden + "/plain/corpus2.each.tsv", want) && ReadFile(golden + "/corpus2.each.in", in)) {
         const std::vector<std::string> lines = EachLines(in);
         std::vector<std::string> got;
-        const size_t n = std::min<size_t>(lines.size(), 2000);
-        for (size_t k = 0; k < n; k++) {
+        for (size_t k = 0; k < lines.size(); k++) {
             const std::vector<std::string> one = PlainStream(snap, true, {lines[k]}, k + 1, "corpus2.each");
             got.insert(got.end(), one.begin(), one.end());
         }
-        std::vector<std::string_view> wantBlocks = FlatBlocks(want);
-        wantBlocks.resize(std::min(wantBlocks.size(), got.size()));
-        const size_t diff = Compare(got, wantBlocks, "corpus2.each (first 2000)");
+        const size_t diff = Compare(got, FlatBlocks(want), "corpus2.each");
         total += diff;
-        std::printf("  plain %-28s %6zu records, %zu differing\n", "corpus2.each (first 2000)", got.size(), diff);
+        std::printf("  plain %-28s %6zu records, %zu differing\n", "corpus2.each", got.size(), diff);
     }
     HD_CHECK_EQ(total, size_t{0});
 }
