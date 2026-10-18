@@ -1,14 +1,18 @@
-// snapshot_check: dumps the dictionary lookups over corpus lines in a line-oriented
-// tab-separated form, for comparison with a reference dump; or measures loading.
+// snapshot_check: dumps the compiled plain entries and the dictionary lookups over
+// corpus lines in a line-oriented tab-separated form, for comparison with a reference
+// dump; or measures loading.
 //
-//   snapshot_check -dicts DIR[,DIR...] -entries DIR -raw FILE -each FILE [-eachlines N] [-out FILE]
+//   snapshot_check -dicts DIR[,DIR...] -compiled FILE [-raw FILE -each FILE [-eachlines N] [-out FILE]]
 //   snapshot_check -dicts DIR[,DIR...] -time
 //
-// -entries names a folder with entries-raw.tsv and entries-text.tsv: compiled plain
-// entries, one per line (key target pos sem gram prio file line order flags negative).
-// Pass a looks every position of every line up in all modes with the text entries;
-// pass b in modes 0 and 3 with the raw entries, strategy UserFirst, prior dictionary
-// BZ, the name keys of the line confirmed, its person places and an entry filter.
+// -compiled writes, sorted, every compiled plain entry: C lines per source (the builtin
+// plain files and the plain files of the folders, compiled again in load order), V
+// lines per composed view of the snapshot (raw: the word pipeline, text: the text
+// path) with the entry's index, N lines with the entry and indexed counts of each
+// view, G lines per sense and M lines per row of a generated marker family.
+// Pass a looks every position of every line up in all modes with the text view;
+// pass b in modes 0 and 3 with the raw view, strategy UserFirst, prior dictionary BZ,
+// the name keys of the line confirmed, its person places and an entry filter.
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -22,9 +26,12 @@
 #include <malloc/malloc.h>
 #endif
 
+#include "hdTrans/dict/builtin.h"
 #include "hdTrans/dict/snapshot.h"
 #include "hdTrans/dict/tsv.h"
 #include "hdTrans/text/utf8.h"
+#include "hdTrans/userdict/sense.h"
+#include "hdTrans/userdict/userdict.h"
 
 using namespace hdTrans::dict;
 
@@ -69,58 +76,6 @@ std::vector<std::string> ReadLines(const std::string& path, long limit) {
     return out;
 }
 
-struct Entries {
-    CodeTable codes;
-    std::unique_ptr<UserText> text;
-};
-
-std::unique_ptr<Entries> ReadEntries(const std::string& path) {
-    std::string data;
-    if (!ReadAll(path, data)) {
-        std::fprintf(stderr, "cannot read %s\n", path.c_str());
-        std::exit(1);
-    }
-    auto out = std::make_unique<Entries>();
-    std::vector<UserEntry> list;
-    for (const std::string& line : Split(data, '\n')) {
-        if (line.empty()) continue;
-        const std::vector<std::string> f = Split(line, '\t');
-        if (f.size() != 11) {
-            std::fprintf(stderr, "bad entry line: %s\n", line.c_str());
-            std::exit(1);
-        }
-        UserEntry e;
-        e.key = f[0];
-        e.target = f[1];
-        e.codes = out->codes.At(out->codes.Intern(f[2], f[3], f[4], "GN"));
-        e.prio = std::atoi(f[5].c_str());
-        e.file = std::atoi(f[6].c_str());
-        e.line = std::atoi(f[7].c_str());
-        e.order = std::atoi(f[8].c_str());
-        std::string reg;
-        for (const char c : f[9]) {
-            switch (c) {
-            case 'N': e.name = true; break;
-            case 'L': e.nameLayer = true; break;
-            case 'K': e.kana = true; break;
-            case 'F': e.force = true; break;
-            case 'H': e.hidden = true; break;
-            case 'O': e.honorific = true; break;
-            case 'E': e.end = true; break;
-            case 'P': e.polite = true; break;
-            case 'S': e.stative = true; break;
-            case 'v': case 'c': case 'l': e.finalClass = c; break;
-            default: reg += c;
-            }
-        }
-        if (!reg.empty()) e.registerLevel = static_cast<uint8_t>(std::atoi(reg.c_str()));
-        e.negative = f[10];
-        list.push_back(std::move(e));
-    }
-    out->text = std::make_unique<UserText>(std::move(list));
-    return out;
-}
-
 class Writer {
 public:
     explicit Writer(std::FILE* f) : f_(f) {}
@@ -152,6 +107,134 @@ std::string EntryFlags(const UserEntry& u) {
     if (u.finalClass) s += u.finalClass;
     if (u.registerLevel) s += std::to_string(u.registerLevel);
     return s;
+}
+
+std::string EntryKind(const UserEntry& e) {
+    if (e.kana) return "kana";
+    if (e.end) return "end";
+    if (e.Part().TagIn("STUP")) return "pat";
+    return "plain";
+}
+
+std::string EntryFields(const UserEntry& e) {
+    return EntryKind(e) + "\t" + std::to_string(e.file) + "\t" + std::to_string(e.line) + "\t" +
+           std::to_string(e.order) + "\t" + e.key + "\t" + e.target + "\t" + e.codes->partText + "\t" +
+           std::string(e.codes->sem.Text()) + "\t" + std::string(e.codes->gram.Text()) + "\t" + std::to_string(e.prio) +
+           "\t" + EntryFlags(e) + "\t" + e.negative;
+}
+
+std::string Index(std::size_t i) {
+    std::string s = std::to_string(i);
+    return std::string(s.size() < 6 ? 6 - s.size() : 0, '0') + s;
+}
+
+bool Fail(const std::string& what) {
+    std::fprintf(stderr, "%s\n", what.c_str());
+    return false;
+}
+
+// Compiles the builtin folder and the plain files of s again, in load order, and writes
+// the compiled dump of them and of the snapshot's views to path.
+bool WriteCompiled(const Snapshot& s, const std::string& path) {
+    namespace ud = hdTrans::userdict;
+    std::vector<std::pair<std::string, std::vector<UserEntry>>> sources;
+    CodeTable codes;
+    ud::Families families;
+    ud::Context builtin{&codes, &families, nullptr};
+    const auto compile = [&](const std::string& label, std::string_view text, int file, ud::Context& ctx) {
+        ud::Compiled c = ud::Parse(text, file, ctx);
+        if (!c.errors.empty()) return Fail(label + ": " + c.errors[0].message);
+        sources.emplace_back(label, std::move(c.entries));
+        return true;
+    };
+    for (const std::string_view name : BuiltinNames()) {
+        if (name == "sound.tsv" || name == "phrases.tsv" || name == "patterns.tsv" || name == "senses.tsv" ||
+            name == "lines.tsv") {
+            continue;
+        }
+        if (!compile("builtin/" + std::string(name), BuiltinText(name), -1, builtin)) return false;
+    }
+    std::string phrases;
+    for (const std::string& line : Split(BuiltinText("phrases.tsv"), '\n')) {
+        std::string bare = line;
+        while (!bare.empty() && bare.back() == '\r') bare.pop_back();
+        const std::vector<std::string> f = Split(bare, '\t');
+        const char32_t r = f[0].empty() ? 0 : hdTrans::text::DecodeRune(f[0]).cp;
+        const bool kana = (r >= U'ぁ' && r <= U'ゖ') || (r >= U'ァ' && r <= U'ヶ') || r == U'ー' || r == U'～';
+        phrases += (f.size() >= 3 && f[2] == "intj" && kana) ? std::string() : line;
+        phrases += '\n';
+    }
+    phrases.pop_back();
+    if (!compile("builtin/phrases.tsv", phrases, -1, builtin)) return false;
+    if (!compile("builtin/patterns.tsv", BuiltinText("patterns.tsv"), -1, builtin)) return false;
+    ud::Context ctx{&codes, &families, &s.Base()};
+    int file = 0;
+    for (const File& f : s.PlainFiles()) {
+        const std::size_t slash = f.name.find_last_of("/\\");
+        const std::string base = slash == std::string::npos ? f.name : f.name.substr(slash + 1);
+        const std::string label = std::to_string(f.folder) + "/" + base;
+        if (base == "readings.tsv") continue;
+        if (base == "kana.tsv") {
+            sources.emplace_back(label, ud::KanaSpellings(f.text, s.Base(), codes));
+            continue;
+        }
+        if (!compile(label, f.text, file++, ctx)) return false;
+    }
+
+    std::vector<std::string> lines;
+    std::vector<std::string> ids;
+    const auto note = [&ids](std::string_view t) {
+        const std::size_t n = t.size();
+        if (n >= 4 && t[n - 1] == '@' && (t[n - 4] == '&' || t[n - 4] == '$' || t[n - 4] == '%')) {
+            ids.emplace_back(t.substr(n - 4));
+        }
+    };
+    for (const auto& [label, entries] : sources) {
+        for (std::size_t i = 0; i < entries.size(); i++) {
+            lines.push_back("C\t" + label + "\t" + Index(i) + "\t" + EntryFields(entries[i]));
+            note(entries[i].target);
+            note(entries[i].negative);
+        }
+    }
+    for (const auto& [name, view] : {std::pair<const char*, const UserText*>{"raw", &s.Plain()}, {"text", &s.TextPlain()}}) {
+        for (std::size_t i = 0; i < view->Entries().size(); i++) {
+            lines.push_back(std::string("V\t") + name + "\t" + Index(i) + "\t" + EntryFields(view->Entries()[i]));
+        }
+        lines.push_back(std::string("N\t") + name + "\t" + std::to_string(view->Entries().size()) + "\t" +
+                        std::to_string(view->Len()));
+    }
+    for (const auto& [key, list] : s.Senses()) {
+        for (std::size_t i = 0; i < list.size(); i++) {
+            const ud::Sense& x = list[i];
+            std::string triggers;
+            for (std::size_t t = 0; t < x.triggers.size(); t++) triggers += (t ? "|" : "") + x.triggers[t];
+            lines.push_back("G\t" + key + "\t" + std::to_string(i) + "\t" + x.key + "\t" + std::string(1, x.classDigit) +
+                            "\t" + x.target + "\t" + std::to_string(static_cast<int>(x.side)) + "\t" + triggers + "\t" +
+                            (x.adjective ? "1" : "0"));
+            note(x.target);
+        }
+    }
+    std::sort(ids.begin(), ids.end());
+    ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+    const ud::Families& gen = s.GeneratedFamilies();
+    for (const std::string& id : ids) {
+        const std::string_view used = id[0] == '&' ? "ACEFHJKLMN" : id[0] == '$' ? "ACDFGIJKL" : "ABCDE";
+        if (used.find(id[1]) != std::string_view::npos) continue;
+        for (const char code : ud::kFormCodes) {
+            const std::string key = id + code;
+            const std::string_view row = id[0] == '&' ? gen.SourceRow(key) : id[0] == '$' ? gen.DollarRow(key) : gen.PercentRow(key);
+            if (!row.empty()) lines.push_back("M\t" + key + "\t" + std::string(row));
+        }
+    }
+    std::sort(lines.begin(), lines.end());
+    std::FILE* f = std::fopen(path.c_str(), "wb");
+    if (!f) return Fail("cannot write " + path);
+    {
+        Writer w(f);
+        for (const std::string& l : lines) w << l << "\n";
+    }
+    std::fclose(f);
+    return true;
 }
 
 void Lookup(Writer& w, const std::string& pos, const char* pass, int mode, const Candidates& c) {
@@ -255,21 +338,21 @@ int Time(const std::vector<std::string>& dirs) {
 }  // namespace
 
 int main(int argc, char** argv) {
-    std::string dicts, entriesDir, raw, each, outPath;
+    std::string dicts, compiledPath, raw, each, outPath;
     long eachLines = 10000;
     bool timing = false;
     for (int i = 1; i < argc; i++) {
         const std::string a = argv[i];
         const bool hasValue = i + 1 < argc;
         if (a == "-dicts" && hasValue) dicts = argv[++i];
-        else if (a == "-entries" && hasValue) entriesDir = argv[++i];
+        else if (a == "-compiled" && hasValue) compiledPath = argv[++i];
         else if (a == "-raw" && hasValue) raw = argv[++i];
         else if (a == "-each" && hasValue) each = argv[++i];
         else if (a == "-eachlines" && hasValue) eachLines = std::atol(argv[++i]);
         else if (a == "-out" && hasValue) outPath = argv[++i];
         else if (a == "-time") timing = true;
         else {
-            std::fprintf(stderr, "usage: snapshot_check -dicts DIR[,DIR] (-time | -entries DIR -raw FILE -each FILE [-eachlines N] [-out FILE])\n");
+            std::fprintf(stderr, "usage: snapshot_check -dicts DIR[,DIR] (-time | [-compiled FILE] [-raw FILE -each FILE [-eachlines N] [-out FILE]])\n");
             return 2;
         }
     }
@@ -282,6 +365,8 @@ int main(int argc, char** argv) {
         return 1;
     }
     const Snapshot& s = *loaded.snapshot;
+    if (!compiledPath.empty() && !WriteCompiled(s, compiledPath)) return 1;
+    if (raw.empty()) return 0;
     std::FILE* outFile = outPath.empty() ? stdout : std::fopen(outPath.c_str(), "wb");
     if (!outFile) return 1;
     {
@@ -297,10 +382,8 @@ int main(int argc, char** argv) {
         w << "S\tbase " << static_cast<long>(s.Base().Len()) << "\tuser "
           << static_cast<long>(s.User() ? s.User()->Len() : 0) << "\n";
 
-        const auto rawEntries = ReadEntries(entriesDir + "/entries-raw.tsv");
-        const auto textEntries = ReadEntries(entriesDir + "/entries-text.tsv");
         LookupContext a;
-        a.plain = textEntries->text.get();
+        a.plain = &s.TextPlain();
         a.strategy = Strategy::LongestMatch;
         for (int m = 0; m <= 4; m++) Lookup(w, "sentinel", "a", m, s.GetWordInfo("", static_cast<LookupMode>(m), a));
         for (int m = 1; m <= 3; m++) {
@@ -322,7 +405,7 @@ int main(int argc, char** argv) {
                 const KeySet confirmedSet(confirmed.begin(), confirmed.end());
                 const KeySet personSet(persons.begin(), persons.end());
                 LookupContext b;
-                b.plain = rawEntries->text.get();
+                b.plain = &s.Plain();
                 b.strategy = Strategy::UserFirst;
                 b.priorDict = "BZ";
                 b.confirmed = &confirmedSet;

@@ -4,8 +4,8 @@
 // number of threads; everything a lookup depends on besides the dictionaries comes
 // in its LookupContext.
 //
-// Loading (Load) reads the top-level *.tsv files of the folders, those of each
-// folder in name order:
+// Loading (Load) reads the builtin folder (builtin.h) and the top-level *.tsv files
+// of the folders, those of each folder in name order:
 //   - Column files (their first line that is neither blank nor a "#" comment is a
 //     header starting with the key column) make the base dictionary. The senses of
 //     a file shadow the senses of earlier files with the same key and class digit.
@@ -23,8 +23,16 @@
 //     the base senses of the key that name the same place take its Korean, and so do
 //     its senses in the layer; the senses of a respelled key in later name files are
 //     dropped unless they respell it too or name a person.
-//   - The other files (plain dictionaries, readings tables, kana spellings) are kept
-//     with their text, in order, for the stages that read them.
+//   - The other files are kept with their text, in order (PlainFiles). Files named
+//     readings.tsv are names readings tables, files named kana.tsv kana spellings
+//     of base words (userdict::KanaSpellings), and the rest plain dictionaries
+//     (userdict::Parse), numbered in order from 0; a plain line that does not compile
+//     fails the load.
+//   - The builtin endings.tsv is a plain dictionary numbered -1, loaded before the
+//     others (their entries of an equal key and part code replace its entries); so
+//     are the builtin phrases.tsv (but its interjections in kana, which are
+//     utterances of the sound lexicon) and patterns.tsv, for the text path only.
+//     senses.tsv is compiled into the sense table (userdict::ParseSenses).
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -38,6 +46,8 @@
 #include "hdTrans/dict/dict.h"
 #include "hdTrans/dict/tsv.h"
 #include "hdTrans/dict/user_text.h"
+#include "hdTrans/userdict/conjugating.h"
+#include "hdTrans/userdict/sense.h"
 
 namespace hdTrans::dict {
 
@@ -53,6 +63,7 @@ enum class LoadErrorKind : uint8_t {
     Read,        // the file cannot be read
     Tsv,         // a malformed line or header of a column file (tsv says which)
     UnknownPos,  // a line skipped for a pos that is neither a part code nor a known tag
+    Plain,       // a line of a plain dictionary or sense table that does not compile
 };
 
 struct LoadError {
@@ -60,6 +71,7 @@ struct LoadError {
     LoadErrorKind kind = LoadErrorKind::Read;
     int line = 0;  // 1-based; 0 for the whole file
     TsvErrorKind tsv = TsvErrorKind::Read;
+    std::string message;  // why a Plain line does not compile
 };
 
 using KeySet = std::unordered_set<std::string, StringHash, std::equal_to<>>;
@@ -141,6 +153,17 @@ public:
     const Dict* Names() const { return names_.Len() > 0 ? &names_ : nullptr; }
     // The files that are not column files, in load order.
     const std::vector<File>& PlainFiles() const { return plain_; }
+    // The plain entries of the word pipeline: the builtin endings, then the entries
+    // of the plain dictionaries.
+    const UserText& Plain() const { return *rawPlain_; }
+    // The plain entries of the text path: the kana spellings, the builtin endings,
+    // phrases and patterns, then the entries of the plain dictionaries.
+    const UserText& TextPlain() const { return *textPlain_; }
+    // The builtin sense table.
+    const userdict::SenseTable& Senses() const { return senses_; }
+    // The marker families that the conjugating plain entries and senses use beyond
+    // the static ones.
+    const userdict::Families& GeneratedFamilies() const { return families_; }
     // The name keys Load dropped, per file.
     const std::vector<std::string>& Warnings() const { return warnings_; }
 
@@ -217,6 +240,9 @@ private:
     std::unordered_map<std::string, Respelling, StringHash, std::equal_to<>> places_;
     std::vector<std::string> warnings_;
     std::vector<File> plain_;
+    userdict::Families families_;
+    std::unique_ptr<const UserText> rawPlain_, textPlain_;
+    userdict::SenseTable senses_;
 };
 
 }  // namespace hdTrans::dict
