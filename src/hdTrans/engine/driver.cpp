@@ -1,5 +1,6 @@
 #include "hdTrans/engine/driver.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -18,6 +19,7 @@
 #include "hdTrans/pipeline/segment.h"
 #include "hdTrans/pipeline/sound.h"
 #include "hdTrans/tokenizer/tokenize.h"
+#include "hdTrans/text/lines.h"
 
 namespace hdTrans::internal {
 
@@ -178,6 +180,23 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
         const auto replacement = NewGenerated(*fallback);
         return TranslateDocument(*fallback, *replacement, lines, memory, observer, options);
     }
+    if (std::any_of(lines.begin(), lines.end(), [](const std::string& line) {
+            return line.size() > text::kMaxLineBytes;
+        })) {
+        std::vector<std::string> bounded;
+        std::vector<std::size_t> ends;
+        for (const std::string& line : lines) {
+            for (std::string_view piece : text::TranslationPieces(line)) bounded.emplace_back(piece);
+            ends.push_back(bounded.size());
+        }
+        const auto translated = TranslateDocument(snap, generated, bounded, memory, observer, options);
+        if (translated.size() != bounded.size()) return {};
+        std::vector<std::string> joined(lines.size());
+        for (std::size_t i = 0, piece = 0; i < ends.size(); i++) {
+            while (piece < ends[i]) joined[i] += translated[piece++];
+        }
+        return joined;
+    }
     const std::unique_ptr<pipeline::DocumentContext> doc = pipeline::BuildDocument(
         snap, lines, !options.reference && options.wordImprovements.extraBuiltin, &memory.document);
 
@@ -218,22 +237,26 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
         return TranslateRawLine(*fallback, *replacement, line, observer, options);
     }
     Scratch s;
-    output::Pieces chunk;
-    if (!line.empty()) chunk.push_back({std::string(line), output::SpanText});
     if (observer.line) observer.line(observer.context, 0);
-    std::vector<output::Sentence> sentences;
     dict::LookupContext lookup;
     lookup.plain = &snap.Plain(!options.reference && options.wordImprovements.extraBuiltin);
-    TranslateChunk(snap, lookup, chunk, 0, false, false, s, generated, observer, options, sentences);
-    output::Pieces result;
-    for (const output::Sentence& sentence : sentences) output::Append(result, sentence.pieces);
+    std::string result;
+    for (std::string_view piece : text::TranslationPieces(line)) {
+        output::Pieces chunk;
+        if (!piece.empty()) chunk.push_back({std::string(piece), output::SpanText});
+        std::vector<output::Sentence> sentences;
+        TranslateChunk(snap, lookup, chunk, 0, false, false, s, generated, observer, options, sentences);
+        output::Pieces composed;
+        for (const output::Sentence& sentence : sentences) output::Append(composed, sentence.pieces);
+        result += output::String(composed);
+    }
     if (!snap.Healthy()) {
         const auto fallback = snap.Fallback();
         if (!fallback) return {};
         const auto replacement = NewGenerated(*fallback);
         return TranslateRawLine(*fallback, *replacement, line, observer, options);
     }
-    return output::String(result);
+    return result;
 }
 
 }  // namespace hdTrans::internal

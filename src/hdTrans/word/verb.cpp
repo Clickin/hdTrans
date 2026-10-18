@@ -284,8 +284,7 @@ bool Item::AcceptVerbContinuation(Record* following) {
     }
 
     length = sourceLength + pattern();
-    base.ResetEnabled(true);
-    for (int& c : base.classes) c = 0;
+    base.ResetDirect(0);
     base.punct = 0;
 
     auto restore = [&]() {
@@ -296,7 +295,7 @@ bool Item::AcceptVerbContinuation(Record* following) {
         }
     };
     auto fill = [&](const Group* g) {
-        base.ResetEnabled(true);
+        base.ResetDirect(g->entries.size());
         base.resultCount = static_cast<int>(g->entries.size());
         base.punct = base.ClassifyTrailingPunctuation(From(after(), g->length));
         for (std::size_t i = 0; i < g->entries.size(); i++) base.classes[i] = base.punct;

@@ -9,6 +9,7 @@
 #include "hdTrans/engine/rules.h"
 #include "hdTrans/output/families.h"
 #include "hdTrans/userdict/conjugating.h"
+#include "hdTrans/text/lines.h"
 
 namespace hdTrans {
 
@@ -103,13 +104,7 @@ Session::~Session() = default;
 std::string Session::Translate(std::string_view text) {
     if (!snapshot_) return {};
     std::vector<std::string> lines;
-    std::size_t start = 0;
-    for (;;) {
-        const std::size_t end = text.find('\n', start);
-        lines.emplace_back(text.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start));
-        if (end == std::string_view::npos) break;
-        start = end + 1;
-    }
+    for (const std::string_view line : text::Lines(text)) lines.emplace_back(line);
     internal::TranslationOptions options;
     options.reference = reference_;
     options.selectShadow = selectShadow_;

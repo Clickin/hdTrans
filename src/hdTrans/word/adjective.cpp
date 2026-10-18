@@ -65,15 +65,14 @@ bool Item::RunKeiyoTrieQuery() {
         return true;
     }
     base.punct = 0;
-    base.ResetEnabled(true);
-    for (int& c : base.classes) c = 0;
+    base.ResetDirect(0);
     if (second.starts_with(kJaSou)) {
         Record* r = w->NewRecord();
         r->target = "1";
         r->partCode = "T500";
         r->attr = "Nm";
         Group* g = w->NewGroup(r, ' ');
-        base.ResetEnabled(false);
+        base.ResetDirect(g->entries.size(), false);
         base.enabled[0] = true;
         base.group = g;
         base.resultCount = 0;
@@ -86,7 +85,7 @@ bool Item::RunKeiyoTrieQuery() {
     if (g != nullptr && g->length > 0) {
         for (;;) {
             bool keepScanning = true;
-            base.ResetEnabled(true);
+            base.ResetDirect(g->entries.size());
             base.resultCount = static_cast<int>(g->entries.size());
             const std::string_view after = From(remaining, offset + g->length);
             base.punct = base.ClassifyTrailingPunctuation(after);
@@ -149,16 +148,15 @@ bool Item::RunDakeiyoCase8Query() {
         base.group = nullptr;
         return true;
     }
-    base.ResetEnabled(true);
+    base.ResetDirect(0);
     base.punct = 0;
-    for (int& c : base.classes) c = 0;
     auto pseudo = [&](std::string_view target, std::string_view attr) {
         Record* r = w->NewRecord();
         r->target.assign(target);
         r->partCode = "U500";
         r->attr.assign(attr);
         Group* g = w->NewGroup(r, ' ');
-        base.ResetEnabled(false);
+        base.ResetDirect(g->entries.size(), false);
         base.enabled[0] = true;
         base.resultCount = static_cast<int>(g->entries.size());
         base.group = g;
@@ -188,13 +186,14 @@ bool Item::RunDakeiyoCase8Query() {
     }
     Group* g = w->NewGroup(found.records, ' ');
     if (g->length <= 0) {
+        base.ResetDirect(g->entries.size());
         base.group = g;
         base.resultCount = static_cast<int>(g->entries.size());
         length += g->length;
         return true;
     }
     for (;;) {
-        base.ResetEnabled(true);
+        base.ResetDirect(g->entries.size());
         base.resultCount = static_cast<int>(g->entries.size());
         const std::string_view after = From(tail, scanOffset + g->length);
         base.punct = base.ClassifyTrailingPunctuation(after);

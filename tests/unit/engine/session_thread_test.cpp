@@ -14,6 +14,7 @@
 #include "hdTrans/engine.h"
 #include "hdTrans/engine/driver.h"
 #include "hdTrans/engine/raw.h"
+#include "hdTrans/text/lines.h"
 #include "hdtest.h"
 
 namespace {
@@ -343,4 +344,30 @@ HD_TEST(engine_session_memory_bytes) {
     auto document = padding;
     document.insert(document.begin(), cue.front());
     HD_CHECK(hdTrans::pipeline::BuildDocument(*snap, document)->female);
+}
+
+HD_TEST(engine_megabyte_line) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine engine(true);
+    HD_REQUIRE(engine.Open({dicts}));
+    std::string line;
+    while (line.size() < 1024 * 1024) line += "あいうえ。 ";
+    std::string expected;
+    for (const std::string_view piece : hdTrans::text::TranslationPieces(line)) {
+        hdTrans::Session fresh(engine);
+        expected += fresh.Translate(piece);
+    }
+    const auto start = std::chrono::steady_clock::now();
+    hdTrans::Session session(engine);
+    HD_CHECK_EQ(session.Translate(line), expected);
+    std::printf("megabyte line: %.3f ms\n", std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count());
+    const std::string ascii(1024 * 1024, 'a');
+    HD_CHECK_EQ(hdTrans::internal::TranslateRaw(engine, ascii), ascii);
+    std::string symbols;
+    while (symbols.size() < 100000) symbols += "0123456789., ";
+    const std::string translated = session.Translate(symbols);
+    for (char c : std::string_view("0123456789.,")) {
+        HD_CHECK_EQ(std::count(translated.begin(), translated.end(), c), std::count(symbols.begin(), symbols.end(), c));
+    }
 }

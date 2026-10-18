@@ -119,8 +119,7 @@ Detail* Worker::NewDetail(int cls, int token) {
     d->record = 0;
     d->punct = 0;
     d->group = nullptr;
-    for (int& c : d->classes) c = 0;
-    d->ResetEnabled(true);
+    d->ResetDirect(0);
     d->resultCount = 0;
     d->selected = -1;
     d->scanOffset = 0;

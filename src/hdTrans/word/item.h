@@ -90,8 +90,8 @@ struct Detail {
     int record = 0;  // verb: 1 passive, 2 causative, 4 potential, 5 causative-passive
     int punct = 0;   // punctuation class after the ending
     Group* group = nullptr;
-    int classes[kDirectSlots] = {};   // punctuation class per direct entry
-    bool enabled[kDirectSlots] = {};  // direct entries still possible
+    std::vector<uint8_t> classes;  // punctuation class per direct entry
+    std::vector<uint8_t> enabled;  // direct entries still possible
     int resultCount = 0;
     int selected = -1;  // selected direct entry, -1 none
     int scanOffset = 0;
@@ -102,8 +102,12 @@ struct Detail {
     int patternLength = 0;
 
     bool Yougo() const { return cls != kDetailInfo; }
-    void ResetEnabled(bool v) {
-        for (bool& e : enabled) e = v;
+    void ResetDirect(std::size_t count, bool value = true) {
+        classes.assign(count, 0);
+        enabled.assign(count, value);
+    }
+    void ResetEnabled(bool value) {
+        for (uint8_t& e : enabled) e = value;
     }
     // The punctuation class of the text after a word: 1 comma, 2 period or end of
     // sentence, 3 '?', 4 '!', 5 ')', 6 closing quote or bracket, 7 ':' or '<', 0
@@ -156,7 +160,7 @@ public:
     int DirectLength() const { return DirectGroup() ? DirectGroup()->length : 0; }
     // Direct entry i; null without a direct group or outside it.
     Entry* DirectEntry(int i) const { return DirectGroup() ? DirectGroup()->At(i) : nullptr; }
-    bool DirectEnabled(int i) const { return DirectGroup() && i >= 0 && i < kDirectSlots && detail->enabled[i]; }
+    bool DirectEnabled(int i) const { return DirectGroup() && i >= 0 && static_cast<std::size_t>(i) < detail->enabled.size() && detail->enabled[i]; }
     std::string_view DirectText(int i) const;
     std::string_view DirectCode(int i) const;
     std::string_view DirectAttr(int i) const;

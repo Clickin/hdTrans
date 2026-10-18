@@ -148,7 +148,7 @@ int Item::DirectRuleID(int i) const {
 }
 
 int Item::DirectClassifier(int i) const {
-    if (!DirectGroup() || i < 0 || i >= kDirectSlots) return 0;
+    if (!DirectGroup() || i < 0 || static_cast<std::size_t>(i) >= detail->classes.size()) return 0;
     return detail->classes[i];
 }
 

@@ -1,4 +1,5 @@
 #include "hdTrans/text/utf8.h"
+#include "hdTrans/text/lines.h"
 
 #include "hdtest.h"
 
@@ -53,4 +54,43 @@ HD_TEST(utf8_rune_count) {
     HD_CHECK_EQ(RuneCount("abc"), size_t{3});
     HD_CHECK_EQ(RuneCount("\xE7\x8C\xAB\xE3\x81\x8C\xE5\xA5\xBD\xE3\x81\x8D"), size_t{4});  // 猫が好き
     HD_CHECK_EQ(RuneCount("a\x80z"), size_t{3});
+}
+
+HD_TEST(text_line_pieces) {
+    using namespace hdTrans::text;
+    for (std::size_t bytes : {std::size_t{0}, std::size_t{1}, kMaxLineBytes}) {
+        const std::string line(bytes, 'a');
+        const auto pieces = TranslationPieces(line);
+        HD_CHECK_EQ(pieces.size(), std::size_t{1});
+        HD_CHECK_EQ(std::string(pieces.front()), line);
+    }
+    for (const std::string_view boundary : {"。", "！", "？", "\r", "\v", "\f", "\xC2\x85", "\xE2\x80\xA8", "\xE2\x80\xA9", " "}) {
+        const std::string line = std::string(100, 'a') + std::string(boundary) + std::string(70000, 'b');
+        const auto pieces = TranslationPieces(line);
+        HD_CHECK_EQ(pieces.front().size(), std::size_t{100} + boundary.size());
+        std::string joined;
+        for (const auto piece : pieces) {
+            HD_CHECK(piece.size() <= kMaxLineBytes);
+            joined += piece;
+        }
+        HD_CHECK_EQ(joined, line);
+    }
+    std::string line;
+    while (line.size() < 100000) line += "あ😀";
+    std::string joined;
+    for (const auto piece : TranslationPieces(line)) {
+        HD_CHECK(piece.size() <= kMaxLineBytes);
+        for (std::size_t i = 0; i < piece.size();) {
+            const auto rune = DecodeRune(piece.substr(i));
+            HD_CHECK(rune.cp != kReplacement);
+            i += rune.size;
+        }
+        joined += piece;
+    }
+    HD_CHECK_EQ(joined, line);
+    const auto lines = Lines("\nline\r\n");
+    HD_CHECK_EQ(lines.size(), std::size_t{3});
+    HD_CHECK(lines.front().empty());
+    HD_CHECK_EQ(std::string(lines[1]), "line\r");
+    HD_CHECK(lines.back().empty());
 }

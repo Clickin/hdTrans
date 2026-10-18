@@ -250,6 +250,7 @@ HD_TEST(word_select_shadow_all_scorers_without_mutation) {
     it.AssignEntrySurface(0, "쓰", {word::Provenance::Rewrite, 8});
     it.detail->cls = word::kDetailVerb;
     it.detail->group = line.MakeGroup("く", {{"4다", "S500"}, {"4는다", "S500"}});
+    it.detail->ResetDirect(it.detail->group->entries.size());
     it.SetDirectIndex(1, {word::Provenance::GlobalRule, 37});
     it.compDI = 1;
     it.compUmiDI = 0;

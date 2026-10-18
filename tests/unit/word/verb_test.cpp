@@ -128,6 +128,7 @@ HD_TEST(word_expanded_candidate_groups) {
         HD_CHECK_EQ(group->entries.size(), count);
         HD_CHECK(group->records == &records[count]);
         word::Detail* detail = worker.NewDetail(word::kDetailVerb, -1);
+        detail->ResetDirect(count);
         detail->enabled[count - 1] = false;
         detail->ResetEnabled(true);
         HD_CHECK(detail->enabled[count - 1]);
@@ -155,6 +156,7 @@ HD_TEST(word_expanded_ending_selection) {
             entry->code = i == 129 ? "5:0" : "500";
             detail->group->entries.push_back(entry);
         }
+        detail->ResetDirect(detail->group->entries.size());
         auto* item = worker.NewItem(detail, group, "寝", 0, 0);
         worker.chain.head = worker.chain.tail = item;
         rules::Program program;
