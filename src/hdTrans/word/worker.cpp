@@ -77,21 +77,21 @@ Group* Worker::NewGroup(Record* records, char mode) {
     const char kind = At(records->partCode, 1);
     g->surface.assign(records->source);
     g->length = static_cast<int>(g->surface.size());
-    Record* current = records;
-    for (int j = 0; j < kDirectSlots && current != nullptr; j++) {
-        const std::string_view code = current->partCode;
-        if (kind != At(code, 1) || g->surface != current->source || (current->user == nullptr) != (records->user == nullptr)) {
+    Record* rec = records;
+    for (int j = 0; j < kDirectSlots && rec != nullptr; j++) {
+        const std::string_view code = rec->partCode;
+        if (kind != At(code, 1) || g->surface != rec->source || (rec->user == nullptr) != (records->user == nullptr)) {
             break;
         }
         bool accept = true;
         if (kind == '4' && !g->entries.empty()) {
-            const bool special = (current->source == kJaGyou || current->source == kJaI) && (At(code, 3) == '0' || At(code, 3) == '1');
+            const bool special = (rec->source == kJaGyou || rec->source == kJaI) && (At(code, 3) == '0' || At(code, 3) == '1');
             if (!special || (mode != '6' && mode != '7')) accept = VerbClassJoins(mode, firstSubtype, At(code, 3));
         }
-        if (accept) g->entries.push_back(NewEntry(*current));
-        current = current->child;
+        if (accept) g->entries.push_back(NewEntry(*rec));
+        rec = rec->child;
     }
-    g->records = current;
+    g->records = rec;
     return g;
 }
 

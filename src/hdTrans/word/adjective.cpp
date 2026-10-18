@@ -112,13 +112,13 @@ bool Item::RunKeiyoTrieQuery() {
                 }
             }
             if (matched) break;
-            Record* next = g->records;
+            Record* rest = g->records;
             g->records = nullptr;
-            if (next == nullptr) {
+            if (rest == nullptr) {
                 base.group = nullptr;
                 return false;
             }
-            g = w->NewGroup(next, ' ');
+            g = w->NewGroup(rest, ' ');
         }
     }
     if (g == nullptr) {
@@ -171,9 +171,9 @@ bool Item::RunDakeiyoCase8Query() {
     if ((second.empty() || second.starts_with(kJaComma)) && w->settings.text && MitaiLike()) {
         std::string ending = "1";
         ending += kKoDa;  // 같다; 같아 in a question
-        std::string_view next = second;
-        if (const int n = tokenIndex + 1; next.empty() && n < w->TokenCount() && w->Span(n) == 0) next = w->Tok(n).text;
-        if (next.starts_with(kJaQuestion) || next.starts_with("?")) ending = "6";
+        std::string_view following = second;
+        if (const int n = tokenIndex + 1; following.empty() && n < w->TokenCount() && w->Span(n) == 0) following = w->Tok(n).text;
+        if (following.starts_with(kJaQuestion) || following.starts_with("?")) ending = "6";
         pseudo(ending, "");
         return true;
     }
@@ -223,10 +223,10 @@ bool Item::RunDakeiyoCase8Query() {
             length += g->length;
             return true;
         }
-        Record* next = g->records;
+        Record* rest = g->records;
         g->records = nullptr;
-        if (next == nullptr) break;
-        g = w->NewGroup(next, ' ');
+        if (rest == nullptr) break;
+        g = w->NewGroup(rest, ' ');
     }
     base.group = nullptr;
     return false;

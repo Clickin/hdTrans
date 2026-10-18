@@ -689,29 +689,29 @@ Item* Worker::HonorificItem(std::string_view full, int cursor, int token, Item* 
 // conjugation checks of its kind: verbs ('4'), adjectives ('7'), adjectival nouns
 // ('8'), words without ending ('6') and the rest. Null when no record group passes.
 Item* Worker::InsertLateCandidate(std::string_view text, int offset, int token, Record* records) {
-    Record* current = records;
-    while (current != nullptr) {
-        if (current->source.empty() || current->partCode.size() != 4 || current->partCode[1] == '5') {
-            current = current->child;
+    Record* rec = records;
+    while (rec != nullptr) {
+        if (rec->source.empty() || rec->partCode.size() != 4 || rec->partCode[1] == '5') {
+            rec = rec->child;
             continue;
         }
-        const std::size_t length = current->source.size();
-        const char kind = current->partCode[1];
+        const std::size_t length = rec->source.size();
+        const char kind = rec->partCode[1];
         auto sameGroup = [&](const Record* r) { return r->source.size() == length && At(r->partCode, 1) == kind; };
         switch (kind) {
         case '4': {
             Detail* word = NewDetail(kDetailVerb, token);
-            const int pattern = current->partCode[3] - '0';
+            const int pattern = rec->partCode[3] - '0';
             word->patternKind = pattern;
             Record* stop = nullptr;
-            const bool ok = MatchConjugation(*word, text, offset, current, stop);
-            current = stop;
+            const bool ok = MatchConjugation(*word, text, offset, rec, stop);
+            rec = stop;
             if (!ok) {
-                while (current != nullptr && sameGroup(current) && At(current->partCode, 3) - '0' == pattern) {
-                    current = current->child;
+                while (rec != nullptr && sameGroup(rec) && At(rec->partCode, 3) - '0' == pattern) {
+                    rec = rec->child;
                 }
             } else {
-                Group* group = NewGroup(current, static_cast<char>(word->kind + '0'));
+                Group* group = NewGroup(rec, static_cast<char>(word->kind + '0'));
                 Item* candidate = NewItem(word, group, text, offset, token);
                 bool accepted = candidate->AcceptVerbContinuation(group->records);
                 if (accepted && candidate->group->surface == kJaShi && candidate->EntryText(0) == "&HT@" &&
@@ -727,12 +727,12 @@ Item* Worker::InsertLateCandidate(std::string_view text, int offset, int token, 
                     }
                     return candidate;
                 }
-                current = group->records;
+                rec = group->records;
                 group->records = nullptr;
             }
-            if (current == nullptr || At(current->partCode, 1) != '4') {
+            if (rec == nullptr || At(rec->partCode, 1) != '4') {
                 if (Item* candidate = QueryPrefixTable(text, offset, token)) {
-                    candidate->group->records = current;
+                    candidate->group->records = rec;
                     return candidate;
                 }
             }
@@ -740,7 +740,7 @@ Item* Worker::InsertLateCandidate(std::string_view text, int offset, int token, 
         }
         case '6': {
             Detail* word = NewDetail(kDetailInfo, token);
-            return NewItem(word, NewGroup(current, ' '), text, offset, token);
+            return NewItem(word, NewGroup(rec, ' '), text, offset, token);
         }
         case '7':
         case '8': {
@@ -751,25 +751,25 @@ Item* Worker::InsertLateCandidate(std::string_view text, int offset, int token, 
                 suffix.starts_with(kJaSaSugi)) {
                 word->kind = kind == '8' ? 'X' : 'x';
             }
-            Group* group = NewGroup(current, ' ');
+            Group* group = NewGroup(rec, ' ');
             Item* candidate = NewItem(word, group, text, offset, token);
             if ((kind == '7' && candidate->RunKeiyoTrieQuery()) || (kind == '8' && candidate->RunDakeiyoCase8Query())) {
                 return candidate;
             }
-            current = group->records;
+            rec = group->records;
             group->records = nullptr;
             break;
         }
         default: {
             Detail* word = NewDetail(kDetailInfo, token);
-            if (!ValidateCandidate(text, offset, token, *current, chain.tail)) {
-                while (current != nullptr && sameGroup(current)) current = current->child;
+            if (!ValidateCandidate(text, offset, token, *rec, chain.tail)) {
+                while (rec != nullptr && sameGroup(rec)) rec = rec->child;
                 continue;
             }
-            Group* group = NewGroup(current, ' ');
+            Group* group = NewGroup(rec, ' ');
             Item* candidate = NewItem(word, group, text, offset, token);
             if (candidate->RunDefaultTrieQuery()) return candidate;
-            current = group->records;
+            rec = group->records;
             group->records = nullptr;
         }
         }
