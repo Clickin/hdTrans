@@ -214,3 +214,30 @@ HD_TEST(word_eu_imperative_lookup) {
         HD_CHECK_EQ(found.records->target, enabled ? "2라고" : "1라고");
     }
 }
+
+HD_TEST(word_short_causative_passive_branch) {
+    for (bool enabled : {false, true}) {
+        word::Record record;
+        record.source = "書";
+        record.partCode = "M421";
+        word::Detail detail;
+        detail.patternKind = 1;
+        detail.causativePassive = enabled;
+        HD_CHECK_EQ(word::MatchKind(detail, "かされた", record.source, record), enabled);
+        if (enabled) HD_CHECK_EQ(detail.kind, 8);
+    }
+}
+
+HD_TEST(word_su_verb_passive_guard) {
+    const auto snapshot = dict::Load({{0, "plain.tsv", "剥がす\t벗기다\tv\n驚かす\t놀라게 하다\tv\n"}}).snapshot;
+    HD_REQUIRE(snapshot != nullptr);
+    tokenizer::Tokens tokens;
+    word::Arena arena;
+    dict::LookupContext lookup;
+    lookup.plain = &snapshot->Plain();
+    word::Worker worker(tokens, *snapshot, lookup, word::Settings::Reference(), arena, {});
+    HD_CHECK(worker.SuVerb("剥が"));
+    HD_CHECK(worker.SuVerb("引き剥が"));
+    HD_CHECK(!worker.SuVerb("驚か"));
+    HD_CHECK(!worker.SuVerb("が"));
+}

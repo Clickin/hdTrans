@@ -1,6 +1,7 @@
 // Verb conjugation: the branch of a verb record and the acceptance of what follows it.
 #include <algorithm>
 
+#include "hdTrans/text/utf8.h"
 #include "hdTrans/word/conjugation.h"
 #include "hdTrans/word/strings.h"
 #include "hdTrans/word/worker.h"
@@ -109,7 +110,8 @@ bool MatchKind(Detail& d, std::string_view tail, std::string_view recordText, co
         if (const std::size_t n = Conjugation(kind, 8).size(); n > 0) {
             const std::string_view rest = tail.substr(n);
             if (Starts(rest, kJaNa) || Starts(rest, kJaN) || Starts(rest, kJaZaru) || Starts(rest, kJaNna) ||
-                Starts(rest, kJaNeba) || Starts(rest, kJaNu)) {
+                Starts(rest, kJaNeba) || Starts(rest, kJaNu) ||
+                (d.causativePassive && kind != 3 && Starts(rest, kJaSare))) {
                 return true;
             }
         } else {
@@ -204,12 +206,21 @@ bool Item::AcceptVerbContinuation(Record* following) {
 
     bool adjusted = false;
     const int oldKind = base.patternKind, oldState = base.kind;
-    if (!matched && (oldState == 1 || oldState == 2 || oldState == 4)) {
+    const bool shortCausativePassive = w->settings.text && w->settings.improvements.causativePassive && !matched &&
+        oldState == 8 && oldKind != 3 && oldKind != 7 && after().starts_with(kJaSare);
+    if (shortCausativePassive && w->SuVerb(surface + std::string(Conjugation(oldKind, 8)))) return false;
+    if (!matched && (oldState == 1 || oldState == 2 || oldState == 4 || shortCausativePassive)) {
         base.record = oldState;
         adjusted = true;
         sourceLength += pattern();
         base.patternKind = 7;
         tail = after();
+        if (shortCausativePassive || (w->settings.text && w->settings.improvements.causativePassive &&
+                                     oldState == 2 && tail.starts_with(kJaRare))) {
+            base.record = 5;
+            sourceLength += static_cast<int>(kJaRare.size());
+            tail.remove_prefix(kJaRare.size());
+        }
         int branch = 0;
         for (; branch < kConjugationBranches; branch++) {
             if (tail.starts_with(Conjugation(7, branch))) {
@@ -413,6 +424,23 @@ bool Item::AcceptVerbContinuation(Record* following) {
         if ((r = r->child) == nullptr) return true;
     }
     base.group = nullptr;
+    return false;
+}
+
+// A verb of the す row with this stem or one of its suffixes, excluding Korean causatives.
+bool Worker::SuVerb(std::string_view stem) {
+    for (std::size_t i = 0; i < stem.size();) {
+        const std::string_view tail = stem.substr(i);
+        if (text::RuneCount(tail) < 2) break;
+        i += text::DecodeRune(tail).size;
+        const std::string_view query = arena.Keep(std::string(tail) + "す");
+        const Lookup found = DoLookup(query, kModeGeneral);
+        if (found.count == 0) continue;
+        for (const Record* record = found.records; record != nullptr; record = record->child) {
+            if (record->source == tail && At(record->partCode, 1) == '4' && At(record->partCode, 3) == '3' &&
+                !Has(record->target, "게 ")) return true;
+        }
+    }
     return false;
 }
 

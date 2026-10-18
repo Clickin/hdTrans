@@ -83,10 +83,11 @@ struct Detail {
     std::string_view nextText;    // its text when the detail was made
     bool nonterminalBoundary = false;
     bool tailLengthCheck = false;
+    bool causativePassive = false;
 
     // The conjugation branch 0..17 of a verb; '0', 'x' or 'X' for adjectives; -1 unset.
     int kind = -1;
-    int record = 0;  // verb: the voice before it was folded into row 7 (1, 2, 4)
+    int record = 0;  // verb: 1 passive, 2 causative, 4 potential, 5 causative-passive
     int punct = 0;   // punctuation class after the ending
     Group* group = nullptr;
     int classes[kDirectSlots] = {};   // punctuation class per direct entry

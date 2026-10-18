@@ -114,6 +114,7 @@ Detail* Worker::NewDetail(int cls, int token) {
     d->nextText = {};
     d->nonterminalBoundary = settings.improvements.nonterminalBoundary;
     d->tailLengthCheck = settings.improvements.tailLengthCheck;
+    d->causativePassive = settings.text && settings.improvements.causativePassive;
     d->kind = -1;
     d->record = 0;
     d->punct = 0;

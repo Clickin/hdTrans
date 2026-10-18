@@ -365,6 +365,16 @@ std::string Composer::Build(int i, int action, std::string_view mode) {
             replacement += LookupSource(key, *generated_);
             break;
         }
+        case 5: {
+            cutStem();
+            replacement = Cat({LookupSource(Cat({key, "1"}), *generated_), "게 "});
+            const auto c = FirstByte(suffix);
+            classText = c.head;
+            suffix = std::string(c.tail);
+            key = Cat({"&C6@", classText});
+            replacement += LookupSource(key, *generated_);
+            break;
+        }
         case 4: {
             cutStem();
             replacement = Cat({LookupSource(Cat({key, "3"}), *generated_), " 수 "});

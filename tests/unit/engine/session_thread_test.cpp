@@ -271,3 +271,21 @@ HD_TEST(engine_reference_session_cleanup_isolation) {
     HD_CHECK_EQ(reference.Translate("何度も言った"), "몇번이나 말했다");
     HD_CHECK_EQ(improved.Translate("몇번"), "몇번");
 }
+
+HD_TEST(engine_causative_passive) {
+    const std::string dicts = DictsDir();
+    if (dicts.empty()) return;
+    hdTrans::Engine engine;
+    HD_REQUIRE(engine.Open({dicts}));
+    const struct { const char* in; const char* want; } cases[] = {
+        {"手紙を書かせられた。", "편지를 쓰게 되었다."},
+        {"本を読まされる。", "책을 읽게 된다."},
+        {"高い壺を買わされた。", "비싼 항아리를 사게 되었다."},
+        {"何本も組み合わされた柱", "몇개나 짜 맞춰진 기둥"},
+        {"彼に手紙を書かせた。", "그에게 편지를 쓰게 했다."},
+    };
+    for (const auto& c : cases) {
+        hdTrans::Session session(engine);
+        HD_CHECK_EQ(session.Translate(c.in), std::string(c.want));
+    }
+}

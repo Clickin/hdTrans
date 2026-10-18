@@ -62,6 +62,7 @@ public:
 
     // Dictionary lookup with the plain-entry filters of the word stage.
     Lookup DoLookup(std::string_view query, int mode);
+    bool SuVerb(std::string_view stem);
 
     // Allocation; every field is set.
     Record* NewRecord();
