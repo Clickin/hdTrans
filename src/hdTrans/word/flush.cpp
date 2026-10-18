@@ -37,9 +37,22 @@ void Flush(Flusher& f) {
         GenitiveBetweenNames(f);
         LongVowelAfterKatakana(f);
         ReturnTo(f);
+        KaraSource(f);
+        NiAfterAdverb(f);
+        NoAfterNa(f);
+        DeScene(f);
+        YounaBeforeModifier(f);
+        ParticleInNext(f);
+        JiBeforeJiman(f);
         EvenBeforePassive(f);
+        ComitativeTo(f);
+        NounTo(f);
     }
-    if (f.w.settings.terminal) PreferTerminal(f);
+    if (f.w.settings.terminal) {
+        PreferTerminal(f);
+        if (f.w.settings.text) ExclaimedAdjective(f);
+    }
+    if (f.w.settings.text) VerbNegative(f);
 }
 
 }  // namespace hdTrans::word

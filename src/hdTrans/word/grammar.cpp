@@ -504,18 +504,6 @@ void PastSequence(Flusher& f) {
     }
 }
 
-void EvenBeforePassive(Flusher& f) {
-    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
-        const Item* n = it->next;
-        if (n == nullptr || it->prev == nullptr || it->group->surface != "でも" ||
-            output::Lemma(it->EntryText(it->selected), f.families) != "에서도" || !n->detail->Yougo() ||
-            Has(it->prev->Attr(it->prev->selected), "VPl")) {
-            continue;
-        }
-        const std::string_view s = Slice(n->text, n->start, n->length);
-        if (Has(s, "られ") || s.starts_with("され")) SelectLemma(f, it, "(이)라도");
-    }
-}
 
 namespace {
 
@@ -747,6 +735,312 @@ void ReturnTo(Flusher& f) {
         if (p != nullptr && n != nullptr && it->group->surface == "に" && ItemLemma(f, it, it->selected) == "하러" &&
             n->group->surface.starts_with("戻")) {
             SelectLemma(f, it, "(으)로");
+        }
+    }
+}
+
+
+void EvenBeforePassive(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* n = it->next;
+        if (n == nullptr || it->prev == nullptr || it->group->surface != "でも" ||
+            output::Lemma(it->EntryText(it->selected), f.families) != "에서도" || !n->detail->Yougo() ||
+            Has(it->prev->Attr(it->prev->selected), "VPl")) {
+            continue;
+        }
+        const std::string_view s = Slice(n->text, n->start, n->length);
+        if (Has(s, "られ") || s.starts_with("され")) SelectLemma(f, it, "(이)라도");
+    }
+}
+
+namespace {
+
+// Words that start the words after から that keep (으)로부터 (kara source).
+constexpr std::string_view kKeepFrom[] = {"なる", "成る", "守", "護", "逃", "救", "庇", "隠", "解放", "避", "離", "身を"};
+
+// Words that end a word of time (kara source).
+constexpr std::string_view kTimeWords[] = {
+    "時", "頃", "日", "朝", "昼", "夜", "晩", "昔", "年", "月", "週", "次", "最初", "初め", "はじめ", "以前", "以後",
+    "直前", "直後", "ずっと前", "少し前", "当初", "瞬間", "今",
+};
+
+// Nouns of position and situation (deScene, karaSource).
+constexpr std::string_view kSceneWords[] = {
+    "後ろ", "前", "横", "隣", "上", "下", "中", "外", "内", "奥", "側", "傍", "近く", "遠く", "真ん中", "隅", "裏", "表",
+    "状況", "場", "場面", "現場", "世界", "夢", "環境", "空間",
+};
+
+// Verbs that take what they write or call something with と (comitativeTo, nounTo).
+constexpr std::string_view kNamingVerbs[] = {"呼ぶ", "書く", "名乗る", "記す", "名付ける", "称する", "読む"};
+
+// Verbs and verbal nouns of supposing or describing that take what they suppose with と.
+constexpr std::string_view kSupposingWords[] = {"仮定", "表現", "判断", "定義", "解釈", "想定", "認識", "見なす", "称する", "形容", "断定"};
+
+// Verbs and nouns of doing something with someone or comparing with something, whose partner takes と.
+constexpr std::string_view kComitativeWords[] = {
+    "合う", "戦う", "闘う", "会う", "出会う", "話す", "付き合う", "遊ぶ", "争う", "比べる", "似る", "違う", "異なる",
+    "別れる", "交わる", "混ざる", "混じる", "並ぶ", "組む", "重なる", "ぶつかる", "離れる", "暮らす", "過ごす", "踊る",
+    "知り合う", "見比べる", "釣り合う", "渡り合う", "向き合う", "張り合う", "話し合う", "語り合う", "競う", "揉める",
+    "すれ違う", "等しい", "結婚", "喧嘩", "対決", "対戦", "勝負", "協力", "握手", "交換", "一致", "再会", "合流", "共闘",
+    "衝突", "交代", "契約", "相談", "会話", "交際", "同居", "比較", "対立", "接触", "連携", "婚約", "和解", "仲直り",
+    "同盟", "取引", "交渉", "決闘", "同じ", "同様", "一緒", "共",
+};
+
+// Whether s starts with one of the words.
+template <std::size_t N>
+bool StartsWithAny(std::string_view s, const std::string_view (&words)[N]) {
+    for (const std::string_view w : words) {
+        if (s.starts_with(w)) return true;
+    }
+    return false;
+}
+
+// Whether s ends with one of the words.
+template <std::size_t N>
+bool EndsWithAny(std::string_view s, const std::string_view (&words)[N]) {
+    for (const std::string_view w : words) {
+        if (s.ends_with(w)) return true;
+    }
+    return false;
+}
+
+// Whether s has only digits (ASCII or full-width) and kanji numerals, and is not empty.
+bool NumberSurface(std::string_view s) {
+    if (s.empty()) return false;
+    for (std::string_view rest = s; !rest.empty(); rest.remove_prefix(text::DecodeRune(rest).size)) {
+        const char32_t r = text::DecodeRune(rest).cp;
+        const bool digit = (r >= U'0' && r <= U'9') || (r >= U'０' && r <= U'９');
+        if (!digit && !RuneIn(r, "〇一二三四五六七八九十百千万億")) return false;
+    }
+    return true;
+}
+
+// The adverb-like noun targets (無理やり 억지로, 精一杯 힘껏): ending in 껏, 으로 or 지로.
+bool AdverbTarget(std::string_view ko) {
+    return ko.ends_with("껏") || ko.ends_with("으로") || ko.ends_with("지로");
+}
+
+}  // namespace
+
+void KaraSource(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        if (!it->group->surface.starts_with("から") || it->selected < 0) continue;
+        Entry* e = it->group->At(it->selected);
+        if (e == nullptr || !e->dst.starts_with("(으)로부터")) continue;
+        const Item* n = it->next;
+        if (n != nullptr && (n->group->surface == "が" || StartsWithAny(n->group->surface, kKeepFrom))) continue;
+        const std::string_view before = std::string_view(it->text).substr(0, static_cast<std::size_t>(it->start));
+        const char32_t last = DecodeLastRune(before).cp;
+        const Item* p = it->prev;
+        const std::string_view rest = std::string_view("(으)로부터");
+        if (EndsWithAny(before, kTimeWords) || text::IsDigit(last) || RuneIn(last, "番号")) {
+            e->dst = "부터" + e->dst.substr(rest.size());
+        } else if (p != nullptr && p->selected >= 0 && !p->detail->Yougo() && At(p->Code(p->selected), 0) == '1' &&
+                   (Has(p->Attr(p->selected), "VPl") || Has(p->Attr(p->selected), "VBp") || InSet(kSceneWords, p->group->surface))) {
+            e->dst = "에서" + e->dst.substr(rest.size());
+        }
+    }
+}
+
+void NiAfterAdverb(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* p = it->prev;
+        if (p == nullptr || it->group->surface != "に" || it->selected < 0 || p->selected < 0 ||
+            ItemLemma(f, it, it->selected) != "에") {
+            continue;
+        }
+        const Item* n = it->next;
+        const bool afterVerb = p->detail->Yougo() && p->DirectIndex() >= 0 && p->DirectEntry(p->DirectIndex()) != nullptr &&
+                               p->DirectEntry(p->DirectIndex())->dst == "6" && n != nullptr && !InSet(kCommaItems, n->group->surface) &&
+                               !InSet(kSentenceEndItems, n->group->surface) && !InSet(kClosingQuoteItems, n->group->surface) &&
+                               n->group->surface != "。";
+        const bool adverb = !p->detail->Yougo() && AdverbTarget(ItemLemma(f, p, p->selected));
+        if (p->group->surface == "くらい" || p->group->surface == "ぐらい") {
+            SelectLemma(f, it, "(으)로");
+        } else if (afterVerb || adverb) {
+            SelectLemma(f, it, "");
+        }
+    }
+}
+
+void NoAfterNa(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* p = it->prev;
+        if (p == nullptr || it->group->surface != "の" || it->selected < 0 || p->selected < 0 || p->detail->Yougo() ||
+            !p->group->surface.ends_with("な") || !ItemLemma(f, p, p->selected).ends_with("한") ||
+            ItemLemma(f, it, it->selected) != "의") {
+            continue;
+        }
+        SelectLemma(f, it, "것");
+    }
+}
+
+void DeScene(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* p = it->prev;
+        if (p == nullptr || it->group->surface != "で" || it->selected < 0 || p->selected < 0 || p->detail->Yougo() ||
+            ItemLemma(f, it, it->selected) != "(으)로") {
+            continue;
+        }
+        if (p->group->surface == "一瞬" || p->group->surface == "瞬時") {
+            SelectLemma(f, it, "에");
+        } else if (InSet(kSceneWords, p->group->surface)) {
+            SelectLemma(f, it, "에서");
+        }
+    }
+}
+
+void YounaBeforeModifier(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* n = it->next;
+        if (n == nullptr || it->group->surface != "のような" || it->selected < 0 ||
+            ItemLemma(f, it, it->selected) != "(와)과 같이" || !n->detail->Yougo()) {
+            continue;
+        }
+        const std::string_view d = n->DirectSurface();
+        const Item* after = n->next;
+        if (d == "な" || (d == "い" && after != nullptr && !after->detail->Yougo() && after->selected >= 0 &&
+                          At(after->Code(after->selected), 0) == '1')) {
+            SelectLemma(f, it, "(와)과 같은");
+        }
+    }
+}
+
+void JiBeforeJiman(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        Item* n = it->next;
+        if (n == nullptr || n->selected < 0 || it->DirectIndex() < 0 ||
+            (!n->group->surface.starts_with("けど") && !n->group->surface.starts_with("けれど")) ||
+            !ItemLemma(f, n, n->selected).ends_with("지만")) {
+            continue;
+        }
+        const Entry* direct = it->DirectEntry(it->DirectIndex());
+        if (direct != nullptr && direct->dst.ends_with("겠지")) {
+            if (Entry* e = n->group->At(n->selected)) e->dst = "만";
+        }
+    }
+}
+
+void ParticleInNext(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* n = it->next;
+        if (n == nullptr || it->selected < 0 || n->selected < 0 || it->detail->Yougo()) continue;
+        Entry* e = it->group->At(it->selected);
+        if (e == nullptr || e->cls != 'P') continue;
+        const std::string lemma = ItemLemma(f, it, it->selected);
+        if (!lemma.empty() && ItemLemma(f, n, n->selected).starts_with(lemma + " ")) e->dst.clear();
+    }
+}
+
+void ComitativeTo(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        Item* p = it->prev;
+        Item* n = it->next;
+        if (p == nullptr || n == nullptr || it->selected < 0 || p->selected < 0 || n->selected < 0) continue;
+        std::string_view bracket;
+        if (it->group->surface == "と") {
+            if (!NumberSurface(p->group->surface)) continue;
+        } else if (it->group->surface == "」と" || it->group->surface == "』と") {
+            if (At(p->Code(p->selected), 0) != '1' || p->prev == nullptr || !Has("「『", p->prev->group->surface)) continue;
+            bracket = "」";
+        } else {
+            continue;
+        }
+        const std::string lemma = ItemLemma(f, it, it->selected);
+        const std::string_view bare = bracket.empty() || !lemma.starts_with(bracket) ? std::string_view(lemma)
+                                                                                      : std::string_view(lemma).substr(bracket.size());
+        if (bare != "(으)로" && bare != "(이)라고" && bare != "라고") continue;
+        const bool quote = QuoteVerbFollows(n) || IsAny(n, kNamingVerbs);
+        const std::string after = n->next != nullptr ? n->next->group->surface : std::string();
+        bool partner = !quote && At(n->Code(n->selected), 0) == '1';
+        if (bracket.empty()) {
+            const bool sound = !after.empty() && RuneIn(text::DecodeRune(after).cp, "しすさせ");
+            partner = partner && after != "は" && after != "が" && (after.empty() || !sound);
+        } else {
+            partner = partner && Has(" を の も や と ", " " + after + " ");
+        }
+        const char cls = At(it->Code(it->selected), 0);
+        if (IsAny(n, kComitativeWords) || partner) {
+            TakeTarget(it, cls, std::string(bracket) + "(와)과");
+        } else if (quote && bracket.empty()) {
+            TakeTarget(it, cls, "(이)라고");
+        }
+    }
+}
+
+void NounTo(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        const Item* p = it->prev;
+        const Item* n = it->next;
+        if (p == nullptr || n == nullptr || it->group->surface != "と" || it->selected < 0 || p->selected < 0 ||
+            n->selected < 0 || p->detail->Yougo() || At(p->Code(p->selected), 0) != '1') {
+            continue;
+        }
+        const char cls = At(it->Code(it->selected), 0);
+        const std::string lemma = ItemLemma(f, it, it->selected);
+        if ((lemma == "(으)로" || lemma == "(이)라고" || lemma == "라고") && IsAny(n, kComitativeWords)) {
+            TakeTarget(it, cls, "(와)과");
+        } else if (lemma == "(와)과" && (IsAny(n, kNamingVerbs) || IsAny(n, kSupposingWords))) {
+            TakeTarget(it, cls, "(이)라고");
+        }
+    }
+}
+
+namespace {
+
+// Punctuation before which an exclaimed adjective may open the utterance.
+constexpr std::string_view kExclaimOpeners[] = {"「", "『", "（", "(", "…", "……", "、"};
+
+// Whether the stem's negative lemma is a state (verbNegative).
+bool StativeNegative(std::string_view lemma) {
+    const std::string_view stem = lemma.substr(0, lemma.size() - std::string_view("지 않다").size());
+    return stem.ends_with("있") || stem.ends_with("그렇") || stem.ends_with("얼마 되");
+}
+
+}  // namespace
+
+void ExclaimedAdjective(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        if (it->DirectIndex() < 0 || OwnedGroup(it->DirectGroup()) || At(it->Code(it->selected), 0) != '7' ||
+            it->DirectText(it->DirectIndex()) != "4" || !IsOneOf(it->next, kCommaItems)) {
+            continue;
+        }
+        if (const Item* p = it->prev; p != nullptr && !IsOneOf(p, kExclaimOpeners)) continue;
+        if (const Item* n = it->next->next; n != nullptr && n->selected >= 0 && At(n->Code(n->selected), 0) == '7' &&
+                                            !IsWord(n, it->group->surface)) {
+            continue;
+        }
+        if (const Item* n = it->next->next; n != nullptr && n->selected >= 0 &&
+                                            (At(n->Code(n->selected), 0) == '1' || n->group->surface.starts_with("で") ||
+                                             n->group->surface.starts_with("だ"))) {
+            continue;
+        }
+        for (int slot = 0; slot < it->DirectCount(); slot++) {
+            if (it->detail->enabled[slot] && it->DirectText(slot) == "1" + std::string(kKoDa)) {
+                it->SetDirectIndex(slot);
+                break;
+            }
+        }
+    }
+}
+
+void VerbNegative(Flusher& f) {
+    for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
+        if (it->DirectIndex() < 0 || At(it->Code(it->selected), 0) != '7') continue;
+        const std::string lemma = ItemLemma(f, it, it->selected);
+        if (!lemma.ends_with("지 않다") || StativeNegative(lemma)) continue;
+        const std::string_view surface = it->group->surface;
+        if (!surface.ends_with("な")) continue;
+        const std::string_view stem = surface.substr(0, surface.size() - std::string_view("な").size());
+        if (stem.empty() || stem.ends_with("じゃ") || stem.ends_with("では")) continue;
+        Entry* e = it->DirectEntry(it->DirectIndex());
+        if (e == nullptr) continue;
+        if (stem.ends_with("く")) {
+            if (e->dst == "4") e->dst = "1은";
+        } else if (e->dst == "1다") {
+            e->dst = "1는다";
+        } else if (e->dst == "4") {
+            e->dst = "1는";
         }
     }
 }

@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <map>
+#include <set>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -19,6 +20,7 @@
 #include "hdTrans/tokenizer/tokenize.h"
 #include "hdTrans/word/analyze.h"
 #include "hdTrans/word/flush.h"
+#include "hdTrans/word/util.h"
 #include "hdTrans/word/worker.h"
 #include "hdtest.h"
 #include "tokenizer/stage_records.h"
@@ -185,10 +187,41 @@ std::string SRecord(const word::Item& it, int chunk, int sent) {
     return line;
 }
 
+// Whether the chunk of a document line is a line of verse: the header carries the line number
+// ("#LINE\t11") after the case.
+bool VerseOfChunk(const std::string& header, const std::set<std::string>& verseTexts,
+                  const std::vector<std::string>& docLines) {
+    const std::size_t at = header.rfind("#LINE\t");
+    if (at == std::string::npos) return false;
+    const long line = std::atol(header.c_str() + at + 6);
+    if (line < 1 || static_cast<std::size_t>(line) > docLines.size()) return false;
+    std::string text = docLines[static_cast<std::size_t>(line - 1)];
+    if (text.ends_with("\r")) text.pop_back();
+    return verseTexts.count(text) != 0;
+}
+
 struct Totals {
     long long chunks = 0, records = 0, differing = 0, differingIgnoringIds = 0;
     double seconds = 0;
 };
+
+// The lines of a document input that output.Settings.Verse is set for: a line ending in て or で
+// that a non-empty line follows (verseLines of the document layer), by line text.
+std::set<std::string> VerseTexts(const std::string& set) {
+    std::set<std::string> out;
+    std::string data;
+    if (!stagetest::ReadFile(GoldenDir() + "/" + set + ".in", data)) return out;
+    const auto lines = stagetest::Lines(data);
+    for (std::size_t i = 0; i + 1 < lines.size(); i++) {
+        const std::string_view t = word::TrimSpace(lines[i]);
+        if ((t.ends_with("て") || t.ends_with("で")) && !word::TrimSpace(lines[i + 1]).empty()) {
+            std::string_view key = lines[i];
+            if (key.ends_with("\r")) key.remove_suffix(1);
+            out.insert(std::string(key));
+        }
+    }
+    return out;
+}
 
 void RunSet(const std::string& dir, const std::string& set, analyzetest::Environments& envs, Totals& totals) {
     std::string data;
@@ -197,6 +230,14 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
         return;
     }
     const auto expected = ExpectedS(GoldenDir() + "/stages/" + set + ".S.tsv");
+    const std::set<std::string> verseTexts = VerseTexts(set);
+    std::vector<std::string> docLines;
+    {
+        std::string input;
+        if (stagetest::ReadFile(GoldenDir() + "/" + set + ".in", input)) {
+            for (const std::string_view l : stagetest::Lines(input)) docLines.emplace_back(l);
+        }
+    }
     const dict::Snapshot* snapshot = Dictionaries();
     const rules::Program& program = *RuleProgram();
     output::Families& families = snapshot->OutputFamilies();
@@ -220,6 +261,7 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
         analyzetest::Analyze(tokens, *snapshot, *env, chunk.index, chunk.faultSentence, arena, analysis, sink);
         word::Worker& w = *analysis.worker;
         w.settings.terminal = env->settings.terminal;
+        w.settings.verse = VerseOfChunk(chunk.header, verseTexts, docLines);
         // The lookup observer of the analyze pass is out of scope once Analyze returns.
         w.observer = {};
         for (std::size_t s = 0; s < analysis.sentences.size(); s++) {
@@ -255,15 +297,10 @@ void RunSet(const std::string& dir, const std::string& set, analyzetest::Environ
     analyzetest::ForEachChunk(data, chunk, finish);
 }
 
-// The text-path sets run with HDTRANS_RESOLVE_TEXT set until their passes are in.
-void RunSets(const char* name, bool (*select)(const std::string&), bool textPath) {
+void RunSets(const char* name, bool (*select)(const std::string&)) {
     const std::string dir = GoldenDir() + "/analyze/";
     if (!std::filesystem::exists(dir + "MANIFEST") || Dictionaries() == nullptr || RuleProgram() == nullptr) {
         std::printf("skip %s: no analyze fixtures, dictionaries or rule program\n", name);
-        return;
-    }
-    if (textPath && std::getenv("HDTRANS_RESOLVE_TEXT") == nullptr) {
-        std::printf("skip %s: text-path passes pending (set HDTRANS_RESOLVE_TEXT to run)\n", name);
         return;
     }
     std::vector<std::string> sets;
@@ -288,13 +325,13 @@ void RunSets(const char* name, bool (*select)(const std::string&), bool textPath
 }  // namespace
 
 HD_TEST(resolve_golden_raw) {
-    RunSets("resolve_golden_raw", [](const std::string& s) { return s == "corpus.raw"; }, false);
+    RunSets("resolve_golden_raw", [](const std::string& s) { return s == "corpus.raw"; });
 }
 
 HD_TEST(resolve_golden_each) {
-    RunSets("resolve_golden_each", [](const std::string& s) { return s == "corpus2.each"; }, true);
+    RunSets("resolve_golden_each", [](const std::string& s) { return s == "corpus2.each"; });
 }
 
 HD_TEST(resolve_golden_docs) {
-    RunSets("resolve_golden_docs", [](const std::string& s) { return s.starts_with("doc-"); }, true);
+    RunSets("resolve_golden_docs", [](const std::string& s) { return s.starts_with("doc-"); });
 }

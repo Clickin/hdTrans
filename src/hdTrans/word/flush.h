@@ -4,6 +4,7 @@
 // resolved chain: the replacements of katakana runs and noun phrases, the selection
 // of each item's candidate and ending by the rules, and the passes that fix class-3
 // words, negatives and terminal forms.
+#include <cstddef>
 #include <string_view>
 
 #include "hdTrans/output/families.h"
@@ -75,6 +76,19 @@ void QuestionCopula(Flusher& f);
 void GenitiveBetweenNames(Flusher& f);
 void LongVowelAfterKatakana(Flusher& f);
 void ReturnTo(Flusher& f);
+void KaraSource(Flusher& f);
+void NiAfterAdverb(Flusher& f);
+void NoAfterNa(Flusher& f);
+void DeScene(Flusher& f);
+void YounaBeforeModifier(Flusher& f);
+void ParticleInNext(Flusher& f);
+void JiBeforeJiman(Flusher& f);
+void ComitativeTo(Flusher& f);
+void NounTo(Flusher& f);
+
+// Text-path terminal and negative passes (grammar.cpp).
+void ExclaimedAdjective(Flusher& f);
+void VerbNegative(Flusher& f);
 void EvenBeforePassive(Flusher& f);
 void TeSequence(Flusher& f);
 bool UtteranceEnd(const Worker& w, const Item* it);
@@ -82,6 +96,12 @@ bool UtteranceEnd(const Worker& w, const Item* it);
 // Text-path adjectival neighbours (neighbours.cpp).
 void AdjectiveNeighbours(Flusher& f);
 void GeotBeforeMitai(Flusher& f);
+
+// Whether the item's surface is one of set.
+template <std::size_t N>
+bool IsOneOf(const Item* it, const std::string_view (&set)[N]) {
+    return it != nullptr && InSet(set, it->group->surface);
+}
 
 // Whether the item is word, a key or the dictionary form of the verb or adjective the item is a
 // stem of (sense.cpp). IsAny is IsWord over a list of words.
