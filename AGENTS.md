@@ -18,8 +18,8 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
 - Warnings are errors; fix the code, not the flags.
 
 ## Source rules
-- Standard library only. UTF-8 `std::string` internally; Shift-JIS and CP949 exist only
-  at the `J2K_*` boundary and in `text/codepage`.
+- Standard library only. UTF-8 `std::string` internally. Shift-JIS and CP949 exist only
+  at the `J2K_*` boundary, converted by the OS; the engine has no code-page tables.
 - Types and functions `CamelCase`, local variables `lowerCamel`, private members with a
   trailing underscore, files `snake_case`, one pipeline stage per directory under
   `src/hdTrans/`. Internal functions go in `hdTrans::internal` and in headers under
