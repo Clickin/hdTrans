@@ -272,6 +272,14 @@ struct Arena {
     // The name-layer entries of the lookups, which records point to.
     std::vector<std::vector<dict::UserEntry>> names;
     std::size_t namesUsed = 0;
+    // Text built by the sentence passes that records point to; the strings do not move.
+    std::vector<std::unique_ptr<std::string>> texts;
+
+    // Keeps text until the arena is reset and returns a view of it.
+    std::string_view Keep(std::string text) {
+        texts.push_back(std::make_unique<std::string>(std::move(text)));
+        return *texts.back();
+    }
 
     void Reset() {
         items.Reset();
@@ -280,6 +288,7 @@ struct Arena {
         details.Reset();
         records.Reset();
         namesUsed = 0;
+        texts.clear();
     }
 };
 

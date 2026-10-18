@@ -292,7 +292,7 @@ Item* InsertParenthesized(Flusher& f) {
         if (TransliterateHiragana(raw) != translated || innerTranslation == translated) continue;
         int recordToken = index;
         if (closing != nullptr) recordToken = closing->tokenIndex;
-        Record* record = w.CreateSyntheticRecord(recordToken, raw, false);
+        Record* record = w.CreateSyntheticRecord(recordToken, w.arena.Keep(raw), false);
         record->target = spaced;
         Item* result = w.InsertLateCandidate(sourceText, start, index, record);
         if (result == nullptr) continue;
