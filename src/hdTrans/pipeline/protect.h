@@ -1,0 +1,92 @@
+#pragma once
+// The protect stage of the text path: the line after the sound lexicon cut into its
+// protected spans and the text between them, with the rewrites that read the text
+// pieces in the context of the spans.
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "hdTrans/dict/snapshot.h"
+#include "hdTrans/output/pieces.h"
+#include "hdTrans/pipeline/line_context.h"
+
+namespace hdTrans::pipeline {
+
+// The pieces the line is translated from, in this order:
+//   - the protected-span cut (internal::CutSpans);
+//   - a line of speech written in katakana read as hiragana (internal::KataSpeech);
+//   - a pronoun, demonstrative or adjective written in katakana for emphasis read as
+//     hiragana unless it may be a name (internal::KataWordsToHiragana);
+//   - a conjunction cut from its clause at the start of a sentence written with its
+//     pronoun (internal::RewriteConjunctions);
+//   - ｢ and ｣ written as 「 and 」.
+// sounded is the line after the sound lexicon and the emphasis rewrites.
+output::Pieces Protect(std::string_view sounded, const LineContext& ctx, const dict::Snapshot& snap);
+
+// Protect without the last step: the pieces as typed, which the cleanup compares the
+// output with.
+output::Pieces ProtectTyped(std::string_view sounded, const LineContext& ctx, const dict::Snapshot& snap);
+
+// ｢ and ｣ in the text pieces written as 「 and 」.
+output::Pieces MarkCornerBrackets(const output::Pieces& typed);
+
+namespace internal {
+
+// text cut into its protected spans and the text between them. The classes are
+// searched one after the other, a later class never matching inside or across an
+// earlier match:
+//   - markup tags <...> of up to 1024 characters other than <BR> and <LI> (SpanOpen, a
+//     closing tag SpanClose);
+//   - BBCode tags [b], [/b], [color=red] of up to 128 characters (SpanOpen, SpanClose);
+//   - entities &amp; &#123; &#x1F;  (SpanOpen);
+//   - the host markers, the longest that matches (SpanOpen);
+//   - the stutter marks U+E000 with their separators (SpanOpen);
+//   - Hangul runs joined by ASCII or full-width spaces (SpanWord);
+//   - runs of foreign characters other than white space (IsForeign), a ゔ taking the
+//     small vowel after it (SpanWord).
+output::Pieces CutSpans(std::string_view text, std::span<const std::string> markers);
+
+// A character kept as written: outside CP932 and neither a Han character nor kana.
+// Hangul, emoji, the letters and symbols of other scripts and the hiragana ゔゕゖ are
+// foreign; ASCII, the half-width forms and ヷヸヹヺ are not.
+bool IsForeign(char32_t r);
+
+// On each line whose katakana runs read as Japanese speech (ワタシハ ニホンゴガ
+// ワカリマセン), the runs that read as words written in hiragana; katakana dictionary
+// words inside a run stay. A line written only in katakana with the punctuation of
+// speech, and a line without hiragana that writes its okurigana in katakana (痛イ……
+// 沈マナイ), count as speech on weaker evidence. A span with Hangul next to the text
+// counts as a sound already written.
+output::Pieces KataSpeech(const output::Pieces& text, const LineContext& ctx, const dict::Snapshot& snap);
+
+// Each word of a short list (アレ, ドコ, アタシ, ダメ, ヤバイ, ...) in the text pieces
+// written in hiragana where it reads as the word rather than a name: it fills its
+// katakana run, does not follow ・ ＝ の or a span, is followed by a particle or
+// predicate it takes (an adjective also by the end of a sentence), does not join the
+// text around it into a dictionary word, has no plain or name sense and is not one of
+// ctx.named.
+output::Pieces KataWordsToHiragana(const output::Pieces& text, const LineContext& ctx, const dict::Snapshot& snap);
+
+// ならば なら ですから であれば にも関わらず にも拘らず にもかかわらず 対して at the
+// start of a sentence or utterance written with their pronoun (それなら, だから,
+// それでも, 反面) in the text pieces; なら before hiragana stays. A span next to a
+// text piece reads as a character that is neither hiragana nor a line break.
+output::Pieces RewriteConjunctions(const output::Pieces& text);
+
+// The text of a text piece, "" for a span.
+std::string_view TextOf(const output::Piece& p);
+
+// text cut at the line feeds of its text pieces; one line at least.
+std::vector<output::Pieces> Lines(const output::Pieces& text);
+
+// The inverse of Lines.
+output::Pieces JoinLines(const std::vector<output::Pieces>& lines);
+
+// The part-of-speech tags (first part-code bytes) of the base records and the plain
+// entries stored under exactly s, kana spellings left out; "" when s is no key.
+std::string KeyTags(std::string_view s, const LineContext& ctx, const dict::Snapshot& snap);
+
+}  // namespace internal
+
+}  // namespace hdTrans::pipeline
