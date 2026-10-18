@@ -13,26 +13,6 @@
 namespace hdTrans::word {
 namespace {
 
-// s without the Unicode white space at either end.
-std::string_view TrimSpace(std::string_view s) {
-    auto space = [](char32_t r) {
-        return r == ' ' || (r >= '\t' && r <= '\r') || r == 0x85 || r == 0xA0 || r == 0x1680 ||
-               (r >= 0x2000 && r <= 0x200A) || r == 0x2028 || r == 0x2029 || r == 0x202F || r == 0x205F || r == 0x3000;
-    };
-    while (!s.empty() && space(text::DecodeRune(s).cp)) s.remove_prefix(text::DecodeRune(s).size);
-    while (!s.empty() && space(DecodeLastRune(s).cp)) s.remove_suffix(DecodeLastRune(s).size);
-    return s;
-}
-
-// Whether s is one of list.
-template <std::size_t N>
-bool InList(const std::string_view (&list)[N], std::string_view s) {
-    for (const std::string_view x : list) {
-        if (x == s) return true;
-    }
-    return false;
-}
-
 // Passive verbs written with a Korean passive rather than 지다, by the surface of the item.
 // A class after the colon is the conjugation class of the Korean lemma.
 struct PassiveLemma {
@@ -104,7 +84,7 @@ bool Transitive(const Item* it) {
 // The passive reading of a られた or られて with no other cue.
 bool NarrativePassive(const Item* it, std::string_view rest) {
     if (!rest.starts_with("た") && !rest.starts_with("て")) return false;
-    return !InList(kAbilityVerbs, it->group->surface);
+    return !InSet(kAbilityVerbs, it->group->surface);
 }
 
 // The passive reading of the られ of verb item it; rest is the text after られ:
@@ -122,7 +102,7 @@ bool PassiveReading(const Item* it, std::string_view rest) {
     for (const std::string_view p : kPotentialForms) {
         if (rest.starts_with(p)) return false;
     }
-    const bool listed = InList(kPassiveVerbs, it->group->surface) || CompoundAction(it->group->surface);
+    const bool listed = InSet(kPassiveVerbs, it->group->surface) || CompoundAction(it->group->surface);
     if (!listed && !Transitive(it)) return false;
     constexpr std::string_view kPassiveForms[] = {"てい", "てる", "てお", "てた"};
     for (const std::string_view p : kPassiveForms) {
@@ -176,15 +156,6 @@ bool Contrast(std::string_view rest) {
         for (const std::string_view p : kParticles) {
             if (after.starts_with(p)) return true;
         }
-    }
-    return false;
-}
-
-// Whether s is one of list.
-template <std::size_t N>
-bool InSet(const std::string_view (&list)[N], std::string_view s) {
-    for (const std::string_view x : list) {
-        if (x == s) return true;
     }
     return false;
 }

@@ -83,6 +83,31 @@ enum NameClass : int { kClassOther, kClassHiragana, kClassKatakana, kClassKanji 
 // (not 〇).
 int NameClassOf(std::string_view c);
 
+// Whether s is one of list.
+template <std::size_t N>
+bool InSet(const std::string_view (&list)[N], std::string_view s) {
+    for (const std::string_view x : list) {
+        if (x == s) return true;
+    }
+    return false;
+}
+
+// s[from, from+count) of a token text, clamped to s.
+inline std::string_view Slice(std::string_view s, long from, long count) {
+    s = From(s, from);
+    if (count < 0) return {};
+    return s.substr(0, static_cast<std::size_t>(count));
+}
+
+// Whether the rune r is in set (a UTF-8 string of runes).
+bool RuneIn(char32_t r, std::string_view set);
+// Whether some rune of s is in set.
+bool AnyRuneIn(std::string_view s, std::string_view set);
+// s without the runes of cutset at either end (strings.Trim).
+std::string_view TrimRunes(std::string_view s, std::string_view cutset);
+// s without the Unicode white space at either end (strings.TrimSpace).
+std::string_view TrimSpace(std::string_view s);
+
 // Whether s has a byte of set.
 inline bool AnyOf(std::string_view set, char c) { return set.find(c) != std::string_view::npos; }
 

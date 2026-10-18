@@ -22,6 +22,8 @@ void Flush(Flusher& f) {
         NegativeCopula(f);
         SubjectBeforeGa(f);
         SubjectNo(f);
+        TeRequest(f);
+        TeSequence(f);
     }
     if (f.w.settings.terminal) PreferTerminal(f);
 }

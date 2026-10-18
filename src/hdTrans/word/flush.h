@@ -57,6 +57,12 @@ void NegativeCopula(Flusher& f);
 void SubjectBeforeGa(Flusher& f);
 void SubjectNo(Flusher& f);
 
+// Text-path て forms (connective.cpp). UtteranceEnd reports an item followed by the end
+// of the utterance (closing punctuation, a pause or the end of the chunk).
+void TeRequest(Flusher& f);
+void TeSequence(Flusher& f);
+bool UtteranceEnd(const Worker& w, const Item* it);
+
 // Text-path adjectival neighbours (neighbours.cpp).
 void AdjectiveNeighbours(Flusher& f);
 void GeotBeforeMitai(Flusher& f);
