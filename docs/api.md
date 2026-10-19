@@ -133,6 +133,7 @@ Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비�
   쓴 뒤 `hdTrans_Reload`를 부르거나 `hdTrans_Terminate` 다음 `hdTrans_Initialize`로 다시 불러옵니다.
 - `hdTrans_Load(name, data, n)`(사전 파일을 버퍼로 넘기는 입구, `src/wasm/main.cpp`)는 아직 구현되지 않아
   -1을 돌려줍니다.
+- 웹 데모(`web/`)가 이 모듈을 씁니다([web.md](web.md)).
 
 ```js
 import createEngine from './hdTransEngine.js';

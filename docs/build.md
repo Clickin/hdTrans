@@ -84,7 +84,7 @@ cmake --build --preset wasm --parallel
 ```
 
 `build/wasm/hdTransEngine.js`와 `hdTransEngine.wasm`이 생깁니다(ES6 모듈). 사용법은
-[api.md](api.md#webassembly)에 있습니다.
+[api.md](api.md#webassembly)에, 이것을 쓰는 웹 데모는 [web.md](web.md)에 있습니다.
 
 ## 빌드 옵션
 

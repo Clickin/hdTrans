@@ -1,0 +1,12 @@
+{
+  "name": "hdtrans-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node check.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

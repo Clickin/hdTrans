@@ -8,3 +8,4 @@ build/
 *.pdb
 .DS_Store
 .hdsnap/
+node_modules/

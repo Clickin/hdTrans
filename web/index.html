@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>일한번역기 hdTrans 웹 데모 페이지</title>
+<meta name="description" content="규칙 기반 일본어→한국어 번역 엔진 hdtrans. 번역은 브라우저 안에서 실행됩니다.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>일한번역기 hdTrans 웹 데모 페이지</h1>
+  <p class="sub" lang="en">Rule-based Japanese → Korean translation, running in your browser</p>
+</header>
+
+<main>
+  <div class="status"><span id="status">불러오는 중…</span> <progress id="bar"></progress></div>
+
+  <div class="controls">
+    <fieldset>
+      <legend>방식</legend>
+      <label><input type="radio" name="mode" value="document" checked> 문서 (이름 통일)</label>
+      <label><input type="radio" name="mode" value="line"> 줄 단위</label>
+    </fieldset>
+    <label>예제 <select id="example"><option value="">고르기…</option></select></label>
+  </div>
+
+  <div class="panes">
+    <label class="pane"><span>일본어</span>
+      <textarea id="src" spellcheck="false" placeholder="일본어 문장을 입력하거나 붙여 넣으면 바로 번역합니다."></textarea></label>
+    <label class="pane"><span>한국어 <small id="info"></small> <progress id="tbar" hidden></progress></span>
+      <textarea id="out" readonly></textarea></label>
+  </div>
+
+  <div class="panes dicts">
+    <div class="pane"><span>사용자 사전</span><div id="userdict"></div></div>
+    <div class="pane"><span>이름 표</span><div id="names"></div></div>
+  </div>
+</main>
+
+<p class="contact">피드백을 꼭 남겨주시면 도움이 많이 됩니다.<br>개발 및 문의사항 : 소쿠릿 (<a href="https://x.com/sokcuri" target="_blank" rel="noopener">https://x.com/sokcuri</a>)</p>
+<p class="contact" id="version">dev</p>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

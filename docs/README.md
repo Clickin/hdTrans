@@ -9,6 +9,7 @@
 | [testing.md](testing.md) | 단위 테스트, 예제 문서, 단계 기록, 자체 기준선, 엔드투엔드 테스트, 환경 변수 |
 | [dictionaries.md](dictionaries.md) | `dicts/` 구성, 파일 머리줄과 계층, 열 파일, 사용자 사전 형식, 캐시 |
 | [api.md](api.md) | CLI 옵션, C API, J2K 함수, WebAssembly, C++ API |
+| [web.md](web.md) | 웹 데모(`web/`) 빌드·확인·배포 |
 
 ## 저장소 구성
 
@@ -20,6 +21,7 @@
 | `src/cshared/` | `hdTransEngine` C API |
 | `src/j2kengine/` | `J2KEngine.dll`의 `J2K_*` 함수 |
 | `src/wasm/` | WebAssembly 입구 |
+| `web/` | 웹 데모 (https://trans.kuri.kr) |
 | `dicts/` | 배포하는 기본 사전 |
 | `tests/unit/` | 단위 테스트 (`hdtest.h` 러너) |
 | `tests/host/` | C API·J2K DLL을 불러 쓰는 호스트 테스트 |

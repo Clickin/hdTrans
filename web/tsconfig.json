@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom", "webworker"],
+    "types": [],
+    "strict": true,
+    "rootDir": "src",
+    "outDir": "../build/web",
+    "skipLibCheck": true
+  },
+  "include": ["src"]
+}
