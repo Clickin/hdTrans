@@ -124,13 +124,21 @@ jobs:
         env:
           EM_COMPILER_WRAPPER: ${{ matrix.preset == 'wasm' && 'ccache' || '' }}
         run: cmake --build --preset "${{ matrix.preset }}" --parallel "$BUILD_JOBS"
-      - name: Stage dictionaries for the Windows host probe
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Stage data, examples and licences
         run: |
-          $dicts = "build/${{ matrix.preset }}/dicts"
-          New-Item -ItemType Directory -Force $dicts | Out-Null
-          Copy-Item 'dicts/*' $dicts -Recurse -Force
+          root="build/${{ matrix.preset }}"
+          mkdir -p "$root/third_party/pcre2/deps/sljit" "$root/third_party/libyaml"
+          cp THIRD-PARTY-NOTICES.txt "$root/"
+          cp third_party/pcre2/LICENCE.md "$root/third_party/pcre2/"
+          cp third_party/pcre2/deps/sljit/LICENSE "$root/third_party/pcre2/deps/sljit/"
+          cp third_party/libyaml/License "$root/third_party/libyaml/"
+          if [[ "${{ matrix.preset }}" != wasm ]]; then
+            data="$root"
+            if [[ "$RUNNER_OS" == Windows ]]; then data="$root/hdTrans"; fi
+            mkdir -p "$data/dicts" "$data/user"
+            cp -R dicts/. "$data/dicts/"
+            cp hdtrans.config.example.yaml userdict.example.tsv "$data/user/"
+          fi
       - name: Test without external fixtures
         run: |
           unset HDTRANS_REQUIRE_ALL HDTRANS_GOLDEN HDTRANS_DICTS HDTRANS_TEST_EXCLUDE
@@ -184,6 +192,11 @@ jobs:
             build/${{ matrix.preset }}/J2KEngine.lib
             build/${{ matrix.preset }}/hdTransEngine.js
             build/${{ matrix.preset }}/hdTransEngine.wasm
+            build/${{ matrix.preset }}/hdTrans/
+            build/${{ matrix.preset }}/dicts/
+            build/${{ matrix.preset }}/user/
+            build/${{ matrix.preset }}/THIRD-PARTY-NOTICES.txt
+            build/${{ matrix.preset }}/third_party/
       - name: Upload test and compiler-cache logs
         if: always()
         uses: actions/upload-artifact@v7

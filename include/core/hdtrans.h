@@ -19,13 +19,13 @@ extern "C" {
 #define HDTRANS_API
 #endif
 
-/* Loads the dictionary folders listed in dirs (NUL-separated, double NUL at the end),
- * later folders overriding earlier ones, then userdict.tsv next to the library when
- * present, and the filters and user dictionary of the Ehnd folder next to the library
- * when there is one (hdTrans_OpenEhnd); a userdict.tsv that does not load is left out (hdTrans_UserDictError).
- * Translations check userdict.tsv at most once a second and reload it in the background
- * when it changes; WebAssembly reads /userdict.tsv of its file system and does not watch
- * it. Returns 0, or -1 when no dictionary loads or a concurrent Terminate, successful
+/* Loads dirs (NUL-separated, double NUL at the end), later folders overriding earlier
+ * ones. Empty dirs uses the config's dicts. The data root is hdTrans/ next to the library
+ * when present, otherwise the library folder; user/ holds config and userdict.tsv.
+ * Legacy files next to the library remain supported. Ehnd is opt-in through config
+ * or hdTrans_OpenEhnd. User dictionary errors are available through hdTrans_UserDictError.
+ * Changed user files reload in the background, except on WebAssembly.
+ * Returns 0, or -1 when no dictionary loads or a concurrent Terminate, successful
  * Initialize or successful Reload cancels this load. */
 HDTRANS_API int hdTrans_Initialize(const char* dirs);
 
@@ -41,13 +41,13 @@ HDTRANS_API int hdTrans_Translate(const char* text, size_t n, char** out, size_t
  * translation starts like the first. Returns 0, or -1 when uninitialized or terminated. */
 HDTRANS_API int hdTrans_Reset(void);
 
-/* Reloads the dictionary folders and userdict.tsv. Returns 0, or -1 when
+/* Rereads config, dictionary folders and the user dictionary. Returns 0, or -1 when
  * uninitialized, terminated, or the reload fails; a userdict.tsv that does not load
  * fails it and keeps the dictionaries loaded before. */
 HDTRANS_API int hdTrans_Reload(void);
 
-/* Writes why the last version of userdict.tsv read did not load, one line per error, as
- * a buffer like hdTrans_Translate does; empty when it loaded or there is none. Returns 0,
+/* Writes config diagnostics and user dictionary errors, one line per error, as
+ * a buffer like hdTrans_Translate does; empty when there are none. Returns 0,
  * or -1 when uninitialized or terminated. */
 HDTRANS_API int hdTrans_UserDictError(char** out, size_t* outn);
 

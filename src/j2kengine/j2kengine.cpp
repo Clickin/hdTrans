@@ -1,6 +1,6 @@
 // J2KEngine-compatible exports: Shift-JIS or UTF-16 in, CP949 or UTF-16 out.
-// Dictionaries are found next to the DLL (dicts and userdict.tsv); the path the host
-// passes is ignored. userdict.tsv is reloaded when it changes.
+// Program data are in hdTrans/ next to the DLL, or the DLL folder itself.
+// The host's path is ignored. The user dictionary is reloaded when it changes.
 // Calls are thread-safe, not reentrant; finish all calls before unloading the DLL.
 #include <windows.h>
 
@@ -10,9 +10,12 @@
 #include <cstring>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "core/config/cache.h"
+#include "core/config/config.h"
 #include "core/dict/folders.h"
 #include "core/engine.h"
 
@@ -44,8 +47,7 @@ std::mutex g_mutex;
 std::condition_variable g_adminsDone;
 std::atomic<unsigned> g_waitingAdmins{0};
 std::uint64_t g_generation = 0;
-std::vector<std::string> g_dirs;
-std::string g_userFile;
+hdTrans::internal::ConfigCache g_cache;
 std::unique_ptr<hdTrans::Engine> g_engine;
 std::unique_ptr<hdTrans::Session> g_session;
 
@@ -90,6 +92,14 @@ std::string ModuleDir() {
     return Utf8FromWide(slash == std::wstring::npos ? L"." : dir.substr(0, slash));
 }
 
+hdTrans::internal::ConfigResult ReadConfig(const std::string& dir) {
+    const std::string path = hdTrans::dict::ConfigFile(dir);
+    auto config = hdTrans::internal::LoadConfig(path);
+    const std::string errors = hdTrans::internal::ConfigErrors(config, path);
+    if (!errors.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: " + errors + "\n").c_str());
+    return config;
+}
+
 // Writes why userdict.tsv did not load, if it did not, and the Ehnd lines skipped to the
 // debugger output.
 void LogLoadErrors(const hdTrans::Engine& e) {
@@ -129,18 +139,26 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
         generation = g_generation;
     }
     const std::string dir = ModuleDir();
-    std::vector<std::string> dirs{hdTrans::dict::ShippedFolder(dir)};
-    std::string userFile = hdTrans::dict::UserFile(dir);
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
-    e->OpenEhnd(hdTrans::dict::EhndFolder(dir));
+    const auto config = ReadConfig(dir);
+    const auto& settings = config.settings;
+    const auto dirs = settings.dicts.value_or(std::vector<std::string>{hdTrans::dict::ShippedFolder(dir)});
+    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    {
+        AdminLock lock;
+        if (generation != g_generation) return 0;
+        if (!g_cache.Apply(settings.cache)) {
+            OutputDebugStringW(L"J2KEngine: cannot set cache directory\n");
+            return 0;
+        }
+    }
+    auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    e->OpenEhnd(settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "");
     if (!e->Open(dirs, false, userFile)) return 0;
     LogLoadErrors(*e);
     AdminLock lock;
     if (generation != g_generation) return 0;
     g_engine = std::move(e);
-    g_session = std::make_unique<hdTrans::Session>(*g_engine);
-    g_dirs = std::move(dirs);
-    g_userFile = std::move(userFile);
+    g_session = std::make_unique<hdTrans::Session>(*g_engine, false, settings.cg, settings.misread);
     ++g_generation;
     return 1;
 }
@@ -152,8 +170,7 @@ int __stdcall J2K_Terminate() {
     ++g_generation;
     g_session.reset();
     g_engine.reset();
-    g_dirs.clear();
-    g_userFile.clear();
+    static_cast<void>(g_cache.Apply(std::nullopt));
     return 1;
 }
 
@@ -186,17 +203,26 @@ void __stdcall J2K_FreeMem(void* block) {
 int __stdcall J2K_StopTranslation(void* /*target*/) { return 1; }
 void __stdcall J2K_ReloadUserDict() {
     std::uint64_t generation;
-    std::vector<std::string> dirs;
-    std::string userFile;
     {
         AdminLock lock;
         if (!g_engine) return;
         generation = g_generation;
-        dirs = g_dirs;
-        userFile = g_userFile;
     }
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
-    e->OpenEhnd(hdTrans::dict::EhndFolder(ModuleDir()));
+    const std::string dir = ModuleDir();
+    const auto config = ReadConfig(dir);
+    const auto& settings = config.settings;
+    const auto dirs = settings.dicts.value_or(std::vector<std::string>{hdTrans::dict::ShippedFolder(dir)});
+    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    {
+        AdminLock lock;
+        if (generation != g_generation) return;
+        if (!g_cache.Apply(settings.cache)) {
+            OutputDebugStringW(L"J2KEngine: cannot set cache directory\n");
+            return;
+        }
+    }
+    auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    e->OpenEhnd(settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "");
     // A userdict.tsv that does not load keeps the dictionaries loaded before.
     if (!e->Open(dirs, false, userFile)) return;
     LogLoadErrors(*e);
@@ -205,7 +231,7 @@ void __stdcall J2K_ReloadUserDict() {
     if (generation != g_generation) return;
     g_session.reset();
     g_engine = std::move(e);
-    g_session = std::make_unique<hdTrans::Session>(*g_engine);
+    g_session = std::make_unique<hdTrans::Session>(*g_engine, false, settings.cg, settings.misread);
     ++g_generation;
 }
 void __stdcall J2K_SetField(int) {}

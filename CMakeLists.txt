@@ -71,12 +71,13 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/builtin_tables.cmake" VERBATIM)
 
 add_subdirectory(third_party/pcre2)
+add_subdirectory(third_party/libyaml)
 
 file(GLOB_RECURSE HDTRANS_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(hdtrans STATIC ${HDTRANS_SOURCES}
     "${CMAKE_CURRENT_BINARY_DIR}/builtin_gen.cpp" "${CMAKE_CURRENT_BINARY_DIR}/builtin_extra_gen.cpp"
     "${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp")
-target_link_libraries(hdtrans PRIVATE pcre2-16)
+target_link_libraries(hdtrans PRIVATE pcre2-16 yaml)
 if(HDTRANS_INTERPRET_RULES)
     target_compile_definitions(hdtrans PRIVATE HDTRANS_INTERPRET_RULES)
 endif()
@@ -121,6 +122,7 @@ if(NOT EMSCRIPTEN)
     enable_testing()
     add_test(NAME unit COMMAND hdtrans_tests)
     if(UNIX)
+        add_test(NAME cli.config COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/tests/config.sh" "$<TARGET_FILE:hdtrans_cli>")
         add_test(NAME tools.selfbase COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/tests/selfbase.sh" "$<TARGET_FILE:hdtrans_cli>")
     endif()
 
@@ -145,6 +147,17 @@ if(NOT EMSCRIPTEN)
             "${CMAKE_CURRENT_SOURCE_DIR}/dicts")
         set_tests_properties(testdata PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 600)
     endif()
+
+    add_executable(config_host tests/host/config.cpp src/cshared/hdtrans_c.cpp)
+    target_include_directories(config_host PRIVATE src)
+    target_link_libraries(config_host PRIVATE hdtrans ${CMAKE_DL_LIBS})
+    set_target_properties(config_host PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/config-host")
+    if(WIN32)
+        add_test(NAME host.config COMMAND config_host "$<TARGET_FILE:j2kengine>")
+    else()
+        add_test(NAME host.config COMMAND config_host)
+    endif()
+    set_tests_properties(host.config PROPERTIES ENVIRONMENT "HDTRANS_CACHE_DIR=off")
 
     add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp)
     target_include_directories(admin_priority PRIVATE src)
@@ -203,6 +216,7 @@ elseif(WIN32)
     set_target_properties(j2kengine PROPERTIES OUTPUT_NAME J2KEngine PREFIX "")
     target_include_directories(j2kengine PRIVATE src)
     target_link_libraries(j2kengine PRIVATE hdtrans)
+    add_dependencies(config_host j2kengine)
 
     add_executable(j2k_host tests/host/j2k_host.c)
     target_compile_definitions(j2k_host PRIVATE UNICODE _UNICODE)

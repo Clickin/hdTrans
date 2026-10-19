@@ -6,7 +6,8 @@ hdTrans는 Ehnd 폴더를 그대로 읽어 같은 순서와 의미로 적용합�
 ([hdTrans 필터 파일](#hdtrans-필터-파일)).
 
 Ehnd 호환은 기능일 뿐입니다. 꿀도르 같은 Ehnd 사전은 `dicts/`에 들어 있지 않고 기본으로 켜지지
-않으며, 사용자가 프로그램 옆에 `Ehnd` 폴더를 두거나 폴더를 직접 지정할 때만 씁니다.
+않습니다. 설정 파일의 `ehnd`, CLI `-ehnd`나 API로 명시적으로 켤 때만 씁니다. 켜면 번역 품질이
+떨어질 수 있습니다.
 
 이 문서는 Ehnd 코드가 파일을 읽고 적용하는 방식을 그대로 적고, hdTrans가 다르게 하는 점을 따로
 밝힙니다. 기준은 Ehnd 공개 소스(`EHND_VER "V3.20"`: `filter.cpp`, `ehnd.cpp`, `watch.cpp`,
@@ -16,10 +17,12 @@ Ehnd 호환은 기능일 뿐입니다. 꿀도르 같은 Ehnd 사전은 `dicts/`�
 
 ## 쓰는 법
 
-- 프로그램 옆의 `Ehnd` 폴더: `hdtrans` CLI는 실행 파일 옆, `hdTransEngine` 라이브러리와
-  `J2KEngine.dll`은 DLL 옆(이지트랜스 폴더라면 Ehnd를 쓰던 그 `Ehnd` 폴더)에 `Ehnd` 폴더가 있으면
-  씁니다. 라이브러리와 DLL은 이 폴더를 `userdict.tsv`처럼 1초에 한 번까지 확인해, 바뀌면 사전과 함께
-  백그라운드에서 다시 읽습니다.
+- 데이터 루트의 `user/hdtrans.config.yaml`에 `ehnd: true`를 적으면 실행 파일이나 DLL 옆의
+  `Ehnd` 폴더를 씁니다. `ehnd: 경로`는 지정한 폴더(상대 경로는 설정 파일 기준)를 씁니다.
+  생략하거나 `ehnd: false`이면 폴더가 있어도 쓰지 않습니다.
+- 라이브러리와 DLL은 켠 폴더를 `userdict.tsv`처럼 1초에 한 번까지 확인해, 바뀌면 사전과 함께
+  백그라운드에서 다시 읽습니다. 설정 자체를 바꾼 뒤에는 다시 초기화하거나 `hdTrans_Reload`,
+  `J2K_ReloadUserDict`를 부릅니다.
 - CLI: `hdtrans -dicts dicts -ehnd "C:\ezTrans XP\Ehnd"`로 다른 폴더를 줍니다. 건너뛴 줄은 표준 오류로
   알립니다.
 - C API: `hdTrans_OpenEhnd(dir)`, `hdTrans_FilterErrors(...)` ([api.md](api.md#c-api-hdtransengine)).
@@ -53,7 +56,7 @@ hdTrans:
 ## 파일 찾기, 인코딩, 순서
 
 - 폴더: Ehnd는 `<J2KEngine.dll 폴더>\Ehnd\`(3.20은 `FILTER_FILE_PATH` 설정으로 바꿀 수 있음),
-  hdTrans는 프로그램 옆의 `Ehnd` 또는 지정한 폴더. 하위 폴더는 읽지 않습니다.
+  hdTrans는 명시적으로 켠 프로그램 옆 `Ehnd` 또는 지정한 폴더. 하위 폴더는 읽지 않습니다.
 - 파일: `PreFilter*.txt`, `PostFilter*.txt`, `SkipLayer*.txt`, `UserDict*.txt`. 이름은 대소문자를
   가리지 않습니다. 접두사 뒤(`_@Hdor`, `#0#req`, `_C` 등)는 이름표일 뿐 뜻이 없고 순서에만 영향을
   줍니다.

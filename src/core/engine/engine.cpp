@@ -349,8 +349,8 @@ std::shared_ptr<const dict::Snapshot> Engine::Dictionaries() const {
     return snapshot_;
 }
 
-Session::Session(const Engine& engine, bool reference)
-    : engine_(engine), reference_(engine.reference_ || reference),
+Session::Session(const Engine& engine, bool reference, bool cg, bool misread)
+    : engine_(engine), reference_(engine.reference_ || reference), cg_(cg), misread_(misread),
       state_(std::make_unique<internal::SessionState>()) {
     std::lock_guard<std::mutex> lock(engine.mu_);
     snapshot_ = engine.snapshot_;
@@ -367,6 +367,8 @@ std::string Session::Translate(std::string_view text) {
     for (const std::string_view line : text::Lines(text)) lines.emplace_back(line);
     internal::TranslationOptions options;
     options.reference = reference_;
+    options.wordImprovements.cgRules = cg_;
+    options.wordImprovements.misreadFilter = misread_;
     options.filters = filters_.get();
     const std::vector<std::string> translated =
         internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, {}, options);
