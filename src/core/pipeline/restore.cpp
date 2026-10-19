@@ -185,6 +185,15 @@ int VowelOf(char32_t r) {
     return -1;
 }
 
+// Whether text ends in a Hangul syllable with a final consonant.
+bool AfterFinalConsonant(std::string_view text) {
+    std::size_t start = text.size();
+    while (start > 0 && (static_cast<unsigned char>(text[start - 1]) & 0xC0) == 0x80) start--;
+    if (start == 0) return false;
+    const auto syllable = text::Split(text::DecodeRune(text.substr(start - 1)).cp);
+    return syllable && syllable->final != text::kFinalNone;
+}
+
 }  // namespace
 
 Pieces DropAddedSpaces(const Pieces& typed, const Pieces& out) {
@@ -240,22 +249,27 @@ std::string KoreanForms(std::string_view s) {
 }
 
 std::string KoreanCleanup(std::string_view s) {
+    struct Row {
+        std::string from, to;
+        bool afterFinal;
+    };
     static const auto rows = [] {
-        std::vector<std::pair<std::string, std::string>> pairs;
+        std::vector<Row> parsed;
         const std::string table = dict::ExtraBuiltinText("cleanup.tsv");
         dict::TsvReader reader(table, "//");
         while (reader.Next()) {
             const auto& f = reader.Fields();
-            if (f.size() >= 2 && !f[0].empty()) pairs.emplace_back(f[0], f[1]);
+            if (f.size() < 2 || f[0].empty()) continue;
+            parsed.push_back({std::string(f[0]), std::string(f[1]), f.size() >= 3 && f[2] == "final"});
         }
-        return pairs;
+        return parsed;
     }();
     std::string out;
     out.reserve(s.size());
     while (!s.empty()) {
         bool matched = false;
-        for (const auto& [from, to] : rows) {
-            if (!s.starts_with(from)) continue;
+        for (const auto& [from, to, afterFinal] : rows) {
+            if (!s.starts_with(from) || (afterFinal && !AfterFinalConsonant(out))) continue;
             out += to;
             s.remove_prefix(from.size());
             matched = true;

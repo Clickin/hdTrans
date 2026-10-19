@@ -43,7 +43,8 @@ output::Pieces RestoreBrackets(const output::Pieces& typed, const output::Pieces
 // (제일의“문제아” -> 제일의 “문제아”).
 std::string KoreanForms(std::string_view s);
 
-// Literal spelling replacements; the first matching row wins and is not scanned again.
+// Literal spelling replacements; the first matching row wins and is not scanned again. A row
+// marked final applies only after a Hangul syllable with a final consonant (있읍니다 -> 있습니다).
 std::string KoreanCleanup(std::string_view s);
 
 // Each run of kana that the composer shifted by DropShift (kana the translation does
