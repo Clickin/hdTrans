@@ -17,7 +17,9 @@ hdTrans
 
 4. 사용자 사전과 설정은 hdTrans\user\에 둡니다.
    Linux와 macOS에서는 프로그램 옆 user/에 둡니다.
-   견본을 참고해 사용자 사전과 hdtrans.config.yaml을 따로 만드세요.
+   userdict.example.txt를 참고해 userdict.txt를 만드세요.
+   여러 파일로 나누려면 userdict로 시작하는 .txt 이름을 씁니다.
+   설정은 hdtrans.config.example.yaml을 hdtrans.config.yaml로 복사해 고칩니다.
    업데이트는 같은 폴더에 덮어 풀면 됩니다. 사용자 파일은 유지됩니다.
    배포본의 견본 파일은 수정하지 마세요. 업데이트 때 교체됩니다.
 
