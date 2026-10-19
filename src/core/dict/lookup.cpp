@@ -133,17 +133,20 @@ Candidates Snapshot::GetWordInfoImpl(std::string_view text, LookupMode mode, con
     // User-dictionary matches.
     int out = kNil;
     int userCount = 0;
-    user_.Prefixes(text, [&](int k, std::size_t n) {
-        user_.EachRecord(k, [&](const Record& r) {
-            userCount++;
-            Candidate c;
-            c.source = text.substr(0, n);
-            c.target = r.target;
-            c.codes = r.codes;
-            out = InsertUserCandidate(pool, out, pool.Add(c));
-            return true;
+    for (const Dict* user : {&user_, ctx.user}) {
+        if (!user) continue;
+        user->Prefixes(text, [&](int k, std::size_t n) {
+            user->EachRecord(k, [&](const Record& r) {
+                userCount++;
+                Candidate c;
+                c.source = text.substr(0, n);
+                c.target = r.target;
+                c.codes = r.codes;
+                out = InsertUserCandidate(pool, out, pool.Add(c));
+                return true;
+            });
         });
-    });
+    }
 
     std::string_view query = text;
     const int m = static_cast<int>(mode);
