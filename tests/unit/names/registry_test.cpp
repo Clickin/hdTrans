@@ -224,6 +224,8 @@ HD_TEST(names_readings_without_table) {
     HD_CHECK_EQ(blank.Render("魅音"), std::string("미온"));
     names::Registry plain = Scan(snap, Repeat("光さん、", 3));
     HD_CHECK_EQ(plain.Render("光"), std::string("히카루"));
+    names::Registry shota = Scan(snap, Repeat("翔太「おはよう」", 3));
+    HD_CHECK_EQ(shota.Render("翔太"), std::string("쇼타"));
 }
 
 HD_TEST(names_katakana_full_names) {
