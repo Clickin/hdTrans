@@ -1,0 +1,7 @@
+rule	input	expected	kind	layer
+L4567	姉に手紙を読んでもらった。	언니가 편지를 읽어 주었다.	fix	local
+L4567	先生に作文を直してもらった。	선생님이 작문을 고쳐 주었다.	fix	local
+L4567	水を運んでもらった。	물을 옮겨 주었다.	keep	local
+L4567	姉に読んでもらった。	언니가 읽어 주었다.	keep	local
+L4567	彼には笑ってもらった。	그는 웃어 주었다.	keep	local
+L4567	庭に花を植えてもらった。	뜰에 꽃을 심어 주었다.	keep	local

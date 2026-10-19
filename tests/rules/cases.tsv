@@ -673,8 +673,8 @@ L4554	勉強させられた。	공부 당했다.	current	local
 L4564	それより早く帰ろう。	그것보다 빨리 돌아가자.	current	local
 L4567	兄に車で送ってもらった。	형에게 차로 보내 주었다.	current	local
 L4567	友達に宿題を教えてもらった。	친구에게 숙제를 가르쳐 주었다.	current	local
-L4567	彼に本を読んでもらった。	그에게 책을 읽어 주었다.	current	local
-L4567	母に本を読んでもらった。	어머니에게 책을 읽어 주었다.	current	local
+L4567	彼に本を読んでもらった。	그가 책을 읽어 주었다.	current	local
+L4567	母に本を読んでもらった。	어머니가 책을 읽어 주었다.	current	local
 L4567	本を読んでもらった。	책을 읽어 주었다.	current	local
 L4577	彼はそういうのを食べる。	그는 그렇게 말하는 것을 먹는다.	current	local
 L4587	として当然だ。	로서 당연하다.	current	local
