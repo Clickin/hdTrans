@@ -92,15 +92,15 @@ int Verify(const Source& source, const File& file, long long cap) {
     int treeDiffs = 0;
     if (a.local.size() != again.local.size() || a.global.size() != again.global.size()) treeDiffs++;
     for (std::size_t i = 0; i < a.local.size() && i < again.local.size(); i++) {
-        const bool same = SameTree(a.local[i].body, again.local[i].body) && a.local[i].tests.size() == again.local[i].tests.size();
-        if (!same) std::fprintf(stderr, "L %zu differs after the round trip\n", i);
-        treeDiffs += !same;
+        const bool equal = SameTree(a.local[i].body, again.local[i].body) && a.local[i].tests.size() == again.local[i].tests.size();
+        if (!equal) std::fprintf(stderr, "L %zu differs after the round trip\n", i);
+        treeDiffs += !equal;
     }
     for (std::size_t i = 0; i < a.global.size() && i < again.global.size(); i++) {
         const Rule &x = a.global[i], &y = again.global[i];
-        const bool same = SameTree(x.body, y.body) && x.pumsa == y.pumsa && x.number == y.number && x.ugan == y.ugan;
-        if (!same) std::fprintf(stderr, "G %zu differs after the round trip\n", i);
-        treeDiffs += !same;
+        const bool equal = SameTree(x.body, y.body) && x.pumsa == y.pumsa && x.number == y.number && x.ugan == y.ugan;
+        if (!equal) std::fprintf(stderr, "G %zu differs after the round trip\n", i);
+        treeDiffs += !equal;
     }
     std::printf("readable round trip: %zu local and %zu global rules, %d tree differences, %zu bytes of readable text\n",
                 again.local.size(), again.global.size(), treeDiffs, readable.size());
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
 
     if (command == "lint") {
         Inventory inventory;
-        std::string error;
+        error.clear();
         if (!dicts.empty() && !LoadInventory(dicts, inventory, error)) {
             std::fprintf(stderr, "hdrulec: %s\n", error.c_str());
             return 2;
@@ -208,9 +208,9 @@ int main(int argc, char** argv) {
     if (command == "dump") {
         // The program as the engine loads it.
         rules::Program loaded;
-        rules::LoadError error{};
-        if (!rules::Load(source.text, loaded, error)) {
-            std::fprintf(stderr, "hdrulec: rules::Load rejects the program at line %d: %s\n", error.line, error.message);
+        rules::LoadError loadError{};
+        if (!rules::Load(source.text, loaded, loadError)) {
+            std::fprintf(stderr, "hdrulec: rules::Load rejects the program at line %d: %s\n", loadError.line, loadError.message);
             return 1;
         }
         const std::string dump = Dump(loaded);
