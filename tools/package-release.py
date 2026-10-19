@@ -3,6 +3,7 @@
 
 import argparse
 import hashlib
+import json
 from pathlib import Path
 import re
 import shutil
@@ -28,6 +29,17 @@ def common_files(source, destination):
         notices += f"\n\n=== {name} ===\n\n"
         notices += (source / name).read_text(encoding="utf-8")
     (destination / "THIRD-PARTY-NOTICES.txt").write_text(notices, encoding="utf-8")
+
+
+def dictionary_version(source):
+    digest = hashlib.sha256()
+    for path in sorted((source / "dicts").glob("*.tsv")):
+        digest.update(path.name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    version = json.loads((source / "npm/package.json").read_text(encoding="utf-8"))["version"]
+    return f"{version}+{digest.hexdigest()[:12]}\n"
 
 
 def zip_folder(folder, output):
@@ -61,6 +73,7 @@ def main():
         parser.error(f"invalid package version: {version!r}")
     args.output.mkdir(parents=True, exist_ok=True)
     packages = []
+    dict_version = dictionary_version(args.source)
     with tempfile.TemporaryDirectory(prefix="hdtrans-package-") as temporary:
         staging = Path(temporary)
         windows = staging / "windows"
@@ -74,6 +87,7 @@ def main():
         ):
             copy_file(builds["windows-x86"] / name, windows / renamed)
         shutil.copytree(builds["windows-x64"] / "hdTrans", windows / "hdTrans")
+        (windows / "hdTrans/dicts.txt").write_text(dict_version, encoding="utf-8")
         common_files(args.source, windows)
         package = args.output / f"hdTrans-{version}-windows.zip"
         zip_folder(windows, package)
@@ -92,6 +106,7 @@ def main():
             (folder / "hdtrans").chmod(0o755)
             for name in ("dicts", "user"):
                 shutil.copytree(builds[preset] / name, folder / name)
+            (folder / "dicts.txt").write_text(dict_version, encoding="utf-8")
             common_files(args.source, folder)
             package = args.output / f"hdTrans-{version}-{platform}-{arch_names[architecture]}.tar.gz"
             with tarfile.open(package, "w:gz", compresslevel=6) as archive:

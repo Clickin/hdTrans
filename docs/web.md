@@ -9,7 +9,8 @@ https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두
 |---|---|
 | `web/index.html`, `web/style.css` | 페이지 |
 | `web/src/app.ts` | 엔진과 사전을 받아(Cache Storage에 보관) 워커에 넘기고, 입력이 바뀌면 번역을 요청 |
-| `web/src/worker.ts` | 워커. `hdTransEngine.js`를 불러 `/dicts.hdsnap`과 나머지 사전 파일(`/dicts`)을 쓰고 C API로 번역 |
+| `web/src/worker.ts` | 워커. WASM과 사전 파일을 준비하고 `HdTrans` 인스턴스로 번역 |
+| `web/src/translator.ts` | 공용 [TypeScript API](typescript-api.md). 문자열 번역, 사용자 사전과 Ehnd 설정, JSON 선택 기록 |
 | `web/src/grid.ts` | 사용자 사전, 이름 표 편집기 (탭 구분 표, 붙여 넣기, 파일 열기, 저장) |
 | `web/src/names.ts` | 이름 표를 사용자 사전 줄로 바꿈 (품사가 없으면 `name`) |
 | `web/examples/`, `web/examples.tsv` | 예제 텍스트와 메뉴 이름 |
@@ -17,10 +18,9 @@ https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두
 | `web/check.mjs` | 헤드리스 Chrome으로 사이트를 확인 |
 | `web/deploy.sh` | 서버에 올림, 되돌림 |
 
-- 사용자 사전 표와 이름 표를 합쳐 엔진의 `/userdict.tsv`(사용자 계층)로 쓰고 엔진을 다시 불러옵니다.
-  불러오지 못하는 줄이 있으면 사용자 사전을 빼고 번역하며 오류를 보여 줍니다.
+- 사용자 사전 표와 이름 표를 합쳐 `setUserDictRaw()`로 넣습니다. 잘못된 내용은 오류를 보여 주고 이전에 적용한 사전을 유지합니다.
 - 문서 방식은 입력 전체를 한 세션으로(`hdtrans`와 같음), 줄 단위는 줄마다 새 세션으로(`hdtrans -each`와
-  같음) 번역합니다. 번역 전에 `hdTrans_Reset`으로 세션을 비웁니다.
+  같음) 번역합니다. 번역 전에 `reset()`으로 세션을 비웁니다.
 - 페이지 아래 버전 줄은 빌드한 커밋의 날짜(Asia/Seoul, `yyyy-MM-dd HH:mm:ss`)와 짧은 해시입니다.
 
 ## 빌드
@@ -79,6 +79,6 @@ HDTRANS_WEB_HOST=user@host HDTRANS_WEB_SSH='ssh -i KEY' web/deploy.sh rollback <
 
 ## 메모리
 
-WebAssembly 메모리는 줄어들지 않으므로 불러오는 동안 가장 많이 쓴 양이 계속 남습니다. 페이지는 TSV를
-컴파일하지 않고 `dicts.hdsnap`(약 36 MB)을 읽으므로 엔진 메모리는 불러온 뒤 약 56 MB입니다(TSV를 엔진에서
-컴파일하면 약 120 MB). 사용자 사전을 바꿀 때는 엔진을 내린 뒤 다시 불러오므로 더 커지지 않습니다.
+WebAssembly의 선형 메모리는 해제해도 크기가 줄지 않으며, 빈 공간을 이후 호출에서 재사용합니다.
+페이지는 TSV를 직접 컴파일하지 않고 `dicts.hdsnap`을 읽어 초기화 중 메모리 사용을 줄입니다.
+사용자 사전과 Ehnd 필터는 같은 인스턴스에서 교체하며, 번역 결과의 임시 메모리는 자동으로 정리합니다.

@@ -265,7 +265,8 @@ using internal::Quote;
 
 // The entries of one line, none for a blank or comment line. Returns an error
 // message, empty on success.
-std::string ParseLine(std::string_view line, Context& ctx, std::vector<dict::UserEntry>& out) {
+std::string ParseLine(std::string_view line, Context& ctx, std::vector<dict::UserEntry>& out,
+                      std::vector<SourceEntry>* sourceEntries) {
     if (const std::string_view t = internal::TrimSpace(line); t.empty() || t.starts_with("//") || t.starts_with("#")) {
         return {};
     }
@@ -360,12 +361,16 @@ std::string ParseLine(std::string_view line, Context& ctx, std::vector<dict::Use
         if (i == 0) e.negative = negativeTarget;
         out.push_back(std::move(e));
     }
+    if (sourceEntries) {
+        sourceEntries->push_back({std::string(jp), std::string(kr), std::string(internal::TrimSpace(fields[2])),
+                                  std::string(internal::TrimSpace(fields[3]))});
+    }
     return {};
 }
 
 }  // namespace
 
-Compiled Parse(std::string_view text, int file, Context& ctx) {
+Compiled Parse(std::string_view text, int file, Context& ctx, std::vector<SourceEntry>* sourceEntries) {
     if (text.starts_with("\xEF\xBB\xBF")) text.remove_prefix(3);
     Compiled out;
     int n = 0;
@@ -373,7 +378,7 @@ Compiled Parse(std::string_view text, int file, Context& ctx) {
         n++;
         while (line.ends_with('\r')) line.remove_suffix(1);
         const std::size_t start = out.entries.size();
-        if (std::string err = ParseLine(line, ctx, out.entries); !err.empty()) {
+        if (std::string err = ParseLine(line, ctx, out.entries, sourceEntries); !err.empty()) {
             out.entries.resize(start);
             out.errors.push_back({n, std::move(err)});
             continue;

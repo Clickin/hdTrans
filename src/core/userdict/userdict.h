@@ -70,9 +70,14 @@ struct Compiled {
     std::vector<Error> errors;
 };
 
+// The validated source row, before conjugation expands it into records.
+struct SourceEntry {
+    std::string ja, ko, pos, options;
+};
+
 // Compiles text, the file-th source in load order: entries carry file, their line
-// and their order within the line.
-Compiled Parse(std::string_view text, int file, Context& ctx);
+// and their order within the line. sourceEntries receives valid noncomment rows.
+Compiled Parse(std::string_view text, int file, Context& ctx, std::vector<SourceEntry>* sourceEntries = nullptr);
 
 // The register values of end rows: 1 plain (해라체), 2 casual (해체), 3 polite (해요체),
 // 4 formal (합쇼체), 5 archaic (하오체).

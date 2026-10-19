@@ -1,29 +1,4 @@
-// hdtrans: reads UTF-8 from stdin (or -in FILE) and writes the translation to stdout. The
-// whole input is one session unless -each or -raw is given.
-//   -config FILE          settings file (default: user/hdtrans.config.yaml in the data root)
-//   -dicts DIR[,DIR...]   dictionary folders in load order (default: data root/dicts,
-//                         else dicts in the current directory); a first
-//                         FILE.hdsnap gives the column dictionaries of the folders
-//   -userdict PATH        user dictionary file or folder; repeat for several sources
-//                         (default: userdict*.txt/tsv in data root/user; empty for none)
-//   -each                 a new session for every line
-//   -raw                  translate each line with the word pipeline only
-//   -reference            disable translation improvements
-//   -verify-dicts         verify source hashes and every cache segment
-//   -compile-dicts        compile and verify the dictionary cache, then exit
-//   -compile-snapshot FILE  compile the column dictionaries of the folders to FILE
-//                         (a .hdsnap for -dicts), then exit
-//   -no-cache             read only the editable dictionaries
-//   -why                  write word choices and shadow scores to stderr; each WHY line ends with
-//                         the layer and rule of the candidate and of the ending (docs/pipeline-layers.md)
-//   -stages DIR           write stage records (also HDTRANS_DRIVER_DUMP)
-//   -rule-counts FILE     write how often each selection rule ran and was true to FILE:
-//                         kind (L or G), index (G: PRIO), pumsa, number, ugan, runs, fires (TSV)
-//   -select-shadow        score shortest targets without changing the translation
-//   -misread              replace candidates the misread model scores as misreadings
-//   -no-cg                turn the hand CG-lite rules off
-//   -cg-learned           also run the learned CG-lite rules
-//   -in FILE              read the input from FILE
+// UTF-8 CLI. The whole input is one session unless --each or --raw is given.
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -33,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #ifdef _WIN32
@@ -52,6 +28,8 @@
 #include "core/engine/rules.h"
 #include "core/word/select.h"
 #include "stage_records.h"
+#include "trace_json.h"
+#include "frontend/dictionary_version.h"
 
 namespace {
 
@@ -100,6 +78,35 @@ std::string ExecutableDir() {
     return std::string(reinterpret_cast<const char*>(dir.data()), dir.size());
 }
 
+void Usage(std::FILE* file) {
+    std::fputs("hdTrans\nAuthor: Sokcuri (https://sokcuri.neko.kr/)\n\n"
+               "usage: hdtrans [options] [text]\n"
+               "  --in FILE, --file FILE  read UTF-8 input (default: stdin)\n"
+               "  --out FILE             write UTF-8 output (default: stdout)\n"
+               "  --json                 return text, choices and logs as JSON\n"
+               "  --why                  write selection and filter logs to stderr\n"
+               "  --version              load dictionaries and show engine, runtime and dictionary versions\n"
+               "  --help                 show this help\n"
+               "  --config FILE          settings file\n"
+               "  --dicts DIR,...        dictionary paths in load order\n"
+               "  --userdict PATH        user dictionary file or folder (repeatable)\n"
+               "  --ehnd DIR             opt-in Ehnd folder\n"
+               "  --each, --raw          independent lines, or word-pipeline-only lines\n"
+               "  --reference, --misread, --no-cg, --cg-learned, --select-shadow\n"
+               "  --verify-dicts, --compile-dicts, --compile-snapshot FILE, --no-cache\n"
+               "  --stages DIR, --rule-counts FILE\n"
+               "Legacy single-hyphen options are also accepted. Use -- before literal text starting with '-'.\n", file);
+}
+
+std::FILE* OpenFile(const std::string& path, bool write) {
+#ifdef _WIN32
+    const std::u8string utf8(path.begin(), path.end());
+    return _wfopen(std::filesystem::path(utf8).c_str(), write ? L"wb" : L"rb");
+#else
+    return std::fopen(path.c_str(), write ? "wb" : "rb");
+#endif
+}
+
 bool ReadAll(std::FILE* f, std::string& out) {
     char buf[1 << 16];
     for (;;) {
@@ -119,6 +126,10 @@ void PrintEscaped(std::string_view text) {
         default: std::fputc(static_cast<unsigned char>(c), stderr); break;
         }
     }
+}
+
+void WhyFilterLog(void*, std::string_view message) {
+    std::fwrite(message.data(), 1, message.size(), stderr);
 }
 
 struct WhyContext {
@@ -206,7 +217,9 @@ bool WriteRuleCounts(const std::string& path, const hdTrans::rules::Program& pro
 
 }  // namespace
 
-int main(int argc, char** argv) {
+namespace {
+
+int RunMain(int argc, char** argv) {
 #ifdef _WIN32
     // The output bytes are the same on every platform: no text-mode CRLF translation.
     _setmode(_fileno(stdin), _O_BINARY);
@@ -216,7 +229,11 @@ int main(int argc, char** argv) {
     std::optional<std::string> dictsArg, snapshotOut;
     std::optional<std::vector<std::string>> userPathsArg;
     std::optional<std::string> ehndArg, configArg;
-    std::string inPath;
+    std::string inPath, outPath, argumentText;
+    bool hasText = false;
+    bool json = false;
+    bool version = false;
+    bool literal = false;
     std::string ruleCountsPath;
     const char* dump = std::getenv("HDTRANS_DRIVER_DUMP");
     std::string stagesDir = dump ? dump : "";
@@ -232,41 +249,78 @@ int main(int argc, char** argv) {
     bool compileDicts = false;
     bool noCache = false;
     for (int i = 1; i < argc; i++) {
-        const char* a = argv[i];
-        if (!std::strcmp(a, "-version")) {
-            std::puts(HDTRANS_VERSION);
-            return 0;
+        std::string option = argv[i];
+        if (!literal && option == "--") {
+            literal = true;
+            continue;
         }
-        if (!std::strcmp(a, "-dicts") && i + 1 < argc) dictsArg = argv[++i];
-        else if (!std::strcmp(a, "-config") && i + 1 < argc) configArg = argv[++i];
-        else if (!std::strcmp(a, "-userdict") && i + 1 < argc) {
-            if (!userPathsArg) userPathsArg.emplace();
-            userPathsArg->emplace_back(argv[++i]);
+        if (literal || option.empty() || option.front() != '-') {
+            if (hasText) argumentText += ' ';
+            argumentText += option;
+            hasText = true;
+            continue;
         }
-        else if (!std::strcmp(a, "-in") && i + 1 < argc) inPath = argv[++i];
-        else if (!std::strcmp(a, "-ehnd") && i + 1 < argc) ehndArg = argv[++i];
-        else if (!std::strcmp(a, "-stages") && i + 1 < argc) stagesDir = argv[++i];
-        else if (!std::strcmp(a, "-rule-counts") && i + 1 < argc) ruleCountsPath = argv[++i];
-        else if (!std::strcmp(a, "-raw")) raw = true;
-        else if (!std::strcmp(a, "-each")) each = true;
-        else if (!std::strcmp(a, "-reference")) reference = true;
-        else if (!std::strcmp(a, "-verify-dicts")) verifyDicts = true;
-        else if (!std::strcmp(a, "-compile-dicts")) compileDicts = true;
-        else if (!std::strcmp(a, "-compile-snapshot") && i + 1 < argc) snapshotOut = argv[++i];
-        else if (!std::strcmp(a, "-no-cache")) noCache = true;
-        else if (!std::strcmp(a, "-why")) why = true;
-        else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
-        else if (!std::strcmp(a, "-misread")) misread = true;
-        else if (!std::strcmp(a, "-no-cg")) noCg = true;
-        else if (!std::strcmp(a, "-cg-learned")) cgLearned = true;
-        else {
-            std::fprintf(stderr, "usage: hdtrans [-version] [-config FILE] [-dicts DIR,...] [-userdict PATH]... [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]\n"
-                                 "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
-                                 "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
-                                 "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
-                                 "Published cache generations must not be overwritten or truncated in place.\n");
+        std::optional<std::string> value;
+        if (option.starts_with("--")) {
+            const auto equal = option.find('=');
+            if (equal != std::string::npos) {
+                value = option.substr(equal + 1);
+                option.resize(equal);
+            }
+            option.erase(0, 1);
+        }
+        if (option == "-file" || option == "-i") option = "-in";
+        if (option == "-o") option = "-out";
+        if (option == "-v") option = "-version";
+        if (option == "-h") option = "-help";
+        const bool takesValue = option == "-dicts" || option == "-config" || option == "-userdict"
+            || option == "-in" || option == "-out" || option == "-ehnd" || option == "-stages"
+            || option == "-rule-counts" || option == "-compile-snapshot";
+        if (takesValue && !value) {
+            if (i + 1 == argc) {
+                std::fprintf(stderr, "hdtrans: %s requires a value\n", argv[i]);
+                return 2;
+            }
+            value = argv[++i];
+        } else if (!takesValue && value) {
+            std::fprintf(stderr, "hdtrans: %s does not take a value\n", option.c_str());
             return 2;
         }
+        if (option == "-help") { Usage(stdout); return 0; }
+        else if (option == "-version") version = true;
+        else if (option == "-json") json = true;
+        else if (option == "-dicts") dictsArg = *value;
+        else if (option == "-config") configArg = *value;
+        else if (option == "-userdict") {
+            if (!userPathsArg) userPathsArg.emplace();
+            userPathsArg->push_back(*value);
+        }
+        else if (option == "-in") inPath = *value;
+        else if (option == "-out") outPath = *value;
+        else if (option == "-ehnd") ehndArg = *value;
+        else if (option == "-stages") stagesDir = *value;
+        else if (option == "-rule-counts") ruleCountsPath = *value;
+        else if (option == "-raw") raw = true;
+        else if (option == "-each") each = true;
+        else if (option == "-reference") reference = true;
+        else if (option == "-verify-dicts") verifyDicts = true;
+        else if (option == "-compile-dicts") compileDicts = true;
+        else if (option == "-compile-snapshot") snapshotOut = *value;
+        else if (option == "-no-cache") noCache = true;
+        else if (option == "-why") why = true;
+        else if (option == "-select-shadow") selectShadow = true;
+        else if (option == "-misread") misread = true;
+        else if (option == "-no-cg") noCg = true;
+        else if (option == "-cg-learned") cgLearned = true;
+        else {
+            std::fprintf(stderr, "hdtrans: unknown option %s\n", argv[i]);
+            Usage(stderr);
+            return 2;
+        }
+    }
+    if (hasText && !inPath.empty()) {
+        std::fputs("hdtrans: text arguments and --in cannot be combined\n", stderr);
+        return 2;
     }
 
     const std::string programDir = ExecutableDir();
@@ -368,16 +422,25 @@ int main(int argc, char** argv) {
     }
     for (const std::string& e : engine.FilterErrors()) std::fprintf(stderr, "hdtrans: %s\n", e.c_str());
 
-    std::string input;
-    if (inPath.empty()) {
-        if (!ReadAll(stdin, input)) return 1;
-    } else {
-        std::FILE* f = std::fopen(inPath.c_str(), "rb");
-        if (!f || !ReadAll(f, input)) {
-            std::fprintf(stderr, "hdtrans: cannot read %s\n", inPath.c_str());
-            return 1;
+    if (version) {
+        const std::string dictionaryVersion = hdTrans::frontend::DictionaryVersion(folders);
+        std::printf("hdTrans v%s (native) / dict %s\n", HDTRANS_VERSION, dictionaryVersion.c_str());
+        return 0;
+    }
+
+    std::string input = argumentText;
+    if (!hasText) {
+        if (inPath.empty() || inPath == "-") {
+            if (!ReadAll(stdin, input)) return 1;
+        } else {
+            std::FILE* f = OpenFile(inPath, false);
+            const bool read = f && ReadAll(f, input);
+            if (f) std::fclose(f);
+            if (!read) {
+                std::fprintf(stderr, "hdtrans: cannot read %s\n", inPath.c_str());
+                return 1;
+            }
         }
-        std::fclose(f);
     }
 
     const auto snapshot = engine.Dictionaries();
@@ -400,7 +463,10 @@ int main(int argc, char** argv) {
         observer.context = &whyContext;
         observer.line = WhyLine;
         observer.resolved = WhyResolved;
+        observer.filterLog = WhyFilterLog;
     }
+    hdTrans::internal::TraceCollector trace;
+    if (json) observer = hdTrans::internal::TraceObserver(trace, observer);
     stagerecords::Collector collector;
     const bool stages = !stagesDir.empty();
     collector.families = &generated->families;
@@ -408,13 +474,38 @@ int main(int argc, char** argv) {
     const hdTrans::rules::Program& program = hdTrans::internal::RulesProgram();
     hdTrans::rules::Tally tally(program);
     if (!ruleCountsPath.empty()) options.ruleTally = &tally;
+    std::string output;
+    auto emit = [&](std::string_view text) {
+        if (json || !outPath.empty()) output.append(text);
+        else std::fwrite(text.data(), 1, text.size(), stdout);
+    };
     auto finish = [&] {
         if (stages && !stagerecords::Dump(stagesDir, collector)) return 1;
         if (!ruleCountsPath.empty() && !WriteRuleCounts(ruleCountsPath, program, tally)) {
             std::fprintf(stderr, "hdtrans: cannot write %s\n", ruleCountsPath.c_str());
             return 1;
         }
-        return 0;
+        if (json) {
+            trace.result.text = std::move(output);
+            output = hdTrans::cli::TraceJson(trace.result);
+            output += '\n';
+        }
+        if (!outPath.empty()) {
+            std::FILE* file = OpenFile(outPath, true);
+            if (!file) {
+                std::fprintf(stderr, "hdtrans: cannot write %s\n", outPath.c_str());
+                return 1;
+            }
+            const bool written = std::fwrite(output.data(), 1, output.size(), file) == output.size();
+            const bool closed = std::fclose(file) == 0;
+            if (!written || !closed) {
+                std::fprintf(stderr, "hdtrans: cannot write %s\n", outPath.c_str());
+                return 1;
+            }
+        } else if (json) {
+            std::fwrite(output.data(), 1, output.size(), stdout);
+        }
+        return std::fflush(stdout) == 0 ? 0 : 1;
     };
 
     if (!raw && !each) {
@@ -431,8 +522,8 @@ int main(int argc, char** argv) {
             hdTrans::internal::TranslateDocument(*snapshot, *generated, lines, memory, observer, options);
         for (size_t i = 0; i < translated.size(); i++) {
             if (stages) stagerecords::AddOutput(collector, static_cast<int>(i) + 1, translated[i]);
-            if (i > 0) std::fputc('\n', stdout);
-            std::fwrite(translated[i].data(), 1, translated[i].size(), stdout);
+            if (i > 0) emit("\n");
+            emit(translated[i]);
         }
         return finish();
     }
@@ -453,10 +544,37 @@ int main(int argc, char** argv) {
             stagerecords::AddOutput(collector, collector.caseBase + 1, out);
             collector.caseBase++;
         }
-        std::fwrite(out.data(), 1, out.size(), stdout);
-        std::fputc('\n', stdout);
+        emit(out);
+        emit("\n");
         whyContext.lineBase++;
+        trace.lineBase++;
+        trace.line = trace.lineBase;
         start = end + 1;
     }
     return finish();
 }
+
+}  // namespace
+
+#ifdef _WIN32
+int wmain(int argc, wchar_t** argv) {
+    std::vector<std::string> storage;
+    storage.reserve(static_cast<std::size_t>(argc));
+    for (int i = 0; i < argc; i++) {
+        const int size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, argv[i], -1, nullptr, 0, nullptr, nullptr);
+        if (size == 0) return 2;
+        std::string text(static_cast<std::size_t>(size), '\0');
+        if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, argv[i], -1, text.data(), size, nullptr, nullptr) == 0) return 2;
+        text.pop_back();
+        storage.push_back(std::move(text));
+    }
+    std::vector<char*> arguments;
+    for (auto& text : storage) arguments.push_back(text.data());
+    arguments.push_back(nullptr);
+    return RunMain(argc, arguments.data());
+}
+#else
+int main(int argc, char** argv) {
+    return RunMain(argc, argv);
+}
+#endif

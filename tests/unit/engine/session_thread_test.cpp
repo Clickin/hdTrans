@@ -22,7 +22,9 @@
 #include "core/engine.h"
 #include "core/dict/snapshot_file.h"
 #include "core/engine/driver.h"
+#include "core/engine/trace.h"
 #include "core/engine/raw.h"
+#include "frontend/dictionary_version.h"
 #include "core/text/lines.h"
 #include "hdtest.h"
 
@@ -566,4 +568,109 @@ HD_TEST(engine_session_fallback_history) {
     session.Reset();
     hdTrans::Session fresh(textEngine);
     HD_CHECK_EQ(session.Translate("お兄様！"), fresh.Translate("お兄様！"));
+}
+
+HD_TEST(session_explicit_observer_is_call_local) {
+    hdTrans::Engine engine(false, hdTrans::CacheWrite::Off);
+    HD_REQUIRE(engine.Open({LocalDictionary()}));
+    hdTrans::Session session(engine), independent(engine);
+    struct Trace {
+        int line = -1;
+        int calls = 0;
+        std::vector<std::string> surfaces;
+        std::vector<std::string> logs;
+    } trace;
+    hdTrans::internal::StageObserver observer;
+    observer.context = &trace;
+    observer.line = [](void* context, int line) { static_cast<Trace*>(context)->line = line; };
+    observer.resolved = [](void* context, int, int, const hdTrans::word::Chain& chain) {
+        auto& out = *static_cast<Trace*>(context);
+        ++out.calls;
+        for (const auto* item = chain.head; item; item = item->next) {
+            if (item->group) out.surfaces.push_back(item->group->surface);
+        }
+    };
+    observer.filterLog = [](void* context, std::string_view message) {
+        static_cast<Trace*>(context)->logs.emplace_back(message);
+    };
+    const std::string input = "学生\nお兄様";
+    const std::string ordinary = session.Translate(input);
+    session.Reset();
+    HD_CHECK_EQ(hdTrans::internal::TranslateObserved(session, input, observer), ordinary);
+    HD_CHECK_EQ(trace.line, 1);
+    HD_CHECK(trace.calls > 0);
+    HD_CHECK(std::find(trace.surfaces.begin(), trace.surfaces.end(), "学生") != trace.surfaces.end());
+    const int calls = trace.calls;
+    HD_CHECK(!trace.logs.empty());
+    const std::size_t logCount = trace.logs.size();
+    session.Reset();
+    HD_CHECK_EQ(session.Translate(input), ordinary);
+    HD_CHECK_EQ(independent.Translate(input), ordinary);
+    HD_CHECK_EQ(trace.calls, calls);
+    HD_CHECK_EQ(trace.logs.size(), logCount);
+    Trace other;
+    observer.context = &other;
+    independent.Reset();
+    HD_CHECK_EQ(hdTrans::internal::TranslateObserved(independent, input, observer), ordinary);
+    HD_CHECK(other.calls > 0);
+    HD_CHECK_EQ(trace.calls, calls);
+    HD_CHECK_EQ(trace.logs.size(), logCount);
+}
+
+HD_TEST(session_trace_collector_forwards_and_offsets) {
+    hdTrans::Engine engine(false, hdTrans::CacheWrite::Off);
+    HD_REQUIRE(engine.Open({LocalDictionary()}));
+    hdTrans::Session session(engine);
+    hdTrans::internal::TraceCollector collector;
+    collector.lineBase = 4;
+    int forwarded = 0;
+    hdTrans::internal::StageObserver downstream;
+    downstream.context = &forwarded;
+    downstream.line = [](void* context, int) { ++*static_cast<int*>(context); };
+    downstream.resolved = [](void* context, int, int, const hdTrans::word::Chain&) {
+        ++*static_cast<int*>(context);
+    };
+    downstream.filterLog = [](void* context, std::string_view) { ++*static_cast<int*>(context); };
+    collector.result.text = hdTrans::internal::TranslateObserved(session, "学生\nお兄様",
+        hdTrans::internal::TraceObserver(collector, downstream));
+    HD_CHECK_EQ(collector.result.text, "학생님\n오라버니");
+    HD_REQUIRE(collector.result.choices.size() >= 2);
+    HD_CHECK_EQ(collector.result.choices.front().line, 4);
+    HD_CHECK_EQ(collector.result.choices.back().line, 5);
+    HD_CHECK_EQ(collector.result.choices.front().surface, "学生");
+    HD_CHECK_EQ(collector.result.choices.front().choice.text, "학생님");
+    HD_CHECK_EQ(collector.result.choices.front().choice.provenance, "Single");
+    HD_CHECK(forwarded >= 4);
+    HD_CHECK(!collector.result.logs.empty());
+    const int count = forwarded;
+    session.Reset();
+    HD_CHECK_EQ(session.Translate("学生"), "학생님");
+    HD_CHECK_EQ(forwarded, count);
+}
+
+HD_TEST(dictionary_version_follows_base_data_path) {
+    DictionaryFolder root("unused");
+    HD_REQUIRE(!root.path.empty());
+    const auto child = root.path / std::filesystem::path(u8"辞書");
+    const auto other = root.path / "other";
+    std::error_code error;
+    HD_REQUIRE(std::filesystem::create_directory(child, error));
+    HD_REQUIRE(std::filesystem::create_directory(other, error));
+    const auto utf8 = [](const std::filesystem::path& path) {
+        const auto text = path.u8string();
+        return std::string(reinterpret_cast<const char*>(text.data()), text.size());
+    };
+    const auto version = [&](const std::filesystem::path& path) {
+        return hdTrans::frontend::DictionaryVersion({utf8(path)});
+    };
+    HD_CHECK_EQ(version(child), "development (unversioned)");
+    std::ofstream(root.path / "dicts.txt", std::ios::binary) << "parent-v1\r\nignored\n";
+    HD_CHECK_EQ(version(child), "parent-v1");
+    std::ofstream(child / "dicts.txt", std::ios::binary) << "\xEF\xBB\xBF" "child-v2\n";
+    HD_CHECK_EQ(version(child), "child-v2");
+    HD_CHECK_EQ(hdTrans::frontend::DictionaryVersion({utf8(child) + "/"}), "child-v2");
+    HD_CHECK_EQ(version(root.path / "bundle.hdsnap"), "parent-v1");
+    HD_CHECK_EQ(version(other), "parent-v1");
+    HD_CHECK_EQ(hdTrans::frontend::DictionaryVersion({utf8(child), utf8(other)}), "child-v2");
+    HD_CHECK_EQ(hdTrans::frontend::DictionaryVersion({}), "development (unversioned)");
 }

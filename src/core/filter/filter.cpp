@@ -220,6 +220,7 @@ std::shared_ptr<const Filters> Build(const std::vector<Source>& sources, std::ve
     struct ParsedCondition {
         Stage stage;
         int layer;
+        std::string label;
         std::u16string cond;
         std::string file;
         int line;
@@ -244,7 +245,7 @@ std::shared_ptr<const Filters> Build(const std::vector<Source>& sources, std::ve
                 if (line.starts_with(u"//")) continue;
                 const std::vector<std::u16string_view> f = Fields(line, 0, false);
                 if (f.size() < 2 || !(f[0].starts_with(u"PRE") || f[0].starts_with(u"POST"))) continue;
-                conditions.push_back({f[0].starts_with(u"PRE") ? Stage::Pre : Stage::Post, ToInt(f[1]),
+                conditions.push_back({f[0].starts_with(u"PRE") ? Stage::Pre : Stage::Post, ToInt(f[1]), Utf8(f[1]),
                                       f.size() > 2 ? std::u16string(f[2]) : std::u16string(), s.name, number});
             }
             break;
@@ -302,6 +303,9 @@ std::shared_ptr<const Filters> Build(const std::vector<Source>& sources, std::ve
         for (ParsedRow& r : rows[stage]) {
             Filters::Rule rule;
             rule.layer = r.layer;
+            rule.file = r.file;
+            rule.line = r.line - 1;
+            rule.regexFlag = r.regex;
             rule.kind = static_cast<Filters::Kind>(r.kind);
             rule.check = r.dest == u"_MATCH_CHECK";
             if (!r.gate.empty()) rule.gate = toggles.Id(r.gate);
@@ -330,12 +334,15 @@ std::shared_ptr<const Filters> Build(const std::vector<Source>& sources, std::ve
         Filters::Program& p = c.stage == Stage::Pre ? fs.pre_ : fs.post_;
         Filters::Condition cond;
         cond.layer = c.layer;
-        if (compile(c.cond, p.matcher, cond.regex, cond.units, c.file, c.line)) p.conditions.push_back(cond);
+        cond.label = c.label;
+        if (compile(c.cond, p.matcher, cond.regex, cond.units, c.file, c.line)) p.conditions.push_back(std::move(cond));
     }
     pcre2_compile_context_free_16(context);
     fs.pre_.matcher.Build();
     fs.post_.matcher.Build();
     fs.defaults_ = toggles.states;
+    fs.toggleNames_.resize(toggles.states.size());
+    for (const auto& [name, id] : toggles.ids) fs.toggleNames_[static_cast<std::size_t>(id)] = Utf8(name);
 
     for (const UserRow& r : userRows) {
         const int32_t code = fs.codes_.Intern(r.phrase ? "A9D0" : "I110", r.attr, "", "GN");
@@ -364,11 +371,11 @@ bool ReplaceAll(std::u16string& text, std::u16string_view src, std::u16string_vi
 
 }  // namespace
 
-void Filters::Apply(Stage stage, std::string& line, Toggles& toggles) const {
+void Filters::Apply(Stage stage, std::string& line, Toggles& toggles, LogSink log) const {
     const Program& p = stage == Stage::Pre ? pre_ : post_;
     if (line.empty() || p.rules.empty()) return;
     std::u16string text = Utf16(line);
-    Run(p, text, toggles);
+    Run(stage, p, text, toggles, log);
     line = Utf8(text);
 }
 
@@ -515,7 +522,7 @@ bool ReplaceRegex(const pcre2_code_16* re, std::u16string& text, std::u16string_
 
 }  // namespace
 
-void Filters::Run(const Program& p, std::u16string& text, Toggles& toggles) const {
+void Filters::Run(Stage stage, const Program& p, std::u16string& text, Toggles& toggles, LogSink log) const {
     std::vector<uint32_t> seen(p.matcher.Size());
     uint32_t stamp = 0;
     bool dirty = true;
@@ -538,7 +545,8 @@ void Filters::Run(const Program& p, std::u16string& text, Toggles& toggles) cons
     };
 
     int layer = -1;
-    bool skipLayer = false, guard = false;
+    bool skipLayer = false, guard = false, loggedSkip = false;
+    std::string skipped;
     for (const Rule& r : p.rules) {
         if (r.layer != layer) {
             layer = r.layer;
@@ -547,6 +555,11 @@ void Filters::Run(const Program& p, std::u16string& text, Toggles& toggles) cons
                                                 [](const Condition& c, int l) { return c.layer < l; });
             for (auto c = first; c != p.conditions.end() && c->layer == layer && !skipLayer; ++c) {
                 skipLayer = !search(c->regex, c->units);
+                if (skipLayer && log.write) {
+                    if (loggedSkip) skipped += ", ";
+                    skipped += c->label;
+                    loggedSkip = true;
+                }
             }
         }
         if (skipLayer) continue;
@@ -574,8 +587,27 @@ void Filters::Run(const Program& p, std::u16string& text, Toggles& toggles) cons
             }
         }
         if (!fired) continue;
-        if (r.sets >= 0) toggles[static_cast<std::size_t>(r.sets)] = r.on;
+        if (log.write) {
+            const std::string message = std::string(stage == Stage::Pre ? "PreFilter" : "PostFIlter") + " : [" +
+                                        r.file + ":" + std::to_string(r.line) + "] | " + Utf8(r.src) + " | " +
+                                        Utf8(r.dest) + " | " + std::to_string(r.layer) + " | " +
+                                        std::to_string(r.regexFlag) + "\n";
+            log.write(log.context, message);
+        }
+        if (r.sets >= 0) {
+            toggles[static_cast<std::size_t>(r.sets)] = r.on;
+            if (log.write) {
+                const std::string message = "토글 변수 " + toggleNames_[static_cast<std::size_t>(r.sets)] +
+                                            "의 상태가 " + (r.on ? "ON으로 변경.\n" : "OFF로 변경.\n");
+                log.write(log.context, message);
+            }
+        }
         if (r.kind == Kind::Guard) guard = true;
+    }
+    if (loggedSkip) {
+        const std::string message = std::string(stage == Stage::Pre ? "PreSkipLayer" : "PostSkipLayer") + " : " +
+                                    skipped + "\n";
+        log.write(log.context, message);
     }
 }
 

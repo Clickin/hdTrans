@@ -18,6 +18,10 @@
 #include "core/word/analyze.h"
 #include "core/word/document_senses.h"
 
+namespace hdTrans {
+class Session;
+}
+
 namespace hdTrans::filter {
 class Filters;
 }
@@ -45,7 +49,12 @@ struct StageObserver {
     // The cleaned-up pieces of a line (C), then the restore steps of the line (R1-R3, OUT).
     void (*cleaned)(void* context, const output::Pieces& pieces) = nullptr;
     void (*restored)(void* context, const pipeline::RestoreSteps& steps) = nullptr;
+    // Ehnd-style stage snapshots and fired filter rules, including trailing newlines.
+    void (*filterLog)(void* context, std::string_view message) = nullptr;
 };
+
+// Uses the session's dictionaries and context without retaining the observer.
+std::string TranslateObserved(Session& session, std::string_view text, const StageObserver& observer);
 
 // The marker families of one loaded dictionary, made by the translations of all sessions.
 // Resolve and compose of a sentence run under mu.

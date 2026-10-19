@@ -24,6 +24,12 @@ namespace hdTrans::filter {
 
 enum class Stage : uint8_t { Pre, Post };
 
+// Each message includes its newline; the view lasts until write returns.
+struct LogSink {
+    void* context = nullptr;
+    void (*write)(void* context, std::string_view line) = nullptr;
+};
+
 // A file of a filter set; texts are UTF-8.
 struct Source {
     enum class Kind : uint8_t { PreFilter, PostFilter, SkipLayer, UserDict };
@@ -53,7 +59,7 @@ public:
     Toggles Start() const { return defaults_; }
 
     // Rewrites line (without "\n") with the rows of stage; an empty line stays empty.
-    void Apply(Stage stage, std::string& line, Toggles& toggles) const;
+    void Apply(Stage stage, std::string& line, Toggles& toggles, LogSink log = {}) const;
 
     // The user dictionary records of the UserDict files; null for none.
     const dict::Dict* User() const { return user_.Len() > 0 ? &user_ : nullptr; }
@@ -69,6 +75,9 @@ private:
     struct Rule {
         std::u16string src, dest;
         int layer = 0;
+        std::string file;
+        int line = 0;  // 0-based physical source row
+        int regexFlag = 0;
         int32_t regex = -1;    // the index in regexes; -1 for a literal row
         // Matcher patterns the text must hold, -1 for none: of a literal row its src; of a
         // regex row the code units every match starts with and holds.
@@ -85,6 +94,7 @@ private:
     // A SkipLayer condition: the rows of layer run only when cond matches.
     struct Condition {
         int layer = 0;
+        std::string label;
         int32_t regex = -1;
         int32_t units[2] = {-1, -1};
     };
@@ -95,12 +105,13 @@ private:
         Matcher matcher;
     };
 
-    void Run(const Program& p, std::u16string& text, Toggles& toggles) const;
+    void Run(Stage stage, const Program& p, std::u16string& text, Toggles& toggles, LogSink log) const;
 
     Program pre_, post_;
     std::vector<pcre2_real_code_16*> regexes_;
     uint32_t pairs_ = 1;  // the most offset pairs a match of the regexes needs
     Toggles defaults_;
+    std::vector<std::string> toggleNames_;
     dict::CodeTable codes_;
     dict::Dict user_;
 };

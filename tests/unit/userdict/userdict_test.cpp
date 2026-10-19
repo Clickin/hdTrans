@@ -341,3 +341,34 @@ HD_TEST(userdict_eu_imperative_model) {
     HD_CHECK(!p.out.entries[1].euImperative);
     HD_CHECK(!p.out.entries[2].euImperative);
 }
+
+HD_TEST(userdict_validated_source_rows) {
+    const std::string text = "\xEF\xBB\xBF# comment\n  // comment\n"
+        "学生\t동료\tn\tprio=3 force\t// trailing\n"
+        "学生\t학우\tn\tprio=1\n蒼月\t아오츠키\tsurname\tprio=2\r\n"
+        "勉強する\t공부하다\tv\n手伝う\t돕다\tv:ㅂ\nたん\t\thon\n"
+        "猫\t냥이\tn\tbogus\n";
+    Parsed normal, captured;
+    Run(normal, text);
+    Context context{&captured.codes, &captured.families, nullptr};
+    std::vector<SourceEntry> rows;
+    captured.out = Parse(text, 0, context, &rows);
+    HD_CHECK_EQ(Show(captured.out.entries), Show(normal.out.entries));
+    HD_CHECK_EQ(Errors(captured.out.errors), Errors(normal.out.errors));
+    HD_REQUIRE(rows.size() == 6);
+    HD_CHECK_EQ(rows[0].ja, "学生");
+    HD_CHECK_EQ(rows[0].ko, "동료");
+    HD_CHECK_EQ(rows[0].options, "prio=3 force");
+    HD_CHECK_EQ(rows[1].ja, "学生");
+    HD_CHECK_EQ(rows[1].options, "prio=1");
+    HD_CHECK_EQ(rows[2].pos, "surname");
+    HD_CHECK_EQ(rows[3].ja, "勉強する");
+    HD_CHECK_EQ(rows[3].ko, "공부하다");
+    HD_CHECK_EQ(rows[3].pos, "v");
+    HD_CHECK_EQ(rows[4].pos, "v:ㅂ");
+    HD_CHECK_EQ(rows[5].pos, "hon");
+    HD_CHECK(rows[5].ko.empty());
+    HD_CHECK(captured.out.entries.size() > rows.size());
+    HD_REQUIRE(captured.out.errors.size() == 1);
+    HD_CHECK_EQ(captured.out.errors[0].line, 9);
+}

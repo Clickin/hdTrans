@@ -97,6 +97,9 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '22'
+      - name: Install TypeScript tools
+        if: matrix.preset == 'wasm'
+        run: npm --prefix web ci
       - name: Set up sccache
         if: matrix.preset != 'wasm'
         uses: mozilla-actions/sccache-action@v0.0.11
@@ -142,6 +145,12 @@ jobs:
         env:
           EM_COMPILER_WRAPPER: ${{ matrix.preset == 'wasm' && 'ccache' || '' }}
         run: cmake --build --preset "${{ matrix.preset }}" --parallel "$BUILD_JOBS"
+      - name: Build TypeScript API and check types
+        if: matrix.preset == 'wasm'
+        run: |
+          npm --prefix web run compile
+          npm --prefix web run test:types
+          cp build/web/translator.js build/web/translator.d.ts build/wasm/
       - name: Stage data, examples and licences
         run: |
           root="build/${{ matrix.preset }}"
@@ -163,7 +172,8 @@ jobs:
         run: |
           unset HDTRANS_REQUIRE_ALL HDTRANS_GOLDEN HDTRANS_DICTS HDTRANS_TEST_EXCLUDE
           if [[ "${{ matrix.preset }}" == wasm ]]; then
-            node --experimental-default-type=module tools/wasm_smoke.mjs \
+            HDTRANS_WASM_WRAPPER=build/wasm/translator.js \
+              node --experimental-default-type=module tools/wasm_smoke.mjs \
               build/wasm/hdTransEngine.js tests/unit/dict/testdata/folder/base.tsv \
               2>&1 | tee build/wasm/ctest.log
           else
@@ -214,6 +224,8 @@ jobs:
             build/${{ matrix.preset }}/J2KEngine.lib
             build/${{ matrix.preset }}/hdTransEngine.js
             build/${{ matrix.preset }}/hdTransEngine.wasm
+            build/${{ matrix.preset }}/translator.js
+            build/${{ matrix.preset }}/translator.d.ts
             build/${{ matrix.preset }}/hdTrans/
             build/${{ matrix.preset }}/dicts/
             build/${{ matrix.preset }}/user/
