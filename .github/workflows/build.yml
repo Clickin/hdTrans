@@ -9,28 +9,87 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SCCACHE_DIR: ${{ github.workspace }}/.sccache
+  SCCACHE_CACHE_SIZE: 1G
+
 jobs:
   build:
     name: ${{ matrix.preset }}
     strategy:
       fail-fast: false
       matrix:
-        preset: [linux, windows-x64, windows-x86, mac]
-    runs-on: ${{ matrix.preset == 'linux' && 'ubuntu-latest' || startsWith(matrix.preset, 'windows-') && 'windows-latest' || 'macos-latest' }}
+        preset: [linux, windows-x64, windows-x86, mac, wasm]
+    runs-on: ${{ startsWith(matrix.preset, 'windows-') && 'windows-latest' || matrix.preset == 'mac' && 'macos-latest' || 'ubuntu-latest' }}
     timeout-minutes: 30
     defaults:
       run:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+      - name: Set up MSVC for Ninja
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.preset == 'windows-x86' && 'amd64_x86' || 'x64' }}
+      - name: Set up Emscripten
+        if: matrix.preset == 'wasm'
+        uses: mymindstorm/setup-emsdk@v16
+        with:
+          version: 4.0.22
+      - name: Set up Node for the WASM smoke test
+        if: matrix.preset == 'wasm'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Set up sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+      - name: Restore compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCCACHE_DIR }}
+          key: sccache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json') }}-${{ github.run_id }}
+          restore-keys: |
+            sccache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json') }}-
+            sccache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-
+      - name: Select parallelism
+        run: |
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            jobs="$NUMBER_OF_PROCESSORS"
+          else
+            jobs="$(getconf _NPROCESSORS_ONLN)"
+          fi
+          echo "BUILD_JOBS=$jobs" >> "$GITHUB_ENV"
       - name: Configure
-        run: cmake --preset "${{ matrix.preset }}"
+        run: |
+          if [[ "${{ matrix.preset }}" == wasm ]]; then
+            # Emscripten wraps its underlying Clang rather than the em++ driver.
+            EM_COMPILER_WRAPPER=sccache emcmake cmake --preset wasm
+          elif [[ "$RUNNER_OS" == Windows ]]; then
+            cmake --preset "${{ matrix.preset }}" -G Ninja -A "" -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          else
+            cmake --preset "${{ matrix.preset }}" -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          fi
       - name: Build CLI, libraries and tests
-        run: cmake --build --preset "${{ matrix.preset }}" --parallel 2
+        env:
+          EM_COMPILER_WRAPPER: ${{ matrix.preset == 'wasm' && 'sccache' || '' }}
+        run: cmake --build --preset "${{ matrix.preset }}" --parallel "$BUILD_JOBS"
       - name: Test without external fixtures
         run: |
-          unset HDTRANS_REQUIRE_ALL HDTRANS_GOLDEN HDTRANS_DICTS
-          ctest --preset "${{ matrix.preset }}" --verbose 2>&1 | tee "build/${{ matrix.preset }}/ctest.log"
+          unset HDTRANS_REQUIRE_ALL HDTRANS_GOLDEN HDTRANS_DICTS HDTRANS_TEST_EXCLUDE
+          if [[ "${{ matrix.preset }}" == wasm ]]; then
+            node --experimental-default-type=module tools/wasm_smoke.mjs \
+              build/wasm/hdTransEngine.js tests/unit/dict/testdata/folder/base.tsv \
+              2>&1 | tee build/wasm/ctest.log
+          else
+            ctest --preset "${{ matrix.preset }}" --parallel "$BUILD_JOBS" --verbose \
+              2>&1 | tee "build/${{ matrix.preset }}/ctest.log"
+          fi
       - name: Report fixture skips and test results
         if: always()
         run: |
@@ -39,30 +98,42 @@ jobs:
             {
               echo '### ${{ matrix.preset }} tests'
               echo '```text'
-              grep -E 'SKIP |[0-9]+ run, [0-9]+ failed, [0-9]+ skipped|tests passed' "$log" || true
+              grep -E 'SKIP |Skipped|PASS wasm smoke|[0-9]+ run, [0-9]+ failed, [0-9]+ skipped|tests passed' "$log" || true
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
+      - name: Report compiler cache
+        if: always()
+        run: |
+          mkdir -p "build/${{ matrix.preset }}"
+          sccache --show-stats 2>&1 | tee "build/${{ matrix.preset }}/sccache.log"
+          sccache --stop-server
       - name: Upload CLI and libraries
         uses: actions/upload-artifact@v4
         with:
           name: hdtrans-${{ matrix.preset }}
+          overwrite: true
           if-no-files-found: error
           path: |
             build/${{ matrix.preset }}/hdtrans
             build/${{ matrix.preset }}/libhdTransCore.a
             build/${{ matrix.preset }}/libhdTransEngine.so
             build/${{ matrix.preset }}/libhdTransEngine.dylib
-            build/${{ matrix.preset }}/Release/hdtrans.exe
-            build/${{ matrix.preset }}/Release/hdTransCore.lib
-            build/${{ matrix.preset }}/Release/hdTransEngine.dll
-            build/${{ matrix.preset }}/Release/hdTransEngine.lib
-            build/${{ matrix.preset }}/Release/J2KEngine.dll
-            build/${{ matrix.preset }}/Release/J2KEngine.lib
-      - name: Upload test log
+            build/${{ matrix.preset }}/hdtrans.exe
+            build/${{ matrix.preset }}/hdTransCore.lib
+            build/${{ matrix.preset }}/hdTransEngine.dll
+            build/${{ matrix.preset }}/hdTransEngine.lib
+            build/${{ matrix.preset }}/J2KEngine.dll
+            build/${{ matrix.preset }}/J2KEngine.lib
+            build/${{ matrix.preset }}/hdTransEngine.js
+            build/${{ matrix.preset }}/hdTransEngine.wasm
+      - name: Upload test and compiler-cache logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-log-${{ matrix.preset }}
+          overwrite: true
           if-no-files-found: ignore
-          path: build/${{ matrix.preset }}/ctest.log
+          path: |
+            build/${{ matrix.preset }}/ctest.log
+            build/${{ matrix.preset }}/sccache.log
