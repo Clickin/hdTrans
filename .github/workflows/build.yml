@@ -117,6 +117,8 @@ jobs:
       - name: Set up sccache
         if: matrix.preset != 'wasm'
         uses: mozilla-actions/sccache-action@v0.0.11
+        with:
+          disable_annotations: true
       - name: Restore native compiler cache
         if: matrix.preset != 'wasm'
         uses: actions/cache@v6
@@ -257,6 +259,12 @@ jobs:
             ccache --show-stats --verbose 2>&1 | tee "build/wasm/ccache.log"
           else
             sccache --show-stats 2>&1 | tee "build/${{ matrix.preset }}/sccache.log"
+            {
+              echo '### ${{ matrix.preset }} compiler cache'
+              echo '```text'
+              cat "build/${{ matrix.preset }}/sccache.log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
             sccache --stop-server
           fi
       - name: Upload CLI, GUI and libraries
