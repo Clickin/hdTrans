@@ -3608,13 +3608,13 @@ bool RuleL369([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "501"sv));
 }
 
-// # 切り下げ의 두 단어 앞이 レベル이거나 格로 끝나면 평가절하라는 번역을 고른다. (미발동: rare-context)
-// # [의심] レベル의 일반적인 수준 인하까지 통화 가치의 평가절하로 한정한다는 문제가 있으며 レベルの切り下げ에서 실제로 평가절하가 선택됨.
+// # 通貨·円·ドル의 切り下げ를 평가절하로 고른다.
 // local 370
-//     (src[-2] == "レベル" or src[-2] ends "格")
+//     (src[-2] == "通貨" or src[-2] == "円" or src[-2] == "ドル")
 bool RuleL370([[maybe_unused]] Item* p) {
-    return (SrcEq(p, -2, "レベル"sv) ||
-           SrcEq(p, -2, "R格"sv));
+    return (SrcEq(p, -2, "通貨"sv) ||
+           SrcEq(p, -2, "円"sv) ||
+           SrcEq(p, -2, "ドル"sv));
 }
 
 // # 助け는 다음 말이 조사이고 그다음 말이 부정 형용사 な·無이면 명사 ‘도움’을 고른다.
@@ -4019,14 +4019,13 @@ bool RuleL417([[maybe_unused]] Item* p) {
     return (PumsaEq(p, 1, "2**"sv) && SrcEq(p, 2, "打"sv) && PumsaEq(p, 2, "4**"sv));
 }
 
-// # 주격 'が' 앞이나 'に'와 동사 연결형·수혜 동사가 이어지는 문맥의 'だれ'를 '누'로 고른다.
-// # [의심] に 뒤의 동사가 수혜형이라는 것만으로 누를 고르지만 に가 최종적으로 에게로 선택되는 말하기 문맥에서는 누구가 필요하다. 자작 예 だれに話してもらう。 → 누에게 이야기해 준다.; -why: だれ LocalRule 418 누, に Sense 1353 에게.
+// # が 앞의 だれ는 누로 고른다. に＋동사＋수혜 구문도 누로 고르되 話す의 상대는 누구 후보를 남긴다.
 // local 418
 //     src[+1] == "が" and pos[+1] is 2**
-//     src[+1] == "に" and pos[+2] is 4** and end.pos[+2] is 57* and (src[+3] == "もら" or src[+3] == "いただ")
+//     src[+1] == "に" and pos[+2] is 4** and src[+2] != "話" and end.pos[+2] is 57* and (src[+3] == "もら" or src[+3] == "いただ")
 bool RuleL418([[maybe_unused]] Item* p) {
     return (SrcEq(p, 1, "が"sv) && PumsaEq(p, 1, "2**"sv)) ||
-           (SrcEq(p, 1, "に"sv) && PumsaEq(p, 2, "4**"sv) && GobiPumsaEq(p, 2, "57*"sv) && (SrcEq(p, 3, "もら"sv) ||
+           (SrcEq(p, 1, "に"sv) && PumsaEq(p, 2, "4**"sv) && SrcNe(p, 2, "話"sv) && GobiPumsaEq(p, 2, "57*"sv) && (SrcEq(p, 3, "もら"sv) ||
            SrcEq(p, 3, "いただ"sv)));
 }
 
@@ -5334,7 +5333,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL367, 0x3a0fd4cdcaf80ab9ull},
     {RuleL368, 0xd5c1b355e0068f97ull},
     {RuleL369, 0x6d9fac2d0a6b9e9dull},
-    {RuleL370, 0x91fa9fa249e33242ull},
+    {RuleL370, 0x1da78b11655f4fbdull},
     {RuleL371, 0x503f390c8bfe72caull},
     {RuleL372, 0x2da672a7ea1d5e70ull},
     {RuleL373, 0xa9b0dde68a672bf2ull},
@@ -5382,7 +5381,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL415, 0x2ed5a4e8f80ac045ull},
     {RuleL416, 0x2a1603358ac2dfa0ull},
     {RuleL417, 0xa4b4ef4da6745a3aull},
-    {RuleL418, 0xe34bea6ad92d2e00ull},
+    {RuleL418, 0x6dc4321637757b4dull},
     {RuleL419, 0x1a54fc1c3c85beedull},
     {RuleL420, 0xc53a9a2cb615c8d1ull},
     {RuleL421, 0x53277a94087e6c3cull},
