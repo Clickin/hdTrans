@@ -51,6 +51,11 @@ macOS, Linux 판에는 명령줄 프로그램만 있습니다([명령줄 사용�
 
 품사와 더 자세한 형식은 [사용자 사전](docs/dictionary-files.md#사용자-사전)에 있습니다.
 
+## 사전
+
+배포판의 기본 사전은 `hdTrans\dicts.hdsnap` 한 파일이고, 버전은 옆의 `dicts.txt`에 있습니다.
+저장소의 `dicts/` 폴더(TSV)를 직접 쓰려면 `dicts.hdsnap`을 지우고 그 자리에 `dicts` 폴더를 두세요([사전](docs/dictionary-files.md#배포판과-git의-사전)).
+
 ## 설정
 
 `hdTrans\user\hdtrans.config.yaml`에 둡니다. 같은 폴더의 `hdtrans.config.example.yaml`을 복사해서 고치면 됩니다.
