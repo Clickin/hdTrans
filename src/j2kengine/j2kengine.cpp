@@ -1,6 +1,6 @@
 // J2KEngine-compatible exports: Shift-JIS or UTF-16 in, CP949 or UTF-16 out.
-// Dictionaries are found next to the DLL (dicts and userdict.tsv); the path the host
-// passes is ignored. userdict.tsv is reloaded when it changes.
+// Program data are in hdTrans/ next to the DLL, or the DLL folder itself.
+// The host's path is ignored. The user dictionary is reloaded when it changes.
 // Calls are thread-safe, not reentrant; finish all calls before unloading the DLL.
 #include <windows.h>
 
@@ -93,7 +93,7 @@ std::string ModuleDir() {
 }
 
 hdTrans::internal::ConfigResult ReadConfig(const std::string& dir) {
-    const std::string path = hdTrans::internal::ConfigPath(dir);
+    const std::string path = hdTrans::dict::ConfigFile(dir);
     auto config = hdTrans::internal::LoadConfig(path);
     const std::string errors = hdTrans::internal::ConfigErrors(config, path);
     if (!errors.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: " + errors + "\n").c_str());

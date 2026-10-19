@@ -1,11 +1,11 @@
 // hdtrans: reads UTF-8 from stdin (or -in FILE) and writes the translation to stdout. The
 // whole input is one session unless -each or -raw is given.
-//   -config FILE          settings file (default: hdtrans.config.yaml next to the executable)
-//   -dicts DIR[,DIR...]   dictionary folders in load order (default: dicts next to the
-//                         executable, else dicts in the current directory); a first
+//   -config FILE          settings file (default: user/hdtrans.config.yaml in the data root)
+//   -dicts DIR[,DIR...]   dictionary folders in load order (default: data root/dicts,
+//                         else dicts in the current directory); a first
 //                         FILE.hdsnap gives the column dictionaries of the folders
 //   -userdict FILE        user dictionary file, which must load (default: userdict.tsv
-//                         next to the executable, left out with a warning when it does not
+//                         in data root/user, left out with a warning when it does not
 //                         load; empty for none)
 //   -each                 a new session for every line
 //   -raw                  translate each line with the word pipeline only
@@ -263,7 +263,7 @@ int main(int argc, char** argv) {
     }
 
     const std::string programDir = ExecutableDir();
-    const std::string configPath = configArg ? *configArg : hdTrans::internal::ConfigPath(programDir);
+    const std::string configPath = configArg ? *configArg : hdTrans::dict::ConfigFile(programDir);
     const auto config = hdTrans::internal::LoadConfig(configPath);
     if (configArg && !config.found && config.diagnostics.empty()) {
         std::fprintf(stderr, "hdtrans: cannot open config file %s\n", configPath.c_str());

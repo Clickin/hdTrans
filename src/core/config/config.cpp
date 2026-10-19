@@ -192,8 +192,6 @@ private:
 
 }  // namespace
 
-std::string ConfigPath(std::string_view folder) { return Utf8(PathOf(folder) / "hdtrans.config.yaml"); }
-
 ConfigResult LoadConfig(std::string_view path) {
     ConfigResult result;
     const auto filePath = PathOf(path);

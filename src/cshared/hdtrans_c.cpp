@@ -142,7 +142,7 @@ int hdTrans_Initialize(const char* dirs) {
     }
     auto paths = SplitNul(dirs);
     const std::string dir = ModuleDir();
-    const std::string configPath = hdTrans::internal::ConfigPath(dir);
+    const std::string configPath = hdTrans::dict::ConfigFile(dir);
     const auto config = hdTrans::internal::LoadConfig(configPath);
     const auto& settings = config.settings;
     const auto requestedPaths = paths;
@@ -206,7 +206,7 @@ int hdTrans_Reload(void) {
         ehndOverride = g_ehnd;
     }
     const std::string dir = ModuleDir();
-    const std::string configPath = hdTrans::internal::ConfigPath(dir);
+    const std::string configPath = hdTrans::dict::ConfigFile(dir);
     const auto config = hdTrans::internal::LoadConfig(configPath);
     const auto& settings = config.settings;
     if (dirs.empty() && settings.dicts) dirs = *settings.dicts;

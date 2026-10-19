@@ -1,13 +1,14 @@
 #!/bin/sh
 set -eu
+export HDTRANS_CACHE_DIR=off
 cli=$1
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/hdtrans-config.XXXXXX")
 tmp=$(cd "$tmp" && pwd -P)
 trap 'rm -rf "$tmp"' EXIT
 trap 'exit 1' HUP INT TERM
 mkdir -p "$tmp/bin" "$tmp/settings/first" "$tmp/settings/second" "$tmp/other"
-cp "$cli" "$tmp/bin/hdtrans"
-cli=$tmp/bin/hdtrans
+cp "$cli" "$tmp/bin/hdtrans-cli"
+cli=$tmp/bin/hdtrans-cli
 printf 'key\tko\tpos\tsem\tgram\tdict\trule\tflags\tprio\treading\tid\n猫\t고양이\tN110\t\t\tGN\t\t\t\t\t1\n' > "$tmp/settings/first/base.tsv"
 printf 'key\tko\tpos\tsem\tgram\tdict\trule\tflags\tprio\treading\tid\n猫\t야옹이\tN110\t\t\tGN\t\t\t\t\t1\n' > "$tmp/settings/second/base.tsv"
 printf 'dicts: first\nuserdict: ""\nehnd: ""\ncache: off\n' > "$tmp/settings/custom.yaml"
@@ -55,4 +56,51 @@ status=0
 status=0
 "$cli" -config "$tmp/missing.yaml" -in "$tmp/input" > /dev/null 2> "$tmp/errors" || status=$?
 [ "$status" -eq 1 ]
-echo 'CLI config: PASS'
+mkdir -p "$tmp/bin/dicts" "$tmp/bin/hdTrans/dicts" "$tmp/bin/hdTrans/user"
+cp "$tmp/settings/second/base.tsv" "$tmp/bin/dicts/"
+printf '犬\t옛사전\n' > "$tmp/bin/userdict.tsv"
+cp "$tmp/settings/first/base.tsv" "$tmp/bin/hdTrans/dicts/"
+printf '犬\t새사전\n' > "$tmp/bin/hdTrans/user/userdict.tsv"
+"$cli" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 고양이 ]
+printf '犬' > "$tmp/dog"
+"$cli" -in "$tmp/dog" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 새사전 ]
+printf 'dicts: ../../../settings/second\nuserdict: userdict.tsv\ncache: off\n' > "$tmp/bin/hdTrans/user/hdtrans.config.yaml"
+"$cli" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 야옹이 ]
+"$cli" -dicts "$tmp/settings/first" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 고양이 ]
+printf 'cache: off\n' > "$tmp/bin/hdTrans/user/hdtrans.config.yaml"
+mv "$tmp/bin/hdTrans/user/userdict.tsv" "$tmp/bin/hdTrans/user/staged.tsv"
+mv "$tmp/bin/hdTrans/user/staged.tsv" "$tmp/bin/hdTrans/user/USERDICT.TSV"
+mv "$tmp/bin/hdTrans/user/hdtrans.config.yaml" "$tmp/bin/hdTrans/user/staged.yaml"
+mv "$tmp/bin/hdTrans/user/staged.yaml" "$tmp/bin/hdTrans/user/HDTRANS.CONFIG.YAML"
+mv "$tmp/bin/hdTrans/dicts" "$tmp/bin/hdTrans/staged-dicts"
+mv "$tmp/bin/hdTrans/staged-dicts" "$tmp/bin/hdTrans/DICTS"
+mv "$tmp/bin/hdTrans/user" "$tmp/bin/hdTrans/staged-user"
+mv "$tmp/bin/hdTrans/staged-user" "$tmp/bin/hdTrans/USER"
+mv "$tmp/bin/hdTrans" "$tmp/bin/staged-data"
+mv "$tmp/bin/staged-data" "$tmp/bin/HDTRANS"
+"$cli" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 고양이 ]
+"$cli" -in "$tmp/dog" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 새사전 ]
+rm -rf "$tmp/bin/HDTRANS"
+"$cli" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 야옹이 ]
+"$cli" -in "$tmp/dog" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 옛사전 ]
+mkdir -p "$tmp/bin/user"
+printf '犬\t새사전\n' > "$tmp/bin/user/userdict.tsv"
+printf 'cache: off\n' > "$tmp/bin/user/hdtrans.config.yaml"
+"$cli" -in "$tmp/dog" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 새사전 ]
+rm "$tmp/bin/user/userdict.tsv" "$tmp/bin/user/hdtrans.config.yaml"
+printf '犬\t견본사전\n' > "$tmp/bin/user/userdict.example.tsv"
+printf 'dicts: missing\n' > "$tmp/bin/user/hdtrans.config.example.yaml"
+"$cli" -in "$tmp/dog" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 옛사전 ]
+"$cli" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 야옹이 ]
+echo 'CLI config: PASS'  

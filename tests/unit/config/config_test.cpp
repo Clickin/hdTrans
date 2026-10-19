@@ -24,7 +24,7 @@ struct TempConfig {
         folder = std::filesystem::temp_directory_path(error) /
                  ("hdtrans-config-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         std::filesystem::create_directories(folder, error);
-        path = hdTrans::internal::ConfigPath(Utf8(folder));
+        path = Utf8(folder / "hdtrans.config.yaml");
     }
     ~TempConfig() {
         std::error_code error;

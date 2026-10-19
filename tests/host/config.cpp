@@ -102,6 +102,22 @@ void CheckJ2K(const std::filesystem::path& source, const std::filesystem::path& 
         checkTranslation(L"猫", L"고양이", "J2K without config ignores sibling Ehnd");
         terminate();
         std::filesystem::remove_all(folder / "dicts", error);
+        const auto data = folder / "HDTRANS";
+        const auto user = data / "USER";
+        std::filesystem::create_directories(data / "DiCtS", error);
+        std::filesystem::create_directories(user, error);
+        std::filesystem::copy_file(folder / "fixtures/first/base.tsv", data / "DiCtS/base.tsv",
+                                   std::filesystem::copy_options::overwrite_existing, error);
+        Write(user / "HDTRANS.CONFIG.YAML", "cache: off\n");
+        Write(user / "USERDICT.TSV", "犬\t새사전\n");
+        Check(initialize(nullptr) == 1, "J2K nested case-insensitive layout");
+        checkTranslation(L"猫", L"고양이", "J2K nested default dictionary");
+        checkTranslation(L"犬", L"새사전", "J2K nested user dictionary");
+        Write(user / "HDTRANS.CONFIG.YAML", "ehnd: true\ncache: off\n");
+        reload();
+        checkTranslation(L"猫", L"검은고양이", "J2K nested config keeps outer Ehnd location");
+        terminate();
+        std::filesystem::remove_all(data, error);
     }
     FreeLibrary(module);
     std::filesystem::remove(dll, error);
@@ -166,6 +182,26 @@ int main(int argc, char** argv) {
     const char* cache = std::getenv("HDTRANS_CACHE_DIR");
     Check(cache && std::string(cache) == "off", "removed config restores cache environment");
     hdTrans_Terminate();
+    const auto data = folder / "HDTRANS";
+    const auto user = data / "USER";
+    std::filesystem::create_directories(data / "DiCtS", error);
+    std::filesystem::create_directories(user, error);
+    std::filesystem::copy_file(fixtures / "first/base.tsv", data / "DiCtS/base.tsv",
+                               std::filesystem::copy_options::overwrite_existing, error);
+    Write(user / "USERDICT.TSV", "犬\t새사전\n");
+    Write(user / "HDTRANS.CONFIG.YAML", "dicts: ../DiCtS\ncache: off\n");
+    Check(hdTrans_Initialize(nullptr) == 0, "initialize case-insensitive nested layout");
+    Check(Translate("猫") == "고양이", "nested dictionary path relative to user config");
+    Check(Translate("犬") == "새사전", "case-insensitive nested user dictionary");
+    hdTrans_Terminate();
+    std::filesystem::remove_all(data, error);
+    std::filesystem::create_directories(folder / "user", error);
+    Write(folder / "user/hdtrans.config.yaml", "dicts: ../fixtures/first\ncache: off\n");
+    Write(folder / "user/userdict.tsv", "犬\t새사전\n");
+    Check(hdTrans_Initialize(nullptr) == 0, "initialize flat user layout");
+    Check(Translate("犬") == "새사전", "flat user dictionary");
+    hdTrans_Terminate();
+    std::filesystem::remove_all(folder / "user", error);
 #ifdef _WIN32
     CheckJ2K(argv[1], folder);
 #endif
