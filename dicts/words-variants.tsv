@@ -7820,7 +7820,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 挙句のはて	결국	N110			GN					jisjk:150382
 挙げ句のはて	결국	N110			GN					jisjk:150382
 挙句の果	결국	N110			GN					jisjk:150382
-朝ご飯	아침 밥	I110	VFdVFd		GN					jisjk:83599
+朝ご飯	아침 밥	I110	VFdVFd	Om	GN					jisjk:83599
 足械	족쇄	I110			GN					jisjk:83803
 足馴らし	사전준비	I110		Hd	GN					jisjk:83814
 足ならし	사전준비	I110		Hd	GN					jisjk:83814

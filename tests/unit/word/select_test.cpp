@@ -22,6 +22,8 @@ std::shared_ptr<const dict::Snapshot> Dictionary() {
 struct Candidate {
     std::string_view target;
     std::string_view part = "N110";
+    std::string_view semantic = {};
+    std::string_view grammar = {};
 };
 
 struct SelectLine {
@@ -43,6 +45,8 @@ struct SelectLine {
             word::Record record;
             record.target = candidate.target;
             record.partCode = candidate.part;
+            record.semantic = candidate.semantic;
+            record.attr = candidate.grammar;
             group->entries.push_back(worker.NewEntry(record));
         }
         return group;
@@ -931,4 +935,84 @@ HD_TEST(document_senses_particle_and_prefix_stems) {
     const word::SelectContext context{*snapshot, line.worker.chain};
     HD_CHECK_EQ(word::DocumentSenseScore(item, 1, context), 1);
     HD_CHECK_EQ(word::DocumentSenseScore(item, 0, context), 0);
+}
+
+HD_TEST(word_select_collocation_recipient) {
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    const struct {
+        std::string_view semantic;
+        std::string_view grammar;
+        std::string_view boundary;
+        bool interveningVerb;
+        bool expected;
+    } cases[] = {
+        {"VHn", "Rc", "", false, true},
+        {"XXXQPN", "Rc", "", false, true},
+        {"VPl", "Rc", "", false, false},
+        {"XVHn", "Rc", "", false, false},
+        {"VHn", "XRc", "", false, false},
+        {"VHn", "", "", false, false},
+        {"VHn", "Rc", "、", false, false},
+        {"VHn", "Rc", "", true, false},
+    };
+    for (const auto& c : cases) {
+        SelectLine line(*snapshot);
+        line.Add("相手", {{"상대", "N110", c.semantic}});
+        auto& particle = line.Add("に", {{"에", "P201"}, {"에게", "P201"}});
+        if (!c.boundary.empty()) line.Add(c.boundary, {{",", "E600"}});
+        if (c.interveningVerb) line.Add("行", {{"가&AH@", "M429"}});
+        line.Add("贈り物", {{"선물"}});
+        line.Add("を", {{"(을)를", "P201"}});
+        line.Add("教え", {{"가르&AO@", "M437", "", c.grammar}});
+        word::ChooseSenses(line.flusher);
+        HD_CHECK_EQ(std::string(particle.EntryText(particle.selected)), std::string(c.expected ? "에게" : "에"));
+    }
+    // Only the selected noun sense supplies semantic evidence.
+    SelectLine line(*snapshot);
+    line.Add("相手", {{"장소", "N110", "VPl"}, {"상대", "N110", "VHn"}});
+    auto& particle = line.Add("に", {{"에", "P201"}, {"에게", "P201"}});
+    line.Add("教え", {{"가르&AO@", "M437", "", "Rc"}});
+    word::ChooseSenses(line.flusher);
+    HD_CHECK_EQ(particle.selected, 0);
+}
+
+HD_TEST(word_select_collocation_object_case) {
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    for (const auto particle : {"を", "が", "に"}) {
+        SelectLine line(*snapshot);
+        line.Add("経緯", {{"경위", "N110", "", "Oq"}});
+        line.Add(particle, {{"조사", "P201"}});
+        auto& verb = line.Add("聞", {{"&JB@", "M431"}});
+        word::ChooseSenses(line.flusher);
+        HD_CHECK_EQ(word::ItemLemma(line.flusher, &verb, verb.selected), std::string(particle == std::string_view("を") ? "묻다" : "듣다"));
+    }
+    SelectLine line(*snapshot);
+    line.Add("響き", {{"울림", "N110", "XXXUHr"}});
+    line.Add("を", {{"(을)를", "P201"}});
+    auto& verb = line.Add("聞", {{"&J7@", "M431"}});
+    word::ChooseSenses(line.flusher);
+    HD_CHECK_EQ(word::ItemLemma(line.flusher, &verb, verb.selected), std::string("듣다"));
+}
+
+HD_TEST(word_select_collocation_passive_and_state) {
+    const auto snapshot = Dictionary();
+    HD_REQUIRE(snapshot != nullptr);
+    {
+        SelectLine line(*snapshot);
+        line.Add("紋章", {{"문장", "N110", "", "Os"}});
+        line.Add("が", {{"(이)가", "P201"}});
+        auto& verb = line.Add("押され", {{"밀&AA@", "M427"}});
+        word::ChooseSenses(line.flusher);
+        HD_CHECK_EQ(word::ItemLemma(line.flusher, &verb, verb.selected), std::string("찍히다"));
+    }
+    {
+        SelectLine line(*snapshot);
+        line.Add("正気", {{"제정신", "N110", "VHnUYi", "Or"}});
+        auto& particle = line.Add("に", {{"에게", "P201"}, {"(으)로", "P201"}});
+        line.Add("戻", {{"돌아&AH@", "M418", "", "Rr"}});
+        word::ChooseSenses(line.flusher);
+        HD_CHECK_EQ(std::string(particle.EntryText(particle.selected)), std::string("(으)로"));
+    }
 }

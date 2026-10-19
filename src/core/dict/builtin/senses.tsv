@@ -1029,6 +1029,8 @@
 // 聞く: 묻다 after a question (か) or a thing asked for, before てみる and in 聞きたい of the speaker; 듣다 otherwise.
 聞く	묻다	か,かって,かと,のか,」と,なんでも,何でも,道,名前,お名前,事情,誰か,理由,意見,都合,年齢,住所,連絡先,電話番号,番号,感想,行き先,予定,好み,用件,真意,意図,質問,こっち,こちら	before	v:ㄷ
 聞く	묻다	みる,込む,直す,くる,来る,いい	after	v:ㄷ
+聞く	묻다	gram:Oq@を	before	v:ㄷ
+聞く	듣다	sem:UHr@を,sem:USo@を	before	v:ㄷ
 聞く	듣다
 
 // 歳 after a numeral the dictionary has as a word (十六 16): the counter 세.
@@ -1334,3 +1336,21 @@
 お風呂	욕조	作る,作っ,作り,作ろ,作れ,造る,造っ,造り,造ろ	after	n
 風呂	목욕물	沸かす,沸かし,沸かそ,沸かさ	after	n
 お風呂	목욕물	沸かす,沸かし,沸かそ,沸かさ	after	n
+
+// Argument classes and case particles; literal collocations above take precedence.
+に	에게	sem:QPN@に/gram:Rc,sem:QNP@に/gram:Rc,sem:VHn@に/gram:Rc,sem:VAm@に/gram:Rc,sem:VGn@に/gram:Rc,sem:VQw@に/gram:Rc,sem:VQm@に/gram:Rc,sem:QAA@に/gram:Rc,sem:QAB@に/gram:Rc,sem:QAC@に/gram:Rc,sem:QAD@に/gram:Rc,sem:QAE@に/gram:Rc,sem:QAF@に/gram:Rc,sem:QAG@に/gram:Rc,sem:QAH@に/gram:Rc	before	p
+押す	찍다	gram:Os@を,gram:Os@が	before	v5
+押す	누르다	gram:Ob@を	before	v5
+押す	밀다	sem:VTp@を	before	v5
+取る	찍다	gram:Op@を	before	v5
+取る	하다	gram:Om@を	before	v5:하다
+掛ける	틀다	sem:USo@を	before	v1
+掛ける	덮다	gram:Of@を	before	v1
+薄い	옅다	gram:Og@は,gram:Og@が,gram:Og@の	before	adj
+薄い	옅다	gram:Og	after	adj
+薄い	연하다	gram:Od@が,gram:Od@は,gram:Od@の,sem:UCr@が,sem:UCr@は,sem:UCr@の	before	adj
+薄い	연하다	gram:Od,sem:UCr	after	adj
+薄い	옅다	sem:UGs@が,sem:UGs@は,sem:UGs@の	before	adj
+薄い	옅다	sem:UGs	after	adj
+押される	찍히다	gram:Os@が	before	v1
+に	(으)로	gram:Or@に/gram:Rr	before	p
