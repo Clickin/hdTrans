@@ -54,6 +54,7 @@ PR 제목은 CI에서 검사합니다. 원인, 테스트, 번역 판정 숫자�
 3. 릴리스 PR을 열어 둔 동안 `main`에 들어온 변경도 같은 PR에 쌓입니다. 버전은 가장 큰 변경을 따릅니다.
 4. 릴리스 PR을 합치면 `CHANGELOG.md`, `release-version.txt`, 버전 목록이 갱신되고 `vX.Y.Z` 태그와 GitHub Release가 만들어집니다.
 5. 해당 태그로 모든 플랫폼을 빌드하고 테스트한 뒤 압축 파일과 `SHA256SUMS.txt`를 릴리스에 첨부합니다.
+6. `publish-npm.yml`이 같은 CI의 npm 패키지를 OIDC로 직접 게시합니다. nightly와 `dry_run=true` 빌드는 npm에 게시하지 않습니다.
 
 첫 정식 버전은 `0.1.0`입니다. 그 뒤 `fix` 여러 개는 patch 한 번, `feat`와 `fix`가 함께 있으면 minor 한 번 올라갑니다.
 릴리스 PR은 자동 병합하지 않습니다. 문서나 CI 변경만으로는 새 정식 버전을 만들지 않습니다.
@@ -68,3 +69,4 @@ Settings → Actions → General에서 **Allow GitHub Actions to create and appr
 토큰으로 만든 태그도 push 이벤트를 일으키지 않으므로, `release-please.yml`이 **Build**를 해당 태그로 명시적으로 실행합니다.
 첨부 파일 빌드가 실패하면 문제를 확인한 뒤 **Build → Run workflow**에서 같은 태그를 선택하고 `dry_run=false`로 다시 실행합니다.
 정식 배포는 `main`에 포함된 `vX.Y.Z` 태그에서만 허용합니다. 기존 릴리스 노트는 첨부 파일을 올릴 때 보존합니다.
+npm 게시만 실패했다면 **Publish npm → Run workflow**에서 같은 태그와 성공한 **Build**의 실행 ID를 지정합니다.
