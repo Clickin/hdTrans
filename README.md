@@ -62,3 +62,4 @@ folder (only top-level `.in` files are read). Lyrics from `lyrics/cases.tsv` are
 and `syosetu/*.ja.txt` files run as documents. `HDTRANS_BIN` selects the built CLI (default `build/mac/hdtrans`).
 Compare accepts run names or folder paths; compare/explain exit 0 for identical, 1 for differences, 2 for invalid inputs.
 Snapshot uses default translation settings and a disposable run-local cache; it refuses an existing run name.
+`tools/list.txt` catalogs the initial sets (name, input line count, recorded source); it does not constrain set discovery.
