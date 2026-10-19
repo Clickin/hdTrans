@@ -23,3 +23,12 @@ L3318	今は走っていないのに暑い。	지금은 달리지 않는데 덥�
 L3318	まだ終わっていないのに帰った。	아직 끝나지 않았는데 돌아갔다.	keep	local-ending
 L4541	終わったって感じだ。	끝났다는 느낌이다.	fix	local-ending
 L4541	終わったって言った。	끝났다고 했다.	keep	local-ending
+L728	パンを焼いた。	빵을 구웠다.	fix	local
+L728	鍋で焼いた。	냄비로 구웠다.	keep	local
+L5088	昨日はお腹すいた。	어제는 배 고팠다.	fix	local
+L5088	お腹すいた。	배 고프다.	keep	local
+L5088	昨夜もお腹すいた。	어젯밤도 배 고팠다.	fix	local
+L3230	寒いと鳥が鳴く。	추우면 새가 운다.	fix	local-ending
+L3230	悪いとされる。	나쁘다고 여겨진다.	keep	local-ending
+L4346	金が受け取れる。	돈을 받을 수 있다.	fix	local
+L4346	利益が受け取れる。	이익을 받을 수 있다.	keep	local
