@@ -190,7 +190,7 @@ HD_TEST(SnapshotFileRoundTrip) {
     for (bool extra : {false, true}) {
         HD_CHECK_EQ(loaded.snapshot->Plain(extra).Entries().size(), editable.snapshot->Plain(extra).Entries().size());
         HD_CHECK_EQ(loaded.snapshot->TextPlain(extra).Entries().size(), editable.snapshot->TextPlain(extra).Entries().size());
-        for (const auto pair : {std::pair{&loaded.snapshot->Plain(extra), &editable.snapshot->Plain(extra)},
+        for (const auto& pair : {std::pair{&loaded.snapshot->Plain(extra), &editable.snapshot->Plain(extra)},
                                 std::pair{&loaded.snapshot->TextPlain(extra), &editable.snapshot->TextPlain(extra)}}) {
             const auto& a = pair.first->Entries();
             const auto& b = pair.second->Entries();
@@ -765,7 +765,7 @@ void CheckPlainCompilation(const hdTrans::dict::Snapshot& actual, const hdTrans:
         HD_CHECK(std::tie(a.folder, a.name, a.text) == std::tie(b.folder, b.name, b.text));
     }
     for (bool extra : {false, true}) {
-        for (const auto pair : {std::pair{&actual.Plain(extra), &expected.Plain(extra)},
+        for (const auto& pair : {std::pair{&actual.Plain(extra), &expected.Plain(extra)},
                                 std::pair{&actual.TextPlain(extra), &expected.TextPlain(extra)}}) {
             HD_CHECK_EQ(pair.first->Len(), pair.second->Len());
             const auto& a = pair.first->Entries();
