@@ -5,11 +5,20 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <system_error>
 #include <vector>
 
+#if defined(_WIN32)
+#include <windows.h>
+#elif !defined(__EMSCRIPTEN__)
+#include <dlfcn.h>
+#endif
+
+#include "core/dict/folders.h"
 #include "core/engine.h"
 
 namespace {
@@ -19,6 +28,7 @@ std::condition_variable g_adminsDone;
 std::atomic<unsigned> g_waitingAdmins{0};
 std::uint64_t g_generation = 0;
 std::vector<std::string> g_dirs;
+std::string g_userFile;
 std::unique_ptr<hdTrans::Engine> g_engine;
 std::unique_ptr<hdTrans::Session> g_session;
 
@@ -45,6 +55,40 @@ std::vector<std::string> SplitNul(const char* dirs) {
     return out;
 }
 
+// The folder of the module holding this library in UTF-8; empty when unknown.
+std::string ModuleDir() {
+#if defined(__EMSCRIPTEN__)
+    return {};
+#else
+#if defined(_WIN32)
+    HMODULE self = nullptr;
+    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            reinterpret_cast<LPCWSTR>(&ModuleDir), &self)) {
+        return {};
+    }
+    std::wstring path(MAX_PATH, L'\0');
+    for (;;) {
+        const DWORD n = GetModuleFileNameW(self, path.data(), static_cast<DWORD>(path.size()));
+        if (n == 0) return {};
+        if (n < path.size()) {
+            path.resize(n);
+            break;
+        }
+        path.resize(path.size() * 2);
+    }
+    const std::filesystem::path module(path);
+#else
+    Dl_info info{};
+    if (!dladdr(reinterpret_cast<void*>(&ModuleDir), &info) || !info.dli_fname) return {};
+    std::error_code ec;
+    const std::filesystem::path module = std::filesystem::canonical(info.dli_fname, ec);
+    if (ec) return {};
+#endif
+    const std::u8string dir = module.parent_path().u8string();
+    return std::string(reinterpret_cast<const char*>(dir.data()), dir.size());
+#endif
+}
+
 int Copy(const std::string& s, char** out, size_t* outn) {
     auto* buf = static_cast<char*>(std::malloc(s.size() + 1));
     if (!buf) return -1;
@@ -66,14 +110,16 @@ int hdTrans_Initialize(const char* dirs) {
         generation = g_generation;
     }
     auto paths = SplitNul(dirs);
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
-    if (!e->Open(paths)) return -1;
+    std::string userFile = hdTrans::dict::UserFile(ModuleDir());
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    if (!e->Open(paths, false, userFile)) return -1;
     AdminLock lock;
     if (generation != g_generation) return -1;
     g_session.reset();
     g_engine = std::move(e);
     g_session = std::make_unique<hdTrans::Session>(*g_engine);
     g_dirs = std::move(paths);
+    g_userFile = std::move(userFile);
     ++g_generation;
     return 0;
 }
@@ -84,6 +130,7 @@ void hdTrans_Terminate(void) {
     g_session.reset();
     g_engine.reset();
     g_dirs.clear();
+    g_userFile.clear();
 }
 
 int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
@@ -96,14 +143,16 @@ int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
 int hdTrans_Reload(void) {
     std::uint64_t generation;
     std::vector<std::string> dirs;
+    std::string userFile;
     {
         AdminLock lock;
         if (!g_engine) return -1;
         generation = g_generation;
         dirs = g_dirs;
+        userFile = g_userFile;
     }
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
-    if (!e->Open(dirs)) return -1;
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    if (!e->Open(dirs, false, userFile)) return -1;
     AdminLock lock;
     if (generation != g_generation) return -1;
     g_session.reset();
