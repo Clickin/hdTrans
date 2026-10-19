@@ -2487,22 +2487,18 @@ bool RuleL240([[maybe_unused]] Item* p) {
            (PumsaEq(p, -1, "4**"sv) && GobiSrcEq(p, -1, "わけには"sv) && GobiDstSet(p, -1, "6서는"sv));
 }
 
-// # うま의 '맛있다' 후보를 주변에 음식 의미의 단어가 있거나 앞에 형용사 すご가 있을 때 선택한다.
-// # [의심] 음식 의미가 두 단어 앞에 있다는 사실만으로 맛있다를 선택하여 음식과 관계된 솜씨·방법까지 맛으로 해석한다; 자체 문장 料理をうまい方法で作った。 → 요리를 맛있는 방법으로 만들었다.; WHY うま: LocalRule 241, 맛$FB@이다.
+// # うま는 음식 문맥에서 ‘맛있다’를 고르되, 뒤의 비음식 명사를 꾸미는 경우는 제외한다.
 // local 241
-//     sem[+1] under VFd|VFd
-//     sem[-1] under VFd|VFd
-//     sem[-2] under VFd|VFd
-//     src[-1] == "すご" and pos[-1] is 7**
-//     sem[+3] has VFd
-//     sem[+2] has VFd
+//     (gram has Ow or pos[+1] is not 1** or sem[+1] under VFd) and (sem[+1] under VFd|VFd or sem[-1] under VFd|VFd or sem[-2] under VFd|VFd or src[-1] == "すご" and pos[-1] is 7** or sem[+3] has VFd or sem[+2] has VFd)
 bool RuleL241([[maybe_unused]] Item* p) {
-    return AttrMinusEq(p, 1, "VFdVFd"sv) ||
+    return ((GramEq(p, 0, "Ow"sv) ||
+           PumsaNe(p, 1, "1**"sv) ||
+           AttrMinusEq(p, 1, "VFd"sv)) && (AttrMinusEq(p, 1, "VFdVFd"sv) ||
            AttrMinusEq(p, -1, "VFdVFd"sv) ||
            AttrMinusEq(p, -2, "VFdVFd"sv) ||
            (SrcEq(p, -1, "すご"sv) && PumsaEq(p, -1, "7**"sv)) ||
            AttrEq(p, 3, "VFd"sv) ||
-           AttrEq(p, 2, "VFd"sv);
+           AttrEq(p, 2, "VFd"sv)));
 }
 
 // # がた는 동사의 연용형 뒤에서 ‘어렵다’를 고른다.
@@ -2597,15 +2593,14 @@ bool RuleL251([[maybe_unused]] Item* p) {
     return (SrcEq(p, -1, "が"sv) && DstSet(p, -1, "(을)를"sv));
 }
 
-// # やさし는 명사와 に 뒤이거나 두 단어 앞이 体·からだ이면 좋다로 고른다.
-// # [의심] 자작문 子供にやさしい先生です。 → 아이에게 좋은 선생님입니다.; WHY: やさし LocalRule 252 $DE@; 명사+に를 모두 몸에 좋은 유형으로 취급하여 아이에게 친절한 선생님이라는 성품 묘사를 놓친다.
+// # やさし는 体·からだ·身体·肌와 に 뒤에서 신체에 이롭다는 ‘좋다’를 고른다.
 // local 252
-//     src[-1] == "に" and pos[-2] is 1**
-//     (src[-2] == "体" or src[-2] == "からだ")
+//     src[-1] == "に" and (src[-2] == "体" or src[-2] == "からだ" or src[-2] == "身体" or src[-2] == "肌")
 bool RuleL252([[maybe_unused]] Item* p) {
-    return (SrcEq(p, -1, "に"sv) && PumsaEq(p, -2, "1**"sv)) ||
-           (SrcEq(p, -2, "体"sv) ||
-           SrcEq(p, -2, "からだ"sv));
+    return (SrcEq(p, -1, "に"sv) && (SrcEq(p, -2, "体"sv) ||
+           SrcEq(p, -2, "からだ"sv) ||
+           SrcEq(p, -2, "身体"sv) ||
+           SrcEq(p, -2, "肌"sv)));
 }
 
 // # やす는 연용형 동사 뒤에서 용이함을 나타내는 ‘쉽다’로 고른다.
@@ -3264,13 +3259,12 @@ bool RuleL326([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "2**"sv) && SrcEq(p, -2, "争い"sv) && PumsaEq(p, -2, "1**"sv));
 }
 
-// # 앞말의 의미나 인명 표지를 검사해 호칭 'さん'을 '씨'로 고른다.
+// # 앞말의 사람 의미나 인명 표지를 검사해 호칭 さん을 ‘씨’로 고른다.
 // local 327
-//     (sem[-1] under VHn or sem[-1] under VPn)
+//     sem[-1] under VHn
 //     pos[-1] is 13* and gram[-1] has Wa|Wb
 bool RuleL327([[maybe_unused]] Item* p) {
-    return (AttrMinusEq(p, -1, "VHn"sv) ||
-           AttrMinusEq(p, -1, "VPn"sv)) ||
+    return AttrMinusEq(p, -1, "VHn"sv) ||
            (PumsaEq(p, -1, "13*"sv) && GramEq(p, -1, "WaWb"sv));
 }
 
@@ -5204,7 +5198,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL238, 0x7c5278cb66e93b31ull},
     {RuleL239, 0x14f3c032c3dd9147ull},
     {RuleL240, 0x474a0936ea7e0dc7ull},
-    {RuleL241, 0xf4991d472f5b2764ull},
+    {RuleL241, 0xb7a5a876d6329180ull},
     {RuleL242, 0x47760793ce6608e0ull},
     {RuleL243, 0xe5789b304721da2eull},
     {RuleL244, 0x3e7704b3e9a8ce97ull},
@@ -5215,7 +5209,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL249, 0x94febfc566058ceeull},
     {RuleL250, 0x040e37f69e4b3f8bull},
     {RuleL251, 0xc05159ee8ceae5bcull},
-    {RuleL252, 0x26774eb3bc8befd5ull},
+    {RuleL252, 0x3f76e90f1b6705f3ull},
     {RuleL253, 0xa0e0e926f82c50eaull},
     {RuleL254, 0x0799b70d2ad5cf2eull},
     {RuleL255, 0x571cfb62bc2085d3ull},
@@ -5290,7 +5284,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL324, 0xb64e47ce2a2bc78aull},
     {RuleL325, 0x1fe7bcfb89f2a006ull},
     {RuleL326, 0x96ce39f669f745cbull},
-    {RuleL327, 0xe8678484f1e714e7ull},
+    {RuleL327, 0xa5d365414896d010ull},
     {RuleL328, 0xbb20f0b0364af855ull},
     {RuleL329, 0x6e3786f746e0c70aull},
     {RuleL330, 0xa35f874ccabb8cfcull},
