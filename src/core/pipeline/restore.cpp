@@ -185,13 +185,27 @@ int VowelOf(char32_t r) {
     return -1;
 }
 
-// Whether text ends in a Hangul syllable with a final consonant.
-bool AfterFinalConsonant(std::string_view text) {
+// The final consonant of the Hangul syllable text ends in, or -1.
+int LastFinal(std::string_view text) {
     std::size_t start = text.size();
     while (start > 0 && (static_cast<unsigned char>(text[start - 1]) & 0xC0) == 0x80) start--;
-    if (start == 0) return false;
+    if (start == 0) return -1;
     const auto syllable = text::Split(text::DecodeRune(text.substr(start - 1)).cp);
-    return syllable && syllable->final != text::kFinalNone;
+    return syllable ? syllable->final : -1;
+}
+
+// Whether text ends in a Hangul syllable with a final consonant.
+bool AfterFinalConsonant(std::string_view text) {
+    const int final = LastFinal(text);
+    return final > text::kFinalNone;
+}
+
+// Whether text ends in an attributive form and one space: a syllable with the final ㄴ
+// or ㄹ (갈 때, 갔을 때, 하는 때).
+bool AfterAttributive(std::string_view text) {
+    if (!text.ends_with(' ')) return false;
+    const int final = LastFinal(text.substr(0, text.size() - 1));
+    return final == text::kFinalNieun || final == text::kFinalRieul;
 }
 
 }  // namespace
@@ -249,9 +263,10 @@ std::string KoreanForms(std::string_view s) {
 }
 
 std::string KoreanCleanup(std::string_view s) {
+    // after: "final" (a syllable with a final consonant before) or "attributive"
+    // (AfterAttributive).
     struct Row {
-        std::string from, to;
-        bool afterFinal;
+        std::string from, to, after;
     };
     static const auto rows = [] {
         std::vector<Row> parsed;
@@ -260,7 +275,7 @@ std::string KoreanCleanup(std::string_view s) {
         while (reader.Next()) {
             const auto& f = reader.Fields();
             if (f.size() < 2 || f[0].empty()) continue;
-            parsed.push_back({std::string(f[0]), std::string(f[1]), f.size() >= 3 && f[2] == "final"});
+            parsed.push_back({std::string(f[0]), std::string(f[1]), f.size() >= 3 ? std::string(f[2]) : std::string()});
         }
         return parsed;
     }();
@@ -268,8 +283,11 @@ std::string KoreanCleanup(std::string_view s) {
     out.reserve(s.size());
     while (!s.empty()) {
         bool matched = false;
-        for (const auto& [from, to, afterFinal] : rows) {
-            if (!s.starts_with(from) || (afterFinal && !AfterFinalConsonant(out))) continue;
+        for (const auto& [from, to, after] : rows) {
+            if (!s.starts_with(from) || (after == "final" && !AfterFinalConsonant(out)) ||
+                (after == "attributive" && !AfterAttributive(out))) {
+                continue;
+            }
             out += to;
             s.remove_prefix(from.size());
             matched = true;

@@ -43,7 +43,11 @@ const dict::Snapshot* Dictionary() {
          "が\t(이)가\tP200\t\t\tGN\t23\n"
          "ドン\t쾅\tN110\t\t\tGN\t24\n"
          "音\t소리\tN110\t\t\tGN\t25\n"
-         "猫\t고양이\tN110\tQAA\t\tGN\t26\n"},
+         "猫\t고양이\tN110\tQAA\t\tGN\t26\n"
+         "曰く\t왈\tN110\t\t\tGN\t27\n"
+         "曰く\t듣자 하니\tE300\t\t\tGN\t28\n"
+         "つい\t무심코\tE311\tXXX\t\tGN\t29\n"
+         "つい\t불과\tE311\t\t\tGN\t30\n"},
         {0, "names.tsv",
          "#! layer=names\n"
          "key\tko\tpos\tsem\tgram\tdict\tid\n"
@@ -89,11 +93,12 @@ void CheckCases(std::initializer_list<Case> cases, std::string_view before = {})
 }  // namespace
 
 HD_TEST(constraint_rules_table) {
-    HD_CHECK_EQ(word::ConstraintRules().size(), size_t{6});
+    HD_CHECK_EQ(word::ConstraintRules().size(), size_t{9});
     for (const word::ConstraintRule& r : word::ConstraintRules()) {
         HD_CHECK(!r.id.empty());
         HD_CHECK(!r.note.empty());
         HD_CHECK((r.word == word::ConstraintWord::Source) == !r.source.empty());
+        HD_CHECK((r.reject == word::ConstraintReject::OtherTargets) == !r.target.empty());
     }
 }
 
@@ -152,4 +157,31 @@ HD_TEST(constraint_quote_after_exclamation) {
     });
     CheckCases({{"と音が", "と音が", "と", "(이)라고"}}, "！");
     CheckCases({{"と音が", "と音が", "と", "(와)과 (이)라고"}}, "、");
+}
+
+// 曰く that opens its line before 、 (past spaces and an opening bracket) is the adverb that
+// introduces hearsay; after a word, without 、 or after other text it keeps its noun sense.
+HD_TEST(constraint_iwaku_line_opening) {
+    CheckCases({
+        {"曰く、彼は", "曰く、彼は", "曰く", "듣자 하니"},
+        {"　曰く、彼は", "曰く、彼は", "曰く", "듣자 하니"},
+        {"「曰く、彼は", "曰く、彼は", "曰く", "듣자 하니"},
+        {"先生曰く、彼は", "曰く、彼は", "曰く", "왈"},
+        {"曰くによれば", "曰くによれば", "曰く", "왈"},
+        {"国、曰く“騎士”", "曰く“騎士”", "曰く", "왈"},
+    });
+    CheckCases({{"曰く、彼は", "曰く、彼は", "曰く", "왈"}}, "。");
+}
+
+// つい before a numeral and 前 (past a quantity word, in its token or the next) is 불과; つい
+// before a numeral without 前, or before other words, keeps its senses.
+HD_TEST(constraint_tsui_numeral_ago) {
+    CheckCases({
+        {"つい三時間ほど前", "つい三時間ほど前", "つい", "불과"},
+        {"つい数分前に", "つい数分前に", "つい", "불과"},
+        {"つい二度寝した", "つい二度寝した", "つい", "무심코 불과"},
+        {"つい3回も言った", "つい3回も言った", "つい", "무심코 불과"},
+        {"つい笑った", "つい笑った", "つい", "무심코 불과"},
+        {"つい三、四日前", "つい三、四日前", "つい", "무심코 불과"},
+    });
 }
