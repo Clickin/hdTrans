@@ -12,7 +12,7 @@ L69	外は雨が降っているようだ。	밖은 비가 오고 있는 것 같�
 L69	あの人はとても元気なようだ。	그 사람은 매우 건강한 것 같다.	current	local
 L69	彼は美しいようだ。	그는 아름다운 것 같다.	current	local
 L95	裏の通りを歩く。	뒤대로를 걷는다.	current	local
-L97	私が好きです。	내를 좋아합니다.	current	local
+L97	私が好きです。	나를 좋아합니다.	current	local
 L102	彼が何時に来るか知らない。	그가 몇시에 오는지 모른다.	current	local-ending
 L102	この先どうなるか分からない。	이 앞 어떻게 되는지 모른다.	current	local-ending
 L106	小さい頃から犬が大好きでした。	어렸을 적부터 개를 아주 좋아했습니다.	current	local
@@ -163,7 +163,7 @@ L1033	どうしてそんなことをしたの。	어째서 그런 일을 했어.
 L1033	そんなことより早く食べよう。	그런 일보다 빨리 먹자.	current	local
 L1041	俺と彼は昔からの友達だ。	나와 그는 옛날부터의 친구다.	current	local
 L1041	俺も一緒に行っていいかな。	나도 함께 가도 좋을까.	current	local
-L1050	狭い間を通る。	좁은 동안을 통과한다.	current	local
+L1050	狭い間を通る。	좁은 사이를 지난다.	current	local
 L1053	旅行に行く気はないと言った。	여행하러 갈 생각은 없다고 말했다.	current	local
 L1053	今日は仕事をする気はありません。	오늘은 일을 할 생각은 없습니다.	current	local
 L1057	これは金と言う金属です。	이것은 김이라고 하는 금속입니다.	current	local
@@ -405,7 +405,7 @@ L2679	私はこの学校の生徒であります。	나는 이 학교의 학생�
 L2682	父は会社で働いており、帰りが遅い。	아버지는 회사에서 일하고 있어 돌아오는 길이 늦다.	current	local
 L2682	この犬は庭で遊んでおり、元気そうだ。	이 개는 뜰에서 놀고 있어 건강한 것 같다.	current	local
 L2682	読んでおり、書いている。	읽고 있어 쓰고 있다.	current	local
-L2684	母について行く。	어머니를 대해 간다.	current	local
+L2684	母について行く。	어머니를 따라 간다.	current	local
 L2688	私には信じられない話だ。	나에게는 믿을 수 없는 이야기다.	current	local
 L2688	お金さえない毎日だった。	돈조차 없는 매일이었다.	current	local
 L2692	病院にかかった。	병원에 걸렸다.	current	local
@@ -711,7 +711,7 @@ L4988	汚れ対策を考える。	더러운 대책을 생각한다.	current	loca
 L4990	残ったうちの半分を使う。	남은 우리 반을 사용한다.	current	local
 L4990	うちの猫だ。	우리 고양이다.	current	local
 L4993	ステンレス流しを買う。	스텐레스 흘려 보내기를 산다.	current	local
-L5015	星がついた。	별이 되었다.	current	local
+L5015	星がついた。	별이 붙었다.	current	local
 L5031	彼はとても行けない。	그는 매우 갈 수 없다.	current	local
 L5031	とても高い。	매우 높다.	current	local
 L5034	健康のため歩く。	건강이기 때문에 걷는다.	current	local
