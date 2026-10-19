@@ -452,7 +452,7 @@ L2943	そんなに急がないで。	그렇게 서두르지 마.	current	local-e
 L2943	ここでは走らないで。	여기에서는 달리지 마.	current	local-ending
 L2947	無理なのよ。	무리이야.	current	local-ending
 L2956	子供のすることだ。	아이가 하는 것이다.	current	local
-L2962	京都巡りツアーに参加する。	교토 둘러싸고 투어에 참가한다.	current	local
+L2962	京都巡りツアーに参加する。	교토 순회 투어에 참가한다.	current	local
 L2963	店員さんに道を聞いた。	점원에 길을 물었다.	current	local
 L2963	運転手さんにお礼を言った。	운전기사에 감사 인사를 했다.	current	local
 L2975	あれはうちの猫よ。	저것은 우리 고양이야.	current	local
@@ -647,7 +647,7 @@ L4222	その話はちょっと分かる。	그 이야기는 잘 안다.	current	
 L4229	お金なんか要りません。	돈은 필요하지 않습니다.	current	local
 L4229	私は野菜なんか嫌いです。	나는 야채는 싫습니다.	current	local
 L4240	いただきます、後で返します。	잘 먹겠습니다, 나중에 돌려줍니다.	current	local
-L4280	一目彼女の顔を見たい。	일목 그녀의 얼굴을 보고 싶다.	current	local
+L4280	一目彼女の顔を見たい。	한 눈 그녀의 얼굴을 보고 싶다.	current	local
 L4281	今日は友達と一緒に買い物へ行く。	오늘은 친구와 함께 쇼핑하러 간다.	current	local
 L4305	方針に従って申し込む。	방침에 따르고 신청한다.	current	local
 L4308	値段は高いものの品質が良い。	가격은 비싼 품질이 좋다.	current	local-ending
