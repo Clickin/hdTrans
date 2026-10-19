@@ -79,7 +79,8 @@ add_library(hdtrans STATIC ${HDTRANS_SOURCES}
     "${CMAKE_CURRENT_BINARY_DIR}/builtin_gen.cpp" "${CMAKE_CURRENT_BINARY_DIR}/builtin_extra_gen.cpp"
     "${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp")
 target_link_libraries(hdtrans PRIVATE pcre2-16 yaml)
-target_compile_definitions(hdtrans PUBLIC HDTRANS_VERSION="${HDTRANS_VERSION}")
+set_source_files_properties(src/cli/main.cpp src/cshared/hdtrans_c.cpp PROPERTIES
+    COMPILE_DEFINITIONS HDTRANS_VERSION="${HDTRANS_VERSION}")
 if(HDTRANS_INTERPRET_RULES)
     target_compile_definitions(hdtrans PRIVATE HDTRANS_INTERPRET_RULES)
 endif()

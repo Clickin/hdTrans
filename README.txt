@@ -23,8 +23,9 @@ hdTrans
 
 5. Ehnd(꿀도르)는 기본으로 꺼져 있습니다. 켜면 번역 품질이 낮아질 수 있습니다.
 
-Windows의 hdtrans.exe, hdTransGUI.exe, hdTransEngine.dll은 64비트입니다.
-hdtrans_x86.exe와 hdTransEngine_x86.dll은 32비트 C API 사용자용입니다.
+Windows의 hdtrans.exe와 hdTransGUI.exe는 64비트입니다.
+32비트 환경에서는 hdtrans_x86.exe를 씁니다.
+hdTransEngine.dll과 hdTransEngine_x86.dll은 다른 프로그램에 넣어 쓰는 개발자용 파일입니다.
 
 소스와 안내: https://github.com/sokcuri/hdTrans
 라이선스: AGPL-3.0-or-later, 외부 라이브러리는 THIRD-PARTY-NOTICES.txt를 확인하세요.
