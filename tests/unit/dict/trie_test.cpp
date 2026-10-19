@@ -16,6 +16,10 @@
 
 using hdTrans::dict::Trie;
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wmismatched-new-delete"
+#endif
+
 // Counts the allocations of the test program, to check that lookups make none.
 namespace {
 size_t allocations = 0;

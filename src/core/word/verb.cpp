@@ -1,4 +1,5 @@
 // Verb conjugation: the branch of a verb record and the acceptance of what follows it.
+#include <cstdint>
 #include <algorithm>
 
 #include "core/text/utf8.h"

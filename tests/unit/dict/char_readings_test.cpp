@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "core/dict/char_readings.h"
 
 #include "hdtest.h"

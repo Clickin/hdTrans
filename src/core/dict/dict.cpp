@@ -1,5 +1,6 @@
 #include "core/dict/dict.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <limits>
 #include <utility>
