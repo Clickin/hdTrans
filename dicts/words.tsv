@@ -680,6 +680,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 せん妄	섬망	N110	UTi		GN				せんもう	w:677
 ぜいたく品	사치품	N110			GN				ぜいたくひん	w:678
 そいつ等	그놈들	N120	VHn		GN		llm		そいつら	w:679
+そういえば	그러고 보니	A9D0			GN					w:26620
 そういった	그런	E010			GN		llm			w:680
 そういった	그런	A9D0			GN		llm		そういった	w:681
 そうこう	이럭저럭	E300			GN		xxx llm	1		w:682
