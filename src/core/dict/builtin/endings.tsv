@@ -1,0 +1,372 @@
+// Builtin end rows. Model words: 書く/쓰다 (verbs), 高い/높다 (i-adjectives),
+// 静か/조용하다 (adjectival nouns), 学生/학생 (nouns). Every row applies
+// only to sentence-final predicates; rows with register= only when that
+// register is set. (요) is written only in the polite register.
+
+// Register table: verbs.
+書く	쓴다	end	register=plain prio=-1
+書く	써	end	register=casual prio=-1
+書く	써요	end	register=polite prio=-1
+書く	씁니다	end	register=formal prio=-1
+書く	쓰오	end	register=archaic prio=-1
+書いた	썼다	end	register=plain prio=-1
+書いた	썼어	end	register=casual prio=-1
+書いた	썼어요	end	register=polite prio=-1
+書いた	썼습니다	end	register=formal prio=-1
+書いた	썼소	end	register=archaic prio=-1
+書かない	쓰지 않는다	end	register=plain prio=-1
+書かない	쓰지 않아	end	register=casual prio=-1
+書かない	쓰지 않아요	end	register=polite prio=-1
+書かない	쓰지 않습니다	end	register=formal prio=-1
+書かない	쓰지 않소	end	register=archaic prio=-1
+書かないで	쓰지 마라	end	register=plain prio=-1
+書かないで	쓰지 마	end	register=casual prio=-1
+書かないで	쓰지 마세요	end	register=polite prio=-1
+書かないで	쓰지 마십시오	end	register=formal prio=-1
+書かないで	쓰지 마오	end	register=archaic prio=-1
+書いて	써라	end	register=plain prio=-1
+書いて	써	end	register=casual prio=-1
+書いて	써요	end	register=polite prio=-1
+書いて	써 주십시오	end	register=formal prio=-1
+書いて	써 주오	end	register=archaic prio=-1
+書け	써라	end	register=plain prio=-1
+書け	써	end	register=casual prio=-1
+書け	쓰세요	end	register=polite prio=-1
+書け	쓰십시오	end	register=formal prio=-1
+書け	쓰오	end	register=archaic prio=-1
+書こう	쓰자	end	register=plain prio=-1
+書こう	쓰자	end	register=casual prio=-1
+書こう	써요	end	register=polite prio=-1
+書こう	씁시다	end	register=formal prio=-1
+書こう	씁시다	end	register=archaic prio=-1
+書いてる	쓰고 있다	end	register=plain prio=-1
+書いてる	쓰고 있어	end	register=casual prio=-1
+書いてる	쓰고 있어요	end	register=polite prio=-1
+書いてる	쓰고 있습니다	end	register=formal prio=-1
+書いてる	쓰고 있소	end	register=archaic prio=-1
+書いてた	쓰고 있었다	end	register=plain prio=-1
+書いてた	쓰고 있었어	end	register=casual prio=-1
+書いてた	쓰고 있었어요	end	register=polite prio=-1
+書いてた	쓰고 있었습니다	end	register=formal prio=-1
+書いてた	쓰고 있었소	end	register=archaic prio=-1
+書いちゃう	써버린다	end	register=plain prio=-1
+書いちゃう	써버려	end	register=casual prio=-1
+書いちゃう	써버려요	end	register=polite prio=-1
+書いちゃう	써버립니다	end	register=formal prio=-1
+書いちゃう	써버리오	end	register=archaic prio=-1
+書いちゃった	써버렸다	end	register=plain prio=-1
+書いちゃった	써버렸어	end	register=casual prio=-1
+書いちゃった	써버렸어요	end	register=polite prio=-1
+書いちゃった	써버렸습니다	end	register=formal prio=-1
+書いちゃった	써버렸소	end	register=archaic prio=-1
+書いちゃうの	써버리는 거야	end	prio=-1
+書きます	쓴다	end	register=plain prio=-1
+書きます	써	end	register=casual prio=-1
+書きます	써요	end	register=polite prio=-1
+書きます	씁니다	end	register=formal prio=-1
+書きます	쓰오	end	register=archaic prio=-1
+書きました	썼다	end	register=plain prio=-1
+書きました	썼어	end	register=casual prio=-1
+書きました	썼어요	end	register=polite prio=-1
+書きました	썼습니다	end	register=formal prio=-1
+書きました	썼소	end	register=archaic prio=-1
+
+// Register table: i-adjectives and adjectival nouns.
+高い	높다	end	register=plain prio=-1
+高い	높아	end	register=casual prio=-1
+高い	높아요	end	register=polite prio=-1
+高い	높습니다	end	register=formal prio=-1
+高い	높으오	end	register=archaic prio=-1
+高かった	높았다	end	register=plain prio=-1
+高かった	높았어	end	register=casual prio=-1
+高かった	높았어요	end	register=polite prio=-1
+高かった	높았습니다	end	register=formal prio=-1
+高かった	높았소	end	register=archaic prio=-1
+静かだ	조용하다	end	register=plain prio=-1
+静かだ	조용해	end	register=casual prio=-1
+静かだ	조용해요	end	register=polite prio=-1
+静かだ	조용합니다	end	register=formal prio=-1
+静かだ	조용하오	end	register=archaic prio=-1
+静かだった	조용했다	end	register=plain prio=-1
+静かだった	조용했어	end	register=casual prio=-1
+静かだった	조용했어요	end	register=polite prio=-1
+静かだった	조용했습니다	end	register=formal prio=-1
+静かだった	조용했소	end	register=archaic prio=-1
+
+// じゃん
+書くじゃん	쓰잖아(요)	end	prio=-1
+書いたじゃん	썼잖아(요)	end	prio=-1
+書いてたじゃん	썼잖아(요)	end	prio=-1
+書かないじゃん	쓰지 않잖아(요)	end	prio=-1
+書いちゃうじゃん	써버리잖아(요)	end	prio=-1
+// っす: polite
+書くっす	써요	end	prio=-1
+書いたっす	썼어요	end	prio=-1
+書いてっす	써요	end	prio=-1
+書いてるっす	쓰고 있어요	end	prio=-1
+書いてたっす	쓰고 있었어요	end	prio=-1
+書いちゃうっす	써버려요	end	prio=-1
+書こうっす	씁시다	end	prio=-1
+// でござる: archaic
+書くでござる	쓰오	end	prio=-1
+書いたでござる	썼소	end	prio=-1
+書いてるでござる	쓰고 있소	end	prio=-1
+書いちゃうでござる	써버리오	end	prio=-1
+学生でござる	학생이오	end	prio=-1
+// ぜ, ぞ (the dictionary endings of 書くぞ, 書いたぞ stay)
+書くぜ	쓴다	end	prio=-1
+書いたぜ	썼다	end	prio=-1
+静かだぞ	조용하다	end	prio=-1
+静かだぜ	조용하다	end	prio=-1
+// のだ, んだ. のだ is also the narration's assertion (書いたのだ: 썼던
+// 것이다), so 거야 needs the casual register.
+書くのだ	쓰는 것이다	end	register=plain prio=-1
+書くのだ	쓰는 거야	end	register=casual prio=-1
+書くんだ	쓰는 거야	end	prio=-1
+書いたのだ	쓴 거야	end	register=casual prio=-1
+書いたんだ	쓴 거야	end	prio=-1
+書いてるのだ	쓰고 있는 거야	end	register=casual prio=-1
+書いちゃうのだ	써버리는 거야	end	register=casual prio=-1
+// もん
+書くもん	쓰는걸	end	prio=-1
+書いたもん	썼는걸	end	prio=-1
+// わよ, わ. わよ after an action verb announces (갈 거야); after a state
+// or 頼む it asserts (달라, 있어, 부탁해).
+書くわよ	써	end	stative prio=-1
+書くわよ	쓸 거야	end	prio=-1
+書いてるわ	쓰고 있어	end	prio=-1
+書いてるわよ	쓰고 있어	end	prio=-1
+書いてたわ	쓰고 있었어	end	prio=-1
+書くわ	써	end	prio=-1
+書いてわよ	써 줘	end	prio=-1
+静かだわよ	조용해	end	prio=-1
+// にゃ
+書くにゃ	쓴다냥	end	prio=-1
+書いたにゃ	썼다냥	end	prio=-1
+書いてるにゃ	쓰고 있다냥	end	prio=-1
+静かだにゃ	조용하다냥	end	prio=-1
+学生だにゃ	학생이다냥	end	prio=-1
+// っぽい
+書くっぽい	쓰는 것 같아	end	prio=-1
+静かっぽい	조용한 것 같아	end	prio=-1
+// ないで with a particle
+書かないでね	쓰지 마	end	prio=-1
+書かないでよ	쓰지 마	end	prio=-1
+書かないでわよ	쓰지 마	end	prio=-1
+// ですわ, わね: polite
+書きますわ	써요	end	prio=-1
+静かですわね	조용하네요	end	prio=-1
+// のう: old speech
+書くのう	쓰는구나	end	prio=-1
+高いのう	높구나	end	prio=-1
+静かだのう	조용하구나	end	prio=-1
+// じゃ: old man's copula
+学生じゃ	학생이야	end	prio=-1
+// のう before a comma too (めでたいのう、提督), かのう
+書いたのう	썼구나	end	prio=-1
+書いてるのう	쓰고 있구나	end	prio=-1
+書かないのう	쓰지 않는구나	end	prio=-1
+書かんのう	쓰지 않는구나	end	prio=-1
+書くかのう	쓸까	end	prio=-1
+書いたかのう	썼을까	end	prio=-1
+書こうかのう	써 볼까	end	prio=-1
+高いかのう	높을까	end	prio=-1
+学生かのう	학생일까	end	prio=-1
+高かったのう	높았구나	end	prio=-1
+高くないのう	높지 않구나	end	prio=-1
+静かじゃのう	조용하구나	end	prio=-1
+学生だのう	학생이구나	end	prio=-1
+学生じゃのう	학생이구나	end	prio=-1
+// sweep2
+書いてみせる	써 내겠다	end	prio=-1
+静かだったろ	조용했잖아	end	prio=-1
+学生だったろ	학생이었잖아	end	prio=-1
+高かったろ	높았잖아	end	prio=-1
+書いたろ	썼잖아	end	prio=-1
+書くんだろ	쓰는 거지	end	prio=-1
+書いたんだろ	쓴 거지	end	prio=-1
+高いんだろ	높은 거지	end	prio=-1
+静かなんだろ	조용한 거지	end	prio=-1
+書くとは	쓰다니	end	prio=-1
+書いたとは	썼다니	end	prio=-1
+学生だったかのう	학생이었을까	end	prio=-1
+// やがる after a 連用形: these forms carry the contempt (〜다니, 〜군); the
+// other forms conjugate as the verb itself (書きやがった 썼다, 書きやがれ 써라).
+書きやがるな	쓰는군	end	prio=-1
+書きやがるぜ	쓰는군	end	prio=-1
+書きやがったぜ	썼군	end	prio=-1
+書きやがって	쓰다니	end	prio=1
+書いてやがる	쓰고 있다	end	prio=-1
+書いてやがるぜ	쓰고 있군	end	prio=-1
+書いてやがらぁ	쓰고 있네	end	prio=-1
+書いてやがった	쓰고 있었다	end	prio=-1
+書いてやがれ	쓰고 있어라	end	prio=-1
+// たげる: てあげる
+書いたげる	써 줄게	end	prio=-1
+書いたげます	써 줄게요	end	prio=-1
+// sweep3: hearsay たって, ていなさい, ておく contractions, sentence-final
+// から, かしら, ものか, ね/よね/わ in casual speech
+書いたって	썼대	end	prio=-1
+書くって	쓴다니까	end	prio=-1
+書いてなさい	쓰고 있어	end	prio=-1
+書いていなさい	쓰고 있어	end	prio=-1
+書いてなさいって	쓰고 있으라니까	end	prio=-1
+書くから	쓰니까	end	prio=-1
+書いたから	썼으니까	end	prio=-1
+書かないから	쓰지 않으니까	end	prio=-1
+書かないからね	쓰지 않으니까	end	prio=-1
+書かないんだから	쓰지 않을 거니까	end	prio=-1
+高いから	높으니까	end	prio=-1
+書くかしら	쓸까	end	prio=-1
+書いたかしら	썼을까	end	prio=-1
+書かないかしら	쓰지 않을까	end	prio=-1
+高いかしら	높을까	end	prio=-1
+静かかしら	조용할까	end	prio=-1
+学生かしら	학생일까	end	prio=-1
+書くものか	쓸까 보냐	end	prio=-1
+書くもんか	쓸까 보냐	end	prio=-1
+書くものかよ	쓸까 보냐	end	prio=-1
+書くもんかよ	쓸까 보냐	end	prio=-1
+書くかよ	쓸까 보냐	end	prio=-1
+書いたね	썼네	end	prio=-1
+書いてるね	쓰고 있네	end	prio=-1
+書かないね	쓰지 않네	end	prio=-1
+高いね	높네	end	prio=-1
+高かったね	높았네	end	prio=-1
+書いたよね	썼지	end	prio=-1
+高いよね	높지	end	prio=-1
+静かよね	조용하지	end	prio=-1
+学生よね	학생이지	end	prio=-1
+学生ね	학생이네	end	prio=-1
+静かね	조용하네	end	prio=-1
+書いちゃいましたか	써 버렸습니까	end	prio=-1
+学生でございます	학생입니다	end	prio=-1
+// だろ: seeking agreement (言っただろ 말했지, そうだろ？ 그렇지?); だろう
+// stays a guess
+書いただろ	썼지	end	prio=-1
+書くだろ	쓰지	end	prio=-1
+書かないだろ	쓰지 않지	end	prio=-1
+書いてるだろ	쓰고 있지	end	prio=-1
+書いてただろ	쓰고 있었지	end	prio=-1
+高いだろ	높지	end	prio=-1
+高かっただろ	높았지	end	prio=-1
+静かだろ	조용하지	end	prio=-1
+学生だろ	학생이지	end	prio=-1
+// じゃないか after a predicate: 〜잖아
+書いたじゃないか	썼잖아	end	prio=-1
+書いてたじゃないか	쓰고 있었잖아	end	prio=-1
+書いてるじゃないか	쓰고 있잖아	end	prio=-1
+書くじゃないか	쓰잖아	end	prio=-1
+高いじゃないか	높잖아	end	prio=-1
+書いたじゃない	썼잖아	end	prio=-1
+書いてたじゃない	쓰고 있었잖아	end	prio=-1
+// んだぞ, のだぞ
+書くんだぞ	쓰는 거야	end	prio=-1
+書いたんだぞ	쓴 거야	end	prio=-1
+高いんだぞ	높은 거야	end	prio=-1
+静かなんだぞ	조용한 거야	end	prio=-1
+学生なんだぞ	학생인 거야	end	prio=-1
+// ですわ, ですの, でしてよ, ですもの: a lady's polite speech
+学生ですわ	학생이에요	end	prio=-1
+高いですわ	높아요	end	prio=-1
+静かですわ	조용해요	end	prio=-1
+書きましたわ	썼어요	end	prio=-1
+学生でしたわ	학생이었어요	end	prio=-1
+高かったですわ	높았어요	end	prio=-1
+学生ですわね	학생이네요	end	prio=-1
+高いですわね	높네요	end	prio=-1
+書きますわね	쓰네요	end	prio=-1
+学生ですわよ	학생이에요	end	prio=-1
+高いですわよ	높아요	end	prio=-1
+学生ですの	학생이에요	end	prio=-1
+高いですの	높아요	end	prio=-1
+書きますの	써요	end	prio=-1
+学生ですのよ	학생이에요	end	prio=-1
+高いですのよ	높아요	end	prio=-1
+静かですのよ	조용해요	end	prio=-1
+学生でしてよ	학생이에요	end	prio=-1
+静かでしてよ	조용해요	end	prio=-1
+高くってよ	높아요	end	prio=-1
+高くてよ	높아요	end	prio=-1
+学生ですもの	학생인걸요	end	prio=-1
+高いですもの	높은걸요	end	prio=-1
+静かですもの	조용한걸요	end	prio=-1
+書くんですもの	쓰는걸요	end	prio=-1
+書いたんですもの	쓴걸요	end	prio=-1
+書きますもの	쓰는걸요	end	prio=-1
+学生だもの	학생인걸	end	prio=-1
+書くんだもの	쓰는걸	end	prio=-1
+書いたんだもの	쓴걸	end	prio=-1
+高いんだもの	높은걸	end	prio=-1
+// かもしれません with わ
+書くかもしれませんわ	쓸지도 몰라요	end	prio=-1
+書いたかもしれませんわ	썼을지도 몰라요	end	prio=-1
+高いかもしれませんわ	높을지도 몰라요	end	prio=-1
+学生かもしれませんわ	학생일지도 몰라요	end	prio=-1
+高いのかもしれませんわ	높은 것일지도 몰라요	end	prio=-1
+書くのかもしれませんわ	쓰는 것일지도 몰라요	end	prio=-1
+書いちゃったか	써 버렸나	end	prio=-1
+書いてしまったか	써 버렸나	end	prio=-1
+// てくれよ, ておくれ: a request
+書いてくれよ	써 줘	end	prio=-1
+書いておいてくれよ	써 둬	end	prio=-1
+書いておくれ	써 다오	end	prio=-1
+書いておくれよ	써 다오	end	prio=-1
+書いてくれるよ	써 줄 거야	end	prio=-1
+// のだぞ, のだよ after a predicate
+書くのだぞ	쓰는 거다	end	prio=-1
+書いたのだぞ	쓴 거다	end	prio=-1
+高いのだぞ	높은 거다	end	prio=-1
+書くのだよ	쓰는 거야	end	prio=-1
+書いたのだよ	쓴 거야	end	prio=-1
+高いのだよ	높은 거야	end	prio=-1
+
+// ね after a past progressive, a past negative, a wish, a negative
+// adjective or a copula (楽しかったね 즐거웠네 is above): 네.
+書いてたね	쓰고 있었네	end	prio=-1
+書かなかったね	쓰지 않았네	end	prio=-1
+書きたいね	쓰고 싶네	end	prio=-1
+高くないね	높지 않네	end	prio=-1
+静かだね	조용하네	end	prio=-1
+静かだったね	조용했네	end	prio=-1
+静かじゃないね	조용하지 않네	end	prio=-1
+// てしまっている, ちゃっている: the state after it happened (ひねくれちゃっている
+// 비뚤어져 버렸다), not 버리고 있다.
+書いちゃっている	써 버렸다	end	prio=-1
+書いちゃってる	써 버렸다	end	prio=-1
+書いてしまっている	써 버렸다	end	prio=-1
+書いてしまってる	써 버렸다	end	prio=-1
+
+// ってよ, ってさ: hearsay at the end of an utterance (婚約破棄したってよ！ 파혼했대!).
+書いたってよ	썼대	end	prio=-1
+書くってよ	쓴대	end	prio=-1
+書いてるってよ	쓰고 있대	end	prio=-1
+高いってよ	높대	end	prio=-1
+学生だってよ	학생이래	end	prio=-1
+書いたってさ	썼대	end	prio=-1
+書くってさ	쓴대	end	prio=-1
+高いってさ	높대	end	prio=-1
+学生だってさ	학생이래	end	prio=-1
+// なんだもん: a reason given in speech.
+学生なんだもん	학생인걸	end	prio=-1
+静かなんだもん	조용한걸	end	prio=-1
+書くんだもん	쓰는걸	end	prio=-1
+書いたんだもん	쓴걸	end	prio=-1
+高いんだもん	높은걸	end	prio=-1
+学生だもん	학생인걸	end	prio=-1
+静かだもん	조용한걸	end	prio=-1
+// なり, でござるな: the old copula and archaic speech.
+学生なり	학생이다	end	prio=-1
+静かなり	조용하다	end	prio=-1
+学生でござるな	학생이로군	end	prio=-1
+学生でござるよ	학생이오	end	prio=-1
+書くでござるよ	쓰오	end	prio=-1
+// でしょう after a polite past, わ after a polite verb, でいらっしゃいます.
+書きましたでしょう	썼지요	end	prio=-1
+書くのですわ	쓰는 거예요	end	prio=-1
+学生でいらっしゃいます	학생이십니다	end	prio=-1
+// のよう at the end of a sentence (お姫様のよう 공주님 같다).
+学生のよう	학생 같다	end	prio=-1
+// 〜たばかり at the end of a sentence (なったばかり 된 지 얼마 안 됐다).
+書いたばかり	쓴 지 얼마 안 됐다	end	prio=-1
+書いたばかりだ	쓴 지 얼마 안 됐다	end	prio=-1
