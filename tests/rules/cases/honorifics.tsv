@@ -1,0 +1,3 @@
+rule	input	expected	kind	layer
+G230	階段を走り上がる。	계단을 달려 오른다.	fix	global-last
+G230	歌を歌い上げた。	노래를 불렀다.	keep	global-last

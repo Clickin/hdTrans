@@ -1,0 +1,6 @@
+rule	input	expected	kind	layer
+L2571	大根を薄く切る。	무를 얇게 자른다.	fix	local
+L2571	味が薄い。	싱겁다.	keep	local
+L2571	薄いスープを飲む。	싱거운 스프를 먹는다.	keep	local
+L267	仕事を辛くしないで。	일을 괴롭게 하지 말아줘.	fix	local
+L267	カレーを辛くしないで。	카레를 맵게 하지 말아줘.	keep	local

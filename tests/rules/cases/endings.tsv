@@ -44,3 +44,14 @@ L1327	何を待つの。	무엇을 기다려.	fix	local-ending
 L1327	ここで待つの。	여기서 기다려.	keep	local-ending
 L220	確認してみるのみだ。	확인해 볼 뿐이다.	fix	local-ending
 L220	待つのみだ。	기다릴 뿐이다.	keep	local-ending
+L191	考えてない。	생각하지 않았다.	fix	local-ending
+L191	歩いて歩いて、町に着いた。	걷고 걸어, 마을에 도착했다.	keep	local-ending
+L3132	今食べていない。	지금 먹지 않는다.	fix	local-ending
+L3132	まだ食べていない。	아직 먹지 않았다.	keep	local-ending
+L3132	今食べてない。	지금 먹지 않는다.	fix	local-ending
+L3318	今は走っていないのに暑い。	지금은 달리지 않는데 덥다.	fix	local-ending
+L3318	まだ終わっていないのに帰った。	아직 끝나지 않았는데 돌아갔다.	keep	local-ending
+L4541	終わったって感じだ。	끝났다는 느낌이다.	fix	local-ending
+L4541	終わったって言った。	끝났다고 했다.	keep	local-ending
+L3230	寒いと鳥が鳴く。	추우면 새가 운다.	fix	local-ending
+L3230	悪いとされる。	나쁘다고 여겨진다.	keep	local-ending
