@@ -123,6 +123,16 @@ struct Program {
     std::vector<GlobalRule> globalRules;
 };
 
+// How often each rule ran and how often it was true: local rules by index, global rules by
+// their position in Program::globalRules. Not synchronised; one evaluating thread at a time.
+struct Tally {
+    std::vector<uint64_t> localRuns, localFires, globalRuns, globalFires;
+
+    explicit Tally(const Program& program)
+        : localRuns(program.localRules.size()), localFires(program.localRules.size()),
+          globalRuns(program.globalRules.size()), globalFires(program.globalRules.size()) {}
+};
+
 struct LoadError {
     int line;  // 1-based
     const char* message;
@@ -135,13 +145,15 @@ bool Load(std::string_view text, Program& program, LoadError& error);
 // Evaluates the rule whose body starts at node root. Evaluation does not allocate.
 bool RunRule(const Program& program, uint32_t root, Item* pwi);
 
-// Runs local rule ruleIndex on pwi; out-of-range indices are false.
-bool RunLocal(const Program& program, Item* pwi, int ruleIndex);
+// Runs local rule ruleIndex on pwi; out-of-range indices are false. A tally, when given,
+// counts the run.
+bool RunLocal(const Program& program, Item* pwi, int ruleIndex, Tally* tally = nullptr);
 
 // Tries, in order, every global rule whose uganRule flag and pumsa key match and
 // reports whether one fired. Stem rules are restricted by number: 1000 < number <
 // 5000, or 0 < number < 1000 when last is set.
 // fired receives the number of the rule that fired, or -1 when none did.
-bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char pumsa, bool last, int* fired = nullptr);
+bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char pumsa, bool last, int* fired = nullptr,
+               Tally* tally = nullptr);
 
 }  // namespace hdTrans::rules

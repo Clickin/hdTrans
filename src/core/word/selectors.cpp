@@ -18,10 +18,10 @@ constexpr uint8_t kPoliteRegister = 2;
 // The byte at i as an unsigned value; 0 outside s.
 int ByteAt(std::string_view s, long i) { return static_cast<unsigned char>(At(s, i)); }
 
-bool RunLocalRule(Flusher& f, Item* it, int rule) { return rules::RunLocal(f.program, it, rule); }
+bool RunLocalRule(Flusher& f, Item* it, int rule) { return rules::RunLocal(f.program, it, rule, f.w.settings.ruleTally); }
 
 bool RunGlobalRule(Flusher& f, Item* it, bool uganRule, unsigned char pumsa, bool last, int* fired) {
-    return rules::RunGlobal(f.program, it, uganRule, pumsa, last, fired);
+    return rules::RunGlobal(f.program, it, uganRule, pumsa, last, fired, f.w.settings.ruleTally);
 }
 
 // The entry of the first "XXX" attribute.

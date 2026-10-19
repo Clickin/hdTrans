@@ -57,6 +57,8 @@ README.md is for users; developer documentation is in docs/ (index: docs/README.
   expectation sets moved.
 - `src/core/dict/builtin/` holds the builtin tables compiled into the library
   (`cmake/builtin_tables.cmake` turns them into C++ at build time); edit the TSVs.
+- `src/core/rules/rules.txt` is the rules program of the word stage, compiled in the same way
+  (docs/rules.md); edit that file.
 - `dicts/` is the shipped dictionary set and is committed; each file starts with
   `#! layer=...` and a `#` description line (docs/dictionaries.md).
 - Never commit build outputs, expectation sets, machine names, user

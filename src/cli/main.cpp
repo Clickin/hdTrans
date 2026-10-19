@@ -16,6 +16,8 @@
 //   -no-cache             read only the editable dictionaries
 //   -why                  write word choices and shadow scores to stderr
 //   -stages DIR           write stage records (also HDTRANS_DRIVER_DUMP)
+//   -rule-counts FILE     write how often each selection rule ran and was true to FILE:
+//                         kind (L or G), index, pumsa, number, ugan, runs, fires (TSV)
 //   -select-shadow        score shortest targets without changing the translation
 //   -misread              replace candidates the misread model scores as misreadings
 //   -no-cg                turn the hand CG-lite rules off
@@ -44,6 +46,7 @@
 #include "core/dict/folders.h"
 #include "core/dict/snapshot_file.h"
 #include "core/engine/driver.h"
+#include "core/engine/rules.h"
 #include "core/word/select.h"
 #include "stage_records.h"
 
@@ -148,6 +151,24 @@ void WhyResolved(void* context, int chunk, int sentence, const hdTrans::word::Ch
     }
 }
 
+bool WriteRuleCounts(const std::string& path, const hdTrans::rules::Program& program,
+                     const hdTrans::rules::Tally& tally) {
+    std::FILE* f = std::fopen(path.c_str(), "wb");
+    if (!f) return false;
+    std::fputs("kind\tindex\tpumsa\tnumber\tugan\truns\tfires\n", f);
+    for (std::size_t i = 0; i < tally.localRuns.size(); i++) {
+        std::fprintf(f, "L\t%zu\t\t\t\t%llu\t%llu\n", i, static_cast<unsigned long long>(tally.localRuns[i]),
+                     static_cast<unsigned long long>(tally.localFires[i]));
+    }
+    for (std::size_t i = 0; i < tally.globalRuns.size(); i++) {
+        const hdTrans::rules::GlobalRule& r = program.globalRules[i];
+        std::fprintf(f, "G\t%zu\t%c\t%d\t%d\t%llu\t%llu\n", i, static_cast<char>(r.pumsa), r.number,
+                     r.uganRule ? 1 : 0, static_cast<unsigned long long>(tally.globalRuns[i]),
+                     static_cast<unsigned long long>(tally.globalFires[i]));
+    }
+    return std::fclose(f) == 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -160,6 +181,7 @@ int main(int argc, char** argv) {
     std::optional<std::string> dictsArg, userFileArg, snapshotOut;
     std::optional<std::string> ehndArg;
     std::string inPath;
+    std::string ruleCountsPath;
     const char* dump = std::getenv("HDTRANS_DRIVER_DUMP");
     std::string stagesDir = dump ? dump : "";
     bool raw = false;
@@ -180,6 +202,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-in") && i + 1 < argc) inPath = argv[++i];
         else if (!std::strcmp(a, "-ehnd") && i + 1 < argc) ehndArg = argv[++i];
         else if (!std::strcmp(a, "-stages") && i + 1 < argc) stagesDir = argv[++i];
+        else if (!std::strcmp(a, "-rule-counts") && i + 1 < argc) ruleCountsPath = argv[++i];
         else if (!std::strcmp(a, "-raw")) raw = true;
         else if (!std::strcmp(a, "-each")) each = true;
         else if (!std::strcmp(a, "-reference")) reference = true;
@@ -193,7 +216,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-no-cg")) noCg = true;
         else if (!std::strcmp(a, "-cg-learned")) cgLearned = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
@@ -315,6 +338,17 @@ int main(int argc, char** argv) {
     const bool stages = !stagesDir.empty();
     collector.families = &generated->families;
     if (stages) observer = stagerecords::ObserverFor(collector, observer);
+    const hdTrans::rules::Program& program = hdTrans::internal::RulesProgram();
+    hdTrans::rules::Tally tally(program);
+    if (!ruleCountsPath.empty()) options.ruleTally = &tally;
+    auto finish = [&] {
+        if (stages && !stagerecords::Dump(stagesDir, collector)) return 1;
+        if (!ruleCountsPath.empty() && !WriteRuleCounts(ruleCountsPath, program, tally)) {
+            std::fprintf(stderr, "hdtrans: cannot write %s\n", ruleCountsPath.c_str());
+            return 1;
+        }
+        return 0;
+    };
 
     if (!raw && !each) {
         std::vector<std::string> lines;
@@ -333,7 +367,7 @@ int main(int argc, char** argv) {
             if (i > 0) std::fputc('\n', stdout);
             std::fwrite(translated[i].data(), 1, translated[i].size(), stdout);
         }
-        return stages && !stagerecords::Dump(stagesDir, collector) ? 1 : 0;
+        return finish();
     }
     size_t start = 0;
     while (start < input.size()) {
@@ -357,5 +391,5 @@ int main(int argc, char** argv) {
         whyContext.lineBase++;
         start = end + 1;
     }
-    return stages && !stagerecords::Dump(stagesDir, collector) ? 1 : 0;
+    return finish();
 }

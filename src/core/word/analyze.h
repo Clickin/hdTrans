@@ -81,6 +81,7 @@ struct Settings {
     bool selectShadow = false;
     bool selectRules = false;  // scorers may override context or rule choices, never sense rows
     const MisreadModel* misreadModel = nullptr;  // the misread filter's model; null for the built-in one
+    rules::Tally* ruleTally = nullptr;  // counts the runs of the selection rules when set
     // The speech level (an output register, 0 for automatic) of sentence-final plain
     // and polite predicates; it selects the plain-dictionary end rows with a register.
     uint8_t registers[2] = {0, 0};
