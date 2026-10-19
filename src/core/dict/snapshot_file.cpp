@@ -240,7 +240,7 @@ bool HashFile(std::string_view name, Digest& out) {
     std::FILE* f = OpenFile(PathOf(name), false);
     if (!f) return false;
     internal::Sha256 hash;
-    std::array<std::byte, 64 * 1024> buf;
+    std::vector<std::byte> buf(64 * 1024);
     bool ok = true;
     for (;;) {
         const auto n = std::fread(buf.data(), 1, buf.size(), f);
