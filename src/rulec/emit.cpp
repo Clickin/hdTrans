@@ -136,14 +136,18 @@ std::string EmitTests(const File& file, const Source& source) {
         "#include \"hdtest.h\"\n#include \"rules/rule_tests.h\"\n\n";
     static const char* const kKinds[] = {"Text", "Unchanged", "Picks", "Silent"};
     for (const auto* rules : {&file.local, &file.global}) {
-        for (const Rule& r : *rules) {
+        for (std::size_t k = 0; k < rules->size(); k++) {
+            const Rule& r = (*rules)[k];
+            // A global rule's record is its place in run order, not its PRIO; its number names the test.
+            const int record = r.kind == 'G' ? static_cast<int>(k) : r.index;
+            const int id = r.kind == 'G' ? r.number : r.index;
             for (std::size_t i = 0; i < r.tests.size(); i++) {
                 const RuleTest& t = r.tests[i];
                 int line = 0, column = 0;
                 source.Position(t.offset, line, column);
-                const std::string name = std::string("ruletest_") + r.kind + std::to_string(r.index) + "_" + std::to_string(i + 1);
+                const std::string name = std::string("ruletest_") + r.kind + std::to_string(id) + "_" + std::to_string(i + 1);
                 out += "HD_TEST(" + name + ") {\n    ruletests::Run({'" + std::string(1, r.kind) + "', " +
-                       std::to_string(r.index) + ", " + std::to_string(r.number) + ", " + CppString(source.FileAt(t.offset)) + ", " +
+                       std::to_string(record) + ", " + std::to_string(r.number) + ", " + CppString(source.FileAt(t.offset)) + ", " +
                        std::to_string(line) + ", ruletests::Kind::" + kKinds[static_cast<int>(t.kind)] + ", " +
                        CppString(t.input) + ", " + CppString(t.expected) + "});\n}\n\n";
             }
