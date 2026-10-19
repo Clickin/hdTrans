@@ -3267,7 +3267,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 ガレキ	잔해	N110			GN		xxx llm	1		w:3259
 ガレット	갈레트	N110	VFd		GN				ガレット	w:3260
 ガン	총	N110			GN		xxx llm	1		w:3261
-ガンガン	마구	E300			GN		xxx llm	1		w:3262
+ガンガン	마구	E300			GN	5091	xxx llm	1		w:3262
 ガングリオシド	강글리오사이드	N110			GN				ガングリオシド	w:3263
 ガングロ	간구로	N110			GN				ガングロ	w:3264
 ガンジスかわいるか	갠지스강돌고래	N110			GN				ガンジスかわいるか	w:3265
@@ -25404,7 +25404,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 霜降り	상강	N110			GN		xxx	1	しもふり	w:25381
 霞草	안개꽃	N110			GN		xxx	1	かすみそう	w:25382
 霧吹き	분무기	N110			GN				きりふき	w:25383
-露わ	드러%D3@	G8U0			GN		xxx llm		あらわ	w:25384
+露わ	드러%D3@	G8U0			GN	5090	xxx llm		あらわ	w:25384
 露わ	공공연%A1@	G8U0			GN		llm		あらわ	w:25385
 露営	노영	N110		Hd	GN				ろえい	w:25386
 露営	노영&AV@	M429			GN				ろえい	w:25387
@@ -26672,3 +26672,31 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 引き篭もり	히키코모리	N110			GN					w:26672
 ふしだら	문란%A1@	G8U0			GN					w:26674
 奴め	녀석 같으니	N110			GN					w:26676
+きつきつ	꽉 %D6@	G8U0			GN	5092				w:26677
+むちむちしてい	포동포동&Mf@	M417			GN					w:26678
+ムチムチしてい	포동포동&Mf@	M417			GN					w:26679
+何なんだ	뭐야	A9D0			GN					w:26680
+きつきつの	꽉 끼는	E0H0			GN					w:26681
+窓拭き	창 닦기	N110		Hd	GN					w:26682
+みね打ち	칼등치기	N110		Hd	GN					w:26683
+やり切	해&A6@	M438			GN					w:26684
+だけは	만은	P200			GN					w:26685
+傾むけ	기울&AJ@	M447			GN					w:26686
+きっかけですね	계기군요	A9D0			GN					w:26687
+疾うに	벌써	E300			GN					w:26688
+おまちどうさま	오래 기다리셨습니다	E320			GN					w:26689
+立ち籠め	자욱&Mf@	M417			GN					w:26690
+煙が立ち籠め	연기가 자욱&Mf@	M417			GN					w:26691
+にべも無	매정$AB@	H7N0	SFl		GN					w:26692
+肉食	고기 &HU@	M420			GN					w:26693
+目許	눈가	N110	VBp		GN					w:26694
+ししょー	스승님	N110	VHn		GN					w:26695
+一貴族	일개 귀족	N110	VHn		GN					w:26696
+ほんきほんき	진짜 진짜	E320			GN					w:26697
+褒めちぎ	한껏 칭찬&AV@	M438			GN					w:26698
+危険をかえりみずに	위험을 무릅쓰고	A9D0			GN					w:26699
+上気	상기&C6@	M429			GN					w:26700
+怖えよ	무서워	E320			GN					w:26701
+格好つけ	허세	N110			GN					w:26702
+ジュージュージュー	지글지글지글	E300			GN					w:26703
+ジュージュージューと	지글지글지글	E300			GN					w:26704
