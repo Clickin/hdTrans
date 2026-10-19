@@ -5,24 +5,21 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
-#include <system_error>
 #include <vector>
 
 #if defined(_WIN32)
 #include <windows.h>
-#elif !defined(__EMSCRIPTEN__)
-#include <dlfcn.h>
 #endif
 
 #include "core/config/cache.h"
 #include "core/config/config.h"
 #include "core/dict/folders.h"
 #include "core/engine.h"
+#include "frontend/module_dir.h"
 
 namespace {
 
@@ -58,41 +55,6 @@ std::vector<std::string> SplitNul(const char* dirs) {
     std::vector<std::string> out;
     for (const char* p = dirs; p && *p; p += std::strlen(p) + 1) out.emplace_back(p);
     return out;
-}
-
-// The folder of the module holding this library in UTF-8; empty when unknown. The root of
-// the Emscripten file system for WebAssembly.
-std::string ModuleDir() {
-#if defined(__EMSCRIPTEN__)
-    return "/";
-#else
-#if defined(_WIN32)
-    HMODULE self = nullptr;
-    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                            reinterpret_cast<LPCWSTR>(&ModuleDir), &self)) {
-        return {};
-    }
-    std::wstring path(MAX_PATH, L'\0');
-    for (;;) {
-        const DWORD n = GetModuleFileNameW(self, path.data(), static_cast<DWORD>(path.size()));
-        if (n == 0) return {};
-        if (n < path.size()) {
-            path.resize(n);
-            break;
-        }
-        path.resize(path.size() * 2);
-    }
-    const std::filesystem::path image(path);
-#else
-    Dl_info info{};
-    if (!dladdr(reinterpret_cast<void*>(&ModuleDir), &info) || !info.dli_fname) return {};
-    std::error_code ec;
-    const std::filesystem::path image = std::filesystem::canonical(info.dli_fname, ec);
-    if (ec) return {};
-#endif
-    const std::u8string dir = image.parent_path().u8string();
-    return std::string(reinterpret_cast<const char*>(dir.data()), dir.size());
-#endif
 }
 
 // WebAssembly has no threads to reload userdict.tsv in the background.
@@ -141,7 +103,7 @@ int hdTrans_Initialize(const char* dirs) {
         generation = g_generation;
     }
     auto paths = SplitNul(dirs);
-    const std::string dir = ModuleDir();
+    const std::string dir = hdTrans::frontend::ModuleDirectory();
     const std::string configPath = hdTrans::dict::ConfigFile(dir);
     const auto config = hdTrans::internal::LoadConfig(configPath);
     const auto& settings = config.settings;
@@ -205,7 +167,7 @@ int hdTrans_Reload(void) {
         dirs = g_dirs;
         ehndOverride = g_ehnd;
     }
-    const std::string dir = ModuleDir();
+    const std::string dir = hdTrans::frontend::ModuleDirectory();
     const std::string configPath = hdTrans::dict::ConfigFile(dir);
     const auto config = hdTrans::internal::LoadConfig(configPath);
     const auto& settings = config.settings;
