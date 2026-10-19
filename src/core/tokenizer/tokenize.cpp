@@ -296,7 +296,7 @@ private:
             } else if (halfWidth) {
                 Add(WidenHalfWidth(c));
             } else {
-                if (c == U'。' && type == kTypeSentenceEnd && BufSize() > 0) Emit(cur_);  // 。 starts a new token
+                if (c == U'。' && BufSize() > 0) Emit(cur_);  // 。 starts a new token
                 Add(c);
             }
         } else if ((cur_ == kTypeNumber && type == kTypeAlpha) || (cur_ == kTypeAlpha && type == kTypeNumber)) {
