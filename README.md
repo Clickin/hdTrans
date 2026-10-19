@@ -112,7 +112,7 @@ Windows는 `hdTrans\user\hdtrans.config.example.yaml`, Linux와 macOS는 `user/h
 
 - [문서 목록](docs/README.md): 사용 안내, 빌드와 API
 - [오역 고치기](docs/fixing-translations.md): 사전과 번역 규칙 수정
-- [기여 안내](docs/contributing.md): 일반 작업은 `develop`에 직접 커밋하고 푸시합니다.
+- [기여 안내](docs/contributing.md): PR은 `develop` 브랜치로 보냅니다.
 
 ## 라이선스
 

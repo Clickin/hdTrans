@@ -157,7 +157,7 @@ ctest --preset <preset>
 
 - 번역이 바뀌는 수정은 따로 커밋하고, 무엇을 왜 바꿨는지와 판정 숫자(바뀐 줄, 나아짐, 같음, 나빠짐)를 적습니다.
 - 규칙을 고친 커밋에는 `program.hash`와 `compiled_gen.cpp`가 함께 들어갑니다.
-- 수정은 `develop`에 직접 커밋하고 푸시합니다. 커밋 제목은 `fix(rules): 조건 뒤 인용 수정`처럼 씁니다([제목 규칙](contributing.md#커밋과-pr-제목)).
+- 풀 리퀘스트는 `develop` 브랜치로 보냅니다. 커밋과 PR 제목은 `fix(rules): 조건 뒤 인용 수정`처럼 씁니다([제목 규칙](contributing.md#커밋과-pr-제목)).
 
 ## 여러 줄을 한꺼번에 고칠 때
 

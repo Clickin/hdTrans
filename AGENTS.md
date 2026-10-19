@@ -37,12 +37,12 @@ README.md is for users; developer documentation is in docs/ (index: docs/README.
 - Warnings are errors; fix the code, not the flags.
 
 ## Branches
-- `develop` is the default branch. Commit and push ordinary work directly to it; per-task PRs and reviews are not required.
+- `develop` is the default branch: work branches start from it and pull requests target it.
 - `main` receives release promotions from `develop` through PRs. After CI passes, the release bot commits version files and cuts release tags.
 - Commit and PR titles use Conventional Commits: `fix(scope): summary`, `feat(scope): summary`,
   or `docs`, `perf`, `refactor`, `style`, `test`, `build`, `ci`, `chore`, `revert`. Scope is optional.
   Breaking changes use `!` or a `BREAKING CHANGE:` footer, not a `major:` type.
-- Merge `develop` into `main` without squashing to preserve change history.
+- Squash ordinary PRs into `develop`; merge `develop` into `main` without squashing to preserve change history.
   The promotion PR title controls the release bump. After CI, the bot commits version files and CHANGELOG,
   then creates the release without another PR (docs/contributing.md).
 
