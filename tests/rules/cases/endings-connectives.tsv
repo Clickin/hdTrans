@@ -31,3 +31,14 @@ L3598	涙が出る程面白い。	눈물이 나올 정도로 재미있다.	fix	l
 L3598	声が出る程面白い。	목소리가 나올 정도로 재미있다.	fix	local-ending
 L3598	読めば読む程面白い。	읽으면 읽을수록 재미있다.	keep	local-ending
 L3598	読む程面白い。	읽을수록 재미있다.	keep	local-ending
+L2082	運びきれなかった。	옮기지 못했다.	fix	local-ending
+L2082	運びきれなかった荷物だ。	옮기지 못했던 짐이다.	keep	local-ending
+L2596	参加しないと見た。	참가하지 않는다고 보았다.	fix	local-ending
+L2596	参加しないと思う。	참가하지 않는다고 생각한다.	keep	local-ending
+L5024	無理だとは思わない。	무리라고는 생각하지 않는다.	fix	local-ending
+L5024	一般的だとは思わない。	일반적이라고는 생각하지 않는다.	keep	local-ending
+L5024	静かだとは思わない。	조용하다고는 생각하지 않는다.	keep	local-ending
+L3238	短い時間だ。	짧은 시간이다.	fix	local-ending
+L3238	私は嘘をつかないことを誓う。	나는 거짓말하지 않을 것을 맹세한다.	keep	local-ending
+L1327	何を待つの。	무엇을 기다려.	fix	local-ending
+L1327	ここで待つの。	여기서 기다려.	keep	local-ending
