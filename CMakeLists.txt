@@ -77,7 +77,7 @@ file(GLOB_RECURSE HDTRANS_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(hdtrans STATIC ${HDTRANS_SOURCES}
     "${CMAKE_CURRENT_BINARY_DIR}/builtin_gen.cpp" "${CMAKE_CURRENT_BINARY_DIR}/builtin_extra_gen.cpp"
     "${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp")
-target_link_libraries(hdtrans PRIVATE pcre2-16)
+target_link_libraries(hdtrans PRIVATE pcre2-16 yaml)
 if(HDTRANS_INTERPRET_RULES)
     target_compile_definitions(hdtrans PRIVATE HDTRANS_INTERPRET_RULES)
 endif()
