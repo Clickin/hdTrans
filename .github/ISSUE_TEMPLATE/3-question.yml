@@ -3,6 +3,9 @@ description: 사용법, 제안, 그 밖의 질문
 title: "[문의] "
 labels: [question]
 body:
+  - type: markdown
+    attributes:
+      value: 오류나 오역은 앞의 버그 신고, 오역 신고를 써 주세요.
   - type: textarea
     id: body
     attributes:

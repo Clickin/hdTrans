@@ -3,19 +3,27 @@ description: 실행이 안 되거나 이상하게 동작할 때
 title: "[버그] "
 labels: [bug]
 body:
-  - type: textarea
-    id: what
+  - type: input
+    id: version
     attributes:
-      label: 내용
-      description: 무슨 일이 일어났고, 어떻게 하면 다시 일어나는지
+      label: 버전
+      placeholder: hdtrans -version 결과, 또는 웹 화면 아래의 버전
     validations:
       required: true
+  - type: input
+    id: env
+    attributes:
+      label: OS와 함께 쓴 도구
+      placeholder: Windows 11 64비트, LunaTranslator 10.6
   - type: dropdown
     id: where
     attributes:
       label: 쓴 방법
       options: [웹, hdTransGUI, CLI, J2KEngine.dll + 번역 도구, C API, 빌드]
-  - type: input
-    id: env
+  - type: textarea
+    id: steps
     attributes:
-      label: 버전, OS, 함께 쓴 도구
+      label: 내용과 다시 일으키는 방법
+      description: 오류 메시지나 스크린샷이 있으면 붙여 주세요.
+    validations:
+      required: true
