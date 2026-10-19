@@ -4124,12 +4124,11 @@ bool RuleL429([[maybe_unused]] Item* p) {
            (SrcEq(p, -1, "との"sv) && PumsaEq(p, -2, "1**"sv) && DstSet(p, -1, "(와)과의"sv));
 }
 
-// # 어미가 「と」인 동사 뒤에서 「計算」을 고르고 그 동사의 어미 번역을 ‘다라고’로 바꾼다. (미발동: rare-context)
-// # [의심] 인용 어미를 "4다라고"로 대입하여 간다라고 계산하다 같은 비표준 인용형을 만들며 평서 인용에는 다고가 맞다.
+// # 어미가 と인 동사 뒤에서 計算을 고르고 그 동사의 평서 인용 어미를 ‘-다고’로 바꾼다.
 // local 430
-//     pos[-1] is 4** and end.src[-1] == "と" and end.pos[-1] is 5** and src[+1] == "する" and pos[+1] is 4** and end.ko[-1] := "4다라고"
+//     pos[-1] is 4** and end.src[-1] == "と" and end.pos[-1] is 5** and src[+1] == "する" and pos[+1] is 4** and end.ko[-1] := "4다고"
 bool RuleL430([[maybe_unused]] Item* p) {
-    return (PumsaEq(p, -1, "4**"sv) && GobiSrcEq(p, -1, "と"sv) && GobiPumsaEq(p, -1, "5**"sv) && SrcEq(p, 1, "する"sv) && PumsaEq(p, 1, "4**"sv) && GobiDstSet(p, -1, "4다라고"sv));
+    return (PumsaEq(p, -1, "4**"sv) && GobiSrcEq(p, -1, "と"sv) && GobiPumsaEq(p, -1, "5**"sv) && SrcEq(p, 1, "する"sv) && PumsaEq(p, 1, "4**"sv) && GobiDstSet(p, -1, "4다고"sv));
 }
 
 // # に와 する 사이의 関係를 고르면서 앞의 に를 에로 바꾼다.
@@ -5393,7 +5392,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL427, 0x19473060e449895full},
     {RuleL428, 0x1bc6eb9159e6978dull},
     {RuleL429, 0x1d3018c8ee02de91ull},
-    {RuleL430, 0xf6b3e3d1c5c89f07ull},
+    {RuleL430, 0x005b78788283a2a7ull},
     {RuleL431, 0x83ed2a301c434a24ull},
     {RuleL432, 0x2643a4fc3fd8834eull},
     {RuleL433, 0x652abdf4fa9cd039ull},
