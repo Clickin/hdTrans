@@ -33,6 +33,66 @@ const dispatchScript = publishWorkflow.match(/      - name: Start npm publicatio
 assert.ok(dispatchScript, 'The completed-Build dispatcher script is present.');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const runDispatch = new AsyncFunction('github', 'context', 'core', dispatchScript.replace(/^ {12}/gm, ''));
+const dispatchCondition = publishWorkflow.match(/  dispatch:\n    if: >-\n([\s\S]*?)\n    runs-on:/)?.[1];
+const concurrencyExpression = publishWorkflow.match(/  group: \$\{\{ (.+) \}\}/)?.[1];
+assert.ok(dispatchCondition);
+assert.ok(concurrencyExpression);
+
+function evaluateExpression(expression, github) {
+  return new Function('github', 'startsWith', 'contains', 'format', `return (${expression});`)(
+    github,
+    (value, prefix) => String(value).toLowerCase().startsWith(prefix.toLowerCase()),
+    (value, part) => String(value).toLowerCase().includes(part.toLowerCase()),
+    (template, value) => template.replace('{0}', String(value)),
+  );
+}
+
+function dispatchContext(overrides = {}, event = 'workflow_run') {
+  return {
+    event_name: event, repository: `${repo.owner}/${repo.repo}`,
+    event: { workflow_run: { ...goodRun, id: Number(runId), head_branch: 'v0.2.0', ...overrides } },
+  };
+}
+
+for (const [name, overrides, expected] of [
+  ['stable push', {}, true],
+  ['stable manual Build', { event: 'workflow_dispatch' }, true],
+  ['main', { head_branch: 'main' }, false],
+  ['develop', { head_branch: 'develop' }, false],
+  ['probe branch', { head_branch: 'ci/probe' }, false],
+  ['nightly', { head_branch: 'nightly' }, false],
+  ['prerelease', { head_branch: 'v0.2.0-rc.1' }, false],
+  ['build metadata', { head_branch: 'v0.2.0+local' }, false],
+  ['nonstable v branch', { head_branch: 'vnext' }, false],
+  ['running', { status: 'in_progress' }, false],
+  ['failure', { conclusion: 'failure' }, false],
+  ['cancellation', { conclusion: 'cancelled' }, false],
+  ['pull request', { event: 'pull_request' }, false],
+  ['fork', { head_repository: { full_name: 'fork/hdTrans' } }, false],
+  ['other workflow', { path: '.github/workflows/probe.yml' }, false],
+]) {
+  test(`pre-run npm dispatch gate accepts ${name}: ${expected}`, () => {
+    const github = dispatchContext(overrides);
+    const selected = evaluateExpression(dispatchCondition, github);
+    assert.equal(selected, expected);
+  });
+}
+
+test('explicit npm publication never allocates a dispatch runner', () => {
+  assert.equal(evaluateExpression(dispatchCondition, dispatchContext({}, 'workflow_dispatch')), false);
+});
+
+test('completion dispatches cannot replace a pending tagged publisher or each other', () => {
+  const first = evaluateExpression(concurrencyExpression, dispatchContext());
+  const second = evaluateExpression(concurrencyExpression, dispatchContext({ id: 124 }));
+  const publisher = evaluateExpression(concurrencyExpression, dispatchContext({}, 'workflow_dispatch'));
+  assert.equal(first, 'publish-npm-dispatch-123');
+  assert.equal(second, 'publish-npm-dispatch-124');
+  assert.equal(publisher, 'publish-npm');
+  assert.notEqual(first, publisher);
+  assert.notEqual(first, second);
+  assert.match(publishWorkflow, /  cancel-in-progress: false/);
+});
 
 async function dispatchFixture(overrides = {}, jobs = [{ name: 'release / release', conclusion: 'success' }]) {
   const calls = [];
