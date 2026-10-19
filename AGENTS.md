@@ -2,6 +2,7 @@
 
 One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEngine.dll`
 (J2K_* exports for hosts that load that DLL), WebAssembly. No dependencies.
+README.md is for users; developer documentation is in docs/ (index: docs/README.md).
 
 ## Build and test
 - CMake presets (CMakePresets.json): `mac` / `linux` build the library, CLI and unit
@@ -11,7 +12,8 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
 - `cmake --preset mac && cmake --build --preset mac && ctest --preset mac` is the
   development loop. The DLLs are the product and are built with MSVC.
 - Unit tests use small local fixtures, not external expectation sets or dictionary totals.
-- `tools/snapshot.sh` records built-CLI outputs; `tools/compare.sh` reports baseline changes.
+- `tools/snapshot.sh` records built-CLI outputs; `tools/compare.sh` reports baseline changes
+  (docs/testing.md).
 - `tools/fetch-syosetu.sh` and `tools/e2e.sh` compare two builds on the public web-novel
   chapters named by `tests/e2e/`; chapter text and its translations are never committed.
   A translation behaviour change needs its own commit with the reason.
@@ -44,7 +46,7 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
 - One coherent change per commit; the message says what changed and whether the
   expectation sets moved.
 - `dicts/` is the shipped dictionary set and is committed; each file starts with
-  `#! layer=...` and a `#` description line.
+  `#! layer=...` and a `#` description line (docs/dictionaries.md).
 - Never commit build outputs, expectation sets, machine names, user
   names or absolute paths. Locations outside the repository come from environment
   variables with relative defaults.
