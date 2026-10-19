@@ -58,8 +58,6 @@
       "binaryDir": "${sourceDir}/build/windows-x64-ninja",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
     },
-    { "name": "msvc-x86", "hidden": true, "inherits": "windows-x86" },
-    { "name": "msvc-x64", "hidden": true, "inherits": "windows-x64" },
     {
       "name": "wasm",
       "displayName": "Emscripten (run as `emcmake cmake --preset wasm`)",
@@ -76,8 +74,6 @@
     { "name": "windows-x64", "configurePreset": "windows-x64", "configuration": "Release" },
     { "name": "windows-x86-ninja", "configurePreset": "windows-x86-ninja" },
     { "name": "windows-x64-ninja", "configurePreset": "windows-x64-ninja" },
-    { "name": "msvc-x86", "hidden": true, "inherits": "windows-x86" },
-    { "name": "msvc-x64", "hidden": true, "inherits": "windows-x64" },
     { "name": "wasm", "configurePreset": "wasm" }
   ],
   "testPresets": [
@@ -87,8 +83,6 @@
     { "name": "windows-x86", "configurePreset": "windows-x86", "configuration": "Release", "output": { "outputOnFailure": true } },
     { "name": "windows-x64", "configurePreset": "windows-x64", "configuration": "Release", "output": { "outputOnFailure": true } },
     { "name": "windows-x86-ninja", "configurePreset": "windows-x86-ninja", "output": { "outputOnFailure": true } },
-    { "name": "windows-x64-ninja", "configurePreset": "windows-x64-ninja", "output": { "outputOnFailure": true } },
-    { "name": "msvc-x86", "hidden": true, "inherits": "windows-x86" },
-    { "name": "msvc-x64", "hidden": true, "inherits": "windows-x64" }
+    { "name": "windows-x64-ninja", "configurePreset": "windows-x64-ninja", "output": { "outputOnFailure": true } }
   ]
 }
