@@ -263,6 +263,12 @@ inline internal::StageObserver ObserverFor(Collector& c, const internal::StageOb
     o.composed = OnComposed;
     o.cleaned = OnCleaned;
     o.restored = OnRestored;
+    if (forward.filterLog) {
+        o.filterLog = [](void* context, std::string_view message) {
+            const auto& collector = *static_cast<Collector*>(context);
+            collector.forward.filterLog(collector.forward.context, message);
+        };
+    }
     return o;
 }
 

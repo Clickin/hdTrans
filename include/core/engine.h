@@ -21,6 +21,7 @@ namespace internal {
 struct Access;
 struct Generated;
 struct SessionState;
+struct StageObserver;
 struct UserWatch;
 }
 
@@ -127,6 +128,9 @@ public:
     void Reset();
 
 private:
+    friend struct internal::Access;
+    std::string TranslateObserved(std::string_view text, const internal::StageObserver& observer);
+
     const Engine& engine_;
     const bool reference_;
     const bool cg_;

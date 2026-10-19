@@ -167,6 +167,97 @@ HD_TEST(FilterRejectsBadRegex) {
     HD_CHECK_EQ(Shown(errors), "s.txt:1: regex rejected (missing terminating ] for character class at 2): [a");
 }
 
+HD_TEST(FilterApplicationLogs) {
+    std::vector<Error> errors;
+    auto f = Make({{Kind::PreFilter, "p.txt", "// note\nx\tX\t2\t0\ny\tY\t1\t2\nz\tZ\t3\t1\n(\tbad\t4\t1\n", false},
+                   {Kind::PostFilter, "o.txt", "q\tQ\t1\t0\n", false}},
+                  &errors);
+    HD_REQUIRE(errors.size() == 1);
+    HD_CHECK_EQ(errors[0].file, "p.txt");
+    HD_CHECK_EQ(errors[0].line, 5);
+    std::vector<std::string> logs;
+    const LogSink sink{&logs, [](void* context, std::string_view line) {
+                           static_cast<std::vector<std::string>*>(context)->emplace_back(line);
+                       }};
+    auto toggles = f->Start();
+    std::string line = "xy";
+    f->Apply(Stage::Pre, line, toggles, sink);
+    HD_CHECK_EQ(line, "XY");
+    HD_REQUIRE(logs.size() == 2);
+    HD_CHECK_EQ(logs[0], "PreFilter : [p.txt:2] | y | Y | 1 | 2\n");
+    HD_CHECK_EQ(logs[1], "PreFilter : [p.txt:1] | x | X | 2 | 0\n");
+    line = "q";
+    f->Apply(Stage::Post, line, toggles, sink);
+    HD_CHECK_EQ(line, "Q");
+    HD_REQUIRE(logs.size() == 3);
+    HD_CHECK_EQ(logs[2], "PostFIlter : [o.txt:0] | q | Q | 1 | 0\n");
+    line = "xy";
+    f->Apply(Stage::Pre, line, toggles);
+    HD_CHECK_EQ(line, "XY");
+    HD_CHECK_EQ(logs.size(), std::size_t{3});
+    logs.clear();
+    line = "none";
+    f->Apply(Stage::Pre, line, toggles, sink);
+    HD_CHECK(logs.empty());
+    line.clear();
+    f->Apply(Stage::Pre, line, toggles, sink);
+    HD_CHECK(logs.empty());
+}
+
+HD_TEST(FilterToggleLogs) {
+    auto f = Make({{Kind::PreFilter, "p.txt",
+                    "_TGL\t_DECR:T_\t_OFF\n"
+                    "_TGL\t_ON:T_\tgo\t_MATCH_CHECK\t1\t0\n"
+                    "_TGL\t_CONN:T_\tx\tX\t2\t0\n"
+                    "_TGL\t_OFF:T_\tstop\t_MATCH_CHECK\t3\t1\n",
+                    false},
+                   {Kind::PostFilter, "o.txt", "_TGL\t_CONN:T_\ty\tY\t1\t0\n", false}});
+    std::vector<std::string> logs;
+    const LogSink sink{&logs, [](void* context, std::string_view line) {
+                           static_cast<std::vector<std::string>*>(context)->emplace_back(line);
+                       }};
+    auto toggles = f->Start();
+    std::string line = "go x stop";
+    f->Apply(Stage::Pre, line, toggles, sink);
+    HD_CHECK_EQ(line, "go X stop");
+    HD_REQUIRE(logs.size() == 5);
+    HD_CHECK_EQ(logs[0], "PreFilter : [p.txt:1] | go | _MATCH_CHECK | 1 | 0\n");
+    HD_CHECK_EQ(logs[1], "토글 변수 T_의 상태가 ON으로 변경.\n");
+    HD_CHECK_EQ(logs[2], "PreFilter : [p.txt:2] | x | X | 2 | 0\n");
+    HD_CHECK_EQ(logs[3], "PreFilter : [p.txt:3] | stop | _MATCH_CHECK | 3 | 1\n");
+    HD_CHECK_EQ(logs[4], "토글 변수 T_의 상태가 OFF로 변경.\n");
+    logs.clear();
+    line = "y";
+    f->Apply(Stage::Post, line, toggles, sink);
+    HD_CHECK_EQ(line, "y");
+    HD_CHECK(logs.empty());
+    toggles = f->Start();
+    line = "go";
+    f->Apply(Stage::Pre, line, toggles, sink);
+    HD_CHECK_EQ(line, "go");
+    logs.clear();
+    line = "y";
+    f->Apply(Stage::Post, line, toggles, sink);
+    HD_CHECK_EQ(line, "Y");
+    HD_REQUIRE(logs.size() == 1);
+    HD_CHECK_EQ(logs[0], "PostFIlter : [o.txt:0] | y | Y | 1 | 0\n");
+}
+
+HD_TEST(FilterSkipLayerLogs) {
+    auto f = Make({{Kind::PreFilter, "p.txt", "a\tA\t5\t0\nb\tB\t6\t0\n", false},
+                   {Kind::SkipLayer, "s.txt", "PRE\t0005\tneeded\nPRE\t6\tneeded\n", false}});
+    std::vector<std::string> logs;
+    const LogSink sink{&logs, [](void* context, std::string_view line) {
+                           static_cast<std::vector<std::string>*>(context)->emplace_back(line);
+                       }};
+    auto toggles = f->Start();
+    std::string line = "a b";
+    f->Apply(Stage::Pre, line, toggles, sink);
+    HD_CHECK_EQ(line, "a b");
+    HD_REQUIRE(logs.size() == 1);
+    HD_CHECK_EQ(logs[0], "PreSkipLayer : 0005, 6\n");
+}
+
 HD_TEST(FilterUserDict) {
     std::vector<Error> errors;
     auto f = Make({{Kind::UserDict, "UserDict_a.txt",

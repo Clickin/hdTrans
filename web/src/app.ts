@@ -168,7 +168,7 @@ async function translate() {
     if (m.lines === undefined) throw new Error(m.message);
     document.body.dataset.memory = String(m.memory);
     text = `${lines.length}줄 · ${Math.round(performance.now() - t0)} ms`;
-    if (m.warning) text += ' · 사전 오류 (사용자 사전 없이 번역): ' + warningText(m.warning, d.userLines);
+    if (m.warning) text += ' / 사전 오류: ' + warningText(m.warning, d.userLines);
     if (g === generation) out.value = m.lines.join('\n');
   } catch (err) {
     text = '번역 실패: ' + (err instanceof Error ? err.message : String(err));

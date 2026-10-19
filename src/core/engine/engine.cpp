@@ -76,6 +76,9 @@ std::shared_ptr<Generated> NewGenerated(const dict::Snapshot& snap) {
 
 struct Access {
     static bool Reference(const Engine& e) { return e.reference_; }
+    static std::string TranslateObserved(Session& session, std::string_view text, const StageObserver& observer) {
+        return session.TranslateObserved(text, observer);
+    }
 
     // e.mu_ is held. A later successful load supersedes this ticket.
     static bool Finish(Engine& e, std::uint64_t ticket, const UserVersion& version, dict::LoadResult r,
@@ -379,7 +382,9 @@ Session::Session(const Engine& engine, bool reference, bool cg, bool misread)
 
 Session::~Session() = default;
 
-std::string Session::Translate(std::string_view text) {
+std::string Session::Translate(std::string_view text) { return TranslateObserved(text, {}); }
+
+std::string Session::TranslateObserved(std::string_view text, const internal::StageObserver& observer) {
     if (engine_.watch_->automatic) internal::Access::Refresh(engine_, snapshot_, generated_, filters_, state_);
     if (!snapshot_) return {};
     std::vector<std::string> lines;
@@ -390,7 +395,7 @@ std::string Session::Translate(std::string_view text) {
     options.wordImprovements.misreadFilter = misread_;
     options.filters = filters_.get();
     const std::vector<std::string> translated =
-        internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, {}, options);
+        internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, observer, options);
     std::string out;
     for (std::size_t i = 0; i < translated.size(); i++) {
         if (i > 0) out += '\n';
@@ -408,6 +413,10 @@ void Session::Reset() {
 }
 
 namespace internal {
+
+std::string TranslateObserved(Session& session, std::string_view text, const StageObserver& observer) {
+    return Access::TranslateObserved(session, text, observer);
+}
 
 std::string TranslateRaw(const Engine& e, std::string_view line) {
     std::shared_ptr<const dict::Snapshot> snap;

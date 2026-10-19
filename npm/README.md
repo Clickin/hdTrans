@@ -1,0 +1,102 @@
+# hdtrans
+
+Japanese to Korean translation for Node.js 22 or newer. The package includes the WebAssembly engine and base dictionary. No compiler, dictionary download or filesystem setup is needed. Translation runs locally.
+
+## Install
+
+```sh
+npm install hdtrans
+```
+
+```js
+import { HdTrans } from 'hdtrans';
+
+const translator = await HdTrans.init();
+try {
+  console.log(translator.translate('今日は本を読みます。'));
+} finally {
+  translator.close();
+}
+```
+
+## Options and JSON
+
+```js
+const translator = await HdTrans.init({
+  ehnd: {
+    'PreFilter_custom.txt': '魔導具\t学生\t1\t0\n',
+  },
+});
+try {
+  const result = translator.translate('学生です。', { json: true });
+  console.log(result.text);
+  console.log(result.choices); // Selected dictionary entries and rules
+  console.log(result.logs);   // Ehnd-style stage and fired-rule messages
+} finally {
+  translator.close();
+}
+```
+
+These are the shared engine options and results, not a separate npm translation mode. Ehnd files are UTF-8 strings keyed by their original `PreFilter*.txt`, `PostFilter*.txt`, `SkipLayer*.txt` or `UserDict*.txt` names. No external Ehnd dictionary is included or enabled by default. `setEhnd(files)` replaces an instance's files; `clearEhnd()` removes them.
+
+## User dictionary
+
+```ts
+import { HdTrans, type UserDictEntry, type TranslationResult } from 'hdtrans';
+
+const translator: HdTrans = await HdTrans.init();
+try {
+  const entries: UserDictEntry[] = [
+    { ja: '蒼月', ko: '아오츠키', pos: 'surname', options: 'prio=2 force' },
+  ];
+  translator.setUserDict(entries);
+  console.log(translator.getUserDict());
+
+  translator.setUserDictRaw('# My dictionary\n学生\t학우\tn\n');
+  console.log(translator.getUserDictRaw());
+  console.log(translator.userDictError);
+  const result: TranslationResult = translator.translate('学生', { json: true });
+  console.log(result.text);
+  translator.clearUserDict();
+} finally {
+  translator.close();
+}
+```
+
+`getUserDict()` returns registered source rows as an independent copy. A malformed raw update keeps the active dictionary and reports `userDictError`; inspect it after updating. `filterErrors` reports rejected filter rows. `reset()` clears translation context. `close()` releases the translator and can be called more than once. Instances have independent user dictionaries, filters and context.
+
+## CLI
+
+```sh
+npx hdtrans '今日は本を読みます。'
+printf '学生です。\n' | npx hdtrans
+npx hdtrans --in input.txt --json
+npx hdtrans --file input.txt --out output.txt
+npx hdtrans --in input.txt --json --out result.json
+printf '学生です。\n' | npx hdtrans --json
+npx hdtrans --version
+npx hdtrans --why '学生です。'
+npx hdtrans --userdict userdict.tsv '学生'
+npx hdtrans --ehnd ./Ehnd '学生'
+```
+
+Files and stdin are UTF-8. `--file` is an alias of `--in`. `--out` writes the result to a file instead of stdout. `--json` writes one JSON document, including when used with `--out`. `--why` writes execution logs verbatim and `WHY` choice records to stderr, leaving the translation on stdout. `--version` loads the bundled dictionary and prints one line: `hdTrans v<engine> (wasm) / dict <dictionary>`. The versions are also available as `translator.version` and `translator.dictionaryVersion`; `translator.runtime` is `'wasm'`. User dictionary and Ehnd changes do not change the base dictionary version. The CLI accepts one `--userdict` file. It does not discover dictionaries or configuration from the current directory. Run `hdtrans --help` for options.
+
+## License
+
+Code: AGPL-3.0-or-later, see `LICENSE`. Dependency licenses are in `THIRD-PARTY-NOTICES.txt`. Source and dictionary updates are available at [sokcuri/hdTrans](https://github.com/sokcuri/hdTrans).
+
+## Building the package from source
+
+This section is for package maintainers, not npm users. Build the native CLI and WebAssembly engine from the same source tree, then compile the shared TypeScript API:
+
+```sh
+npm --prefix web ci
+npm --prefix web run compile
+npm --prefix npm ci
+node tools/package-npm.mjs --cli build/mac/hdtrans --wasm build/wasm --wrapper build/web/translator.js
+npm --prefix npm test
+npm pack ./npm
+```
+
+`--cli` and `--wasm` also accept `HDTRANS_CLI` and `HDTRANS_WASM`. `--wrapper` defaults to `build/web/translator.js` and accepts `HDTRANS_NPM_WRAPPER`. The tool compiles a fresh snapshot from repository `dicts/` and copies the still-needed plain dictionaries. It verifies that the bundled WASM can open that snapshot. It does not publish anything.

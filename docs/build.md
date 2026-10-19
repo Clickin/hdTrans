@@ -118,7 +118,7 @@ cmake --build --preset wasm --parallel
   `hdtrans-<프리셋>` 아티팩트로 올라갑니다.
 - **release.yml**: `build.yml`의 결과를 받아 Windows ZIP과 Linux, macOS tar.gz, `SHA256SUMS.txt`를
   만듭니다. Windows는 x86 `J2KEngine.dll`, x64 CLI, GUI, C API와 별도의 x86 CLI, C API를 담습니다.
-  WASM은 기존 빌드 아티팩트로 제공하며 웹 번들 ZIP은 만들지 않습니다.
+  WASM 아티팩트에는 엔진, TypeScript용 JavaScript와 `.d.ts`를 포함합니다. npm용 `.tgz`도 빌드한 엔진과 기본 사전을 담아 릴리스에 첨부합니다.
 - **e2e.yml**: 풀 리퀘스트와 `main`, `develop` 푸시 때, 현재 커밋의 CLI로 비공개 테스트 데이터를 번역해 기대 출력과
   달라진 줄을 보고합니다. 자세한 내용은 [testing.md](testing.md#ci)에 있습니다.
 
@@ -144,5 +144,6 @@ Actions의 **Build → Run workflow**에서 `dry_run=true`로 실행하면 패�
 버전은 `git describe --tags`에서 가져오며 이동하는 `nightly` 태그는 제외하고 앞의 `v`를 뗍니다.
 태그가 없으면 `0.0.0-<짧은 SHA>`입니다. Git 정보가 없는 소스 압축본은 release-please가 관리하는
 `release-version.txt`를 쓰며, 그 파일도 없으면 `0.0.0-unknown`입니다.
-CLI의 `-version`, C API의 `hdTrans_Version`, Windows EXE와 DLL의 버전 정보에 같은 문자열을 씁니다.
+C API의 `hdTrans_Version`, TypeScript의 `version`, Windows EXE와 DLL의 버전 정보에 같은 엔진 버전 문자열을 씁니다.
+CLI의 `--version`은 선택한 사전도 로드해서 `hdTrans v<엔진> (native 또는 wasm) / dict <사전>`을 한 줄로 출력합니다.
 `J2KEngine.config.yaml`은 아직 읽지 않으므로 배포하지 않습니다. 설정은 `user/hdtrans.config.yaml`을 씁니다.
