@@ -84,6 +84,13 @@ C API의 `hdTrans_UserDictError`, J2K의 디버거 출력으로 알립니다.
 C API의 비어 있지 않은 `dirs`와 명시적인 `hdTrans_OpenEhnd`는 파일보다 우선합니다.
 WebAssembly에도 같은 규칙을 적용하며 `/user/hdtrans.config.yaml`을 쓸 수 있습니다.
 
+## 번역 창 (hdTransGUI.exe, Windows)
+
+단문 번역 창과 문서 번역 창이 있습니다. 실행 파일 옆의 `hdTrans\`(없으면 실행 파일 폴더)에서 사전, 사용자 사전,
+설정을 엔진을 처음 불러올 때 읽습니다. 문서 번역은 Shift-JIS, UTF-8(BOM 유무 무관), UTF-16LE(BOM)를 읽고
+UTF-8 BOM으로 저장합니다. 문서 전체를 한 번에 번역하므로 문맥이 이어지고, **중단**은 지금 문서를 마친 뒤
+결과를 저장하지 않습니다.
+
 ## C API (hdTransEngine)
 
 헤더: `include/core/hdtrans.h`. Windows에서 DLL을 쓰는 쪽은 `HDTRANS_USE_DLL`을 정의합니다.

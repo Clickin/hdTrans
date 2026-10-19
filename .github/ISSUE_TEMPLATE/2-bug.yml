@@ -19,7 +19,7 @@ body:
     id: where
     attributes:
       label: 쓴 방법
-      options: [웹, hdTransGUI, CLI, J2KEngine.dll + 번역 도구, C API, 빌드]
+      options: [웹, 번역 창(hdTransGUI), 명령줄(hdtrans), 이지트랜스 도구에 끼워서, 직접 만든 프로그램에서, 직접 빌드]
   - type: textarea
     id: steps
     attributes:
