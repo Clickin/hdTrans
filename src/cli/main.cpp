@@ -14,10 +14,11 @@
 //   -compile-snapshot FILE  compile the column dictionaries of the folders to FILE
 //                         (a .hdsnap for -dicts), then exit
 //   -no-cache             read only the editable dictionaries
-//   -why                  write word choices and shadow scores to stderr
+//   -why                  write word choices and shadow scores to stderr; each WHY line ends with
+//                         the layer and rule of the candidate and of the ending (docs/architecture.md)
 //   -stages DIR           write stage records (also HDTRANS_DRIVER_DUMP)
 //   -rule-counts FILE     write how often each selection rule ran and was true to FILE:
-//                         kind (L or G), index, pumsa, number, ugan, runs, fires (TSV)
+//                         kind (L or G), index (G: PRIO), pumsa, number, ugan, runs, fires (TSV)
 //   -select-shadow        score shortest targets without changing the translation
 //   -misread              replace candidates the misread model scores as misreadings
 //   -no-cg                turn the hand CG-lite rules off
@@ -129,6 +130,37 @@ void WhyLine(void* context, int line) {
     std::fprintf(stderr, "WHY-LINE\t%zu\n", why.line);
 }
 
+// The execution layer (docs/architecture.md) and the rule that made a choice.
+std::string Decided(const hdTrans::word::Selection& s, bool ending) {
+    using hdTrans::word::Provenance;
+    switch (s.layer) {
+    case Provenance::None: return "\t";
+    case Provenance::Fixed: return "fixed\t";
+    case Provenance::LocalRule: return std::string(ending ? "local-ending\t" : "local\t") + hdTrans::internal::RuleSource('L', s.id);
+    case Provenance::GlobalRule: {
+        std::string layer = "global-ending";
+        if (!ending) {
+            layer = "global-stem";
+            for (const auto& g : hdTrans::internal::RulesProgram().globalRules) {
+                if (g.prio == s.id && g.number > 0 && g.number < 1000) layer = "global-last";
+            }
+        }
+        return layer + "\t" + hdTrans::internal::RuleSource('G', s.id);
+    }
+    case Provenance::Single:
+    case Provenance::FirstXxx:
+    case Provenance::Digit: return ending ? "ending-defaults\t" : "defaults\t";
+    case Provenance::Sense:
+    case Provenance::SenseDefault: return "senses\tsenses.tsv:" + std::to_string(s.id);
+    case Provenance::Initial:
+    case Provenance::Rewrite: return "rewrites\t";
+    case Provenance::Scorer: return "scorers\t";
+    case Provenance::Misread: return "misread\t";
+    case Provenance::Cg: return "cg-lite\t";
+    }
+    return "\t";
+}
+
 void WhyResolved(void* context, int chunk, int sentence, const hdTrans::word::Chain& chain) {
     const auto& why = *static_cast<WhyContext*>(context);
     for (const hdTrans::word::Item* it = chain.head; it; it = it->next) {
@@ -137,8 +169,9 @@ void WhyResolved(void* context, int chunk, int sentence, const hdTrans::word::Ch
         std::fprintf(stderr, "\t%d\t%s\t%d\t", it->selected, hdTrans::word::ProvenanceName(it->choice.layer),
                      it->choice.id);
         PrintEscaped(it->EntryText(it->selected));
-        std::fprintf(stderr, "\t%d\t%s\t%d\n", it->DirectIndex(),
-                     hdTrans::word::ProvenanceName(it->directChoice.layer), it->directChoice.id);
+        std::fprintf(stderr, "\t%d\t%s\t%d\t%s\t%s\n", it->DirectIndex(),
+                     hdTrans::word::ProvenanceName(it->directChoice.layer), it->directChoice.id,
+                     Decided(it->choice, false).c_str(), Decided(it->directChoice, true).c_str());
         for (const hdTrans::word::ShadowChoice& shadow : it->shadowChoices) {
             std::fprintf(stderr, "SHADOW\t%zu\t%d\t%d\t%d:%d\t", why.line, chunk, sentence, it->tokenIndex,
                          it->start);
@@ -162,7 +195,7 @@ bool WriteRuleCounts(const std::string& path, const hdTrans::rules::Program& pro
     }
     for (std::size_t i = 0; i < tally.globalRuns.size(); i++) {
         const hdTrans::rules::GlobalRule& r = program.globalRules[i];
-        std::fprintf(f, "G\t%zu\t%c\t%d\t%d\t%llu\t%llu\n", i, static_cast<char>(r.pumsa), r.number,
+        std::fprintf(f, "G\t%d\t%c\t%d\t%d\t%llu\t%llu\n", r.prio, static_cast<char>(r.pumsa), r.number,
                      r.uganRule ? 1 : 0, static_cast<unsigned long long>(tally.globalRuns[i]),
                      static_cast<unsigned long long>(tally.globalFires[i]));
     }

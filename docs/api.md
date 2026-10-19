@@ -39,13 +39,14 @@ hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference
 | `-no-cg` | CG-lite 손 규칙(`cgRules`, 기본 켬)을 끔: 오독 결정의 후보를 지우거나 고르는 규칙표 |
 | `-cg-learned` | 학습 규칙(`cgLearned`, 기본 끔)도 켬 |
 | `-stages DIR` | 단계 기록을 DIR에 씀 ([testing.md](testing.md#한-입력-살펴보기-단계-기록--stages)) |
-| `-rule-counts FILE` | 선택 규칙마다 실행 횟수와 참이 된 횟수를 FILE에 TSV로 씀: `kind`(L·G), `index`, `pumsa`, `number`, `ugan`, `runs`, `fires` ([rules.md](rules.md#사용-횟수)) |
+| `-rule-counts FILE` | 선택 규칙마다 실행 횟수와 참이 된 횟수를 FILE에 TSV로 씀: `kind`(L·G), `index`(전역 규칙은 PRIO), `pumsa`, `number`, `ugan`, `runs`, `fires` ([rules.md](rules.md#사용-횟수)) |
 
 종료 코드: 0 성공, 1 사전을 못 불러옴·입력 읽기 실패·캐시 오류, 2 알 수 없는 옵션(사용법 출력).
 
 `-why`의 표준 오류 출력은 탭으로 구분한 줄입니다. `WHY-LINE <줄>`이 입력 줄마다 나오고, 단어마다
-`WHY <줄> <청크> <문장> <토큰>:<시작> <표면형> <선택> <출처> <id> <번역> <직접 선택> <출처> <id>`,
-그 아래에 `SHADOW` 줄이 붙습니다. 탭·줄바꿈·백슬래시는 `\t`, `\n`, `\\`로 이스케이프합니다.
+`WHY <줄> <청크> <문장> <토큰>:<시작> <표면형> <선택> <출처> <id> <번역> <직접 선택> <출처> <id> <층> <규칙> <어미 층> <어미 규칙>`,
+그 아래에 `SHADOW` 줄이 붙습니다. 층과 규칙은 후보와 어미를 정한 실행 층과 규칙 파일:규칙(`local`
+`particles.txt:L925`, 전역 규칙은 `파일:GPRIO`)입니다([architecture.md](architecture.md#누가-정했는지--why)). 탭·줄바꿈·백슬래시는 `\t`, `\n`, `\\`로 이스케이프합니다.
 
 | 환경 변수 | 설명 |
 |---|---|
