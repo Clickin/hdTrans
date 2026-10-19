@@ -554,6 +554,15 @@ bool ThinkingVerbAhead(const Item* it) {
     return false;
 }
 
+// Whether the next item is a verb of thinking or wishing (思う, 考える, 願う, 祈る, 望む).
+bool WishVerbNext(const Item* x) {
+    if (x == nullptr || x->selected < 0) return false;
+    for (const std::string_view v : {"思", "おもう", "おもっ", "考え", "願", "祈", "望"}) {
+        if (x->group->surface.starts_with(v)) return true;
+    }
+    return false;
+}
+
 // Whether the item is a verb of saying or thinking whose と ends the utterance.
 bool SayingConditional(const Item* it) {
     const std::string_view s = it->group->surface;
@@ -585,6 +594,12 @@ void QuoteTo(Flusher& f) {
         if (!d.ends_with("と") || (!e->dst.starts_with("2면") && !e->dst.starts_with("1다면"))) continue;
         const bool end = QuoteEnd(f.w, it);
         const std::string ja = it->group->surface + std::string(d);
+        // たらと思う keeps the condition as an unfinished wish (行けたらと思う 갈 수 있으면 하고 생각한다);
+        // before a verb of saying it is a suggestion (行ったらと言われた) and stays a quote.
+        if ((d == "らと" || d.ends_with("たらと") || d.ends_with("だらと")) && WishVerbNext(it->next)) {
+            it->AssignDirectSlot(it->DirectIndex(), std::string(e->dst.starts_with("1다면") ? "1다면" : "2면") + " 하고");
+            continue;
+        }
         const bool thought = (At(it->Code(it->selected), 0) == '7' || ja.ends_with("ないと") || d.starts_with("た")) &&
                              ThinkingVerbAhead(it);
         if ((!end && !QuoteVerbFollows(it->next) && !thought) || (end && (ja.ends_with("ないと") || SayingConditional(it))) ||
