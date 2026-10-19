@@ -45,16 +45,13 @@ jobs:
       - name: Compare with the expected outputs
         if: env.HAS_KEY == 'true'
         # Exit 1 means translations changed, which is reported, not a failure; 2 is an error.
-        # The texts are private: the summary gets counts only, the log the first changed lines.
+        # The texts are private: summary and log carry counts only.
         run: |
           set +e
           tools/e2e.sh --expected testdata build/linux/hdtrans "$GITHUB_WORKSPACE/dicts" > "$RUNNER_TEMP/e2e.log"
           status=$?
-          if [ "$(wc -l < "$RUNNER_TEMP/e2e.log")" -le 20 ]; then
-            cat "$RUNNER_TEMP/e2e.log"
-          else
-            head -n 19 "$RUNNER_TEMP/e2e.log"; echo '...'; tail -n 1 "$RUNNER_TEMP/e2e.log"
-          fi
+          # The log is public: print per-chapter counts only, never translated lines.
+          grep -E '^[^ ]+: [0-9]+ changed lines?$|^e2e: ' "$RUNNER_TEMP/e2e.log"
           tail -n 1 "$RUNNER_TEMP/e2e.log" | grep '^e2e: ' >> "$GITHUB_STEP_SUMMARY"
           case $status in
             0) echo 'No translation changed.' >> "$GITHUB_STEP_SUMMARY" ;;
