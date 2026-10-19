@@ -1,58 +1,21 @@
 name: 버그 신고
-description: 실행이 안 되거나, 멈추거나, 기능이 이상하게 동작할 때
+description: 실행이 안 되거나 이상하게 동작할 때
 title: "[버그] "
 labels: [bug]
 body:
   - type: textarea
     id: what
     attributes:
-      label: 무슨 일이 일어났나요
+      label: 내용
+      description: 무슨 일이 일어났고, 어떻게 하면 다시 일어나는지
     validations:
       required: true
-  - type: textarea
-    id: steps
-    attributes:
-      label: 다시 일으키는 방법
-      placeholder: |
-        1.
-        2.
-    validations:
-      required: true
-  - type: textarea
-    id: expected
-    attributes:
-      label: 기대한 동작
   - type: dropdown
     id: where
     attributes:
       label: 쓴 방법
-      options:
-        - 웹 (trans.kuri.kr)
-        - hdTransGUI
-        - hdtrans CLI
-        - J2KEngine.dll + 번역 도구
-        - C API
-        - 빌드
-    validations:
-      required: true
+      options: [웹, hdTransGUI, CLI, J2KEngine.dll + 번역 도구, C API, 빌드]
   - type: input
-    id: tool
+    id: env
     attributes:
-      label: 함께 쓴 도구
-      description: LunaTranslator, XUnity.AutoTranslator, 아랄트랜스, VNR, 아네모네 등과 그 버전
-  - type: input
-    id: version
-    attributes:
-      label: hdTrans 버전
-    validations:
-      required: true
-  - type: input
-    id: os
-    attributes:
-      label: OS
-      placeholder: Windows 11 64비트
-  - type: textarea
-    id: log
-    attributes:
-      label: 오류 메시지나 로그
-      render: text
+      label: 버전, OS, 함께 쓴 도구
