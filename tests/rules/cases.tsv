@@ -287,7 +287,7 @@ L2016	今朝は何を食べた？	오늘 아침은 무엇을 먹었어?	current	
 L2039	ガラス越しに見える。	유리 넘어로 보인다.	current	local
 L2051	この問題は簡単ではない。	이 문제는 간단하지 않다.	current	local-ending
 L2051	その説明は正確ではない。	그 설명은 정확하지 않다.	current	local-ending
-L2059	文字は小さくされた。	문자는 작게 여겨졌다.	current	local
+L2059	文字は小さくされた。	문자는 작게 만들어졌다.	current	local
 L2060	私は友達に本を返そうとした。	나는 친구에게 책을 돌려주려고 했다.	current	local-ending
 L2060	彼は急いで電話を取ろうとした。	그는 서둘러 전화를 취하려고 했다.	current	local-ending
 L2062	天気が良い限り外で遊ぶ。	날씨가 좋을 따름 밖에서 논다.	current	local-ending
@@ -667,9 +667,9 @@ L4470	ここに座ってはだめなの？	여기에 앉아서는 안돼?	curren
 L4470	本当にそれで大丈夫なの？	정말로 그래서 괜찮아?	current	local-ending
 L4470	だめなの？	안돼?	current	local-ending
 L4475	何もしてくれんかった。	아무것도 해 줘.	current	local
-L4480	私は掃除をさせられた。	나는 청소를 하게 했다.	current	local
+L4480	私は掃除をさせられた。	나는 청소를 하도록 강요받았다.	current	local
 L4541	やっと終わったって感じです。	드디어 끝났다 라는 느낌입니다.	current	local-ending
-L4554	勉強させられた。	공부 당했다.	current	local
+L4554	勉強させられた。	공부 하도록 강요받았다.	current	local
 L4564	それより早く帰ろう。	그것보다 빨리 돌아가자.	current	local
 L4567	兄に車で送ってもらった。	형에게 차로 보내 주었다.	current	local
 L4567	友達に宿題を教えてもらった。	친구에게 숙제를 가르쳐 주었다.	current	local
@@ -712,7 +712,7 @@ L4990	残ったうちの半分を使う。	남은 우리 반을 사용한다.	cu
 L4990	うちの猫だ。	우리 고양이다.	current	local
 L4993	ステンレス流しを買う。	스텐레스 흘려 보내기를 산다.	current	local
 L5015	星がついた。	별이 되었다.	current	local
-L5031	彼はとても行けない。	그는 매우 갈 수 없다.	current	local
+L5031	彼はとても行けない。	그는 도저히 갈 수 없다.	current	local
 L5031	とても高い。	매우 높다.	current	local
 L5034	健康のため歩く。	건강이기 때문에 걷는다.	current	local
 L5067	毎日の残業にうんざりと息をついた。	매일의 잔업에 지긋지긋한숨을 쉬었다.	current	local
