@@ -12,7 +12,7 @@ L69	外は雨が降っているようだ。	밖은 비가 오고 있는 것 같�
 L69	あの人はとても元気なようだ。	그 사람은 매우 건강한 것 같다.	current	local
 L69	彼は美しいようだ。	그는 아름다운 것 같다.	current	local
 L95	裏の通りを歩く。	뒤의 거리를 걷는다.	fix	local
-L97	私が好きです。	내를 좋아합니다.	current	local
+L97	私が好きです。	나를 좋아합니다.	current	local
 L102	彼が何時に来るか知らない。	그가 몇시에 오는지 모른다.	current	local-ending
 L102	この先どうなるか分からない。	이 앞 어떻게 되는지 모른다.	current	local-ending
 L106	小さい頃から犬が大好きでした。	어렸을 적부터 개를 아주 좋아했습니다.	current	local
@@ -125,7 +125,7 @@ L576	新しい企画を成功させたい。	새로운 기획을 성공시키고
 L576	犬を散歩させに公園へ行く。	개를 산책시키러 공원에 간다.	current	local
 L578	財布を落としてしまった。	지갑을 잃어버려 버렸다.	current	local
 L578	電車に乗り遅れてしまう。	전철에 놓쳐 버린다.	current	local
-L632	看板を壁に掲げる。	간판을 벽으로 내건다.	current	local
+L632	看板を壁に掲げる。	간판을 벽에 내건다.	current	local
 L658	彼はいつも気をつけます。	그는 언제나 조심합니다.	fix	local
 L728	パンを焼いた。	빵을 구웠다.	current	local
 L729	子供が受けられる授業です。	아이가 받을 수 있는 수업입니다.	current	local
@@ -141,7 +141,7 @@ L925	ポイントで買った。	포인트로 샀다.	current	local
 L925	コンビニで買った。	편의점에서 샀다.	current	local
 L932	忘れた傘を取りに戻った。	잊은 우산을 취하러 돌아왔다.	current	local-ending
 L932	駅前の店へ本を買いに行く。	역 앞의 가게에 책을 사러 간다.	current	local-ending
-L940	安く高い性能を得る。	싸고 비싼 성능을 얻는다.	current	local
+L940	安く高い性能を得る。	싸고 높은 성능을 얻는다.	current	local
 L940	高い性能が必要だ。	높은 성능이 필요하다.	current	local
 L945	明日は車で行きます。	내일은 차로 갑니다.	current	local
 L945	彼は自転車で来ました。	그는 자전거로 왔습니다.	current	local
@@ -163,7 +163,7 @@ L1033	どうしてそんなことをしたの。	어째서 그런 일을 했어.
 L1033	そんなことより早く食べよう。	그런 일보다 빨리 먹자.	current	local
 L1041	俺と彼は昔からの友達だ。	나와 그는 옛날부터의 친구다.	current	local
 L1041	俺も一緒に行っていいかな。	나도 함께 가도 좋을까.	current	local
-L1050	狭い間を通る。	좁은 동안을 통과한다.	current	local
+L1050	狭い間を通る。	좁은 사이를 지난다.	current	local
 L1053	旅行に行く気はないと言った。	여행하러 갈 생각은 없다고 말했다.	current	local
 L1053	今日は仕事をする気はありません。	오늘은 일을 할 생각은 없습니다.	current	local
 L1057	これは金と言う金属です。	이것은 금이라고 하는 금속입니다.	fix	local
@@ -312,7 +312,7 @@ L2128	それって本物じゃねえ？	그 거 진짜가 아니야?	current	loc
 L2128	これ、あなたの鞄じゃないか？	이것, 당신의 가방이 아닌가?	current	local
 L2131	え、え、もう終わったの？	네, 네, 벌써 끝났어?	current	local
 L2131	あの、え、これ本当に私の？	저, 네, 이것 정말로 나의?	current	local
-L2141	ねえ、ところで明日は暇ですか。	있잖아, 곳에서 내일은 한가합니까.	current	local
+L2141	ねえ、ところで明日は暇ですか。	있잖아, 그런데 내일은 한가합니까.	current	local
 L2155	それは彼の役目なのである。	그것은 그의 역할인 것이다.	current	local
 L2157	「足、まだ痛いの？」	「다리, 아직 아픈거야?」	current	local-ending
 L2157	「これ、本当においしいの？」	「이것, 정말로 맛있는거야?」	current	local-ending
@@ -364,8 +364,8 @@ L2380	母の作った料理はおいしい。	어머니가 만든 요리는 맛�
 L2380	弟の描いた絵が賞をもらった。	남동생이 그린 그림이 상을 받았다.	current	local
 L2403	この部屋は夏になると暑くなる。	이 방은 여름이 되면 더워진다.	current	local-ending
 L2403	春が来て、庭の花が赤くなった。	봄이 와, 뜰의 꽃이 붉어졌다.	current	local-ending
-L2425	理想にかなう。	이상에 필적한다.	current	local
-L2425	条件にかなう。	조건에 필적한다.	current	local
+L2425	理想にかなう。	이상에 부합한다.	current	local
+L2425	条件にかなう。	조건에 부합한다.	current	local
 L2429	こちらで確認いたします。	이쪽에서 확인하겠습니다.	current	local-ending
 L2429	明日の朝、お伺いいたします。	내일 아침, 질문하겠습니다.	current	local-ending
 L2430	来週からもっと頑張ります！	다음주부터도 와 노력하겠습니다!	current	local-ending
@@ -405,7 +405,7 @@ L2679	私はこの学校の生徒であります。	나는 이 학교의 학생�
 L2682	父は会社で働いており、帰りが遅い。	아버지는 회사에서 일하고 있어 돌아오는 길이 늦다.	current	local
 L2682	この犬は庭で遊んでおり、元気そうだ。	이 개는 뜰에서 놀고 있어 건강한 것 같다.	current	local
 L2682	読んでおり、書いている。	읽고 있어 쓰고 있다.	current	local
-L2684	母について行く。	어머니를 대해 간다.	current	local
+L2684	母について行く。	어머니를 따라 간다.	current	local
 L2688	私には信じられない話だ。	나에게는 믿을 수 없는 이야기다.	current	local
 L2688	お金さえない毎日だった。	돈조차 없는 매일이었다.	current	local
 L2692	病院にかかった。	병원에서 진료받았다.	current	local
@@ -452,7 +452,7 @@ L2943	そんなに急がないで。	그렇게 서두르지 마.	current	local-e
 L2943	ここでは走らないで。	여기에서는 달리지 마.	current	local-ending
 L2947	無理なのよ。	무리야.	current	local-ending
 L2956	子供のすることだ。	아이가 하는 것이다.	current	local
-L2962	京都巡りツアーに参加する。	교토 둘러싸고 투어에 참가한다.	current	local
+L2962	京都巡りツアーに参加する。	교토 순회 투어에 참가한다.	current	local
 L2963	店員さんに道を聞いた。	점원에 길을 물었다.	current	local
 L2963	運転手さんにお礼を言った。	운전기사에 감사 인사를 했다.	current	local
 L2975	あれはうちの猫よ。	저것은 우리 고양이야.	current	local
@@ -591,7 +591,7 @@ L3824	駅で三時間も待たされた。	역에서 3시간이나 기다리게 
 L3824	二週間も雨が続いている。	2주간이나 비가 계속되고 있다.	current	local
 L3830	まだ寝てる？	아직 자고 있어?	current	local-ending
 L3830	今、何してる？	지금, 뭐하고 있어?	current	local-ending
-L3833	彼は議論を深める。	그는 논의가 깊어진다.	current	local
+L3833	彼は議論を深める。	그는 논의를 깊게 한다.	current	local
 L3844	一緒に医者になろう。	함께 의사가 되자.	fix	local
 L3851	日経記者です。	닛케이 기자입니다.	fix	local
 L3856	近く見える。	가깝게 보인다.	fix	local
@@ -622,7 +622,7 @@ L3999	その案が候補にあがった。	그 안이 후보에 갔다.	current	
 L4001	彼は話を聞かれた。	그는 이야기를 들렸다.	current	local
 L4033	先に宿題を済ませておこう。	먼저 숙제를 끝마쳐 두자.	current	local
 L4033	旅行の前に切符を買っておく。	여행앞에 표를 사 둔다.	current	local
-L4051	無事でなによりです。	무사해 최상입니다.	current	local
+L4051	無事でなによりです。	무사해서 다행입니다.	current	local
 L4075	ケーキを四つに分けて食べた。	케이크를 4개로 나누어 먹었다.	current	local
 L4075	この問題には二つの答えがある。	이 문제에는 2개의 대답이 있다.	current	local
 L4083	娘のユイが庭で遊んでいる。	딸 유이가 뜰에서 놀고 있다.	current	local
@@ -647,7 +647,7 @@ L4222	その話はちょっと分かる。	그 이야기는 조금 안다.	curre
 L4229	お金なんか要りません。	돈은 필요하지 않습니다.	current	local
 L4229	私は野菜なんか嫌いです。	나는 야채는 싫습니다.	current	local
 L4240	いただきます、後で返します。	받습니다, 나중에 돌려줍니다.	fix	local
-L4280	一目彼女の顔を見たい。	일목 그녀의 얼굴을 보고 싶다.	current	local
+L4280	一目彼女の顔を見たい。	한 눈 그녀의 얼굴을 보고 싶다.	current	local
 L4281	今日は友達と一緒に買い物へ行く。	오늘은 친구와 함께 쇼핑하러 간다.	current	local
 L4305	方針に従って申し込む。	방침에 따르고 신청한다.	current	local
 L4308	値段は高いものの品質が良い。	가격은 비싸기는 하지만 품질이 좋다.	current	local-ending
@@ -703,7 +703,7 @@ L4919	今日は朝から寒いな。	오늘은 아침부터 추운데.	current	l
 L4934	別に構わないけど。	별로 상관없는데.	current	local-ending
 L4934	ちょっと眠いけど。	조금 졸린데.	current	local-ending
 L4938	もう１個ください。	더 1개 주세요.	current	local
-L4941	パンをどうぞ。	빵을 부탁합니다.	current	local
+L4941	パンをどうぞ。	빵을 드세요.	current	local
 L4951	右へどうぞ進んでください。	오른쪽으로 부디 진행해 주세요.	fix	local
 L4979	犯人は彼とのことです。	범인은 그와의 일입니다.	current	local
 L4988	汚れ防止の布です。	오염 방지의 옷감입니다.	fix	local
@@ -711,7 +711,7 @@ L4988	汚れ対策を考える。	오염 대책을 생각한다.	fix	local
 L4990	残ったうちの半分を使う。	남은 것 중 반을 사용한다.	current	local
 L4990	うちの猫だ。	우리 고양이다.	current	local
 L4993	ステンレス流しを買う。	스텐레스 흘려 보내기를 산다.	current	local
-L5015	星がついた。	별이 되었다.	current	local
+L5015	星がついた。	별이 붙었다.	current	local
 L5031	彼はとても行けない。	그는 도저히 갈 수 없다.	current	local
 L5031	とても高い。	매우 높다.	current	local
 L5034	健康のため歩く。	건강이기 때문에 걷는다.	current	local

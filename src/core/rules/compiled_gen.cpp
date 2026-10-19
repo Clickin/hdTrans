@@ -838,12 +838,11 @@ bool RuleL96([[maybe_unused]] Item* p) {
            (GobiSrcEq(p, 0, "で"sv) && GobiDstSet(p, 0, "1게"sv));
 }
 
-// # 好き를 '좋아하다'로 고르면서 지정 문맥의 주격 조사를 목적격으로 바꾸거나 앞 동사구를 '-는 것을'로 바꾼다.
-// # [의심] が를 목적격으로 바꾸면서 앞의 내가 주격용으로 이미 선택된 사실을 처리하지 않아 내를이 생긴다; 자작문 私が好きです。 → CLI 「내를 좋아합니다.」, WHY 私 LocalRule 2320 내, が 및 好き LocalRule 97; 목적격으로 옮기려면 나를이어야 한다.
+// # 好き를 ‘좋아하다’로 고르며 주격을 목적격으로 옮길 때 ‘내’를 ‘나’로 되돌리거나 앞 동사구를 ‘-는 것을’로 바꾼다.
 // local 97
 //     (src == "好き" or src == "すき" or src == "嫌い") and pos is 8** and src[-1] == "の" and ko[-1] == "(이)가" and pos[-1] is 2** and pos[-2] is 1** and sem[-2] under VHn
 //     pos[-1] is 4** and end.src[-1] == "のが" and end.pos[-1] is 50* and end.ko[-1] := "0 것을"
-//     (end.src == "です" or end.src == "だ") and src[-1] == "が" and pos[-1] is 2** and ko[-1] := "(을)를"
+//     (end.src == "です" or end.src == "だ") and src[-1] == "が" and pos[-1] is 2** and (ko[-2] != "내" or ko[-2] := "나") and ko[-1] := "(을)를"
 //     pos[-1] is 4** and end.pos[-1] is 5:0 and end.ko[-1] := "0 것을"
 bool RuleL97([[maybe_unused]] Item* p) {
     return ((SrcEq(p, 0, "好き"sv) ||
@@ -851,7 +850,8 @@ bool RuleL97([[maybe_unused]] Item* p) {
            SrcEq(p, 0, "嫌い"sv)) && PumsaEq(p, 0, "8**"sv) && SrcEq(p, -1, "の"sv) && DstEq(p, -1, "(이)가"sv) && PumsaEq(p, -1, "2**"sv) && PumsaEq(p, -2, "1**"sv) && AttrMinusEq(p, -2, "VHn"sv)) ||
            (PumsaEq(p, -1, "4**"sv) && GobiSrcEq(p, -1, "のが"sv) && GobiPumsaEq(p, -1, "50*"sv) && GobiDstSet(p, -1, "0 것을"sv)) ||
            ((GobiSrcEq(p, 0, "です"sv) ||
-           GobiSrcEq(p, 0, "だ"sv)) && SrcEq(p, -1, "が"sv) && PumsaEq(p, -1, "2**"sv) && DstSet(p, -1, "(을)를"sv)) ||
+           GobiSrcEq(p, 0, "だ"sv)) && SrcEq(p, -1, "が"sv) && PumsaEq(p, -1, "2**"sv) && (DstNe(p, -2, "내"sv) ||
+           DstSet(p, -2, "나"sv)) && DstSet(p, -1, "(을)를"sv)) ||
            (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "5:0"sv) && GobiDstSet(p, -1, "0 것을"sv));
 }
 
@@ -4111,12 +4111,11 @@ bool RuleL429([[maybe_unused]] Item* p) {
            (SrcEq(p, -1, "との"sv) && PumsaEq(p, -2, "1**"sv) && DstSet(p, -1, "(와)과의"sv));
 }
 
-// # 어미가 「と」인 동사 뒤에서 「計算」을 고르고 그 동사의 어미 번역을 ‘다라고’로 바꾼다. (미발동: rare-context)
-// # [의심] 인용 어미를 "4다라고"로 대입하여 간다라고 계산하다 같은 비표준 인용형을 만들며 평서 인용에는 다고가 맞다.
+// # 어미가 と인 동사 뒤에서 計算을 고르고 그 동사의 평서 인용 어미를 ‘-다고’로 바꾼다.
 // local 430
-//     pos[-1] is 4** and end.src[-1] == "と" and end.pos[-1] is 5** and src[+1] == "する" and pos[+1] is 4** and end.ko[-1] := "4다라고"
+//     pos[-1] is 4** and end.src[-1] == "と" and end.pos[-1] is 5** and src[+1] == "する" and pos[+1] is 4** and end.ko[-1] := "4다고"
 bool RuleL430([[maybe_unused]] Item* p) {
-    return (PumsaEq(p, -1, "4**"sv) && GobiSrcEq(p, -1, "と"sv) && GobiPumsaEq(p, -1, "5**"sv) && SrcEq(p, 1, "する"sv) && PumsaEq(p, 1, "4**"sv) && GobiDstSet(p, -1, "4다라고"sv));
+    return (PumsaEq(p, -1, "4**"sv) && GobiSrcEq(p, -1, "と"sv) && GobiPumsaEq(p, -1, "5**"sv) && SrcEq(p, 1, "する"sv) && PumsaEq(p, 1, "4**"sv) && GobiDstSet(p, -1, "4다고"sv));
 }
 
 // # に와 する 사이의 関係를 고르면서 앞의 に를 에로 바꾼다.
@@ -5042,7 +5041,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL94, 0xf2bd933a4c5e2df2ull},
     {RuleL95, 0x958e4b0425de092eull},
     {RuleL96, 0x948ed32288ec23f3ull},
-    {RuleL97, 0x0a5bcc1cf72c0d0dull},
+    {RuleL97, 0xcd235febb449b331ull},
     {RuleL98, 0x7d85fc8c08ac4ef5ull},
     {RuleL99, 0xc61fb05c3c3b734aull},
     {RuleL100, 0x8aea83a40bc764a2ull},
@@ -5375,7 +5374,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL427, 0x19473060e449895full},
     {RuleL428, 0x1bc6eb9159e6978dull},
     {RuleL429, 0x1d3018c8ee02de91ull},
-    {RuleL430, 0xf6b3e3d1c5c89f07ull},
+    {RuleL430, 0x005b78788283a2a7ull},
     {RuleL431, 0x83ed2a301c434a24ull},
     {RuleL432, 0x2643a4fc3fd8834eull},
     {RuleL433, 0x652abdf4fa9cd039ull},
