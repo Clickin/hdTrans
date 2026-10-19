@@ -6,14 +6,14 @@ namespace hdTrans::rules::compiled {
 
 using namespace std::string_view_literals;
 
-// # 사전 행이 가리키지 않거나 분류가 분명하지 않은 규칙. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
+// # 참조 없는 규칙: 사전(dicts/*.tsv)의 rule 열이 가리키지 않아 실행되지 않는 지역 규칙과, rule 열이 비었거나 0인 행이 가리키는 빈 규칙 L 0. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
+// # 사전 행이 이 번호를 가리키게 되면 그 머리 단어의 파일로 옮긴다.
 // # 규칙 번호가 비어 있거나 0인 모든 사전어에 적용되어 어떤 후보도 고르지 않는다. (미발동: impossible)
 // local 0
 bool RuleL0([[maybe_unused]] Item* p) {
     return false;
 }
 
-// # 문두·감탄사·응답·접속사. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
 // # 뒤에 부사·감탄사로 분석되는 あら가 또 오면 앞의 あら를 감탄사 '어머나'로 고른다. (미발동: rare-context)
 // local 1
 //     src[+1] == "あら" and pos[+1] is 3**
@@ -21,7 +21,6 @@ bool RuleL1([[maybe_unused]] Item* p) {
     return (SrcEq(p, 1, "あら"sv) && PumsaEq(p, 1, "3**"sv));
 }
 
-// # 내용어(명사·동사·형용사·부사)의 뜻 고르기. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
 // # 문장 끝의 あんまり를 '별로'로 고른다.
 // local 2
 //     gram has Ow
@@ -29,7 +28,6 @@ bool RuleL2([[maybe_unused]] Item* p) {
     return GramEq(p, 0, "Ow"sv);
 }
 
-// # 경어·경칭(様·さん·いただく·なさる…). 형식: docs/rules.md, 실행 순서: docs/architecture.md.
 // # 다음 동사가 「あそば」이고 ‘하시다’라는 번역 후보가 있으면 「いかが」를 ‘어떻게’로 고른다. (미발동: rare-context)
 // local 3
 //     src[+1] == "あそば" and ko[+1] == "하&AE@" and pos[+1] is 4**
@@ -50,7 +48,6 @@ bool RuleL4([[maybe_unused]] Item* p) {
            GobiSrcEq(p, 1, "であろうと"sv);
 }
 
-// # 수사·조수사·날짜와 시간. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
 // # いくら는 가격·구매·비용·보유량을 묻는 구문에서 의문 수량 표현 ‘얼마’로 고른다.
 // local 5
 //     src[+1] == "で" and pos[+1] is 2** and src[+2] == "買" and pos[+2] is 4**
@@ -210,7 +207,6 @@ bool RuleL22([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "50*"sv) && PumsaEq(p, 1, "2**"sv) && DstSet(p, 0, "기회"sv) && GobiDstSet(p, -1, "3"sv));
 }
 
-// # 조사(で·に·と·は·が·を·の·も·から·まで…)의 번역 선택. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
 // # として는 지정된 사람 명사와 当로 시작하는 명사 사이 또는 사람·역할·中心 뒤에서 자격의 ‘(으)로서’를 고른다.
 // local 23
 //     (src[-1] == "学生" or src[-1] == "男" or src[-1] == "女" or src[-1] == "親" or src[-1] == "息子" or src[-1] == "娘") and pos[-1] is 1** and src[+1] starts "当" and pos[+1] is 1**
@@ -345,7 +341,6 @@ bool RuleL35([[maybe_unused]] Item* p) {
     return AttrEq(p, 1, "UTsUSe"sv);
 }
 
-// # 가나 표기·의성어·의태어·소리. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
 // # ばったり 뒤에 あ·会 동사가 오면 우연히를 고른다. (미발동: rare-word)
 // local 36
 //     (src[+1] == "あ" or src[+1] == "会") and pos[+1] is 4**
@@ -685,7 +680,6 @@ bool RuleL76([[maybe_unused]] Item* p) {
     return (GobiSrcEq(p, 0, "に"sv) && SrcEq(p, 1, "満ち"sv) && PumsaEq(p, 1, "4**"sv) && GobiDstSet(p, 0, " 으로"sv));
 }
 
-// # 시제·상·부정(た·ている·ない·ず…). 형식: docs/rules.md, 실행 순서: docs/architecture.md.
 // # 気の毒는 です로 활용되면 어미를 '-었습니다'로 바꾸고 だ로 활용되면 전체를 '안 됐다'로 바꾼다.
 // local 77
 //     end.src == "です" and end.ko := "5습니다"
@@ -881,7 +875,6 @@ bool RuleL99([[maybe_unused]] Item* p) {
            SrcEq(p, -1, "どちら"sv);
 }
 
-// # 어미·연결 표현의 번역 선택. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
 // # 어미 か 뒤에 を와 する형 명사가 차례로 오면 지를 고른다. (미발동: rare-context)
 // local 100
 //     src[+1] == "を" and pos[+2] is 1** and gram[+2] has Hd
@@ -1165,7 +1158,6 @@ bool RuleL122([[maybe_unused]] Item* p) {
            SrcEq(p, -2, "連絡"sv);
 }
 
-// # 수동·사역·가능(れる·られる·せる·させる…). 형식: docs/rules.md, 실행 순서: docs/architecture.md.
 // # と를 두 단어 앞이 賞으로 끝나거나 ビザ일 때 받다로 고른다. (미발동: rare-context)
 // local 123
 //     src[-2] ends "賞"

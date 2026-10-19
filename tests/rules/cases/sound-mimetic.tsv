@@ -1,0 +1,3 @@
+rule	input	expected	kind	layer
+L2317	父そっくりの顔だ。	아버지를 빼닮은 얼굴이다.	fix	local
+L2317	荷物をそっくり渡す。	짐을 전부 건네준다.	keep	local

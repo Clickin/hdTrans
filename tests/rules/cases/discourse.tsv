@@ -1,0 +1,4 @@
+rule	input	expected	kind	layer
+L2245	もっとも、雨なら休む。	다만, 비라면 쉰다.	fix	local
+L2245	もっとも大事な話だ。	무엇보다 소중한 이야기다.	keep	local
+L2245	もっとも急ぐ必要がある。	무엇보다 서두를 필요가 있다.	keep	local

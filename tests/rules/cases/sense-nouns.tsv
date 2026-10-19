@@ -1,0 +1,15 @@
+rule	input	expected	kind	layer
+L3395	夜は更ける。	밤은 깊어진다.	fix	local
+L3395	夜は続いた。	밤은 계속되었다.	fix	local
+L3395	夜は歩いた。	밤에는 걸었다.	keep	local
+L3395	夜走った。	밤에 달렸다.	keep	local
+L4990	選んだうちの一つだ。	선택한 것 중 하나다.	fix	local
+L4990	うちの犬は元気だ。	우리 개는 건강하다.	keep	local
+L524	マッチ二本を使う。	성냥 두 개를 사용한다.	fix	local
+L524	紙マッチを擦る。	종이 성냥을 문지른다.	fix	local
+L524	テニスマッチを見た。	테니스 매치를 보았다.	keep	local
+L542	本を持って来いと言った。	책을 가져와라고 말했다.	fix	local
+L542	練習に持って来いの場所だ。	연습에 안성마춤의 장소다.	keep	local
+L542	練習に持って来いだ。	연습에 안성마춤이다.	keep	local
+G120	山田、田中、鈴木が来た。	야마다, 타나카, 스즈키가 왔다.	fix	global-stem
+G120	太郎が来た。	타로가 왔다.	keep	global-stem

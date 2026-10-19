@@ -20,7 +20,7 @@ struct RuleFile {
 };
 std::span<const RuleFile> RuleFiles();
 
-// "particles.txt:L925" or "global.txt:G30" for a local rule index or a global rule PRIO;
+// "particles.txt:L925" or "sense-nouns.txt:G30" for a local rule index or a global rule PRIO;
 // empty when there is no such rule.
 std::string RuleSource(char kind, int id);
 
