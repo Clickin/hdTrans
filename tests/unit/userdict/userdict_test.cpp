@@ -313,7 +313,7 @@ HD_TEST(userdict_builtin_files) {
     const struct {
         const char* name;
         std::size_t entries;
-    } files[] = {{"endings.tsv", 323}, {"patterns.tsv", 606}, {"phrases.tsv", 1264}, {"sound.tsv", 5263}};
+    } files[] = {{"endings.tsv", 321}, {"patterns.tsv", 626}, {"phrases.tsv", 1308}, {"sound.tsv", 5286}};
     for (const auto& f : files) {
         Parsed p;
         Context ctx{&p.codes, &p.families, nullptr};

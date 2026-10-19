@@ -109,13 +109,13 @@ HD_TEST(userdict_senses_errors) {
     }
 }
 
-// The builtin sense table compiles: 1,307 senses of 658 keys.
+// The builtin sense table compiles: 1,310 senses of 661 keys.
 HD_TEST(userdict_builtin_senses) {
     Families families;
     const CompiledSenses s = ParseSenses(dict::BuiltinText("senses.tsv"), families);
     HD_CHECK_EQ(Errors(s.errors), std::string());
     std::size_t n = 0;
     for (const auto& [key, list] : s.table) n += list.size();
-    HD_CHECK_EQ(s.table.size(), std::size_t{658});
-    HD_CHECK_EQ(n, std::size_t{1307});
+    HD_CHECK_EQ(s.table.size(), std::size_t{661});
+    HD_CHECK_EQ(n, std::size_t{1310});
 }
