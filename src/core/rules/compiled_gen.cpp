@@ -3259,13 +3259,12 @@ bool RuleL326([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "2**"sv) && SrcEq(p, -2, "争い"sv) && PumsaEq(p, -2, "1**"sv));
 }
 
-// # 앞말의 의미나 인명 표지를 검사해 호칭 'さん'을 '씨'로 고른다.
+// # 앞말의 사람 의미나 인명 표지를 검사해 호칭 さん을 ‘씨’로 고른다.
 // local 327
-//     (sem[-1] under VHn or sem[-1] under VPn)
+//     sem[-1] under VHn
 //     pos[-1] is 13* and gram[-1] has Wa|Wb
 bool RuleL327([[maybe_unused]] Item* p) {
-    return (AttrMinusEq(p, -1, "VHn"sv) ||
-           AttrMinusEq(p, -1, "VPn"sv)) ||
+    return AttrMinusEq(p, -1, "VHn"sv) ||
            (PumsaEq(p, -1, "13*"sv) && GramEq(p, -1, "WaWb"sv));
 }
 
@@ -5285,7 +5284,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL324, 0xb64e47ce2a2bc78aull},
     {RuleL325, 0x1fe7bcfb89f2a006ull},
     {RuleL326, 0x96ce39f669f745cbull},
-    {RuleL327, 0xe8678484f1e714e7ull},
+    {RuleL327, 0xa5d365414896d010ull},
     {RuleL328, 0xbb20f0b0364af855ull},
     {RuleL329, 0x6e3786f746e0c70aull},
     {RuleL330, 0xa35f874ccabb8cfcull},
