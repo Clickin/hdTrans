@@ -18,16 +18,29 @@
 
 namespace hdTrans::rulec {
 
+// The text of one file, or of several files read as one (Join): files holds where each
+// starts, and positions are those in the file holding the offset.
 struct Source {
+    struct File {
+        uint32_t start;
+        std::string name;
+    };
     std::string name;
     std::string text;
     std::vector<uint32_t> lineStarts;
+    std::vector<File> files;
 
     Source(std::string name, std::string text);
-    // 1-based line and column; columns count code points.
+    // The file, its 1-based line and column (columns count code points) of an offset.
     void Position(uint32_t offset, int& line, int& column) const;
-    std::string_view Line(int line) const;
+    const std::string& FileAt(uint32_t offset) const;
+    std::string_view Line(uint32_t offset) const;
 };
+
+// The rules program of a directory as the build makes it: the header line "rules 1
+// LOCALCOUNT GLOBALCOUNT", then the *.txt files in name order. False when a file cannot
+// be read.
+bool ReadRuleDir(const std::string& dir, std::string& text, std::vector<Source::File>& files, std::string& error);
 
 enum class Severity : uint8_t { Note, Warning, Error };
 
@@ -55,7 +68,7 @@ struct Diagnostics {
 
 // "file:line:col: warning: message [-Wflag]", the source line and a caret under the span.
 std::string Format(const Source& source, const Diagnostic& d);
-// One TSV row: kind, index, statement, line, column, severity, flag, message.
+// One TSV row: kind, index, statement, file, line, column, severity, flag, message.
 std::string FormatRow(const Source& source, const Diagnostic& d);
 
 // An expression of a rule body. Atoms have op, delta, rightDelta (word operand) and
@@ -93,6 +106,8 @@ void AppendQuoted(std::string& out, std::string_view s);
 bool ParseTest(std::string_view text, uint32_t offset, Diagnostics& diags, RuleTest& test);
 std::string PrintTest(const RuleTest& test);
 
+// A local rule's index is its number; a global rule's is its PRIO. File keeps local rules by
+// index and global rules in PRIO order (equal PRIO in file order), as they run.
 struct Rule {
     char kind = 'L';
     int index = 0;
@@ -102,6 +117,7 @@ struct Rule {
     uint32_t offset = 0, length = 0;  // the record (flat) or header line
     Expr body;                        // an Or over the statements
     std::vector<RuleTest> tests;
+    std::vector<std::string> comments;  // the comment lines above the record, without "#"
 };
 
 struct File {
@@ -149,8 +165,13 @@ void Normalize(File& file);
 void CanonicalLiterals(File& file);
 bool SameTree(const Expr& a, const Expr& b);
 
-// The Program rules::Load would build for the flat text of file.
+// A Program for file: the rules rules::Load builds from its flat text, local rules in index
+// order.
 rules::Program Lower(const File& file);
+// The rules of a program in run order as flat text: local rules by index, then global rules
+// by position with their key, number and stem flag (not their PRIO). Two programs with the
+// same dump select the same way.
+std::string Dump(const rules::Program& program);
 
 // What the dictionaries hold: part codes as the rules see them, semantic and grammar
 // codes, and the rows naming each local rule.

@@ -860,7 +860,7 @@ HD_TEST(word_selected_assignment_rule_provenance) {
         }
         const std::string body = "||1 &&2 D+" + std::string(c.neighbour ? "1" : "0") +
                                  "= \"수도\" S+0== \"" + (c.succeeds ? "東京" : "missing") + "\"\n";
-        const std::string flat = c.global ? "rules 1 0 1\nG 0 1 1015 1 " + body
+        const std::string flat = c.global ? "rules 1 0 1\nG 50 1 1015 1 " + body
                                           : "rules 1 1 0\nL 0 " + body;
         rules::Program program;
         rules::LoadError error{};
@@ -870,7 +870,7 @@ HD_TEST(word_selected_assignment_rule_provenance) {
         HD_CHECK_EQ(result, c.succeeds);
         HD_CHECK_EQ(affected.selected, c.selected);
         const auto layer = c.global ? word::Provenance::GlobalRule : word::Provenance::LocalRule;
-        const int id = c.global ? 1015 : 0;
+        const int id = c.global ? 50 : 0;
         CheckChoice(affected.choice, layer, id);
         CheckChoice(affected.group->At(c.selected)->targetChoice, layer, id);
         CheckChoice(affected.group->At(1 - c.selected)->targetChoice, word::Provenance::None);

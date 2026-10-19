@@ -96,7 +96,7 @@ bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char p
         const GlobalRule& r = program.globalRules[i];
         if (r.uganRule != uganRule || r.pumsa != pumsa) continue;
         if (uganRule && (r.number <= lo || r.number >= hi)) continue;
-        if (pwi) pwi->SetRuleContext(true, r.number);
+        if (pwi) pwi->SetRuleContext(true, r.prio);
         const bool result = i < program.globalCode.size() && program.globalCode[i] ? program.globalCode[i](pwi)
                                                                                      : Run(program, r.root, pwi);
         if (pwi) pwi->SetRuleContext(true, -1);
@@ -105,7 +105,7 @@ bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char p
             if (result) tally->globalFires[i]++;
         }
         if (result) {
-            if (fired) *fired = r.number;
+            if (fired) *fired = r.prio;
             return true;
         }
     }

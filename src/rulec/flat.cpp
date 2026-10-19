@@ -1,4 +1,7 @@
 // The flat format of rules::Load, parsed with the same acceptance and printed back.
+#include <algorithm>
+#include <cstdint>
+
 #include "rulec/rulec.h"
 
 namespace hdTrans::rulec {
@@ -232,6 +235,8 @@ File ParseFlat(const Source& source, Diagnostics& diags) {
     int localCount = -1, globalCount = -1;
     uint32_t headerOffset = 0;
     std::vector<Rule>* lastList = nullptr;
+    std::vector<uint32_t> seen;  // record offset by local index
+    std::vector<std::string> comments;
     const std::string_view text(source.text);
     for (std::size_t start = 0; start < text.size();) {
         std::size_t end = text.find('\n', start);
@@ -251,7 +256,10 @@ File ParseFlat(const Source& source, Diagnostics& diags) {
             }
             continue;
         }
-        if (s.empty() || s[0] == '#') continue;
+        if (s.empty() || s[0] == '#') {
+            if (localCount >= 0 && !s.empty()) comments.emplace_back(s.substr(1));
+            continue;
+        }
 
         Record r(offset, s, diags);
         Token kind;
@@ -272,6 +280,8 @@ File ParseFlat(const Source& source, Diagnostics& diags) {
             continue;
         }
         Rule rule;
+        rule.comments = std::move(comments);
+        comments.clear();
         rule.offset = offset;
         rule.length = static_cast<uint32_t>(s.size());
         rule.kind = kind.text == "L" ? 'L' : kind.text == "G" ? 'G' : 0;
@@ -280,23 +290,26 @@ File ParseFlat(const Source& source, Diagnostics& diags) {
             continue;
         }
         std::vector<Rule>& list = rule.kind == 'L' ? file.local : file.global;
-        if (rule.kind == 'L' && !file.global.empty()) {
-            r.Fail(kind.offset, 1, "local rule after a global rule");
-            continue;
-        }
         Token indexToken;
-        if (!r.Next(indexToken, "the rule index")) continue;
-        const int count = rule.kind == 'L' ? localCount : globalCount;
-        if (!ParseInt(indexToken.text, 0, count - 1, rule.index)) {
+        if (!r.Next(indexToken, rule.kind == 'L' ? "the rule index" : "the rule priority")) continue;
+        const long long lo = rule.kind == 'L' ? 0 : -(1LL << 30), hi = rule.kind == 'L' ? localCount - 1 : 1LL << 30;
+        if (!ParseInt(indexToken.text, lo, hi, rule.index)) {
             r.Fail(indexToken.offset, static_cast<uint32_t>(indexToken.text.size()),
-                   "rule index '" + std::string(indexToken.text) + "' is not in 0.." + std::to_string(count - 1) +
-                       " (the header count)");
+                   rule.kind == 'L' ? "rule index '" + std::string(indexToken.text) + "' is not in 0.." +
+                                          std::to_string(localCount - 1) + " (the header count)"
+                                    : "bad rule priority '" + std::string(indexToken.text) + "'");
             continue;
         }
-        if (static_cast<std::size_t>(rule.index) != list.size()) {
-            r.Fail(indexToken.offset, static_cast<uint32_t>(indexToken.text.size()),
-                   "rule index out of order: expected " + std::to_string(list.size()));
-            continue;
+        if (rule.kind == 'L') {
+            if (seen.size() < static_cast<std::size_t>(localCount)) seen.assign(static_cast<std::size_t>(localCount), UINT32_MAX);
+            uint32_t& at = seen[static_cast<std::size_t>(rule.index)];
+            if (at != UINT32_MAX) {
+                r.Fail(indexToken.offset, static_cast<uint32_t>(indexToken.text.size()),
+                       "local rule " + std::to_string(rule.index) + " is defined twice");
+                diags.Note(at, 1, "first defined here");
+                continue;
+            }
+            at = offset;
         }
         if (rule.kind == 'G') {
             Token pumsa;
@@ -318,6 +331,18 @@ File ParseFlat(const Source& source, Diagnostics& diags) {
         list.push_back(std::move(rule));
         lastList = &list;
     }
+    std::stable_sort(file.local.begin(), file.local.end(), [](const Rule& a, const Rule& b) { return a.index < b.index; });
+    std::stable_sort(file.global.begin(), file.global.end(), [](const Rule& a, const Rule& b) { return a.index < b.index; });
+    for (std::size_t i = 1; i < file.global.size(); i++) {
+        if (file.global[i].index != file.global[i - 1].index) continue;
+        diags.Warning("prio-tie", file.global[i].offset, file.global[i].length,
+                      "global rules with priority " + std::to_string(file.global[i].index) + " run in file order");
+        diags.list.back().kind = 'G';
+        diags.list.back().index = file.global[i].index;
+    }
+    for (std::size_t i = 0; localCount != (1 << 20) && i < seen.size(); i++) {
+        if (seen[i] == UINT32_MAX) diags.Error(headerOffset, 0, "local rule " + std::to_string(i) + " is missing");
+    }
     if (localCount < 0) {
         diags.Error(0, 0, "no header");
     } else if (localCount != (1 << 20) &&
@@ -338,12 +363,14 @@ std::string PrintFlatBody(const Expr& body) {
 std::string PrintFlat(const File& file) {
     std::string out = "rules 1 " + std::to_string(file.local.size()) + " " + std::to_string(file.global.size()) + "\n";
     for (const Rule& r : file.local) {
+        for (const std::string& c : r.comments) out += "#" + c + "\n";
         out += "L " + std::to_string(r.index) + " ";
         PrintExpr(out, r.body);
         out += '\n';
         for (const RuleTest& t : r.tests) out += "#test " + PrintTest(t) + "\n";
     }
     for (const Rule& r : file.global) {
+        for (const std::string& c : r.comments) out += "#" + c + "\n";
         out += "G " + std::to_string(r.index) + " ";
         out += static_cast<char>(r.pumsa);
         out += " " + std::to_string(r.number) + " " + (r.ugan ? "1 " : "0 ");

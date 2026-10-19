@@ -145,7 +145,7 @@ HD_TEST(word_provenance_global_rule) {
         else word::CleanupSelectors(f);
         HD_CHECK_EQ(it->selected, 1);
         HD_CHECK_EQ(std::string(it->EntryText(it->selected)), std::string("도쿄"));
-        CheckSelection(it->choice, word::Provenance::GlobalRule, 3500);
+        CheckSelection(it->choice, word::Provenance::GlobalRule, 150);
         CheckSelection(it->group->At(1)->targetChoice, word::Provenance::None);
     }
 }
@@ -248,7 +248,7 @@ HD_TEST(word_provenance_direct_selection) {
         {"書く。", "V\t4다\tS500\tXXX\t\tGN\t0\t2\nV\t4는다\tS500\t\t\tGN\t2\t3\n",
          1, word::Provenance::LocalRule, 2, "4는다"},
         {"書いて。", "V\t1고\tS570\tXXX\t\tGN\t0\t2\nV\t6\tS570\t\t\tGN\t0\t3\n",
-         1, word::Provenance::GlobalRule, 9991, "6"},
+         1, word::Provenance::GlobalRule, 330, "6"},
     };
     HD_REQUIRE(internal::RulesLoaded());
     for (const Case& c : cases) {
@@ -313,9 +313,9 @@ HD_TEST(word_provenance_pool_reuse) {
     HD_REQUIRE(stem != nullptr);
     word::Flusher verbs{*line.analysis.worker, internal::RulesProgram(), snapshot->OutputFamilies()};
     word::Flush(verbs);
-    CheckSelection(stem->directChoice, word::Provenance::GlobalRule, 4);
+    CheckSelection(stem->directChoice, word::Provenance::GlobalRule, 240);
     HD_REQUIRE(stem->DirectEntry(stem->DirectIndex()) != nullptr);
-    CheckSelection(stem->DirectEntry(stem->DirectIndex())->targetChoice, word::Provenance::GlobalRule, 4);
+    CheckSelection(stem->DirectEntry(stem->DirectIndex())->targetChoice, word::Provenance::GlobalRule, 240);
 
     HD_REQUIRE(line.Analyze("書く。", *snapshot));
     word::Item* reused = line.Find("書");
@@ -382,16 +382,16 @@ HD_TEST(word_provenance_late_global_rule) {
         else word::CleanupSelectors(f);
         HD_CHECK_EQ(auxiliary->selected, 0);
         HD_CHECK_EQ(std::string(auxiliary->EntryText(auxiliary->selected)), std::string());
-        CheckSelection(auxiliary->choice, word::Provenance::GlobalRule, 4);
-        CheckSelection(auxiliary->group->At(0)->targetChoice, word::Provenance::GlobalRule, 4);
+        CheckSelection(auxiliary->choice, word::Provenance::GlobalRule, 240);
+        CheckSelection(auxiliary->group->At(0)->targetChoice, word::Provenance::GlobalRule, 240);
         HD_CHECK_EQ(std::string(stem->DirectText(stem->DirectIndex())), std::string("4다"));
         CheckSelection(stem->choice, word::Provenance::Single);
-        CheckSelection(stem->directChoice, word::Provenance::GlobalRule, 4);
+        CheckSelection(stem->directChoice, word::Provenance::GlobalRule, 240);
         HD_REQUIRE(stem->DirectEntry(stem->DirectIndex()) != nullptr);
-        CheckSelection(stem->DirectEntry(stem->DirectIndex())->targetChoice, word::Provenance::GlobalRule, 4);
+        CheckSelection(stem->DirectEntry(stem->DirectIndex())->targetChoice, word::Provenance::GlobalRule, 240);
         fired = -1;
         HD_CHECK(rules::RunGlobal(internal::RulesProgram(), auxiliary, true, '4', true, &fired));
-        HD_CHECK_EQ(fired, 4);
+        HD_CHECK_EQ(fired, 240);
     }
 }
 

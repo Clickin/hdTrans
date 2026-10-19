@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <cstdint>
+
 #include "core/rules/rules.h"
 
 namespace hdTrans::rules {
@@ -6,6 +8,7 @@ namespace hdTrans::rules {
 namespace {
 
 constexpr int kMaxDepth = 32;
+constexpr uint32_t kNoRule = UINT32_MAX;
 
 struct OpSpelling {
     char field;
@@ -198,6 +201,7 @@ bool Load(std::string_view text, Program& program, LoadError& error) {
     program = Program{};
     int line = 0;
     int localCount = -1, globalCount = -1;
+    std::size_t locals = 0;
     auto fail = [&](const char* message) {
         error = {line, message};
         return false;
@@ -219,25 +223,26 @@ bool Load(std::string_view text, Program& program, LoadError& error) {
             if (kind != "rules" || !r.NextInt(1, 1, version) || !r.NextInt(0, 1 << 20, localCount) ||
                 !r.NextInt(0, 1 << 20, globalCount) || !r.AtEnd())
                 return fail(r.error ? r.error : "bad header");
-            program.localRules.reserve(static_cast<std::size_t>(localCount));
+            program.localRules.assign(static_cast<std::size_t>(localCount), kNoRule);
             program.globalRules.reserve(static_cast<std::size_t>(globalCount));
             continue;
         }
         if (kind == "L") {
-            if (!program.globalRules.empty()) return fail("local rule after a global rule");
             if (!r.NextInt(0, localCount - 1, index)) return fail(r.error);
-            if (static_cast<std::size_t>(index) != program.localRules.size()) return fail("rule index out of order");
-            program.localRules.push_back(static_cast<uint32_t>(program.nodes.size()));
+            uint32_t& root = program.localRules[static_cast<std::size_t>(index)];
+            if (root != kNoRule) return fail("local rule index repeated");
+            root = static_cast<uint32_t>(program.nodes.size());
+            locals++;
         } else if (kind == "G") {
             std::string_view pumsa;
             int number = 0, ugan = 0;
-            if (!r.NextInt(0, globalCount - 1, index)) return fail(r.error);
-            if (static_cast<std::size_t>(index) != program.globalRules.size()) return fail("rule index out of order");
+            if (!r.NextInt(-(1 << 30), 1 << 30, index)) return fail(r.error);
+            if (program.globalRules.size() == static_cast<std::size_t>(globalCount)) return fail("more global rules than the header counts");
             if (!r.Next(pumsa) || !r.NextInt(-(1 << 30), 1 << 30, number) || !r.NextInt(0, 1, ugan))
                 return fail(r.error);
             if (pumsa.size() != 1) return fail("pumsa key must be one byte");
             program.globalRules.push_back(
-                {static_cast<unsigned char>(pumsa[0]), number, ugan == 1, static_cast<uint32_t>(program.nodes.size())});
+                {static_cast<unsigned char>(pumsa[0]), number, ugan == 1, static_cast<uint32_t>(program.nodes.size()), index});
         } else {
             return fail("unknown record");
         }
@@ -247,9 +252,10 @@ bool Load(std::string_view text, Program& program, LoadError& error) {
         if (!r.AtEnd()) return fail("trailing tokens");
     }
     if (localCount < 0) return fail("no header");
-    if (program.localRules.size() != static_cast<std::size_t>(localCount) ||
-        program.globalRules.size() != static_cast<std::size_t>(globalCount))
+    if (locals != static_cast<std::size_t>(localCount) || program.globalRules.size() != static_cast<std::size_t>(globalCount))
         return fail("rule count differs from the header");
+    std::stable_sort(program.globalRules.begin(), program.globalRules.end(),
+                     [](const GlobalRule& a, const GlobalRule& b) { return a.prio < b.prio; });
     return true;
 }
 

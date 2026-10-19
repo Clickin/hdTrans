@@ -305,8 +305,21 @@ private:
         Note(r, s, a.offset, a.length, "the other test");
     }
 
-    // Alternatives of an Or that can never be the first true one.
+    // Alternatives of an Or that can never be the first true one, and, among the statements of
+    // a rule, a lone code test after a conjunction: with prefix counts, a list one short makes
+    // its last test a statement of its own.
     void OrList(const Rule& r, int statement, const Expr& e) {
+        bool conjunction = false;
+        for (std::size_t j = 0; statement == 0 && j < e.children.size(); j++) {
+            const Expr& c = e.children[j];
+            const bool code = c.kind == NodeKind::Atom && !Info(c.op).assigns &&
+                              (Info(c.op).operand == Operand::Code2 || Info(c.op).operand == Operand::Code3);
+            if (code && conjunction)
+                Warn(r, static_cast<int>(j) + 1, "lone-test", c.offset, c.length,
+                     "statement " + std::to_string(j + 1) + " is the single test '" + Show(c) +
+                         "' and decides alone; check the counts of the lists before it");
+            conjunction = conjunction || c.kind == NodeKind::And;
+        }
         for (std::size_t j = 1; j < e.children.size(); j++) {
             const Expr& cj = e.children[j];
             const int sj = statement ? statement : static_cast<int>(j) + 1;
@@ -454,7 +467,7 @@ private:
                 }
                 if (!all) continue;
                 Warn(g[j], 0, "shadowed", g[j].offset, g[j].length,
-                     Name(g[j]) + " never fires: G " + std::to_string(i) + " runs first for the same words and is true whenever it is");
+                     Name(g[j]) + " never fires: " + Name(g[i]) + " runs first for the same words and is true whenever it is");
                 Note(g[i], 0, g[i].offset, g[i].length, "the earlier rule");
                 break;
             }

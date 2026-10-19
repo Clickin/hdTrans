@@ -1,6 +1,10 @@
 #include "core/engine/rules.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <map>
 #include <string>
+#include <vector>
 
 #include "core/rules/compiled.h"
 
@@ -8,28 +12,64 @@ namespace hdTrans::internal {
 
 namespace {
 
+// A record line of the program: its kind, index (L) or PRIO (G), file and text.
+struct Record {
+    char kind;
+    int id;
+    std::size_t file;
+    std::string_view line;
+};
+
 struct Loaded {
     rules::Program program;
     bool ok = false;
+    std::vector<std::size_t> localFile;     // by index
+    std::map<int, std::size_t> globalFile;  // by PRIO
 };
+
+std::vector<Record> Records() {
+    std::vector<Record> out;
+    const auto lines = RuleLines();
+    const auto files = RuleFiles();
+    for (std::size_t f = 0; f < files.size(); f++) {
+        for (std::size_t i = files[f].first; i < files[f].first + files[f].count && i < lines.size(); i++) {
+            std::string_view line = lines[i];
+            while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.remove_suffix(1);
+            if (!line.starts_with("L ") && !line.starts_with("G ")) continue;
+            long long id = 0;
+            std::size_t k = 2;
+            const bool negative = k < line.size() && line[k] == '-';
+            if (negative) k++;
+            for (; k < line.size() && line[k] >= '0' && line[k] <= '9' && id < (1LL << 31); k++) id = id * 10 + (line[k] - '0');
+            out.push_back({line[0], static_cast<int>(negative ? -id : id), f, line});
+        }
+    }
+    return out;
+}
 
 #ifndef HDTRANS_INTERPRET_RULES
 // Gives each rule the compiled code made from its record line, when that line is unchanged.
-void AttachCompiled(rules::Program& program) {
+// Global rules are matched in PRIO order, as they run.
+void AttachCompiled(rules::Program& program, const std::vector<Record>& records) {
     const auto local = rules::compiled::LocalRules();
     const auto global = rules::compiled::GlobalRules();
-    std::size_t l = 0, g = 0;
-    for (std::string_view line : RuleLines()) {
-        while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.remove_suffix(1);
-        const bool isLocal = line.starts_with("L "), isGlobal = line.starts_with("G ");
-        if (!isLocal && !isGlobal) continue;
-        const std::size_t index = isLocal ? l++ : g++;
-        const auto table = isLocal ? local : global;
-        if (index >= table.size() || table[index].code == nullptr) continue;
-        if (table[index].hash != rules::compiled::RecordHash(line)) continue;
-        auto& code = isLocal ? program.localCode : program.globalCode;
-        if (code.size() <= index) code.resize(index + 1, nullptr);
-        code[index] = table[index].code;
+    std::vector<const Record*> globals;
+    for (const Record& r : records) {
+        if (r.kind == 'G') {
+            globals.push_back(&r);
+            continue;
+        }
+        const std::size_t index = static_cast<std::size_t>(r.id);
+        if (index >= local.size() || index >= program.localRules.size() || local[index].code == nullptr) continue;
+        if (local[index].hash != rules::compiled::RecordHash(r.line)) continue;
+        if (program.localCode.size() <= index) program.localCode.resize(index + 1, nullptr);
+        program.localCode[index] = local[index].code;
+    }
+    std::stable_sort(globals.begin(), globals.end(), [](const Record* a, const Record* b) { return a->id < b->id; });
+    for (std::size_t i = 0; i < globals.size() && i < global.size() && i < program.globalRules.size(); i++) {
+        if (global[i].code == nullptr || global[i].hash != rules::compiled::RecordHash(globals[i]->line)) continue;
+        if (program.globalCode.size() <= i) program.globalCode.resize(i + 1, nullptr);
+        program.globalCode[i] = global[i].code;
     }
 }
 #endif
@@ -41,8 +81,14 @@ const Loaded& Load() {
         Loaded l;
         rules::LoadError error{};
         l.ok = rules::Load(text, l.program, error);
+        const std::vector<Record> records = Records();
+        l.localFile.assign(l.program.localRules.size(), SIZE_MAX);
+        for (const Record& r : records) {
+            if (r.kind == 'L' && r.id >= 0 && static_cast<std::size_t>(r.id) < l.localFile.size()) l.localFile[static_cast<std::size_t>(r.id)] = r.file;
+            if (r.kind == 'G') l.globalFile.emplace(r.id, r.file);
+        }
 #ifndef HDTRANS_INTERPRET_RULES
-        if (l.ok) AttachCompiled(l.program);
+        if (l.ok) AttachCompiled(l.program, records);
 #endif
         return l;
     }();
@@ -54,5 +100,16 @@ const Loaded& Load() {
 const rules::Program& RulesProgram() { return Load().program; }
 
 bool RulesLoaded() { return Load().ok; }
+
+std::string RuleSource(char kind, int id) {
+    const Loaded& l = Load();
+    std::size_t file = SIZE_MAX;
+    if (kind == 'L' && id >= 0 && static_cast<std::size_t>(id) < l.localFile.size()) file = l.localFile[static_cast<std::size_t>(id)];
+    if (kind == 'G') {
+        if (const auto it = l.globalFile.find(id); it != l.globalFile.end()) file = it->second;
+    }
+    if (file >= RuleFiles().size()) return {};
+    return std::string(RuleFiles()[file].name) + ":" + kind + std::to_string(id);
+}
 
 }  // namespace hdTrans::internal

@@ -2,7 +2,7 @@
 //
 //   file      = { line }
 //   line      = header | statement | (blank or "#" comment)
-//   header    = "local" INT | "global" INT ("stem" | "ending") "pos" KEY
+//   header    = "local" INT | "global" INT ("stem" | "ending") "pos" KEY ["prio" INT]
 //   statement = or NEWLINE            (newlines inside parentheses are spaces)
 //   or        = and { "or" and }
 //   and       = primary { "and" primary }
@@ -12,6 +12,7 @@
 //   test      = "==" | "!=" | ":=" | ["not"] ("starts" | "ends" | "inside")
 //             | "is" ["not"] | "has" | "lacks" | "under" | "within" | "isa"
 //   operand   = STRING | field | CODE { "|" CODE }
+#include <algorithm>
 #include <cctype>
 
 #include "rulec/rulec.h"
@@ -88,6 +89,14 @@ public:
             }
             if (diags_.list.size() != errors) SkipLine();
         }
+        std::stable_sort(file.local.begin(), file.local.end(), [](const Rule& a, const Rule& b) { return a.index < b.index; });
+        std::stable_sort(file.global.begin(), file.global.end(), [](const Rule& a, const Rule& b) { return a.index < b.index; });
+        for (std::size_t i = 0; i < file.local.size(); i++) {
+            if (file.local[i].index != static_cast<int>(i)) {
+                diags_.Error(0, 0, "local rule " + std::to_string(i) + " is missing");
+                break;
+            }
+        }
         return file;
     }
 
@@ -99,7 +108,15 @@ private:
                                         (s_[pos_] == '\n' && depth_ > 0)))
                 pos_++;
             if (pos_ < s_.size() && s_[pos_] == '#') {
+                const std::size_t start = pos_;
                 while (pos_ < s_.size() && s_[pos_] != '\n') pos_++;
+                std::size_t line = start;
+                while (line > 0 && (s_[line - 1] == ' ' || s_[line - 1] == '\t')) line--;
+                if (line == 0 || s_[line - 1] == '\n') {
+                    std::size_t end = pos_;
+                    if (end > start && s_[end - 1] == '\r') end--;
+                    comments_.emplace_back(s_.substr(start + 1, end - start - 1));
+                }
                 continue;
             }
             break;
@@ -213,6 +230,8 @@ private:
         Advance();
         Rule r;
         r.kind = local ? 'L' : 'G';
+        r.comments = std::move(comments_);
+        comments_.clear();
         r.offset = head.offset;
         r.body.kind = NodeKind::Or;
         r.body.offset = head.offset;
@@ -220,11 +239,11 @@ private:
         std::vector<Rule>& list = local ? file.local : file.global;
         r.index = static_cast<int>(list.size());
         if (local) {
-            if (!file.global.empty()) return Error(head, "local rule after a global rule"), nullptr;
             const Token at = tok_;
-            int n = 0;
-            if (!Int(n, "the local rule index")) return nullptr;
-            if (n != r.index) return Error(at, "expected local rule " + std::to_string(r.index)), nullptr;
+            if (!Int(r.index, "the local rule index")) return nullptr;
+            for (const Rule& other : list) {
+                if (other.index == r.index) return Error(at, "local rule " + std::to_string(r.index) + " is defined twice"), nullptr;
+            }
         } else {
             if (!Int(r.number, "the global rule number")) return nullptr;
             if (Accept("stem")) {
@@ -237,6 +256,7 @@ private:
                 return Error(tok_, "expected a one-byte pumsa key"), nullptr;
             r.pumsa = static_cast<unsigned char>(tok_.text[0]);
             Advance();
+            if (Accept("prio") && !Int(r.index, "the rule priority")) return nullptr;
         }
         if (tok_.kind != Tok::Newline && tok_.kind != Tok::End) return Error(tok_, "expected the end of the header"), nullptr;
         r.length = tok_.offset - head.offset;
@@ -432,6 +452,7 @@ private:
     int depth_ = 0;
     bool codes_ = false;
     Token tok_;
+    std::vector<std::string> comments_;  // whole-line comments since the last header
 };
 
 std::string Delta(int d) { return d == 0 ? "" : "[" + std::string(d < 0 ? "-" : "+") + std::to_string(d < 0 ? -d : d) + "]"; }
@@ -505,12 +526,13 @@ void PrintExpr(std::string& out, const Expr& e, NodeKind parent) {
 }
 
 void PrintRule(std::string& out, const Rule& r) {
+    for (const std::string& c : r.comments) out += "#" + c + "\n";
     if (r.kind == 'L') {
         out += "local " + std::to_string(r.index) + "\n";
     } else {
         out += "global " + std::to_string(r.number) + (r.ugan ? " stem pos " : " ending pos ");
         out += static_cast<char>(r.pumsa);
-        out += '\n';
+        out += " prio " + std::to_string(r.index) + "\n";
     }
     for (const Expr& s : r.body.children) {
         out += "    ";

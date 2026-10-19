@@ -17,7 +17,7 @@ using namespace hdTrans;
 
 namespace {
 
-// The text of src/core/rules/rules.txt with the record of local rule index replaced by line;
+// The text of the rules program with the record of local rule index replaced by line;
 // empty when there is no such record.
 std::string EditedRules(int index, std::string_view line) {
     std::string text;

@@ -222,9 +222,9 @@ HD_TEST(rules_load_errors) {
         {"rules 2 0 0", 1, "bad number"},
         {"rules 1 0 0 0", 1, "bad header"},
         {"rules 1 1 0\nL 1 ||0", 2, "bad number"},
-        {"rules 1 2 0\nL 1 ||0\nL 0 ||0", 2, "rule index out of order"},
+        {"rules 1 2 0\nL 1 ||0\nL 1 ||0", 3, "local rule index repeated"},
         {"rules 1 2 0\nL 0 ||0", 2, "rule count differs from the header"},
-        {"rules 1 1 1\nG 0 1 1002 1 ||0\nL 0 ||0", 3, "local rule after a global rule"},
+        {"rules 1 1 1\nG 0 1 1002 1 ||0\nG 1 1 1002 1 ||0\nL 0 ||0", 3, "more global rules than the header counts"},
         {"rules 1 1 0\nX 0 ||0", 2, "unknown record"},
         {"rules 1 1 0\nL 0 S+0== \"x\"", 2, "rule body must be a || list"},
         {"rules 1 1 0\nL 0 ||1 Q+0== \"x\"", 2, "unknown operator"},
@@ -273,6 +273,23 @@ HD_TEST(rules_load_literals) {
     HD_CHECK_EQ(p.nodes[3].delta, -1);
 }
 
+// Local rules are placed by index and global rules run by PRIO, wherever their records are.
+HD_TEST(rules_load_order_free) {
+    Program p;
+    LoadError e{};
+    HD_REQUIRE(hdTrans::rules::Load("rules 1 2 3\nG 30 4 1002 1 ||0\nL 1 ||1 S+0== \"b\"\nG 10 4 1003 1 ||0\n"
+                                    "L 0 ||1 S+0== \"a\"\nG 30 4 1004 1 ||0",
+                                    p, e));
+    HD_REQUIRE(p.localRules.size() == 2 && p.globalRules.size() == 3);
+    auto lit = [&](uint32_t root) { const auto& n = p.nodes[root + 1]; return p.literals.substr(n.first, n.second); };
+    HD_CHECK_EQ(lit(p.localRules[0]), std::string("a"));
+    HD_CHECK_EQ(lit(p.localRules[1]), std::string("b"));
+    HD_CHECK_EQ(p.globalRules[0].number, 1003);
+    HD_CHECK_EQ(p.globalRules[1].number, 1002);
+    HD_CHECK_EQ(p.globalRules[2].number, 1004);
+    HD_CHECK_EQ(p.globalRules[2].prio, 30);
+}
+
 HD_TEST(rules_global_open_interval_boundaries) {
     const struct { int number; bool last; bool normal; } cases[] = {
         {-1, false, false}, {0, false, false}, {1, true, false}, {999, true, false},
@@ -284,11 +301,11 @@ HD_TEST(rules_global_open_interval_boundaries) {
             for (bool stem : {false, true}) {
                 Program p;
                 p.nodes.push_back({hdTrans::rules::NodeKind::And, {}, 0, 0, 0, 1});
-                p.globalRules.push_back({'4', c.number, stem, 0});
+                p.globalRules.push_back({'4', c.number, stem, 0, 70});
                 int fired = 12345;
                 const bool expected = !stem || (last ? c.last : c.normal);
                 HD_CHECK_EQ(hdTrans::rules::RunGlobal(p, nullptr, stem, '4', last, &fired), expected);
-                HD_CHECK_EQ(fired, expected ? c.number : -1);
+                HD_CHECK_EQ(fired, expected ? 70 : -1);
                 fired = 12345;
                 HD_CHECK(!hdTrans::rules::RunGlobal(p, nullptr, stem, '1', last, &fired));
                 HD_CHECK_EQ(fired, -1);

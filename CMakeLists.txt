@@ -57,13 +57,18 @@ endfunction()
 hdtrans_builtin_source(builtin_gen.cpp "${HDTRANS_BUILTIN_DIR}" kTables BuiltinTables HDTRANS_BUILTIN_TSV)
 hdtrans_builtin_source(builtin_extra_gen.cpp "${HDTRANS_BUILTIN_DIR}/extra" kFiles ExtraBuiltinFiles
     HDTRANS_BUILTIN_EXTRA_TSV)
-# The rules program of the word stage, src/core/rules/rules.txt, compiled in.
-set(HDTRANS_RULES "${CMAKE_CURRENT_SOURCE_DIR}/src/core/rules/rules.txt")
+# The rules program of the word stage, the *.txt files of src/core/rules, compiled in; a stamp
+# lists the files so that adding or removing one regenerates the source.
+set(HDTRANS_RULE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/core/rules")
+file(GLOB HDTRANS_RULES CONFIGURE_DEPENDS "${HDTRANS_RULE_DIR}/*.txt")
+list(SORT HDTRANS_RULES)
+string(REPLACE ";" "\n" HDTRANS_RULE_NAMES "${HDTRANS_RULES}")
+file(CONFIGURE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp.files" CONTENT "${HDTRANS_RULE_NAMES}\n" @ONLY)
 add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp"
-    COMMAND "${CMAKE_COMMAND}" "-DFILE=${HDTRANS_RULES}" "-DOUT=${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp"
-        "-DHEADER=core/engine/rules.h" "-DNAMESPACE=hdTrans::internal" "-DACCESSOR=RuleLines"
+    COMMAND "${CMAKE_COMMAND}" "-DRULE_DIR=${HDTRANS_RULE_DIR}" "-DOUT=${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp"
         -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/builtin_tables.cmake"
-    DEPENDS "${HDTRANS_RULES}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake/builtin_tables.cmake" VERBATIM)
+    DEPENDS ${HDTRANS_RULES} "${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp.files"
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/builtin_tables.cmake" VERBATIM)
 
 add_subdirectory(third_party/pcre2)
 
@@ -76,7 +81,7 @@ if(HDTRANS_INTERPRET_RULES)
     target_compile_definitions(hdtrans PRIVATE HDTRANS_INTERPRET_RULES)
 endif()
 file(GLOB_RECURSE HDTRANS_DATA_SOURCES CONFIGURE_DEPENDS src/core/*.cpp src/core/*.h)
-list(APPEND HDTRANS_DATA_SOURCES "${HDTRANS_RULES}")
+list(APPEND HDTRANS_DATA_SOURCES ${HDTRANS_RULES})
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${HDTRANS_DATA_SOURCES})
 set(HDTRANS_DATA_HASHES "")
 foreach(dataFile IN LISTS HDTRANS_DATA_SOURCES)
@@ -149,14 +154,15 @@ if(NOT EMSCRIPTEN)
             src/core/rules/match.cpp src/core/rules/attr_families_gen.cpp src/core/dict/codes.cpp
             src/core/dict/pos_tags_gen.cpp)
         target_include_directories(hdrulec PRIVATE src)
-        add_test(NAME rules.lint COMMAND hdrulec lint "${HDTRANS_RULES}")
-        add_test(NAME rules.verify COMMAND hdrulec verify "${HDTRANS_RULES}" -paths 4096)
-        add_test(NAME rules.generated COMMAND hdrulec cpp "${HDTRANS_RULES}" -local 0-499 -globals
+        add_test(NAME rules.lint COMMAND hdrulec lint "${HDTRANS_RULE_DIR}" -dicts "${CMAKE_CURRENT_SOURCE_DIR}/dicts")
+        add_test(NAME rules.verify COMMAND hdrulec verify "${HDTRANS_RULE_DIR}" -paths 4096)
+        add_test(NAME rules.identity COMMAND hdrulec dump "${HDTRANS_RULE_DIR}" -check "${HDTRANS_RULE_DIR}/program.hash")
+        add_test(NAME rules.generated COMMAND hdrulec cpp "${HDTRANS_RULE_DIR}" -local 0-499 -globals
             -check "${CMAKE_CURRENT_SOURCE_DIR}/src/core/rules/compiled_gen.cpp")
         # The test lines of the rules, one unit test each (ruletest_L3_1, ...), run with dicts/.
         add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/rule_tests_gen.cpp"
-            COMMAND hdrulec tests "${HDTRANS_RULES}" -o "${CMAKE_CURRENT_BINARY_DIR}/rule_tests_gen.cpp"
-            DEPENDS hdrulec "${HDTRANS_RULES}" VERBATIM)
+            COMMAND hdrulec tests "${HDTRANS_RULE_DIR}" -o "${CMAKE_CURRENT_BINARY_DIR}/rule_tests_gen.cpp"
+            DEPENDS hdrulec ${HDTRANS_RULES} VERBATIM)
         target_sources(hdtrans_tests PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/rule_tests_gen.cpp")
         add_test(NAME rules.tests COMMAND hdtrans_tests ruletest_)
         set_tests_properties(rules.tests PROPERTIES ENVIRONMENT

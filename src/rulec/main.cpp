@@ -8,12 +8,19 @@
 //                                        evaluation paths per rule, default 2^20)
 //   hdrulec cpp RULES -local FIRST-LAST [-globals] [-o OUT | -check FILE]
 //   hdrulec tests RULES -o OUT           the test lines as unit tests
+//   hdrulec dump RULES [-hash] [-o OUT | -check FILE]
+//                                        the program rules::Load builds, in run order, or the
+//                                        FNV-1a 64 of that dump; -check fails unless FILE holds it
+// RULES is a flat rules file, a directory of them (*.txt, read as the build reads it), or a
+// readable file (*.hdr).
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <vector>
 
+#include "core/rules/compiled.h"
 #include "core/rules/rules.h"
 #include "rulec/oracle.h"
 #include "rulec/rulec.h"
@@ -43,7 +50,7 @@ bool WriteFile(const std::string& path, const std::string& text) {
 bool Readable(const std::string& path) { return path.size() > 4 && path.substr(path.size() - 4) == ".hdr"; }
 
 int Report(const Source& source, const Diagnostics& diags, bool tsv) {
-    if (tsv) std::fputs("kind\tindex\tstatement\tline\tcolumn\tseverity\tflag\tmessage\n", stdout);
+    if (tsv) std::fputs("kind\tindex\tstatement\tfile\tline\tcolumn\tseverity\tflag\tmessage\n", stdout);
     for (const Diagnostic& d : diags.list) {
         const std::string text = tsv ? FormatRow(source, d) : Format(source, d);
         std::fputs(text.c_str(), tsv ? stdout : stderr);
@@ -51,23 +58,6 @@ int Report(const Source& source, const Diagnostics& diags, bool tsv) {
     if (!tsv && (diags.errors || diags.warnings))
         std::fprintf(stderr, "%d error(s), %d warning(s)\n", diags.errors, diags.warnings);
     return diags.errors ? 1 : 0;
-}
-
-bool SameProgram(const rules::Program& a, const rules::Program& b) {
-    if (a.nodes.size() != b.nodes.size() || a.literals != b.literals || a.localRules != b.localRules ||
-        a.globalRules.size() != b.globalRules.size())
-        return false;
-    for (std::size_t i = 0; i < a.nodes.size(); i++) {
-        const rules::Node &x = a.nodes[i], &y = b.nodes[i];
-        if (x.kind != y.kind || x.op != y.op || x.delta != y.delta || x.rightDelta != y.rightDelta || x.first != y.first ||
-            x.second != y.second)
-            return false;
-    }
-    for (std::size_t i = 0; i < a.globalRules.size(); i++) {
-        const rules::GlobalRule &x = a.globalRules[i], &y = b.globalRules[i];
-        if (x.pumsa != y.pumsa || x.number != y.number || x.uganRule != y.uganRule || x.root != y.root) return false;
-    }
-    return true;
 }
 
 // The front end against rules::Load, and the readable round trip on every rule: same
@@ -81,13 +71,13 @@ int Verify(const Source& source, const File& file, long long cap) {
         return 1;
     }
     const rules::Program lowered = Lower(file);
+    const bool same = Dump(loaded) == Dump(lowered);
     std::printf("front end vs rules::Load: %s (%zu nodes, %zu literal bytes)\n",
-                SameProgram(loaded, lowered) ? "identical programs" : "DIFFERENT programs", loaded.nodes.size(),
-                loaded.literals.size());
-    failures += !SameProgram(loaded, lowered);
+                same ? "identical dumps" : "DIFFERENT dumps", loaded.nodes.size(), loaded.literals.size());
+    failures += !same;
 
     const std::string readable = PrintReadable(file);
-    Source back(source.name + ".hdr", readable);
+    Source back("(readable)", readable);
     Diagnostics diags;
     File again = ParseReadable(back, diags);
     if (diags.errors) {
@@ -167,7 +157,7 @@ int main(int argc, char** argv) {
     }
     const std::string command = argv[1], path = argv[2];
     std::string out, dicts, check;
-    bool tsv = false, globals = false;
+    bool tsv = false, globals = false, hashOnly = false;
     int first = 0, last = -1;
     long long cap = 1 << 20;
     CheckOptions options;
@@ -177,6 +167,7 @@ int main(int argc, char** argv) {
         else if (a == "-dicts" && i + 1 < argc) dicts = argv[++i];
         else if (a == "-check" && i + 1 < argc) check = argv[++i];
         else if (a == "-tsv") tsv = true;
+        else if (a == "-hash") hashOnly = true;
         else if (a == "-globals") globals = true;
         else if (a == "-paths" && i + 1 < argc) cap = std::atoll(argv[++i]);
         else if (a == "-max-delta" && i + 1 < argc) options.maxDelta = std::atoi(argv[++i]);
@@ -186,12 +177,15 @@ int main(int argc, char** argv) {
             return 2;
         }
     }
-    std::string text;
-    if (!ReadFile(path, text)) {
-        std::fprintf(stderr, "hdrulec: cannot read %s\n", path.c_str());
+    std::string text, error;
+    std::vector<Source::File> files;
+    const bool dir = std::filesystem::is_directory(path);
+    if (dir ? !ReadRuleDir(path, text, files, error) : !ReadFile(path, text)) {
+        std::fprintf(stderr, "hdrulec: cannot read %s %s\n", path.c_str(), error.c_str());
         return 2;
     }
-    const Source source(path, std::move(text));
+    Source source(path, std::move(text));
+    if (dir) source.files = files;
     Diagnostics diags;
     File file = Readable(path) ? ParseReadable(source, diags) : ParseFlat(source, diags);
     if (diags.errors) return Report(source, diags, tsv);
@@ -211,6 +205,28 @@ int main(int argc, char** argv) {
     if (command == "convert") return WriteFile(out, PrintReadable(file)) ? 0 : 2;
     if (command == "flat") return WriteFile(out, PrintFlat(file)) ? 0 : 2;
     if (command == "verify") return Verify(source, file, cap);
+    if (command == "dump") {
+        // The program as the engine loads it.
+        rules::Program loaded;
+        rules::LoadError error{};
+        if (!rules::Load(source.text, loaded, error)) {
+            std::fprintf(stderr, "hdrulec: rules::Load rejects the program at line %d: %s\n", error.line, error.message);
+            return 1;
+        }
+        const std::string dump = Dump(loaded);
+        char hash[32];
+        std::snprintf(hash, sizeof hash, "%016llx", static_cast<unsigned long long>(rules::compiled::RecordHash(dump)));
+        if (check.empty()) return WriteFile(out, hashOnly ? std::string(hash) + "\n" : dump) ? 0 : 2;
+        std::string want;
+        if (!ReadFile(check, want)) return 2;
+        if (want.find(hash) == std::string::npos) {
+            std::fprintf(stderr, "hdrulec: the rules program changed (dump hash %s, %s records another); if the change is "
+                                 "meant, write the new hash with hdrulec dump %s -hash\n",
+                         hash, check.c_str(), path.c_str());
+            return 1;
+        }
+        return 0;
+    }
     if (command == "tests") return WriteFile(out, EmitTests(file, source)) ? 0 : 2;
     if (command == "cpp") {
         if (Readable(path)) {

@@ -4,15 +4,16 @@
 // from the flat rule format, and is evaluated against an Item.
 //
 // Flat rule format: UTF-8 text, one record per line; empty lines and lines starting
-// with '#' are skipped. The first record is the header, then the local rules with
-// INDEX 0, 1, ... in order, then the global rules likewise:
+// with '#' are skipped. The first record is the header, then the local and global rules
+// in any order:
 //
 //   rules 1 LOCALCOUNT GLOBALCOUNT
 //   L INDEX BODY
-//   G INDEX PUMSA NUMBER UGAN BODY
+//   G PRIO PUMSA NUMBER UGAN BODY
 //
-// PUMSA is the one-byte pumsa key, NUMBER the rule number, UGAN 1 for a stem rule
-// and 0 for an ending rule. BODY is a prefix expression of tokens separated by one
+// Local rules may come in any order; each INDEX in [0, LOCALCOUNT) occurs once. Global
+// rules run in ascending PRIO, equal PRIO in file order. PUMSA is the one-byte pumsa key,
+// NUMBER the rule number, UGAN 1 for a stem rule and 0 for an ending rule. BODY is a prefix expression of tokens separated by one
 // space:
 //
 //   ||N E1 .. EN   short-circuit OR; the root of every body is ||N over the rule's
@@ -47,7 +48,8 @@ namespace hdTrans::rules {
 // wi argument of the LL methods is nullptr in that case too.
 class Item {
 public:
-    // number is -1 when evaluation ends. Assignments may survive a false rule.
+    // number (a local rule index or a global rule PRIO) is -1 when evaluation ends.
+    // Assignments may survive a false rule.
     virtual void SetRuleContext(bool, int) {}
     virtual Item* GetObject(int delta) = 0;
     virtual int GetCurrentCompDI() = 0;
@@ -114,13 +116,14 @@ struct GlobalRule {
     int number;
     bool uganRule;
     uint32_t root;
+    int prio = 0;
 };
 
 struct Program {
     std::vector<Node> nodes;
     std::string literals;
     std::vector<uint32_t> localRules;  // root node of each local rule
-    std::vector<GlobalRule> globalRules;
+    std::vector<GlobalRule> globalRules;  // in PRIO order
     // Native code of rules (src/core/rules/compiled.h), by the index of localRules and
     // globalRules; a rule without code (shorter vector or null) evaluates its nodes. The
     // code of a rule makes the calls its nodes make.
@@ -156,7 +159,7 @@ bool RunLocal(const Program& program, Item* pwi, int ruleIndex, Tally* tally = n
 // Tries, in order, every global rule whose uganRule flag and pumsa key match and
 // reports whether one fired. Stem rules are restricted by number: 1000 < number <
 // 5000, or 0 < number < 1000 when last is set.
-// fired receives the number of the rule that fired, or -1 when none did.
+// fired receives the PRIO of the rule that fired, or -1 when none did.
 bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char pumsa, bool last, int* fired = nullptr,
                Tally* tally = nullptr);
 

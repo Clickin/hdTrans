@@ -6,6 +6,10 @@
 #         -P builtin_tables.cmake
 #     the lines of FILE, each ending in "\n" but a missing last one, and the function ACCESSOR
 #     (declared in HEADER) that returns them as std::span<const std::string_view>
+#   cmake -DRULE_DIR=<dir> -DOUT=<file> -P builtin_tables.cmake
+#     the rules program: the header "rules 1 LOCALCOUNT GLOBALCOUNT" and the lines of the *.txt
+#     files of RULE_DIR in name order, as RuleLines(), and each file's name and lines as
+#     RuleFiles() (core/engine/rules.h)
 
 # Sets VAR to the initializer of a std::string_view array holding the lines of the file at path.
 function(hdtrans_literal_lines path var)
@@ -28,6 +32,45 @@ function(hdtrans_literal_lines path var)
     string(REPLACE "\n" "\\n\",\n    \"" text "${text}")
     set(${var} "{\n    \"${text}${end}}" PARENT_SCOPE)
 endfunction()
+
+if(DEFINED RULE_DIR)
+    file(GLOB files LIST_DIRECTORIES false "${RULE_DIR}/*.txt")
+    list(SORT files)
+    set(body "")
+    set(table "")
+    set(locals 0)
+    set(globals 0)
+    set(first 1)
+    foreach(path IN LISTS files)
+        file(READ "${path}" text)
+        string(REGEX MATCHALL "\nL [0-9]+ " l "\n${text}")
+        string(REGEX MATCHALL "\nG -?[0-9]+ " g "\n${text}")
+        list(LENGTH l nl)
+        list(LENGTH g ng)
+        math(EXPR locals "${locals} + ${nl}")
+        math(EXPR globals "${globals} + ${ng}")
+        string(REGEX MATCHALL "\n" breaks "${text}")
+        list(LENGTH breaks count)
+        if(NOT text MATCHES "\n$")
+            message(FATAL_ERROR "${path} does not end in a line break")
+        endif()
+        hdtrans_literal_lines("${path}" lines)
+        string(LENGTH "${lines}" size)
+        math(EXPR size "${size} - 3")
+        string(SUBSTRING "${lines}" 2 ${size} lines)
+        string(APPEND body "${lines}")
+        get_filename_component(name "${path}" NAME)
+        string(APPEND table "    {\"${name}\", ${first}, ${count}},\n")
+        math(EXPR first "${first} + ${count}")
+    endforeach()
+    file(WRITE "${OUT}" "// Generated table; do not edit.\n#include <span>\n#include <string_view>\n\n"
+        "#include \"core/engine/rules.h\"\n\nnamespace hdTrans::internal {\n\nnamespace {\n\n"
+        "constexpr std::string_view kLines[] = {\n    \"rules 1 ${locals} ${globals}\\n\",\n${body}};\n\n"
+        "constexpr RuleFile kFiles[] = {\n${table}};\n\n}  // namespace\n\n"
+        "std::span<const std::string_view> RuleLines() { return kLines; }\n\n"
+        "std::span<const RuleFile> RuleFiles() { return kFiles; }\n\n}  // namespace hdTrans::internal\n")
+    return()
+endif()
 
 if(DEFINED FILE)
     hdtrans_literal_lines("${FILE}" lines)

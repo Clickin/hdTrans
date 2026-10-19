@@ -254,6 +254,54 @@ bool SameTree(const Expr& a, const Expr& b) {
     return true;
 }
 
+namespace {
+
+void DumpNode(const rules::Program& p, uint32_t i, std::string& out) {
+    const rules::Node& n = p.nodes[i];
+    if (n.kind != NodeKind::Atom) {
+        out += n.kind == NodeKind::Or ? "||" : n.kind == NodeKind::And ? "&&" : "&";
+        out += std::to_string(n.first);
+        uint32_t child = i + 1;
+        for (uint32_t k = 0; k < n.first; k++) {
+            out += ' ';
+            DumpNode(p, child, out);
+            child = p.nodes[child].kind == NodeKind::Atom ? child + 1 : p.nodes[child].second;
+        }
+        return;
+    }
+    const OpInfo& o = Info(n.op);
+    auto delta = [](int d) { return (d < 0 ? "-" : "+") + std::to_string(d < 0 ? -d : d); };
+    out += o.field;
+    out += delta(n.delta);
+    out += o.flat;
+    out += ' ';
+    if (o.word) {
+        out += "@" + delta(n.rightDelta);
+    } else {
+        AppendQuoted(out, std::string_view(p.literals).substr(n.first, n.second));
+    }
+}
+
+}  // namespace
+
+std::string Dump(const rules::Program& p) {
+    std::string out;
+    for (std::size_t i = 0; i < p.localRules.size(); i++) {
+        out += "L " + std::to_string(i) + " ";
+        DumpNode(p, p.localRules[i], out);
+        out += '\n';
+    }
+    for (std::size_t i = 0; i < p.globalRules.size(); i++) {
+        const rules::GlobalRule& g = p.globalRules[i];
+        out += "G " + std::to_string(i) + " ";
+        out += static_cast<char>(g.pumsa);
+        out += " " + std::to_string(g.number) + (g.uganRule ? " 1 " : " 0 ");
+        DumpNode(p, g.root, out);
+        out += '\n';
+    }
+    return out;
+}
+
 rules::Program Lower(const File& file) {
     rules::Program p;
     for (const Rule& r : file.local) {
@@ -261,7 +309,7 @@ rules::Program Lower(const File& file) {
         LowerExpr(r.body, p);
     }
     for (const Rule& r : file.global) {
-        p.globalRules.push_back({r.pumsa, r.number, r.ugan, static_cast<uint32_t>(p.nodes.size())});
+        p.globalRules.push_back({r.pumsa, r.number, r.ugan, static_cast<uint32_t>(p.nodes.size()), r.index});
         LowerExpr(r.body, p);
     }
     return p;
