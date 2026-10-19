@@ -444,7 +444,10 @@ struct SnapshotStorage {
         std::shared_ptr<Snapshot> snapshot;
         std::vector<LoadError> errors;
     };
-    static Columns Read(const std::vector<std::string>& folders, std::string_view path, bool full);
+    // With compiled, path is a snapshot compiled by any build of the same engine data,
+    // which is never quarantined.
+    static Columns Read(const std::vector<std::string>& folders, std::string_view path, bool full,
+                        bool compiled = false);
     static bool Matches(const Snapshot& expected, const std::vector<LoadError>& errors,
                         const Columns& actual, const std::vector<std::string>& folders);
     static bool RestoreAux(Reader& r, Snapshot& s, std::vector<LoadError>& errors, const std::vector<std::string>& folders);
@@ -678,12 +681,13 @@ public:
     std::array<std::vector<const Codes*>, 3> codeRefs;
     std::array<std::size_t, 3> keys{};
     std::vector<Source> sources;
+    bool compiled = false;  // a compiled snapshot (CompileSnapshot), not a cache generation
     std::atomic<bool> bad{false};
     std::once_flag fallbackOnce;
     std::shared_ptr<const Snapshot> fallback;
 
     void Fail() {
-        if (bad.exchange(true, std::memory_order_relaxed)) return;
+        if (bad.exchange(true, std::memory_order_relaxed) || compiled) return;
         {
             std::lock_guard lock(BadMutex());
             auto& list = BadResources();
@@ -762,7 +766,7 @@ public:
     bool Open(std::string_view name, const std::vector<std::string>& dirs) {
         if constexpr (std::endian::native != std::endian::little) return false;
         path = name; folders = dirs;
-        if (!ReadStamp(name, stamp) || IsBad(name, stamp)) return false;
+        if (!ReadStamp(name, stamp) || (!compiled && IsBad(name, stamp))) return false;
         if (stamp.size < kHeaderSize) { Fail(); return false; }
         mapped = MappedFile::Open(name);
         FileStamp after;
@@ -779,8 +783,10 @@ public:
         const auto builtin = HexDigest(HDTRANS_BUILTIN_ID), rules = HexDigest(HDTRANS_DATA_ID);
         const auto compiler = HexDigest(HDTRANS_COMPILER_ID);
         if (!std::equal(builtin.begin(), builtin.end(), bytes.begin() + 96) ||
-            !std::equal(rules.begin(), rules.end(), bytes.begin() + 128) ||
-            Get(bytes, 204, 4) != sizeof(void*) || !std::equal(compiler.begin(), compiler.end(), bytes.begin() + 208)) return false;
+            !std::equal(rules.begin(), rules.end(), bytes.begin() + 128)) return false;
+        // The sections are little endian with fixed widths: only a cache is bound to its build.
+        if (!compiled && (Get(bytes, 204, 4) != sizeof(void*) ||
+                          !std::equal(compiler.begin(), compiler.end(), bytes.begin() + 208))) return false;
         const auto sectionCount = Get(bytes, 40, 4), segmentCount = Get(bytes, 44, 4);
         if (sectionCount != 27 || segmentCount > (bytes.size() - kHeaderSize) / kDescriptorSize ||
             sectionCount > (bytes.size() - kHeaderSize) / kDescriptorSize - segmentCount) { Fail(); return false; }
@@ -870,8 +876,10 @@ bool SnapshotStorage::RestoreAux(Reader& r, Snapshot& s, std::vector<LoadError>&
     return r.Done();
 }
 
-SnapshotStorage::Columns SnapshotStorage::Read(const std::vector<std::string>& folders, std::string_view path, bool full) {
+SnapshotStorage::Columns SnapshotStorage::Read(const std::vector<std::string>& folders, std::string_view path, bool full,
+                                               bool compiled) {
     auto file = std::make_shared<internal::SnapshotFile>();
+    file->compiled = compiled;
     if (!file->Open(path, folders)) return {};
     auto snap = std::shared_ptr<Snapshot>(new Snapshot());
     snap->backing_ = file;
@@ -1099,11 +1107,38 @@ void RefreshManifest(const internal::SnapshotFile& file, const std::vector<Sourc
     if (!ok) { std::error_code ec; std::filesystem::remove(temp, ec); }
 }
 
+// The column layers of the compiled snapshot path with the plain files of folders and a
+// plain userFile.
+LoadResult LoadCompiled(const std::string& path, const std::vector<std::string>& folders, bool verify,
+                        std::string_view userFile) {
+    if (bool column = false; !userFile.empty() && internal::ReadColumnHeader(userFile, column) && column) {
+        return {nullptr, {{std::string(userFile), LoadErrorKind::Header, 1, TsvErrorKind::Read,
+                           "a column user dictionary cannot be loaded with a compiled snapshot"}}};
+    }
+    auto compiled = SnapshotStorage::Read(folders, path, verify, true);
+    if (!compiled.snapshot) {
+        std::error_code ec;
+        const bool exists = std::filesystem::exists(PathOf(path), ec);
+        return {nullptr, {{path, LoadErrorKind::Read, 0, TsvErrorKind::Read,
+                           exists ? "not a snapshot compiled by this engine from as many folders" : ""}}};
+    }
+    const auto file = SnapshotStorage::Backing(*compiled.snapshot);
+    file->userFile = userFile;
+    auto loaded = LoadPlainFolders(std::move(compiled.snapshot), folders, std::move(compiled.errors), userFile);
+    if (file->bad.load(std::memory_order_relaxed)) {
+        return {nullptr, {{path, LoadErrorKind::Read, 0, TsvErrorKind::Read, "the compiled snapshot is damaged"}}};
+    }
+    return loaded;
+}
+
 }  // namespace
 
 LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify, bool cacheWrite,
                        std::string_view userFile) {
     for (const auto& folder : folders) if (!SafePath(folder)) return {nullptr, {{folder, LoadErrorKind::Folder, 0, TsvErrorKind::Read, {}}}};
+    if (!folders.empty() && folders.front().ends_with(".hdsnap")) {
+        return LoadCompiled(folders.front(), {folders.begin() + 1, folders.end()}, verify, userFile);
+    }
     const auto mode = EnvironmentPath("HDTRANS_SNAPSHOT");
     if (mode && *mode == "off") return LoadFoldersTsv(folders, userFile);
     if (bool column = false; !userFile.empty() && internal::ReadColumnHeader(userFile, column) && column) {

@@ -15,7 +15,8 @@ interface Manifest {
   format: number;
   engine: Asset;
   wasm: Asset;
-  dict: { license: string; files: Asset[] };
+  // snapshot: the column dictionaries of dicts/ compiled; files: its other files
+  dict: { license: string; snapshot: Asset; files: Asset[] };
 }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -225,7 +226,7 @@ async function asset(cache: Cache | undefined, a: Asset, progress: (n: number) =
 async function load() {
   const res = await fetch('manifest.json', { cache: 'no-cache' });
   const m: Manifest = await res.json();
-  const all = [m.wasm, ...m.dict.files];
+  const all = [m.wasm, m.dict.snapshot, ...m.dict.files];
   const total = all.reduce((s, a) => s + a.size, 0);
   const done = all.map(() => 0);
   const show = () => {
@@ -243,9 +244,11 @@ async function load() {
   }
   status.textContent = '엔진 준비 중…';
   const module = await WebAssembly.compile(bytes[0] as BufferSource);
-  const files = bytes.slice(1).map((b) => b.buffer);
+  const snapshot = bytes[1].buffer;
+  const files = bytes.slice(2).map((b) => b.buffer);
   const engine = new URL(m.engine.path, location.href).href;
-  worker.postMessage({ type: 'init', engine, module, names: m.dict.files.map((f) => f.name), files }, files);
+  const names = m.dict.files.map((f) => f.name);
+  worker.postMessage({ type: 'init', engine, module, snapshot, names, files }, [snapshot, ...files]);
 }
 
 load().catch((err) => {
