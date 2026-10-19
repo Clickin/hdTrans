@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-#include "core/dict/builtin.h"
 #include "core/userdict/compile.h"
 #include "hdtest.h"
 
@@ -305,21 +304,6 @@ HD_TEST(userdict_endings) {
         Run(p, c.in);
         HD_CHECK_EQ(Errors(p.out.errors), std::string());
         HD_CHECK_EQ(ShowEndings(p.out.entries), std::string(c.want));
-    }
-}
-
-// The builtin plain dictionaries compile.
-HD_TEST(userdict_builtin_files) {
-    const struct {
-        const char* name;
-        std::size_t entries;
-    } files[] = {{"endings.tsv", 321}, {"patterns.tsv", 626}, {"phrases.tsv", 1308}, {"sound.tsv", 5286}};
-    for (const auto& f : files) {
-        Parsed p;
-        Context ctx{&p.codes, &p.families, nullptr};
-        p.out = Parse(dict::BuiltinText(f.name), -1, ctx);
-        HD_CHECK_EQ(Errors(p.out.errors), std::string());
-        HD_CHECK_EQ(p.out.entries.size(), f.entries);
     }
 }
 

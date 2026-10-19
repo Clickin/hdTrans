@@ -8,6 +8,7 @@
 //   -compile-dicts        compile and verify the dictionary cache, then exit
 //   -no-cache             read only the editable dictionaries
 //   -why                  write word choices and shadow scores to stderr
+//   -stages DIR           write stage records (also HDTRANS_DRIVER_DUMP)
 //   -select-shadow        score shortest targets without changing the translation
 //   -in FILE              read the input from FILE
 #include <cstdio>
@@ -26,8 +27,11 @@
 #include "core/dict/snapshot_file.h"
 #include "core/engine/driver.h"
 #include "core/word/select.h"
+#include "stage_records.h"
 
 namespace {
+
+namespace stagerecords = hdTrans::cli::stagerecords;
 
 std::vector<std::string> SplitComma(const std::string& s) {
     std::vector<std::string> out;
@@ -105,6 +109,8 @@ int main(int argc, char** argv) {
 #endif
     std::string dicts = "dicts/base";
     std::string inPath;
+    const char* dump = std::getenv("HDTRANS_DRIVER_DUMP");
+    std::string stagesDir = dump ? dump : "";
     bool raw = false;
     bool each = false;
     bool why = false;
@@ -117,6 +123,7 @@ int main(int argc, char** argv) {
         const char* a = argv[i];
         if (!std::strcmp(a, "-dicts") && i + 1 < argc) dicts = argv[++i];
         else if (!std::strcmp(a, "-in") && i + 1 < argc) inPath = argv[++i];
+        else if (!std::strcmp(a, "-stages") && i + 1 < argc) stagesDir = argv[++i];
         else if (!std::strcmp(a, "-raw")) raw = true;
         else if (!std::strcmp(a, "-each")) each = true;
         else if (!std::strcmp(a, "-reference")) reference = true;
@@ -126,7 +133,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-stages DIR] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
@@ -215,6 +222,9 @@ int main(int argc, char** argv) {
         observer.line = WhyLine;
         observer.resolved = WhyResolved;
     }
+    stagerecords::Collector collector;
+    const bool stages = !stagesDir.empty();
+    if (stages) observer = stagerecords::ObserverFor(collector, observer);
 
     if (!raw && !each) {
         std::vector<std::string> lines;
@@ -229,10 +239,11 @@ int main(int argc, char** argv) {
         const std::vector<std::string> translated =
             hdTrans::internal::TranslateDocument(*snapshot, *generated, lines, memory, observer, options);
         for (size_t i = 0; i < translated.size(); i++) {
+            if (stages) stagerecords::AddOutput(collector, static_cast<int>(i) + 1, translated[i]);
             if (i > 0) std::fputc('\n', stdout);
             std::fwrite(translated[i].data(), 1, translated[i].size(), stdout);
         }
-        return 0;
+        return stages && !stagerecords::Dump(stagesDir, collector) ? 1 : 0;
     }
     size_t start = 0;
     while (start < input.size()) {
@@ -247,10 +258,14 @@ int main(int argc, char** argv) {
             hdTrans::internal::Memory memory;
             out = hdTrans::internal::TranslateDocument(*snapshot, *generated, lines, memory, observer, options).front();
         }
+        if (stages) {
+            stagerecords::AddOutput(collector, collector.caseBase + 1, out);
+            collector.caseBase++;
+        }
         std::fwrite(out.data(), 1, out.size(), stdout);
         std::fputc('\n', stdout);
         whyContext.lineBase++;
         start = end + 1;
     }
-    return 0;
+    return stages && !stagerecords::Dump(stagesDir, collector) ? 1 : 0;
 }

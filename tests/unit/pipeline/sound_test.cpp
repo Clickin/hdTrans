@@ -1,7 +1,5 @@
 #include "core/pipeline/sound.h"
 
-#include <cstdlib>
-#include <memory>
 #include <string>
 
 #include "core/dict/snapshot.h"
@@ -12,12 +10,22 @@ using namespace hdTrans::pipeline;
 
 namespace {
 
-using hdtest::DictsDir;
-
-// The snapshot of the dictionary folder, null when it cannot be loaded.
-std::shared_ptr<const dict::Snapshot> Dicts() {
-    static const std::shared_ptr<const dict::Snapshot> snap = dict::LoadFolders({DictsDir()}).snapshot;
-    return snap;
+const dict::LoadResult& SoundDictionary() {
+    static const dict::LoadResult result = dict::Load({{
+        0, "base.tsv",
+        "key\tko\tpos\tid\n"
+        "くすくす笑\t킥킥 웃\tM100\t1\n"
+        "もっと\t더\tE300\t2\n"
+        "まかせ\t맡기\tM100\t3\n"
+        "やめ\t그만두\tM100\t4\n"
+        "うるさ\t시끄럽\tH100\t5\n"
+        "ちょっと\t조금\tE300\t6\n"
+        "どうだ\t어때\tE300\t7\n"
+        "い\t가\tM100\t8\n"
+        "すご\t대단하\tH100\t9\n"
+        "冷た\t차갑\tH100\t10\n",
+    }});
+    return result;
 }
 
 struct Case {
@@ -59,11 +67,10 @@ HD_TEST(pipeline_sound_lexicon) {
 // separator), grammar after a sound, words that are not sounds, the emphasis and casual
 // adjective rewrites and the lead interjections.
 HD_TEST(pipeline_sound) {
-    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
-    const auto snap = Dicts();
-    if (snap == nullptr) {
-        HD_SKIP(std::string("no dictionaries at ") + DictsDir());
-    }
+    const auto& loaded = SoundDictionary();
+    HD_REQUIRE(loaded.errors.empty());
+    const auto& snap = loaded.snapshot;
+    HD_REQUIRE(snap != nullptr);
     LineContext ctx;
     ctx.lookup.plain = &snap->TextPlain();
     const Case cases[] = {
@@ -120,9 +127,10 @@ HD_TEST(pipeline_sound) {
 }
 
 HD_TEST(pipeline_sound_markers) {
-    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
-    const auto snap = Dicts();
-    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
+    const auto& loaded = SoundDictionary();
+    HD_REQUIRE(loaded.errors.empty());
+    const auto& snap = loaded.snapshot;
+    HD_REQUIRE(snap != nullptr);
     const std::string markers[] = {"ドキ"};
     LineContext ctx;
     ctx.lookup.plain = &snap->TextPlain();
@@ -131,9 +139,10 @@ HD_TEST(pipeline_sound_markers) {
 }
 
 HD_TEST(pipeline_rewrite_emphasis) {
-    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
-    const auto snap = Dicts();
-    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
+    const auto& loaded = SoundDictionary();
+    HD_REQUIRE(loaded.errors.empty());
+    const auto& snap = loaded.snapshot;
+    HD_REQUIRE(snap != nullptr);
     LineContext ctx;
     ctx.lookup.plain = &snap->TextPlain();
     const Case cases[] = {
@@ -157,9 +166,10 @@ HD_TEST(pipeline_rewrite_emphasis) {
 }
 
 HD_TEST(pipeline_rewrite_casual_adjectives) {
-    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
-    const auto snap = Dicts();
-    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
+    const auto& loaded = SoundDictionary();
+    HD_REQUIRE(loaded.errors.empty());
+    const auto& snap = loaded.snapshot;
+    HD_REQUIRE(snap != nullptr);
     LineContext ctx;
     ctx.lookup.plain = &snap->TextPlain();
     const Case cases[] = {
