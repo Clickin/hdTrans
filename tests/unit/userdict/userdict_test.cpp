@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/dict/builtin.h"
 #include "core/userdict/compile.h"
 #include "hdtest.h"
 
@@ -304,6 +305,17 @@ HD_TEST(userdict_endings) {
         Run(p, c.in);
         HD_CHECK_EQ(Errors(p.out.errors), std::string());
         HD_CHECK_EQ(ShowEndings(p.out.entries), std::string(c.want));
+    }
+}
+
+// A builtin row that does not compile makes every dictionary load fail.
+HD_TEST(userdict_builtin_tables_compile) {
+    for (const char* name : {"endings.tsv", "patterns.tsv", "phrases.tsv", "sound.tsv"}) {
+        for (const std::string& text : {dict::BuiltinText(name), dict::ExtraBuiltinText(name)}) {
+            Parsed p;
+            Run(p, text);
+            HD_CHECK_EQ(Errors(p.out.errors), std::string());
+        }
     }
 }
 
