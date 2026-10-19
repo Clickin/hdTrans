@@ -375,8 +375,9 @@ bool ReadCacheSmall(const std::filesystem::path& path, std::string& out) {
     if (::fstat(file, &info) == 0 && S_ISREG(info.st_mode) && info.st_size >= 0 && info.st_size < 512) {
         length = static_cast<std::size_t>(info.st_size);
         std::size_t offset = 0;
-        while (offset < length) {
-            const auto count = ::read(file, bytes + offset, length - offset);
+        while (offset < length && offset < sizeof(bytes)) {
+            const auto remaining = std::min(length - offset, sizeof(bytes) - offset);
+            const auto count = ::read(file, bytes + offset, remaining);
             if (count < 0 && errno == EINTR) continue;
             if (count <= 0) break;
             offset += static_cast<std::size_t>(count);
