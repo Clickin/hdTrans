@@ -12,3 +12,14 @@ L2716	私にできません。	내가 할 수 없습니다.	fix	local
 L3138	友人について来る。	친구를 따라 온다.	fix	local
 L3138	計画について話す。	계획에 대해 이야기한다.	keep	local
 L3138	友人について話す。	친구에 대해 이야기한다.	keep	local
+L565	パンにソースをかけた。	빵에 소스를 끼얹었다.	fix	local
+L565	壁に時計をかけた。	벽에 시계를 걸었다.	keep	local
+L3132	今食べていない。	지금 먹지 않는다.	fix	local-ending
+L3132	まだ食べていない。	아직 먹지 않았다.	keep	local-ending
+L3132	今食べてない。	지금 먹지 않는다.	fix	local-ending
+L3215	食べてないと困る。	먹지 않으면 곤란하다.	fix	local-ending
+L3215	食べてないと言った。	먹지 않다고 말했다.	keep	local-ending
+L3318	今は走っていないのに暑い。	지금은 달리지 않는데 덥다.	fix	local-ending
+L3318	まだ終わっていないのに帰った。	아직 끝나지 않았는데 돌아갔다.	keep	local-ending
+L4541	終わったって感じだ。	끝났다는 느낌이다.	fix	local-ending
+L4541	終わったって言った。	끝났다고 했다.	keep	local-ending
