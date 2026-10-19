@@ -23,8 +23,8 @@ body:
   - type: dropdown
     id: where
     attributes:
-      label: 쓴 방법
-      options: [웹, 번역 창(hdTransGUI), 명령줄(hdtrans), 이지트랜스 도구에 끼워서, 직접 만든 프로그램에서]
+      label: 어디서 썼나요
+      options: [LunaTranslator, XUnity.AutoTranslator, 아랄트랜스, Textractor나 ITH + 아네모네, VNR, hdTransGUI 직접 실행, 웹 (trans.kuri.kr), 명령줄 (hdtrans), 기타]
   - type: input
     id: version
     attributes:
