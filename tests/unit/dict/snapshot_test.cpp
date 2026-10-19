@@ -1,7 +1,9 @@
 #include "core/dict/snapshot.h"
 
 #include <cstdint>
+#include <fstream>
 #include <initializer_list>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -193,10 +195,10 @@ HD_TEST(SnapshotFolderWithoutLaterFolder) {
 
 HD_TEST(SnapshotAdditiveFolderPriority) {
     const std::string header = "key\tko\tpos\tsem\tgram\tdict\tprio\tid\n";
-    File base = MakeFile("base/words.tsv", header + "黙殺\t곡살\tN110\t\t\tGN\t0\t0\n");
-    File extra = MakeFile("extra/words-extra.tsv", header + "黙殺\t묵살\tN110\t\t\tGN\t1\t0\n");
+    File base = MakeFile("base/words.tsv", "#! layer=words\n" + header + "黙殺\t곡살\tN110\t\t\tGN\t0\t0\n");
+    File extra = MakeFile("extra/words-extra.tsv", "#! layer=words\n" + header + "黙殺\t묵살\tN110\t\t\tGN\t1\t0\n");
     extra.folder = 1;
-    File names = MakeFile("extra/names-extra.tsv", header + "アメリア\t아멜리아\tN130\tQPN\t\tGN\t0\t0\n");
+    File names = MakeFile("extra/names-extra.tsv", "#! layer=names\n" + header + "アメリア\t아멜리아\tN130\tQPN\t\tGN\t0\t0\n");
     names.folder = 1;
     const LoadResult r = Load({base, extra, names});
     HD_REQUIRE(r.snapshot != nullptr);
@@ -236,7 +238,7 @@ HD_TEST(SnapshotKeysAndUserDictionary) {
     files.push_back(MakeFile("base.tsv", "\xEF\xBB\xBF# comment\n" + kHeader +
                                              "犬\t견\tN110\t\t\tGN\t1\n犬\t개과\tN110\t\t\t\t2\n\xFFX\t깨짐\tN110\t\t\tGN\t3\n"
                                              "#犬\t주석\tN110\t\t\tGN\t4\n"));
-    files.push_back(MakeFile("userdict.tsv", kHeader + "犬\t개\tN110\t\t\t\t1\n"));
+    files.push_back(MakeFile("userdict.tsv", "#! layer=user\n" + kHeader + "犬\t개\tN110\t\t\t\t1\n"));
     const LoadResult r = Load(std::move(files));
     HD_REQUIRE(r.snapshot != nullptr);
     HD_CHECK(r.errors.empty());
@@ -498,9 +500,9 @@ HD_TEST(SnapshotCompiledPlainDictionaries) {
     std::vector<File> files;
     files.push_back(MakeFile("a/base.tsv", kHeader + "帰\t돌아가&AA@\tM428\t\t\tGN\t1\n愛\t사랑\tN110\t\t\tGN\t2\n"
                                                     "愛\t사랑하&AV@\tM429\t\t\tGN\t3\n"));
-    files.push_back(MakeFile("a/kana.tsv", "// kana\nあい\t愛\t\n"));
+    files.push_back(MakeFile("a/kana.tsv", "#! layer=kana\n// kana\nあい\t愛\t\n"));
     files.push_back(MakeFile("a/plain.tsv", "帰る\t돌아가다\tv\n猫\t냥이\n"));
-    files.push_back(MakeFile("a/readings.tsv", "x\ty\n"));
+    files.push_back(MakeFile("a/readings.tsv", "#! layer=readings\nx\ty\n"));
     files.push_back(MakeFile("b/userdict.tsv", "猫\t고양이\tn\tprio=1\n"));
     const LoadResult r = Load(std::move(files));
     HD_REQUIRE(r.snapshot != nullptr);
@@ -516,7 +518,7 @@ HD_TEST(SnapshotCompiledPlainDictionaries) {
     HD_CHECK(s.Plain().Entries()[0].end);
     // The text path adds the kana spellings, the phrases but the 329 interjections in
     // kana, and the patterns.
-    HD_CHECK_EQ(EntriesOf(s.TextPlain(), -2), "あい 사랑 N110 @2.0");
+    HD_CHECK_EQ(EntriesOf(s.TextPlain(), -2), "あい 사랑 N110 @3.0");
     HD_CHECK_EQ(CountFile(s.TextPlain(), -1), size_t{1926});
     HD_CHECK_EQ(s.TextPlain().Entries().size(), size_t{1930});
     HD_CHECK_EQ(s.Senses().size(), size_t{661});
@@ -560,8 +562,8 @@ HD_TEST(SnapshotColumnMembershipUsesContent) {
 HD_TEST(SnapshotColumnAndPlainCodeClosure) {
     const auto loaded = Load({
         MakeFile("base.tsv", kHeader + "犬\t견\tN110\tQNN\tWb\tBZ\t1\n猫\t고양이\tN110\t\t\tGN\t2\n"),
-        MakeFile("names.tsv", kHeader + "アリス\t앨리스\tN130\tQPN\tWa\tPN\t1\n"),
-        MakeFile("userdict.tsv", kHeader + "犬\t개\tN110\tVHn\tWb\t\t1\n"),
+        MakeFile("names.tsv", "#! layer=names\n" + kHeader + "アリス\t앨리스\tN130\tQPN\tWa\tPN\t1\n"),
+        MakeFile("userdict.tsv", "#! layer=user\n" + kHeader + "犬\t개\tN110\tVHn\tWb\t\t1\n"),
         MakeFile("plain.tsv", "猫\t냥이\tn\n歌う\t노래하다\tv5\n"),
     });
     HD_REQUIRE(loaded.snapshot != nullptr);
@@ -744,5 +746,119 @@ HD_TEST(DictSparseOffsetsAndTruncation) {
         const Dict d = Dict::FromView(data);
         HD_CHECK(!d.Validate());
         for (size_t k = 0; k < d.Len(); k++) d.EachRecord(static_cast<int>(k), [](const Record&) { return true; });
+    }
+}
+
+namespace {
+
+std::string ReadFixture(const std::string& name) {
+    std::ifstream in(SourceDir() + "/testdata/" + name, std::ios::binary);
+    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+}
+
+// Every key of d with its records.
+std::string Dump(const Dict* d) {
+    std::string s;
+    if (!d) return s;
+    d->Each([&](std::string_view key, const std::vector<Record>& records) {
+        s += std::string(key) + ":";
+        for (const Record& r : records) {
+            s += " " + std::string(r.target) + "/" + r.codes->partText + "/" + std::string(r.codes->sem.Text()) + "/" +
+                 std::string(r.codes->gram.Text()) + "/" + std::string(r.codes->dict.Text()) + "/" +
+                 std::to_string(r.rule) + "/" + std::to_string(r.id);
+        }
+        s += "\n";
+    });
+    return s;
+}
+
+}  // namespace
+
+HD_TEST(SnapshotLayerHeaders) {
+    struct Case {
+        const char* file;
+        bool ok;
+        FileLayer layer;
+    };
+    const Case cases[] = {
+        {"missing.tsv", true, FileLayer::Base},   {"base.tsv", true, FileLayer::Base},
+        {"words.tsv", true, FileLayer::Words},    {"names.tsv", true, FileLayer::Names},
+        {"user.tsv", true, FileLayer::User},      {"kana.tsv", true, FileLayer::Kana},
+        {"readings.tsv", true, FileLayer::Readings}, {"bom.tsv", true, FileLayer::Names},
+        {"unknown.tsv", false, FileLayer::Base},  {"nokey.tsv", false, FileLayer::Base},
+    };
+    for (const Case& c : cases) {
+        const std::string text = ReadFixture(std::string("layers/") + c.file);
+        HD_REQUIRE(!text.empty());
+        FileLayer layer = FileLayer::Words;
+        HD_CHECK_EQ(internal::ReadLayer(text, layer), c.ok);
+        HD_CHECK(layer == c.layer);
+    }
+    HD_CHECK_EQ(std::string(internal::WithoutHeader("#! layer=kana\nあい\t愛\n")), "\nあい\t愛\n");
+    HD_CHECK_EQ(std::string(internal::WithoutHeader("\xEF\xBB\xBF#! layer=kana")), "");
+    HD_CHECK_EQ(std::string(internal::WithoutHeader("あい\t愛\n")), "あい\t愛\n");
+
+    // The layer comes from the header, whatever the file name.
+    std::vector<File> files;
+    for (const char* name : {"base.tsv", "bom.tsv", "kana.tsv", "readings.tsv", "user.tsv", "words.tsv"}) {
+        files.push_back(MakeFile(std::string("x/") + name, ReadFixture(std::string("layers/") + name)));
+    }
+    const LoadResult loaded = Load(files);
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    HD_CHECK(loaded.errors.empty());
+    HD_CHECK_EQ(Targets(loaded.snapshot->NameRecords("猫")), "고양이");
+    HD_REQUIRE(loaded.snapshot->User() != nullptr);
+    HD_CHECK_EQ(Targets(loaded.snapshot->User()->Records("猫")), "고양이");
+    HD_CHECK_EQ(Targets(loaded.snapshot->Base().Records("猫")), "고양이 고양이");
+    HD_REQUIRE(loaded.snapshot->PlainFiles().size() == 2);
+    HD_CHECK(loaded.snapshot->PlainFiles()[0].layer == FileLayer::Kana);
+    HD_CHECK(loaded.snapshot->PlainFiles()[1].layer == FileLayer::Readings);
+    HD_CHECK_EQ(EntriesOf(loaded.snapshot->TextPlain(), -2), "ねこ 고양이 N110 @2.0");
+
+    // An unknown header, or a layer the kind of file cannot have, fails the load at line 1.
+    const std::pair<std::string, std::string> bad[] = {
+        {"x/unknown.tsv", ReadFixture("layers/unknown.tsv")},
+        {"x/nokey.tsv", ReadFixture("layers/nokey.tsv")},
+        {"x/column-kana.tsv", "#! layer=kana\n" + kHeader + "猫\t고양이\tN110\t\t\tGN\t1\n"},
+        {"x/plain-names.tsv", "#! layer=names\n猫\t고양이\tn\n"},
+    };
+    for (const auto& [name, text] : bad) {
+        const LoadResult failed = Load({MakeFile("x/base.tsv", ReadFixture("layers/base.tsv")), MakeFile(name, text)});
+        HD_CHECK(failed.snapshot == nullptr);
+        HD_REQUIRE(failed.errors.size() == 1);
+        HD_CHECK(failed.errors[0].kind == LoadErrorKind::Header);
+        HD_CHECK_EQ(failed.errors[0].file, name);
+        HD_CHECK_EQ(failed.errors[0].line, 1);
+        HD_CHECK(!failed.errors[0].message.empty());
+    }
+}
+
+// testdata/renamed is testdata/folder with every file of a layer other than base
+// renamed (names.tsv is zz-people.tsv): it loads the same.
+HD_TEST(SnapshotRenamedLayerFiles) {
+    const LoadResult a = LoadFoldersTsv({Folder()});
+    const LoadResult b = LoadFoldersTsv({SourceDir() + "/testdata/renamed"});
+    HD_REQUIRE(a.snapshot != nullptr && b.snapshot != nullptr);
+    const Snapshot& x = *a.snapshot;
+    const Snapshot& y = *b.snapshot;
+    HD_REQUIRE(a.errors.size() == b.errors.size());
+    for (std::size_t i = 0; i < a.errors.size(); i++) {
+        HD_CHECK(a.errors[i].kind == b.errors[i].kind);
+        HD_CHECK_EQ(a.errors[i].line, b.errors[i].line);
+    }
+    HD_REQUIRE(x.Warnings().size() == 1 && y.Warnings().size() == 1);
+    HD_CHECK(y.Warnings()[0].find("zz-people.tsv: ") != std::string::npos);
+    HD_CHECK_EQ(x.Warnings()[0].substr(x.Warnings()[0].find(".tsv: ")), y.Warnings()[0].substr(y.Warnings()[0].find(".tsv: ")));
+    HD_CHECK(!Dump(x.Names()).empty() && !Dump(x.User()).empty());
+    HD_CHECK_EQ(Dump(&x.Base()), Dump(&y.Base()));
+    HD_CHECK_EQ(Dump(x.User()), Dump(y.User()));
+    HD_CHECK_EQ(Dump(x.Names()), Dump(y.Names()));
+    HD_CHECK_EQ(x.Plain().Entries().size(), y.Plain().Entries().size());
+    HD_CHECK_EQ(x.TextPlain().Entries().size(), y.TextPlain().Entries().size());
+    const LookupContext none;
+    for (const char* text : {"学生です", "アリスさん", "霧島さん", "京都の", "行くの", "翔太くん", "カイト", "猫"}) {
+        for (const auto mode : {LookupMode::General, LookupMode::VerbEnding}) {
+            HD_CHECK_EQ(Show(x.GetWordInfo(text, mode, none)), Show(y.GetWordInfo(text, mode, none)));
+        }
     }
 }

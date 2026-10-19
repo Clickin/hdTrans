@@ -35,7 +35,10 @@ WebAssembly: `emcmake cmake --preset wasm && cmake --build --preset wasm`.
 | `tests/unit/` | unit tests (`hdtest.h` runner) |
 | `tools/` | `golden.sh` (expectation sets), `build.ps1` (Windows build) |
 
-Dictionaries are UTF-8 TSV folders and are not part of this repository.
+Dictionaries are UTF-8 TSV folders and are not part of this repository. Each folder loads its
+`*.tsv` files in name order; a file's first line `#! layer=NAME` gives its role (`base`, `words`,
+`names`, `user`, `kana` or `readings`, see `src/core/dict/snapshot.h`), and a file without it is a
+`base` file.
 Cache validation trusts source size, timestamps and file identity; after edits that preserve them,
 use `-verify-dicts` or `HDTRANS_VERIFY_DICTS=1` to check source contents.
 `CacheWrite::Off` never publishes a cache generation, but may write a `.bad` marker and

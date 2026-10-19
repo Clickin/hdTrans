@@ -1,0 +1,4 @@
+#! layer=names
+key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
+霧島	키리시마	N130	QCTVPl		GN		replace			places:1
+京都	교토	N130	QCTVPl		GN					places:2

@@ -105,11 +105,6 @@ bool ReadFile(const std::filesystem::path& path, std::string& out, bool* column 
     return ok;
 }
 
-std::string_view BaseName(std::string_view name) {
-    const std::size_t slash = name.find_last_of("/\\");
-    return slash == std::string_view::npos ? name : name.substr(slash + 1);
-}
-
 // Returns whether the physical line decides the file's column/plain membership.
 bool ColumnLine(std::string_view line, bool first, bool& column) {
     while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) line.remove_suffix(1);
@@ -312,6 +307,33 @@ struct ParsedNames {
 
 }  // namespace
 
+bool internal::ReadLayer(std::string_view text, FileLayer& layer) {
+    layer = FileLayer::Base;
+    if (text.starts_with("\xEF\xBB\xBF")) text.remove_prefix(3);
+    if (!text.starts_with("#!")) return true;
+    text.remove_prefix(2);
+    std::string_view line = text.substr(0, text.find('\n'));
+    while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) line.remove_suffix(1);
+    while (!line.empty() && (line.front() == ' ' || line.front() == '\t')) line.remove_prefix(1);
+    if (!line.starts_with("layer=")) return false;
+    line.remove_prefix(6);
+    constexpr std::string_view kNames[] = {"base", "words", "names", "user", "kana", "readings"};
+    for (std::size_t i = 0; i < std::size(kNames); i++) {
+        if (line == kNames[i]) {
+            layer = static_cast<FileLayer>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string_view internal::WithoutHeader(std::string_view text) {
+    const std::string_view bare = text.starts_with("\xEF\xBB\xBF") ? text.substr(3) : text;
+    if (!bare.starts_with("#!")) return text;
+    const std::size_t nl = bare.find('\n');
+    return nl == std::string_view::npos ? std::string_view() : bare.substr(nl);
+}
+
 bool internal::ReadColumnHeader(std::string_view utf8Path, bool& column) {
     column = false;
     if (utf8Path.find('\0') != std::string_view::npos || !internal::ValidUtf8(utf8Path)) return false;
@@ -338,6 +360,7 @@ struct SnapshotLoader {
     explicit SnapshotLoader(std::shared_ptr<Snapshot> existing) : snap(std::move(existing)) {}
 
     LoadResult Run();
+    bool ReadLayers();
     LoadResult FinishPlain(const std::vector<std::size_t>& rest);
     bool CompilePlain(const std::vector<std::size_t>& rest);
     bool Compile(const std::string& name, std::string_view text, int file, userdict::Context& ctx,
@@ -372,6 +395,26 @@ bool SnapshotLoader::Compile(const std::string& name, std::string_view text, int
     return c.errors.empty();
 }
 
+// Sets the layer of each file from its header.
+bool SnapshotLoader::ReadLayers() {
+    for (File& f : files) {
+        const char* message = nullptr;
+        if (!internal::ReadLayer(f.text, f.layer)) {
+            message = "the first line is not #! layer=base|words|names|user|kana|readings";
+        } else if (f.layer != FileLayer::Base) {
+            const bool plainLayer = f.layer == FileLayer::Kana || f.layer == FileLayer::Readings;
+            const bool column = ColumnFile(f.text);
+            if (column && plainLayer) message = "a column file cannot be of the layer kana or readings";
+            if (!column && !plainLayer) message = "a plain file cannot be of the layer words, names or user";
+        }
+        if (message) {
+            errors.push_back({f.name, LoadErrorKind::Header, 1, TsvErrorKind::Read, message});
+            return false;
+        }
+    }
+    return true;
+}
+
 // Compiles the plain dictionaries of the builtin folder and of the files rest, the
 // kana spellings and the sense table, in this order, which numbers the generated
 // marker families.
@@ -390,14 +433,14 @@ bool SnapshotLoader::CompilePlain(const std::vector<std::size_t>& rest) {
     userdict::Context ctx{&s.codes_, &s.families_, &s.base_};
     int file = 0;
     for (const std::size_t i : rest) {
-        const std::string_view name = BaseName(files[i].name);
-        if (name == "readings.tsv") continue;
-        if (name == "kana.tsv") {
-            std::vector<UserEntry> k = userdict::KanaSpellings(files[i].text, s.base_, s.codes_);
+        const std::string_view text = internal::WithoutHeader(files[i].text);
+        if (files[i].layer == FileLayer::Readings) continue;
+        if (files[i].layer == FileLayer::Kana) {
+            std::vector<UserEntry> k = userdict::KanaSpellings(text, s.base_, s.codes_);
             std::move(k.begin(), k.end(), std::back_inserter(kana));
             continue;
         }
-        ok = Compile(files[i].name, files[i].text, file++, ctx, entries) && ok;
+        ok = Compile(files[i].name, text, file++, ctx, entries) && ok;
     }
     userdict::CompiledSenses senses = userdict::ParseSenses(BuiltinText("senses.tsv"), s.families_);
     for (userdict::Error& e : senses.errors) {
@@ -445,11 +488,12 @@ std::string SnapshotLoader::PersonSpelling(std::string_view ko, const std::vecto
 }
 
 LoadResult SnapshotLoader::Run() {
+    if (!ReadLayers()) return {nullptr, std::move(errors)};
     // Name senses join the name layer in file order after the base is built.
     std::vector<std::size_t> baseFiles, nameFiles, rest;
     for (std::size_t i = 0; i < files.size(); i++) {
         if (!ColumnFile(files[i].text)) rest.push_back(i);
-        else if (BaseName(files[i].name).starts_with("names")) nameFiles.push_back(i);
+        else if (files[i].layer == FileLayer::Names) nameFiles.push_back(i);
         else baseFiles.push_back(i);
     }
     std::vector<ParsedNames> parsed(nameFiles.size());
@@ -465,8 +509,7 @@ LoadResult SnapshotLoader::Run() {
 
     internal::Layer base(true), user(false), names(false);
     for (const std::size_t i : baseFiles) {
-        const std::string_view file = BaseName(files[i].name);
-        if (file == "userdict.tsv") {
+        if (files[i].layer == FileLayer::User) {
             const std::size_t start = user.Rows().size();
             if (!ReadColumnFile(files[i], reader, user, nullptr, errors)) return {nullptr, std::move(errors)};
             user.ByPrio(start);
@@ -474,7 +517,7 @@ LoadResult SnapshotLoader::Run() {
             const std::size_t start = base.Rows().size();
             std::vector<uint32_t> replacing;
             if (!ReadColumnFile(files[i], reader, base, &replacing, errors)) return {nullptr, std::move(errors)};
-            base.Shadow(start, file.starts_with("words") ? &replacing : nullptr, snap->codes_);
+            base.Shadow(start, files[i].layer == FileLayer::Words ? &replacing : nullptr, snap->codes_);
             base.Compact();
         }
     }
@@ -563,6 +606,7 @@ LoadResult LoadPlainFolders(std::shared_ptr<Snapshot> snapshot, const std::vecto
     std::vector<LoadError> readErrors;
     if (!ReadFolderFiles(folders, true, loader.files, readErrors)) return {nullptr, std::move(readErrors)};
     loader.errors = std::move(errors);
+    if (!loader.ReadLayers()) return {nullptr, std::move(loader.errors)};
     std::vector<std::size_t> rest;
     rest.reserve(loader.files.size());
     for (std::size_t i = 0; i < loader.files.size(); i++) rest.push_back(i);

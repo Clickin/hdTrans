@@ -1,0 +1,30 @@
+# Base senses: prio order, tags from the part-of-speech table, special codes.
+key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
+学生	학도	N110			GN			-1		1
+学生	학생	N110	VHn		GN					2
+行	가&AA@	M428			GN					3
+行	행	N110			GN					4
+行	갈&AB@	M429			GN					5
+行	다닐&AC@	M427			GN					6
+東京	도쿄	N130	QCTVPl		GN					jisjk:7
+霧島	기리시마	N130	QCTVPl		GN					8
+霧島	키리시마	N130	QPN		GN					9
+の	한	P200			GN	5089				10
+の	의	P200			GN	12				11
+D	1고	U5I1			GN					12
+走	달리&AD@	verb-general,godan-ra			GN					13
+山田	야마다	名詞-固有名詞-人名-姓			GN					14
+山田	산전	foo-bar			GN					15
+大阪	오사카	N130	QCT VPl	Wb 						16
+大阪	대판	N130			SO					17
+行く	가&AE@	M42?			GN					18
+田中	다나카	N130	QPN		GN		 xxx			19
+中村	나카무라	N130	XXXQPN		GN		xxx			20
+走る	달리다	N110			GN		kana		はしる	21
+隠	숨김	N110			GN		hidden			22
+食べ	먹&AF@	M427			GN					23
+#注	주석	N110			GN					24
+副	부	副詞			BZ					25
+学	학	N110			BZ					26
+学	배울&AG@	M42;			GN					27
+学	학교	I110			PN					28

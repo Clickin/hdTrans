@@ -173,12 +173,13 @@ bool WriteCompiled(const Snapshot& s, const std::string& path) {
         const std::size_t slash = f.name.find_last_of("/\\");
         const std::string base = slash == std::string::npos ? f.name : f.name.substr(slash + 1);
         const std::string label = std::to_string(f.folder) + "/" + base;
-        if (base == "readings.tsv") continue;
-        if (base == "kana.tsv") {
-            sources.emplace_back(label, ud::KanaSpellings(f.text, s.Base(), codes));
+        const std::string_view text = hdTrans::dict::internal::WithoutHeader(f.text);
+        if (f.layer == hdTrans::dict::FileLayer::Readings) continue;
+        if (f.layer == hdTrans::dict::FileLayer::Kana) {
+            sources.emplace_back(label, ud::KanaSpellings(text, s.Base(), codes));
             continue;
         }
-        if (!compile(label, f.text, file++, ctx)) return false;
+        if (!compile(label, text, file++, ctx)) return false;
     }
 
     std::vector<std::string> lines;
