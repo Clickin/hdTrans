@@ -76,13 +76,14 @@ bool ReadColumnHeaderFromFile(std::FILE* f, bool& column, std::string* prefix) {
     }
 }
 
+// Appends the bytes of path to out. With column, a column file is read only through
+// the line that makes it one.
 bool ReadFile(const std::filesystem::path& path, std::string& out, bool* column = nullptr) {
     std::FILE* f = internal::OpenShared(path);
     if (!f) return false;
     if (column) {
         const bool ok = ReadColumnHeaderFromFile(f, *column, &out);
         if (!ok || *column) {
-            out.clear();
             std::fclose(f);
             return ok;
         }
@@ -126,6 +127,26 @@ bool ColumnFile(std::string_view text) {
     return false;
 }
 
+// Whether f is a column file.
+bool Column(const File& f) { return f.head || ColumnFile(f.text); }
+
+// The number of rows the column file f can add (one per line, as ReadColumnFile
+// reserves); 0 when it cannot be read.
+std::size_t RowBound(const File& f) {
+    if (!f.head) return static_cast<std::size_t>(std::count(f.text.begin(), f.text.end(), '\n')) + 1;
+    std::FILE* in = internal::OpenShared(PathOf(f.name));
+    if (!in) return 0;
+    std::vector<char> buf(1 << 16);
+    std::size_t lines = 1;
+    for (;;) {
+        const std::size_t n = std::fread(buf.data(), 1, buf.size(), in);
+        lines += static_cast<std::size_t>(std::count(buf.data(), buf.data() + n, '\n'));
+        if (n < buf.size()) break;
+    }
+    std::fclose(in);
+    return lines;
+}
+
 void CloseCodes(CodeTable& codes, std::size_t first) {
     for (int32_t c = static_cast<int32_t>(first); c < static_cast<int32_t>(codes.Size()); c++) {
         codes.SetWithXXX(c);
@@ -157,20 +178,19 @@ bool ReadFolderFiles(const std::vector<std::string>& folders, bool plainOnly, st
             File file;
             file.folder = static_cast<int>(f);
             file.name = Utf8Of(dir / PathOf(name));
-            bool column = false;
-            if ((plainOnly && !internal::ValidUtf8(file.name)) ||
-                !ReadFile(dir / PathOf(name), file.text, plainOnly ? &column : nullptr)) {
+            if ((plainOnly && !internal::ValidUtf8(file.name)) || !ReadFile(dir / PathOf(name), file.text, &file.head)) {
                 errors.push_back({file.name, LoadErrorKind::Read, 0, TsvErrorKind::Read, {}});
                 return false;
             }
-            if (!column) files.push_back(std::move(file));
+            if (!plainOnly || !file.head) files.push_back(std::move(file));
         }
     }
     return true;
 }
 
 // Reads the user dictionary file at path after the files of the folders; nothing for an
-// empty path or a missing file. With plainOnly, a column file is left out.
+// empty path or a missing file. With plainOnly, a column file is left out. Of a column
+// file, only the head is read (File::head).
 bool ReadUserFile(std::string_view path, std::size_t folders, bool plainOnly, std::vector<File>& files,
                   std::vector<LoadError>& errors) {
     if (path.empty()) return true;
@@ -184,12 +204,11 @@ bool ReadUserFile(std::string_view path, std::size_t folders, bool plainOnly, st
     }
     std::error_code ec;
     if (!std::filesystem::exists(PathOf(path), ec) && !ec) return true;
-    bool column = false;
-    if (!ReadFile(PathOf(path), file.text, plainOnly ? &column : nullptr)) {
+    if (!ReadFile(PathOf(path), file.text, &file.head)) {
         errors.push_back({file.name, LoadErrorKind::Read, 0, TsvErrorKind::Read, {}});
         return false;
     }
-    if (!column) files.push_back(std::move(file));
+    if (!plainOnly || !file.head) files.push_back(std::move(file));
     return true;
 }
 
@@ -243,16 +262,18 @@ private:
     CodeTable& codes_;
     std::unordered_map<std::string, PosInfo, StringHash, std::equal_to<>> pos_;
     std::string withXXX_;
-    std::string_view last_[4];  // the codes of lastCode_, views into the files
+    std::string_view last_[4];  // the codes of lastCode_, views into the file
     int32_t lastCode_ = -1;
 };
 
-// Parses the column file f into layer with reader; adds the indexes of its rows with
-// the flag replace to replacing. false on an error other than unknown pos: a file
-// with malformed lines fails the load, and its unknown pos lines are not listed.
-bool ReadColumnFile(const File& f, CodeReader& reader, internal::Layer& layer, std::vector<uint32_t>* replacing,
+// Parses the column file f into layer, interning its codes in codes; adds the indexes
+// of its rows with the flag replace to replacing. false on an error other than unknown
+// pos: a file with malformed lines fails the load, and its unknown pos lines are not
+// listed.
+bool ReadColumnFile(const File& f, CodeTable& codes, internal::Layer& layer, std::vector<uint32_t>* replacing,
                     std::vector<LoadError>& errors) {
     layer.Rows().reserve(layer.Rows().size() + static_cast<std::size_t>(std::count(f.text.begin(), f.text.end(), '\n')) + 1);
+    CodeReader reader(codes);
     TsvReader rows(f.text);
     SenseReader senses(rows);
     std::vector<LoadError> unknown;
@@ -320,14 +341,6 @@ std::string BuiltinPhrases(bool extraOnly = false) {
     return out;
 }
 
-// A name file parsed ahead, with codes numbered in its own table.
-struct ParsedNames {
-    internal::Layer layer{false};
-    std::vector<uint32_t> replacing;
-    std::vector<LoadError> errors;
-    bool ok = true;
-};
-
 }  // namespace
 
 bool internal::ReadLayer(std::string_view text, FileLayer& layer) {
@@ -373,13 +386,15 @@ struct SnapshotLoader {
     std::vector<File> files;
     std::vector<LoadError> errors;
     std::shared_ptr<Snapshot> snap{new Snapshot()};
-    CodeReader reader{snap->codes_};
 
     SnapshotLoader() = default;
     explicit SnapshotLoader(std::shared_ptr<Snapshot> existing) : snap(std::move(existing)) {}
 
     LoadResult Run();
     bool ReadLayers();
+    bool ReadColumns(std::size_t i, internal::Layer& layer, std::vector<uint32_t>* replacing);
+    bool BuildBase(const std::vector<std::size_t>& baseFiles);
+    bool BuildNames(const std::vector<std::size_t>& nameFiles);
     LoadResult FinishPlain(const std::vector<std::size_t>& rest);
     bool CompilePlain(const std::vector<std::size_t>& rest);
     bool Compile(const std::string& name, std::string_view text, int file, userdict::Context& ctx,
@@ -419,7 +434,7 @@ bool SnapshotLoader::ReadLayers() {
     for (File& f : files) {
         const char* message = nullptr;
         if (f.user) {
-            const bool column = ColumnFile(f.text);
+            const bool column = Column(f);
             if (!internal::ReadLayer(f.text, f.layer) ||
                 (f.layer != FileLayer::User && internal::WithoutHeader(f.text).size() != f.text.size())) {
                 message = "the first line of the user dictionary is not #! layer=user";
@@ -429,7 +444,7 @@ bool SnapshotLoader::ReadLayers() {
             message = "the first line is not #! layer=base|words|names|user|kana|readings";
         } else if (f.layer != FileLayer::Base) {
             const bool plainLayer = f.layer == FileLayer::Kana || f.layer == FileLayer::Readings;
-            const bool column = ColumnFile(f.text);
+            const bool column = Column(f);
             if (column && plainLayer) message = "a column file cannot be of the layer kana or readings";
             if (!column && !plainLayer) message = "a plain file cannot be of the layer words, names or user";
         }
@@ -513,62 +528,64 @@ std::string SnapshotLoader::PersonSpelling(std::string_view ko, const std::vecto
     return {};
 }
 
-LoadResult SnapshotLoader::Run() {
-    if (!ReadLayers()) return {nullptr, std::move(errors)};
-    // Name senses join the name layer in file order after the base is built.
-    std::vector<std::size_t> baseFiles, nameFiles, rest;
-    for (std::size_t i = 0; i < files.size(); i++) {
-        if (!ColumnFile(files[i].text)) rest.push_back(i);
-        else if (files[i].layer == FileLayer::Names) nameFiles.push_back(i);
-        else baseFiles.push_back(i);
-    }
-    std::vector<ParsedNames> parsed(nameFiles.size());
-    CodeTable nameCodes;
-    {
-        CodeReader r(nameCodes);
-        for (std::size_t j = 0; j < nameFiles.size(); j++) {
-            ParsedNames& p = parsed[j];
-            p.ok = ReadColumnFile(files[nameFiles[j]], r, p.layer, &p.replacing, p.errors);
-            if (!p.ok) break;
+// Parses the column file i into layer (ReadColumnFile), reading the rest of a file
+// of which only the head was read, and frees its text. A read error replaces the
+// errors so far.
+bool SnapshotLoader::ReadColumns(std::size_t i, internal::Layer& layer, std::vector<uint32_t>* replacing) {
+    File& f = files[i];
+    if (f.head) {
+        f.text.clear();
+        f.head = false;
+        if (!ReadFile(PathOf(f.name), f.text)) {
+            errors = {{f.name, LoadErrorKind::Read, 0, TsvErrorKind::Read, {}}};
+            return false;
         }
     }
+    const bool ok = ReadColumnFile(f, snap->codes_, layer, replacing, errors);
+    std::string().swap(f.text);
+    return ok;
+}
 
-    internal::Layer base(true), user(false), names(false);
+// Builds the base and user dictionaries from the column files baseFiles, in order.
+bool SnapshotLoader::BuildBase(const std::vector<std::size_t>& baseFiles) {
+    Snapshot& s = *snap;
+    internal::Layer base(true), user(false);
+    // Reserved ahead, the rows of a layer are not moved as its files are added.
+    std::size_t baseRows = 0, userRows = 0;
+    for (const std::size_t i : baseFiles) (files[i].layer == FileLayer::User ? userRows : baseRows) += RowBound(files[i]);
+    base.Rows().reserve(baseRows);
+    user.Rows().reserve(userRows);
     for (const std::size_t i : baseFiles) {
         if (files[i].layer == FileLayer::User) {
             const std::size_t start = user.Rows().size();
-            if (!ReadColumnFile(files[i], reader, user, nullptr, errors)) return {nullptr, std::move(errors)};
+            if (!ReadColumns(i, user, nullptr)) return false;
             user.ByPrio(start);
         } else {
             const std::size_t start = base.Rows().size();
             std::vector<uint32_t> replacing;
-            if (!ReadColumnFile(files[i], reader, base, &replacing, errors)) return {nullptr, std::move(errors)};
-            base.Shadow(start, files[i].layer == FileLayer::Words ? &replacing : nullptr, snap->codes_);
+            if (!ReadColumns(i, base, &replacing)) return false;
+            base.Shadow(start, files[i].layer == FileLayer::Words ? &replacing : nullptr, s.codes_);
             base.Compact();
         }
     }
-    Snapshot& s = *snap;
-    s.hasDictionary_ = rest.size() < files.size();
     if (s.hasDictionary_) {
         s.user_ = user.Build(s.codes_);
         s.base_ = base.Build(s.codes_);
     }
-    for (const std::size_t i : baseFiles) std::string().swap(files[i].text);
-    std::vector<int32_t> nameCode(nameCodes.Size());
-    for (std::size_t c = 0; c < nameCode.size(); c++) {
-        const Codes* x = nameCodes.At(static_cast<int32_t>(c));
-        nameCode[c] = s.codes_.Intern(x->partText, x->sem.Text(), x->gram.Text(), x->dict.Text());
-    }
-    for (std::size_t j = 0; j < nameFiles.size(); j++) {
-        const std::size_t i = nameFiles[j];
-        ParsedNames& p = parsed[j];
-        errors.insert(errors.end(), p.errors.begin(), p.errors.end());
-        if (!p.ok) return {nullptr, std::move(errors)};
+    return true;
+}
+
+// Builds the name layer from the name files nameFiles, in order, after the base.
+bool SnapshotLoader::BuildNames(const std::vector<std::size_t>& nameFiles) {
+    Snapshot& s = *snap;
+    internal::Layer names(false);
+    std::size_t rows = 0;
+    for (const std::size_t i : nameFiles) rows += RowBound(files[i]);
+    names.Rows().reserve(rows);
+    for (const std::size_t i : nameFiles) {
         const std::size_t start = names.Rows().size();
-        for (internal::Row& r : p.layer.Rows()) r.code = nameCode[static_cast<std::size_t>(r.code)];
-        std::vector<uint32_t> replacing = std::move(p.replacing);
-        for (uint32_t& at : replacing) at += static_cast<uint32_t>(start);
-        names.Append(std::move(p.layer));
+        std::vector<uint32_t> replacing;
+        if (!ReadColumns(i, names, &replacing)) return false;
         std::unordered_set<std::string_view> own;
         for (const uint32_t at : replacing) {
             const internal::Row& r = names.Rows()[at];
@@ -594,6 +611,21 @@ LoadResult SnapshotLoader::Run() {
         names.Compact();
     }
     s.names_ = names.Build(s.codes_);
+    return true;
+}
+
+LoadResult SnapshotLoader::Run() {
+    if (!ReadLayers()) return {nullptr, std::move(errors)};
+    std::vector<std::size_t> baseFiles, nameFiles, rest;
+    for (std::size_t i = 0; i < files.size(); i++) {
+        if (!Column(files[i])) rest.push_back(i);
+        else if (files[i].layer == FileLayer::Names) nameFiles.push_back(i);
+        else baseFiles.push_back(i);
+    }
+    Snapshot& s = *snap;
+    s.hasDictionary_ = rest.size() < files.size();
+    if (!BuildBase(baseFiles)) return {nullptr, std::move(errors)};
+    if (!BuildNames(nameFiles)) return {nullptr, std::move(errors)};
     for (auto& [key, sp] : s.places_) {
         sp.person = PersonSpelling(sp.ko, s.base_.Records(key));
         if (sp.person.empty()) sp.person = PersonSpelling(sp.ko, s.names_.Records(key));

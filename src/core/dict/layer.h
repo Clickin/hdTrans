@@ -11,8 +11,8 @@
 
 namespace hdTrans::dict::internal {
 
-// A sense in load order. key and target point into the loaded files (or into the
-// layer for repaired keys); the files must outlive the layer.
+// A sense in load order. key and target point into the storage of the layer that
+// added the row.
 struct Row {
     std::string_view key;
     std::string_view target;
@@ -29,8 +29,8 @@ public:
     // prio: Build orders the records of a key by prio, higher first.
     explicit Layer(bool prio) : prio_(prio) {}
 
-    // Appends a row. A byte of key that is not valid UTF-8 is stored as U+FFFD, as
-    // lookups decode it.
+    // Appends a row, copying key and target. A byte of key that is not valid UTF-8 is
+    // stored as U+FFFD, as lookups decode it.
     void Add(std::string_view key, std::string_view target, int32_t code, int32_t prio, int32_t rule, int32_t id);
 
     std::vector<Row>& Rows() { return rows_; }
@@ -43,8 +43,6 @@ public:
     // (indexes in Rows; all rows from end when null) has. Compact drops them.
     void Shadow(std::size_t end, const std::vector<uint32_t>* later, const CodeTable& codes);
     void Compact();
-    // Appends the rows of other.
-    void Append(Layer&& other);
 
     // Builds the dictionary of the rows. The records of a key are ordered by prio
     // when the layer orders by prio, then by row order.
@@ -52,10 +50,13 @@ public:
 
 private:
     void Sort();
+    // A copy of s in chunks_.
+    std::string_view Keep(std::string_view s);
 
     bool prio_;
     std::vector<Row> rows_;
-    std::vector<std::unique_ptr<std::string>> repaired_;  // keys rows point to
+    std::vector<std::unique_ptr<char[]>> chunks_;  // the keys and targets of rows_
+    std::size_t used_ = 0, room_ = 0;               // bytes used and held by chunks_.back()
 };
 
 }  // namespace hdTrans::dict::internal

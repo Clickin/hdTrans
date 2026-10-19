@@ -78,6 +78,9 @@ struct File {
     std::string text;
     FileLayer layer = FileLayer::Base;  // set by the load from the header
     bool user = false;                  // the user dictionary file of the load
+    // text holds only the head of a column file, through the line that makes it one;
+    // the load reads the rest when it parses the file.
+    bool head = false;
 };
 
 namespace internal {

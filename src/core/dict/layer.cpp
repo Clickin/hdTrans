@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <algorithm>
+#include <cstring>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -44,27 +45,32 @@ struct KeyClassHash {
 namespace internal {
 
 void Layer::Add(std::string_view key, std::string_view target, int32_t code, int32_t prio, int32_t rule, int32_t id) {
+    std::string fixed;
     if (!internal::ValidUtf8(key)) {
-        std::string fixed;
         for (std::size_t i = 0; i < key.size();) {
             const auto r = text::DecodeRune(key.substr(i));
             text::AppendRune(fixed, r.cp);
             i += r.size;
         }
-        key = *repaired_.emplace_back(std::make_unique<std::string>(std::move(fixed)));
+        key = fixed;
     }
-    rows_.push_back({key, target, code, prio, rule, id});
+    // The senses of a key are usually consecutive rows.
+    const std::string_view kept = !rows_.empty() && rows_.back().key == key ? rows_.back().key : Keep(key);
+    rows_.push_back({kept, Keep(target), code, prio, rule, id});
 }
 
-void Layer::Append(Layer&& other) {
-    if (rows_.empty()) {
-        rows_.swap(other.rows_);
-    } else {
-        rows_.insert(rows_.end(), other.rows_.begin(), other.rows_.end());
+std::string_view Layer::Keep(std::string_view s) {
+    constexpr std::size_t kChunkSize = 1 << 20;
+    if (s.empty()) return {};
+    if (s.size() > room_ - used_) {
+        room_ = std::max(kChunkSize, s.size());
+        chunks_.push_back(std::unique_ptr<char[]>(new char[room_]));
+        used_ = 0;
     }
-    for (auto& r : other.repaired_) repaired_.push_back(std::move(r));
-    other.rows_.clear();
-    other.repaired_.clear();
+    char* at = chunks_.back().get() + used_;
+    std::memcpy(at, s.data(), s.size());
+    used_ += s.size();
+    return {at, s.size()};
 }
 
 void Layer::ByPrio(std::size_t start) {
