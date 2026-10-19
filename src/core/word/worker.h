@@ -1,6 +1,7 @@
 #pragma once
 // The state of the word stage over one chunk: the tokens, the lookup context the
 // lookups carry from token to token, and the chain of the current sentence.
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>

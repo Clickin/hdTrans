@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "core/tokenizer/canonical.h"
 
 #include "fnv.h"

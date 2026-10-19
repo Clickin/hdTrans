@@ -1,5 +1,6 @@
 #include "core/output/inflect.h"
 
+#include <cstdint>
 #include <array>
 #include <bit>
 #include <set>

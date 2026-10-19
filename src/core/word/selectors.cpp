@@ -1,5 +1,6 @@
 // Candidate and ending selection: each item picks the entry of its group and the entry
 // of its ending group, by the local rule of an entry, the global rules, then defaults.
+#include <cstdint>
 #include <string>
 #include <string_view>
 
