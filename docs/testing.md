@@ -40,14 +40,16 @@ build/mac/hdtrans_tests userdict   # 이름에 userdict가 들어간 테스트�
 
 ## 규칙 사례 (tests/rules/cases.tsv)
 
-규칙 프로그램(`src/core/rules/rules.txt`)의 단어 선택을 고정하는 표입니다. 열은 `rule input expected kind`이고
-입력 한 줄을 한 세션으로 번역합니다(`-each -why`).
+규칙 프로그램(`src/core/rules/*.txt`)의 단어 선택을 고정하는 표입니다. 열은 `rule input expected kind layer`이고
+입력 한 줄을 한 세션으로 번역합니다(`-each -why`). 실패는 `layer`별로 묶어 보입니다.
 
-- `rule`: 사례가 겨냥하는 규칙(`L1276`, `G32`)
+- `rule`: 사례가 겨냥하는 규칙(`L1276`, 전역 규칙은 PRIO로 `G330`)
 - `input`: 직접 쓴 짧은 일본어 문장
 - `expected`: 번역 전체, 또는 `rule:L1276=<번역>`(그 줄의 어떤 단어를 지역 규칙 1276이 그 번역으로 골랐음, `-why` 기준)
 - `kind`: `fix`(고친 규칙이 이제 맞게 고르는 문장), `keep`(고치기 전 선택이 맞아서 그대로 남아야 하는 문장),
   `current`(지금 동작을 그대로 적어 둔 문장)
+- `layer`: 그 규칙이 도는 실행 층([architecture.md](architecture.md)의 `local`, `local-ending`, `global-stem`,
+  `global-last`, `global-ending`)
 
 ```sh
 tools/rule-cases.sh build/mac/hdtrans dicts            # 다르면 규칙·입력·기대값·실제값을 보이고 실패
