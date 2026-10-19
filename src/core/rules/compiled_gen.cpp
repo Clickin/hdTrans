@@ -818,12 +818,13 @@ bool RuleL94([[maybe_unused]] Item* p) {
     return (GobiPumsaEq(p, 0, "56*"sv) && PumsaEq(p, 1, "1**"sv) && DstSet(p, 0, "철저한    "sv) && GobiDstSet(p, 0, ""sv));
 }
 
-// # 명사와 の 뒤의 通り를 대로로 고르고 앞의 の를 지운다.
-// # [의심] 명사＋の만으로 준거의 대로를 강제해 도로라는 뜻도 오역한다. 자작문 裏の通りを歩く。 → 뒤대로를 걷는다.; -why: 通り LocalRule 95 대로, の도 LocalRule 95로 삭제된다. 뒷길을 걷는다는 의미다.
+// # 장소 명사와 の 뒤의 通り는 거리로, 그 밖의 명사와 の 뒤에서는 대로로 고르고 の를 지운다.
 // local 95
+//     src[-1] == "の" and sem[-2] has VPl and ko := "거리"
 //     src[-1] == "の" and pos[-2] is 1** and ko[-1] := ""
 bool RuleL95([[maybe_unused]] Item* p) {
-    return (SrcEq(p, -1, "の"sv) && PumsaEq(p, -2, "1**"sv) && DstSet(p, -1, ""sv));
+    return (SrcEq(p, -1, "の"sv) && AttrEq(p, -2, "VPl"sv) && DstSet(p, 0, "거리"sv)) ||
+           (SrcEq(p, -1, "の"sv) && PumsaEq(p, -2, "1**"sv) && DstSet(p, -1, ""sv));
 }
 
 // # 平気는 현재 어미가 で이면 뒤에 형용사류가 있을 때 ‘-고’, 그 밖에는 ‘-게’로 어미를 바꾸고 ‘아무렇지도 않다’를 고른다.
@@ -5058,7 +5059,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL92, 0x52ee40b64e40fc99ull},
     {RuleL93, 0xf1469da37011441aull},
     {RuleL94, 0xf2bd933a4c5e2df2ull},
-    {RuleL95, 0xead3b2ae71bc1389ull},
+    {RuleL95, 0x958e4b0425de092eull},
     {RuleL96, 0x948ed32288ec23f3ull},
     {RuleL97, 0x0a5bcc1cf72c0d0dull},
     {RuleL98, 0x7d85fc8c08ac4ef5ull},
