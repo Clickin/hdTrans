@@ -1,0 +1,77 @@
+name: Build
+
+on:
+  push:
+    branches: [main, 'ci/**', platforms]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.preset }}
+    strategy:
+      fail-fast: false
+      matrix:
+        preset: ${{ fromJSON((github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && '["linux","windows-x64","windows-x86","mac"]' || '["linux","windows-x64","windows-x86"]') }}
+        include:
+          - preset: linux
+            os: ubuntu-latest
+          - preset: windows-x64
+            os: windows-latest
+          - preset: windows-x86
+            os: windows-latest
+          - preset: mac
+            os: macos-latest
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake --preset "${{ matrix.preset }}"
+      - name: Build CLI, libraries and tests
+        run: cmake --build --preset "${{ matrix.preset }}" --parallel 2
+      - name: Test without external fixtures
+        run: |
+          unset HDTRANS_REQUIRE_ALL HDTRANS_GOLDEN HDTRANS_DICTS
+          ctest --preset "${{ matrix.preset }}" --verbose 2>&1 | tee "build/${{ matrix.preset }}/ctest.log"
+      - name: Report fixture skips and test results
+        if: always()
+        run: |
+          log="build/${{ matrix.preset }}/ctest.log"
+          if [[ -f "$log" ]]; then
+            {
+              echo '### ${{ matrix.preset }} tests'
+              echo '```text'
+              grep -E 'SKIP |[0-9]+ run, [0-9]+ failed, [0-9]+ skipped|tests passed' "$log" || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload CLI and libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: hdtrans-${{ matrix.preset }}
+          if-no-files-found: error
+          path: |
+            build/${{ matrix.preset }}/hdtrans
+            build/${{ matrix.preset }}/libhdTransCore.a
+            build/${{ matrix.preset }}/libhdTransEngine.so
+            build/${{ matrix.preset }}/libhdTransEngine.dylib
+            build/${{ matrix.preset }}/Release/hdtrans.exe
+            build/${{ matrix.preset }}/Release/hdTransCore.lib
+            build/${{ matrix.preset }}/Release/hdTransEngine.dll
+            build/${{ matrix.preset }}/Release/hdTransEngine.lib
+            build/${{ matrix.preset }}/Release/J2KEngine.dll
+            build/${{ matrix.preset }}/Release/J2KEngine.lib
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log-${{ matrix.preset }}
+          if-no-files-found: ignore
+          path: build/${{ matrix.preset }}/ctest.log
