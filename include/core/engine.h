@@ -112,7 +112,7 @@ private:
 // takes them and first forgets what the session learned, as Reset does.
 class Session {
 public:
-    explicit Session(const Engine& engine, bool reference = false);
+    explicit Session(const Engine& engine, bool reference = false, bool cg = true, bool misread = false);
     ~Session();
     Session(const Session&) = delete;
     Session& operator=(const Session&) = delete;
@@ -127,6 +127,8 @@ public:
 private:
     const Engine& engine_;
     const bool reference_;
+    const bool cg_;
+    const bool misread_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;
     std::shared_ptr<const filter::Filters> filters_;

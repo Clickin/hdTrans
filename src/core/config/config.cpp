@@ -208,4 +208,13 @@ ConfigResult LoadConfig(std::string_view path) {
     return result;
 }
 
+std::string ConfigErrors(const ConfigResult& result, std::string_view path) {
+    std::string errors;
+    for (const auto& diagnostic : result.diagnostics) {
+        if (!errors.empty()) errors += '\n';
+        errors += std::string(path) + ":" + std::to_string(diagnostic.line) + ": " + diagnostic.message;
+    }
+    return errors;
+}
+
 }  // namespace hdTrans::internal

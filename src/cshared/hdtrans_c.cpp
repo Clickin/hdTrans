@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -18,6 +19,8 @@
 #include <dlfcn.h>
 #endif
 
+#include "core/config/cache.h"
+#include "core/config/config.h"
 #include "core/dict/folders.h"
 #include "core/engine.h"
 
@@ -28,8 +31,10 @@ std::condition_variable g_adminsDone;
 std::atomic<unsigned> g_waitingAdmins{0};
 std::uint64_t g_generation = 0;
 std::vector<std::string> g_dirs;
-std::string g_userFile;
-std::string g_ehnd;
+std::optional<std::string> g_ehnd;
+std::string g_defaultEhnd;
+std::string g_configErrors;
+hdTrans::internal::ConfigCache g_cache;
 std::unique_ptr<hdTrans::Engine> g_engine;
 std::unique_ptr<hdTrans::Session> g_session;
 
@@ -138,19 +143,30 @@ int hdTrans_Initialize(const char* dirs) {
     }
     auto paths = SplitNul(dirs);
     const std::string dir = ModuleDir();
-    std::string userFile = hdTrans::dict::UserFile(dir);
-    std::string ehnd = hdTrans::dict::EhndFolder(dir);
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, kUserReload);
+    const std::string configPath = hdTrans::internal::ConfigPath(dir);
+    const auto config = hdTrans::internal::LoadConfig(configPath);
+    const auto& settings = config.settings;
+    const auto requestedPaths = paths;
+    if (paths.empty() && settings.dicts) paths = *settings.dicts;
+    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    const std::string defaultEhnd = hdTrans::dict::EhndFolder(dir);
+    const std::string ehnd = settings.ehnd.value_or(defaultEhnd);
+    {
+        AdminLock lock;
+        if (generation != g_generation || !g_cache.Apply(settings.cache)) return -1;
+    }
+    auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, kUserReload);
     e->OpenEhnd(ehnd);
     if (!e->Open(paths, false, userFile)) return -1;
     AdminLock lock;
     if (generation != g_generation) return -1;
     g_session.reset();
     g_engine = std::move(e);
-    g_session = std::make_unique<hdTrans::Session>(*g_engine);
-    g_dirs = std::move(paths);
-    g_userFile = std::move(userFile);
-    g_ehnd = std::move(ehnd);
+    g_session = std::make_unique<hdTrans::Session>(*g_engine, false, settings.cg, settings.misread);
+    g_dirs = requestedPaths;
+    g_ehnd.reset();
+    g_defaultEhnd = defaultEhnd;
+    g_configErrors = hdTrans::internal::ConfigErrors(config, configPath);
     ++g_generation;
     return 0;
 }
@@ -161,8 +177,10 @@ void hdTrans_Terminate(void) {
     g_session.reset();
     g_engine.reset();
     g_dirs.clear();
-    g_userFile.clear();
-    g_ehnd.clear();
+    g_ehnd.reset();
+    g_defaultEhnd.clear();
+    g_configErrors.clear();
+    static_cast<void>(g_cache.Apply(std::nullopt));
 }
 
 int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
@@ -183,16 +201,28 @@ int hdTrans_Reset(void) {
 int hdTrans_Reload(void) {
     std::uint64_t generation;
     std::vector<std::string> dirs;
-    std::string userFile, ehnd;
+    std::optional<std::string> ehndOverride;
+    std::string defaultEhnd;
     {
         AdminLock lock;
         if (!g_engine) return -1;
         generation = g_generation;
         dirs = g_dirs;
-        userFile = g_userFile;
-        ehnd = g_ehnd;
+        ehndOverride = g_ehnd;
+        defaultEhnd = g_defaultEhnd;
     }
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, kUserReload);
+    const std::string dir = ModuleDir();
+    const std::string configPath = hdTrans::internal::ConfigPath(dir);
+    const auto config = hdTrans::internal::LoadConfig(configPath);
+    const auto& settings = config.settings;
+    if (dirs.empty() && settings.dicts) dirs = *settings.dicts;
+    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    const std::string ehnd = ehndOverride.value_or(settings.ehnd.value_or(defaultEhnd));
+    {
+        AdminLock lock;
+        if (generation != g_generation || !g_cache.Apply(settings.cache)) return -1;
+    }
+    auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, kUserReload);
     e->OpenEhnd(ehnd);
     // A userdict.tsv that does not load keeps the dictionaries loaded before.
     if (!e->Open(dirs, false, userFile) || !e->UserFileError().empty()) return -1;
@@ -200,7 +230,8 @@ int hdTrans_Reload(void) {
     if (generation != g_generation) return -1;
     g_session.reset();
     g_engine = std::move(e);
-    g_session = std::make_unique<hdTrans::Session>(*g_engine);
+    g_session = std::make_unique<hdTrans::Session>(*g_engine, false, settings.cg, settings.misread);
+    g_configErrors = hdTrans::internal::ConfigErrors(config, configPath);
     ++g_generation;
     return 0;
 }
@@ -209,7 +240,10 @@ int hdTrans_UserDictError(char** out, size_t* outn) {
     std::unique_lock<std::mutex> lock(g_mutex);
     g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
     if (!g_engine) return -1;
-    return Copy(g_engine->UserFileError(), out, outn);
+    std::string errors = g_configErrors;
+    const std::string userError = g_engine->UserFileError();
+    if (!userError.empty()) errors += (errors.empty() ? "" : "\n") + userError;
+    return Copy(errors, out, outn);
 }
 
 int hdTrans_OpenEhnd(const char* dir) {

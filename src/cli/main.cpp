@@ -1,5 +1,6 @@
 // hdtrans: reads UTF-8 from stdin (or -in FILE) and writes the translation to stdout. The
 // whole input is one session unless -each or -raw is given.
+//   -config FILE          settings file (default: hdtrans.config.yaml next to the executable)
 //   -dicts DIR[,DIR...]   dictionary folders in load order (default: dicts next to the
 //                         executable, else dicts in the current directory); a first
 //                         FILE.hdsnap gives the column dictionaries of the folders
@@ -43,6 +44,8 @@
 #include <mach-o/dyld.h>
 #endif
 
+#include "core/config/config.h"
+#include "core/config/cache.h"
 #include "core/engine.h"
 #include "core/dict/folders.h"
 #include "core/dict/snapshot_file.h"
@@ -212,7 +215,7 @@ int main(int argc, char** argv) {
     _setmode(_fileno(stderr), _O_BINARY);
 #endif
     std::optional<std::string> dictsArg, userFileArg, snapshotOut;
-    std::optional<std::string> ehndArg;
+    std::optional<std::string> ehndArg, configArg;
     std::string inPath;
     std::string ruleCountsPath;
     const char* dump = std::getenv("HDTRANS_DRIVER_DUMP");
@@ -231,6 +234,7 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i++) {
         const char* a = argv[i];
         if (!std::strcmp(a, "-dicts") && i + 1 < argc) dictsArg = argv[++i];
+        else if (!std::strcmp(a, "-config") && i + 1 < argc) configArg = argv[++i];
         else if (!std::strcmp(a, "-userdict") && i + 1 < argc) userFileArg = argv[++i];
         else if (!std::strcmp(a, "-in") && i + 1 < argc) inPath = argv[++i];
         else if (!std::strcmp(a, "-ehnd") && i + 1 < argc) ehndArg = argv[++i];
@@ -249,13 +253,34 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-no-cg")) noCg = true;
         else if (!std::strcmp(a, "-cg-learned")) cgLearned = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-config FILE] [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
                                  "Published cache generations must not be overwritten or truncated in place.\n");
             return 2;
         }
+    }
+
+    const std::string programDir = ExecutableDir();
+    const std::string configPath = configArg ? *configArg : hdTrans::internal::ConfigPath(programDir);
+    const auto config = hdTrans::internal::LoadConfig(configPath);
+    if (configArg && !config.found && config.diagnostics.empty()) {
+        std::fprintf(stderr, "hdtrans: cannot open config file %s\n", configPath.c_str());
+        return 1;
+    }
+    for (const auto& diagnostic : config.diagnostics) {
+        std::fprintf(stderr, "hdtrans: %s:%zu: %s\n", configPath.c_str(), diagnostic.line, diagnostic.message.c_str());
+    }
+    if (!userFileArg && config.settings.userdict) userFileArg = config.settings.userdict;
+    if (!ehndArg && config.settings.ehnd) ehndArg = config.settings.ehnd;
+    reference = reference || config.settings.reference;
+    misread = misread || config.settings.misread;
+    noCg = noCg || !config.settings.cg;
+    hdTrans::internal::ConfigCache configCache;
+    if (!configCache.Apply(config.settings.cache)) {
+        std::fprintf(stderr, "hdtrans: cannot set cache directory\n");
+        return 1;
     }
 
     if (static_cast<int>(compileDicts) + static_cast<int>(snapshotOut.has_value()) + static_cast<int>(noCache) > 1) {
@@ -277,10 +302,13 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "hdtrans: warning: relative HDTRANS_CACHE_DIR disables dictionary caching\n");
         if (compileDicts) return 1;
     }
-    const std::string programDir = dictsArg && userFileArg ? std::string() : ExecutableDir();
-    const std::string dicts = dictsArg ? *dictsArg : hdTrans::dict::DefaultFolder(programDir);
+    std::string dicts = dictsArg ? *dictsArg : hdTrans::dict::DefaultFolder(programDir);
     const std::string userFile = userFileArg ? *userFileArg : hdTrans::dict::UserFile(programDir);
-    const auto folders = SplitComma(dicts);
+    const auto folders = !dictsArg && config.settings.dicts ? *config.settings.dicts : SplitComma(dicts);
+    if (!dictsArg && config.settings.dicts) {
+        dicts.clear();
+        for (const auto& folder : folders) dicts += (dicts.empty() ? "" : ",") + folder;
+    }
     if (snapshotOut) {
         if (!hdTrans::dict::CompileSnapshot(folders, *snapshotOut)) {
             std::fprintf(stderr, "hdtrans: cannot compile the dictionary snapshot; a column dictionary must load successfully\n");
@@ -327,7 +355,7 @@ int main(int argc, char** argv) {
         if (userFileArg) return 1;
     }
     // Without -ehnd, an Ehnd folder next to the program is used when there is one.
-    const std::string ehnd = ehndArg ? *ehndArg : hdTrans::dict::EhndFolder(ExecutableDir());
+    const std::string ehnd = ehndArg ? *ehndArg : hdTrans::dict::EhndFolder(programDir);
     if (!ehnd.empty() && !engine.OpenEhnd(ehnd)) {
         std::fprintf(stderr, "hdtrans: cannot read the Ehnd folder %s\n", ehnd.c_str());
         return 1;

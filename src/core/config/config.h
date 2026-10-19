@@ -32,5 +32,6 @@ struct ConfigResult {
 std::string ConfigPath(std::string_view folder);
 // Missing files are optional. Invalid entries are skipped; earlier valid entries survive syntax errors.
 ConfigResult LoadConfig(std::string_view path);
+std::string ConfigErrors(const ConfigResult& result, std::string_view path);
 
 }  // namespace hdTrans::internal
