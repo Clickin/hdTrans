@@ -133,9 +133,9 @@ void ApplyKanaFinal(Run& run, long i, int row) {
     } else if (after == kSmallTsu) {
         const std::string following = CellAt(run.cells, i + 2);
         int n = 35;
-        if (kKRow.find(following) != std::string_view::npos) {
+        if (!following.empty() && kKRow.find(following) != std::string_view::npos) {
             n = 10;
-        } else if (kBPRows.find(following) != std::string_view::npos) {
+        } else if (!following.empty() && kBPRows.find(following) != std::string_view::npos) {
             n = 30;
         }
         if (variant(n, v)) {

@@ -122,8 +122,8 @@ void Run::ApplyFinal(long i, int row) {
     } else if (after == kMarkTsu) {
         const std::string_view following = At(i + 2);
         int n = 35;
-        if (kMarkKRow.find(following) != std::string_view::npos) n = 10;
-        else if (kMarkBPRows.find(following) != std::string_view::npos) n = 30;
+        if (!following.empty() && kMarkKRow.find(following) != std::string_view::npos) n = 10;
+        else if (!following.empty() && kMarkBPRows.find(following) != std::string_view::npos) n = 30;
         if (variant(n, v)) {
             Replace(i, At(i), v);
             if (n == 30 && following == kMarkPu) Replace(i + 2, kMarkPu, "");
