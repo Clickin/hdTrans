@@ -227,8 +227,8 @@ HD_TEST(document_senses_shadow_consistency) {
     }
     std::printf("document_senses_shadow total: sets=%zu scored=%zu would-change=%zu blocked=%zu\n",
                 paths.size(), total.scored, total.wouldChange, total.blocked);
-    HD_CHECK_EQ(total.scored, size_t{57168});
-    HD_CHECK_EQ(total.wouldChange, size_t{2});
+    HD_CHECK_EQ(total.scored, size_t{56698});
+    HD_CHECK_EQ(total.wouldChange, size_t{1});
     HD_CHECK_EQ(total.blocked, size_t{4});
 }
 

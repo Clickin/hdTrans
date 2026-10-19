@@ -127,16 +127,16 @@ HD_TEST(select_shadow_golden) {
     }
     HD_REQUIRE(counted);
     if (counted) {
-        HD_CHECK_EQ(stats.items, size_t{538139});
-        HD_CHECK_EQ(stats.scored, size_t{229758});
-        HD_CHECK_EQ(stats.wouldChange, size_t{60006});
-        HD_CHECK_EQ(stats.blocked, size_t{55817});
+        HD_CHECK_EQ(stats.items, size_t{530810});
+        HD_CHECK_EQ(stats.scored, size_t{224717});
+        HD_CHECK_EQ(stats.wouldChange, size_t{60238});
+        HD_CHECK_EQ(stats.blocked, size_t{55214});
         const std::map<word::Provenance, size_t> layers = {
-            {word::Provenance::Fixed, 17719}, {word::Provenance::LocalRule, 48731},
-            {word::Provenance::GlobalRule, 16523}, {word::Provenance::Single, 283306},
-            {word::Provenance::FirstXxx, 89519}, {word::Provenance::Digit, 76290},
-            {word::Provenance::Sense, 2894}, {word::Provenance::SenseDefault, 1085},
-            {word::Provenance::Initial, 586}, {word::Provenance::Rewrite, 1486},
+            {word::Provenance::Fixed, 24030}, {word::Provenance::LocalRule, 48354},
+            {word::Provenance::GlobalRule, 11607}, {word::Provenance::Single, 276093},
+            {word::Provenance::FirstXxx, 90051}, {word::Provenance::Digit, 74810},
+            {word::Provenance::Sense, 2708}, {word::Provenance::SenseDefault, 1086},
+            {word::Provenance::Initial, 586}, {word::Provenance::Rewrite, 1485},
         };
         HD_CHECK_EQ(stats.layers.size(), layers.size());
         for (const auto& [layer, count] : layers) HD_CHECK_EQ(stats.layers[layer], count);

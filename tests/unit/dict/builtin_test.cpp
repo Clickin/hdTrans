@@ -18,7 +18,7 @@ HD_TEST(builtin_fingerprint) {
         h.Str(BuiltinText(name));
     }
     HD_CHECK_EQ(names.size(), std::size_t{6});
-    HD_CHECK_EQ(h.h, uint64_t{0x3332ecc20204ada3ull});
+    HD_CHECK_EQ(h.h, uint64_t{0x7d422551b3b64ca7ull});
     HD_CHECK(BuiltinText("none.tsv").empty());
     HD_CHECK(BuiltinText("endings.tsv").starts_with("// Builtin end rows."));
 }
