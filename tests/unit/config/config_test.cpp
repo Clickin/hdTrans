@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 #include "hdtest.h"
@@ -34,7 +35,11 @@ struct TempConfig {
         std::ofstream(folder / "hdtrans.config.yaml", std::ios::binary) << text;
         return hdTrans::internal::LoadConfig(path);
     }
-    std::string Resolve(const char* name) const { return Utf8((folder / name).lexically_normal()); }
+    std::string Resolve(const char* name) const {
+        const std::string_view text(name);
+        const std::u8string u8(text.begin(), text.end());  // a narrow path is the ANSI code page on Windows
+        return Utf8((folder / std::filesystem::path(u8)).lexically_normal());
+    }
 };
 
 }  // namespace
