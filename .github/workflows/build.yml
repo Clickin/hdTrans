@@ -16,6 +16,8 @@ concurrency:
 env:
   SCCACHE_DIR: ${{ github.workspace }}/.sccache
   SCCACHE_CACHE_SIZE: 1G
+  CCACHE_DIR: ${{ github.workspace }}/build/ccache
+  CCACHE_MAXSIZE: 1G
 
 jobs:
   build:
@@ -59,14 +61,29 @@ jobs:
         uses: mymindstorm/setup-emsdk@v16
         with:
           version: 4.0.22
+          actions-cache-folder: build/emsdk
+      - name: Set up ccache for Emscripten
+        if: matrix.preset == 'wasm'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache
+          # Keep sysroot paths stable in both cold and restored compiler caches.
+          sdk="$GITHUB_WORKSPACE/build/emsdk/emsdk-main"
+          "$sdk/emsdk" activate 4.0.22
+          source "$sdk/emsdk_env.sh"
+          env | grep '^EMSDK' >> "$GITHUB_ENV"
+          echo "EM_CONFIG=$sdk/.emscripten" >> "$GITHUB_ENV"
+          printf '%s\n' "$sdk" "$sdk/upstream/emscripten" >> "$GITHUB_PATH"
       - name: Set up Node for the WASM smoke test
         if: matrix.preset == 'wasm'
         uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Set up sccache
+        if: matrix.preset != 'wasm'
         uses: mozilla-actions/sccache-action@v0.0.11
-      - name: Restore compiler cache
+      - name: Restore native compiler cache
+        if: matrix.preset != 'wasm'
         uses: actions/cache@v6
         with:
           path: ${{ env.SCCACHE_DIR }}
@@ -74,6 +91,15 @@ jobs:
           restore-keys: |
             sccache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json') }}-
             sccache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-
+      - name: Restore WASM compiler cache
+        if: matrix.preset == 'wasm'
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ runner.arch }}-wasm-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json') }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ runner.arch }}-wasm-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json') }}-
+            ccache-${{ runner.os }}-${{ runner.arch }}-wasm-
       - name: Select parallelism
         run: |
           if [[ "$RUNNER_OS" == Windows ]]; then
@@ -85,8 +111,9 @@ jobs:
       - name: Configure
         run: |
           if [[ "${{ matrix.preset }}" == wasm ]]; then
-            # Emscripten wraps its underlying Clang rather than the em++ driver.
-            EM_COMPILER_WRAPPER=sccache emcmake cmake --preset wasm -G Ninja
+            # ccache accepts the -Xclang arguments in Emscripten's Clang calls.
+            EM_COMPILER_WRAPPER=ccache emcmake cmake --preset wasm -G Ninja
+            ccache --zero-stats
           elif [[ "$RUNNER_OS" == Windows ]]; then
             cmake --preset "${{ matrix.preset }}" -G Ninja -A "" -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_C_COMPILER_LAUNCHER=sccache
@@ -95,7 +122,7 @@ jobs:
           fi
       - name: Build CLI, libraries and tests
         env:
-          EM_COMPILER_WRAPPER: ${{ matrix.preset == 'wasm' && 'sccache' || '' }}
+          EM_COMPILER_WRAPPER: ${{ matrix.preset == 'wasm' && 'ccache' || '' }}
         run: cmake --build --preset "${{ matrix.preset }}" --parallel "$BUILD_JOBS"
       - name: Test without external fixtures
         run: |
@@ -125,8 +152,12 @@ jobs:
         if: always()
         run: |
           mkdir -p "build/${{ matrix.preset }}"
-          sccache --show-stats 2>&1 | tee "build/${{ matrix.preset }}/sccache.log"
-          sccache --stop-server
+          if [[ "${{ matrix.preset }}" == wasm ]]; then
+            ccache --show-stats --verbose 2>&1 | tee "build/wasm/ccache.log"
+          else
+            sccache --show-stats 2>&1 | tee "build/${{ matrix.preset }}/sccache.log"
+            sccache --stop-server
+          fi
       - name: Upload CLI and libraries
         uses: actions/upload-artifact@v7
         with:
@@ -156,3 +187,4 @@ jobs:
           path: |
             build/${{ matrix.preset }}/ctest.log
             build/${{ matrix.preset }}/sccache.log
+            build/${{ matrix.preset }}/ccache.log

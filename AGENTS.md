@@ -14,7 +14,8 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
   under `build/<preset>`. `wasm` needs Emscripten and Ninja: `emcmake cmake --preset wasm`.
 - `cmake --preset mac && cmake --build --preset mac --parallel && ctest --preset mac`
   is the development loop; substitute any native platform's preset for `mac`.
-- CI uses Ninja and sccache; sccache is optional and not required by local presets.
+- CI uses Ninja with sccache for native builds and ccache for Emscripten's Clang calls;
+  neither compiler cache is required by local presets.
 - Unit tests use small local fixtures, not external expectation sets or dictionary totals.
 - `tools/snapshot.sh` records built-CLI outputs; `tools/compare.sh` reports baseline changes.
 - `tools/fetch-syosetu.sh` and `tools/e2e.sh` compare two builds on the public web-novel

@@ -35,7 +35,8 @@ WebAssembly needs Emscripten and Ninja:
 
 The native C API library is `hdTransEngine.dll`, `libhdTransEngine.so`, or
 `libhdTransEngine.dylib`; `J2KEngine.dll` is Windows-only.
-CI uses Ninja and sccache on all platforms; sccache is not needed for local builds.
+CI uses Ninja with sccache for native builds and ccache for Emscripten's Clang calls.
+Neither compiler cache is needed for local builds.
 
 ## Layout
 
