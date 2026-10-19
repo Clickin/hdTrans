@@ -16,6 +16,7 @@ const char* ProvenanceName(Provenance layer) {
         case Provenance::Initial: return "Initial";
         case Provenance::Rewrite: return "Rewrite";
         case Provenance::Scorer: return "Scorer";
+        case Provenance::Misread: return "Misread";
     }
     return "None";
 }

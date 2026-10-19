@@ -1,4 +1,5 @@
 #include "core/word/flush.h"
+#include "core/word/misread.h"
 #include "core/word/select.h"
 
 namespace hdTrans::word {
@@ -54,6 +55,7 @@ void Flush(Flusher& f) {
         if (f.w.settings.text) ExclaimedAdjective(f);
     }
     if (f.w.settings.text) VerbNegative(f);
+    if (f.w.settings.text && f.w.settings.improvements.misreadFilter) FilterMisreads(f);
 }
 
 }  // namespace hdTrans::word

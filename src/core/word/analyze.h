@@ -15,6 +15,7 @@
 namespace hdTrans::word {
 
 class Worker;
+struct MisreadModel;
 struct SessionSenses;
 
 // Each switch and its default; reference mode disables every switch.
@@ -34,7 +35,8 @@ struct SessionSenses;
     X(nonterminalBoundary, true)      /* End an unterminated ending at the query boundary. */ \
     X(tailLengthCheck, false)         /* Measure the matched tail rather than the whole record. */ \
     X(preparedNextToken, false)       /* Canonicalize lookahead token text before lookup. */ \
-    X(forwardTerminal, false)         /* Visit terminal-form candidates from left to right. */
+    X(forwardTerminal, false)         /* Visit terminal-form candidates from left to right. */ \
+    X(misreadFilter, false)           /* Replace a chosen candidate the misread model scores as a misreading. */
 
 struct Improvements {
 #define HDTRANS_IMPROVEMENT_FIELD(name, defaultValue) bool name = defaultValue;
@@ -76,6 +78,7 @@ struct Settings {
     std::span<const Scorer> shadowScorers;  // recorded only when selectShadow is set
     bool selectShadow = false;
     bool selectRules = false;  // scorers may override context or rule choices, never sense rows
+    const MisreadModel* misreadModel = nullptr;  // the misread filter's model; null for the built-in one
     // The speech level (an output register, 0 for automatic) of sentence-final plain
     // and polite predicates; it selects the plain-dictionary end rows with a register.
     uint8_t registers[2] = {0, 0};

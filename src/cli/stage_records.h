@@ -15,6 +15,7 @@
 #include "core/engine/driver.h"
 #include "core/engine/glue.h"
 #include "core/text/utf8.h"
+#include "core/word/misread.h"
 
 namespace hdTrans::cli::stagerecords {
 
@@ -24,6 +25,8 @@ struct Collector {
     Records records;
     int key = 0;
     int caseBase = 0;
+    // The marker families that spell the dictionary forms of MC records; null for none.
+    const output::Families* families = nullptr;
     internal::StageObserver forward;
 
     void Add(std::string record) {
@@ -166,11 +169,53 @@ inline std::string SRecord(int chunk, int sent, const output::ResolvedItem& it) 
     return out;
 }
 
+// The facts the misread features read (MI items, MC entries with their dictionary forms,
+// MS sound readings) and the features and scores of each decision candidate (MF).
+inline void MisreadRecords(Collector& c, int chunk, int sentence, const word::Chain& chain) {
+    auto part = [](const word::Entry& e) { return std::string(1, e.cls == 0 ? '_' : e.cls) + std::string(e.code); };
+    auto lemma = [&](const word::Entry& e) { return c.families ? Esc(output::Lemma(e.dst, *c.families)) : std::string(); };
+    const std::string at = std::to_string(chunk) + "\t" + std::to_string(sentence) + "\t";
+    int index = 0;
+    std::map<const word::Item*, int> indices;
+    for (const word::Item* it = chain.head; it != nullptr; it = it->next, index++) {
+        indices[it] = index;
+        const word::MisreadContext m = word::MisreadContextOf(*it);
+        const std::string n = at + std::to_string(index) + "\t";
+        c.Add("MI\t" + n + std::to_string(it->tokenIndex) + ":" + std::to_string(it->start) + "\t" +
+              std::to_string(it->length) + "\t" + Esc(it->group->surface) + "\t" + Esc(m.before) + "\t" +
+              Esc(m.after) + "\t" + (m.lineStart ? "1" : "0") + "\t" + std::to_string(it->detail->cls) + "\t" +
+              (it->Fixed() ? "1" : "0") + "\t" + std::to_string(it->selected) + "\t" +
+              word::ProvenanceName(it->choice.layer) + "\t" + Esc(it->DirectSurface()) + "\t" +
+              std::to_string(it->DirectIndex()) + "\t" + word::ProvenanceName(it->directChoice.layer));
+        int k = 0;
+        for (const word::Entry* e : it->group->entries) {
+            c.Add("MC\t" + n + "W\t" + std::to_string(k++) + "\t" + Esc(part(*e)) + "\t" + Esc(e->attr) + "\t" +
+                  Esc(e->gattr) + "\t1\t" + Esc(e->dst) + "\t" + lemma(*e));
+        }
+        for (int d = 0; d < it->DirectCount(); d++) {
+            const word::Entry& e = *it->DirectEntry(d);
+            c.Add("MC\t" + n + "E\t" + std::to_string(d) + "\t" + Esc(part(e)) + "\t" + Esc(e.attr) + "\t" +
+                  Esc(e.gattr) + "\t" + (it->DirectEnabled(d) ? "1" : "0") + "\t" + Esc(e.dst) + "\t" + lemma(e));
+        }
+        if (const std::string sound = word::SoundReading(*it, m); !sound.empty()) c.Add("MS\t" + n + Esc(sound));
+    }
+    for (const word::MisreadDecision& d : word::MisreadDecisions(chain, word::BuiltinMisreadModel())) {
+        const std::string n = at + std::to_string(indices[d.item]) + "\t" +
+                              (d.kind == word::MisreadDecisionKind::Word ? "W" : "E") + "\t";
+        for (const word::MisreadCandidate& cand : d.candidates) {
+            std::string r = "MF\t" + n + std::to_string(cand.slot) + "\t" + std::to_string(cand.score);
+            for (const std::string& f : cand.features) r += "\t" + Esc(f);
+            c.Add(std::move(r));
+        }
+    }
+}
+
 inline void OnResolved(void* context, int chunk, int sentence, const word::Chain& chain) {
     auto* c = static_cast<Collector*>(context);
     std::vector<output::ResolvedItem> items;
     internal::ResolvedItems(chain, items);
     for (const output::ResolvedItem& it : items) c->Add(SRecord(chunk, sentence, it));
+    MisreadRecords(*c, chunk, sentence, chain);
     if (c->forward.resolved) c->forward.resolved(c->forward.context, chunk, sentence, chain);
 }
 
@@ -228,7 +273,7 @@ inline bool Dump(const std::string& dir, const Collector& c) {
         std::fprintf(stderr, "hdtrans: cannot create stage directory %s: %s\n", dir.c_str(), ec.message().c_str());
         return false;
     }
-    for (const char* tag : {"N", "SN", "P", "CH", "T", "CM", "L", "LC", "LD", "S", "K", "C", "R1", "R2", "R3", "OUT"}) {
+    for (const char* tag : {"N", "SN", "P", "CH", "T", "CM", "L", "LC", "LD", "S", "MI", "MC", "MS", "MF", "K", "C", "R1", "R2", "R3", "OUT"}) {
         const std::string path = (std::filesystem::path(dir) / (std::string("input.") + tag + ".got.tsv")).string();
         std::FILE* f = std::fopen(path.c_str(), "wb");
         if (f == nullptr) {

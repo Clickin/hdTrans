@@ -63,6 +63,11 @@ printf '%s' '学生です。' | build/mac/hdtrans -dicts dicts -stages stages
 있습니다. `-raw`를 붙이면 단어 파이프라인만, `-each`를 붙이면 줄마다 새 세션으로 기록합니다.
 `-why`는 단어 선택과 shadow 점수를 표준 오류로 씁니다([api.md](api.md#명령줄-hdtrans)).
 
+오독 필터의 기록은 문장의 선택이 끝난 뒤(S와 같은 시점)에 남습니다. `MI`는 체인의 단어마다 위치, 표면형,
+앞뒤 글자, 줄 첫머리 여부, 선택과 출처, `MC`는 단어의 후보(W)와 어미 후보(E)마다 품사·의미·문법 코드,
+사용 가능 여부, 한국어와 사전형, `MS`는 소리 읽기, `MF`는 결정의 후보마다 내장 모델 점수와 특징입니다.
+`tools/misread/check.py`는 MI·MC·MS로 같은 특징을 다시 만들어 MF와 비교합니다([misread-classifier.md](misread-classifier.md)).
+
 ## 자체 기준선
 
 ```sh

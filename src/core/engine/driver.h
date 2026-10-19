@@ -70,6 +70,7 @@ struct TranslationOptions {
     std::span<const word::Scorer> shadowScorers;
     bool selectShadow = false;
     bool selectRules = false;
+    const word::MisreadModel* misreadModel = nullptr;  // null: the built-in model
     // The pre-filter rewrites each line before translation and the post-filter its
     // translation; their user dictionary joins the lookups. Null for none.
     const filter::Filters* filters = nullptr;

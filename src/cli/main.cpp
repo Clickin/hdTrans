@@ -14,6 +14,7 @@
 //   -why                  write word choices and shadow scores to stderr
 //   -stages DIR           write stage records (also HDTRANS_DRIVER_DUMP)
 //   -select-shadow        score shortest targets without changing the translation
+//   -misread              replace candidates the misread model scores as misreadings
 //   -in FILE              read the input from FILE
 #include <cstdint>
 #include <cstdio>
@@ -160,6 +161,7 @@ int main(int argc, char** argv) {
     bool each = false;
     bool why = false;
     bool selectShadow = false;
+    bool misread = false;
     bool reference = false;
     bool verifyDicts = false;
     bool compileDicts = false;
@@ -179,8 +181,9 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-no-cache")) noCache = true;
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
+        else if (!std::strcmp(a, "-misread")) misread = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-stages DIR] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-misread] [-stages DIR] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
@@ -276,6 +279,7 @@ int main(int argc, char** argv) {
     hdTrans::internal::TranslationOptions options;
     options.reference = reference;
     options.filters = filters.get();
+    options.wordImprovements.misreadFilter = misread;
     if (selectShadow) {
         options.shadowScorers = diagnosticScorers;
         options.selectShadow = true;
@@ -289,6 +293,7 @@ int main(int argc, char** argv) {
     }
     stagerecords::Collector collector;
     const bool stages = !stagesDir.empty();
+    collector.families = &generated->families;
     if (stages) observer = stagerecords::ObserverFor(collector, observer);
 
     if (!raw && !each) {

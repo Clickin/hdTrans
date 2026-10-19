@@ -101,6 +101,7 @@ word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions&
         s.shadowScorers = options.shadowScorers;
         s.selectShadow = options.selectShadow;
         s.selectRules = options.selectRules;
+        s.misreadModel = options.misreadModel;
     }
     s.sessionSenses = text ? sessionSenses : nullptr;
     return s;

@@ -6,7 +6,7 @@ namespace hdTrans::word {
 
 enum class Provenance : uint8_t {
     None, Fixed, LocalRule, GlobalRule, Single, FirstXxx, Digit,
-    Sense, SenseDefault, Initial, Rewrite, Scorer,
+    Sense, SenseDefault, Initial, Rewrite, Scorer, Misread,
 };
 
 struct Selection {
