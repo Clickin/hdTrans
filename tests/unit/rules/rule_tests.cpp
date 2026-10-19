@@ -24,12 +24,12 @@ struct Dictionaries {
 
 const Dictionaries* Loaded() {
     static const Dictionaries d = [] {
-        Dictionaries d;
+        Dictionaries loaded;
         const char* dir = std::getenv("HDTRANS_DICTS");
-        if (dir == nullptr || *dir == 0) return d;
-        d.snapshot = dict::LoadFolders({dir}).snapshot;
-        if (d.snapshot) d.generated = internal::NewGenerated(*d.snapshot);
-        return d;
+        if (dir == nullptr || *dir == 0) return loaded;
+        loaded.snapshot = dict::LoadFolders({dir}).snapshot;
+        if (loaded.snapshot) loaded.generated = internal::NewGenerated(*loaded.snapshot);
+        return loaded;
     }();
     return d.snapshot ? &d : nullptr;
 }
