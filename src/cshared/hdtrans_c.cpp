@@ -223,6 +223,6 @@ int hdTrans_FilterErrors(char** out, size_t* outn) {
 
 void hdTrans_FreeMem(void* p) { std::free(p); }
 
-const char* hdTrans_Version(void) { return "0.0.0"; }
+const char* hdTrans_Version(void) { return HDTRANS_VERSION; }
 
 }  // extern "C"

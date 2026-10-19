@@ -2,6 +2,7 @@
 # J2KEngine.dll (J2K_* exports) on Windows; WebAssembly with Emscripten. Presets: CMakePresets.json.
 cmake_minimum_required(VERSION 3.25)
 project(hdtrans LANGUAGES C CXX)
+include(cmake/version.cmake)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -78,6 +79,8 @@ add_library(hdtrans STATIC ${HDTRANS_SOURCES}
     "${CMAKE_CURRENT_BINARY_DIR}/builtin_gen.cpp" "${CMAKE_CURRENT_BINARY_DIR}/builtin_extra_gen.cpp"
     "${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp")
 target_link_libraries(hdtrans PRIVATE pcre2-16 yaml)
+set_source_files_properties(src/cli/main.cpp src/cshared/hdtrans_c.cpp PROPERTIES
+    COMPILE_DEFINITIONS HDTRANS_VERSION="${HDTRANS_VERSION}")
 if(HDTRANS_INTERPRET_RULES)
     target_compile_definitions(hdtrans PRIVATE HDTRANS_INTERPRET_RULES)
 endif()
@@ -137,6 +140,8 @@ if(NOT EMSCRIPTEN)
     target_include_directories(hdtrans_tests PRIVATE tests/unit src)
     target_link_libraries(hdtrans_tests PRIVATE hdtrans_gui_support)
     enable_testing()
+    add_test(NAME cli.version COMMAND hdtrans_cli -version)
+    set_tests_properties(cli.version PROPERTIES PASS_REGULAR_EXPRESSION "${HDTRANS_VERSION}")
     add_test(NAME unit COMMAND hdtrans_tests)
     if(UNIX)
         add_test(NAME cli.config COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/tests/config.sh" "$<TARGET_FILE:hdtrans_cli>")
@@ -243,6 +248,10 @@ elseif(WIN32)
     target_compile_definitions(hdtrans_gui PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX
         WINVER=0x0A00 _WIN32_WINNT=0x0A00)
     target_link_libraries(hdtrans_gui PRIVATE hdtrans_gui_support comctl32 comdlg32 shell32 gdi32 user32)
+    hdtrans_version_resource(hdtrans_cli hdtrans.exe VFT_APP)
+    hdtrans_version_resource(hdtrans_gui hdTransGUI.exe VFT_APP)
+    hdtrans_version_resource(hdtrans_dll hdTransEngine.dll VFT_DLL)
+    hdtrans_version_resource(j2kengine J2KEngine.dll VFT_DLL)
     if(MINGW)
         target_compile_definitions(hdtrans_gui PRIVATE HDTRANS_RC_MANIFEST)
         target_link_options(hdtrans_gui PRIVATE -municode)

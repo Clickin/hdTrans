@@ -107,7 +107,7 @@ cmake --build --preset wasm --parallel
 
 ## CI
 
-`.github/workflows/`의 두 워크플로가 GitHub Actions에서 돌아갑니다.
+`.github/workflows/`의 워크플로가 GitHub Actions에서 돌아갑니다.
 
 - **build.yml**: `linux`, `windows-x64`, `windows-x86`, `mac`, `wasm` 프리셋을 각 OS 러너에서
   빌드합니다. 모든 플랫폼에서 Ninja를 쓰고, 컴파일 캐시는 네이티브 빌드가 sccache, `wasm`이 ccache입니다
@@ -116,7 +116,31 @@ cmake --build --preset wasm --parallel
   Node로 `tools/wasm_smoke.mjs`를 실행해 작은 사전으로 한 번 번역해 봅니다(셋째 인자로 그 사전을
   컴파일한 `.hdsnap`을 주면 그것으로도 불러 봅니다). 결과물은
   `hdtrans-<프리셋>` 아티팩트로 올라갑니다.
-- **e2e.yml**: 풀 리퀘스트와 `main` 푸시 때, 현재 커밋의 CLI로 비공개 테스트 데이터를 번역해 기대 출력과
+- **release.yml**: `build.yml`의 결과를 받아 Windows ZIP과 Linux, macOS tar.gz, `SHA256SUMS.txt`를
+  만듭니다. Windows는 x86 `J2KEngine.dll`, x64 CLI, GUI, C API와 별도의 x86 CLI, C API를 담습니다.
+  WASM은 기존 빌드 아티팩트로 제공하며 웹 번들 ZIP은 만들지 않습니다.
+- **e2e.yml**: 풀 리퀘스트와 `main`, `develop` 푸시 때, 현재 커밋의 CLI로 비공개 테스트 데이터를 번역해 기대 출력과
   달라진 줄을 보고합니다. 자세한 내용은 [testing.md](testing.md#ci)에 있습니다.
 
 로컬 빌드에는 sccache와 ccache 모두 필요 없습니다.
+
+## 릴리스
+
+`main`에 `develop`을 병합한 뒤 릴리스할 커밋에서 태그를 푸시합니다.
+
+```sh
+git tag v0.1.0 && git push github v0.1.0
+```
+
+전체 플랫폼 빌드와 테스트가 통과하면 패키지와 SHA-256 목록을 GitHub Release에 올립니다.
+릴리스 노트는 이전 태그 이후의 커밋 제목이며 머지 커밋을 먼저 나열합니다.
+`develop` 푸시는 `nightly` 태그를 옮기고 같은 이름의 사전 릴리스 하나와 첨부 파일을 갱신합니다.
+
+Actions의 **Build → Run workflow**에서 `dry_run=true`로 실행하면 패키지를 `release-packages`
+아티팩트로만 올립니다. 수동 실행이나 `ci/**` 브랜치에서는 태그와 릴리스를 공개하지 않습니다.
+사용자 파일 견본의 스테이징 목록은 `build.yml`의 `HDTRANS_USER_FILES`에서 관리합니다.
+
+버전은 `git describe --tags`에서 가져오며 이동하는 `nightly` 태그는 제외하고 앞의 `v`를 뗍니다.
+태그가 없으면 `0.0.0-<짧은 SHA>`입니다. 소스 압축본처럼 Git 정보도 없으면 `0.0.0-unknown`입니다.
+CLI의 `-version`, C API의 `hdTrans_Version`, Windows EXE와 DLL의 버전 정보에 같은 문자열을 씁니다.
+`J2KEngine.config.yaml`은 아직 읽지 않으므로 배포하지 않습니다. 설정은 `user/hdtrans.config.yaml`을 씁니다.

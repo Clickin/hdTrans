@@ -3,21 +3,29 @@ name: Build
 on:
   push:
     branches: [main, develop, 'ci/**']
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Package artifacts without publishing a release
+        type: boolean
+        default: true
+        required: true
 
 permissions:
   contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/ci/') }}
 
 env:
   SCCACHE_DIR: ${{ github.workspace }}/.sccache
   SCCACHE_CACHE_SIZE: 1G
   CCACHE_DIR: ${{ github.workspace }}/build/ccache
   CCACHE_MAXSIZE: 1G
+  HDTRANS_USER_FILES: hdtrans.config.example.yaml user/userdict.example.txt
 
 jobs:
   build:
@@ -33,6 +41,8 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Set up MSVC for Ninja
         if: runner.os == 'Windows'
         shell: pwsh
@@ -127,6 +137,7 @@ jobs:
       - name: Stage data, examples and licences
         run: |
           root="build/${{ matrix.preset }}"
+          printf '%s\n' "$RUNNER_ARCH" > "$root/ARCH"
           mkdir -p "$root/third_party/pcre2/deps/sljit" "$root/third_party/libyaml"
           cp THIRD-PARTY-NOTICES.txt "$root/"
           cp third_party/pcre2/LICENCE.md "$root/third_party/pcre2/"
@@ -137,7 +148,8 @@ jobs:
             if [[ "$RUNNER_OS" == Windows ]]; then data="$root/hdTrans"; fi
             mkdir -p "$data/dicts" "$data/user"
             cp -R dicts/. "$data/dicts/"
-            cp hdtrans.config.example.yaml user/userdict.example.txt "$data/user/"
+            read -r -a userFiles <<< "$HDTRANS_USER_FILES"
+            cp "${userFiles[@]}" "$data/user/"
           fi
       - name: Test without external fixtures
         run: |
@@ -180,12 +192,13 @@ jobs:
           overwrite: true
           if-no-files-found: error
           path: |
-            build/${{ matrix.preset }}/hdtrans
+            build/${{ matrix.preset }}/hdtrans-version.txt
+            build/${{ matrix.preset }}/ARCH
+            build/${{ matrix.preset }}/hdtrans${{ runner.os == 'Windows' && '.exe' || '' }}
             build/${{ matrix.preset }}/libhdTransCore.a
             build/${{ matrix.preset }}/libhdTransEngine.so
             build/${{ matrix.preset }}/libhdTransEngine.dylib
             build/${{ matrix.preset }}/hdTransGUI.exe
-            build/${{ matrix.preset }}/hdtrans.exe
             build/${{ matrix.preset }}/hdTransCore.lib
             build/${{ matrix.preset }}/hdTransEngine.dll
             build/${{ matrix.preset }}/hdTransEngine.lib
@@ -209,3 +222,15 @@ jobs:
             build/${{ matrix.preset }}/ctest.log
             build/${{ matrix.preset }}/sccache.log
             build/${{ matrix.preset }}/ccache.log
+
+  release:
+    needs: build
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+       (github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v')))
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
