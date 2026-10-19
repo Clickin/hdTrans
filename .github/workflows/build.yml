@@ -173,7 +173,7 @@ jobs:
             sccache --show-stats 2>&1 | tee "build/${{ matrix.preset }}/sccache.log"
             sccache --stop-server
           fi
-      - name: Upload CLI and libraries
+      - name: Upload CLI, GUI and libraries
         uses: actions/upload-artifact@v7
         with:
           name: hdtrans-${{ matrix.preset }}
@@ -184,6 +184,7 @@ jobs:
             build/${{ matrix.preset }}/libhdTransCore.a
             build/${{ matrix.preset }}/libhdTransEngine.so
             build/${{ matrix.preset }}/libhdTransEngine.dylib
+            build/${{ matrix.preset }}/hdTransGUI.exe
             build/${{ matrix.preset }}/hdtrans.exe
             build/${{ matrix.preset }}/hdTransCore.lib
             build/${{ matrix.preset }}/hdTransEngine.dll

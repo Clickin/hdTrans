@@ -7,8 +7,8 @@ hdTrans는 일본어를 한국어로 옮기는 규칙 기반 번역 엔진입니
 
 ## 특징
 
-- **유니코드 코어**: 내부 처리는 모두 UTF-8입니다. Shift-JIS와 CP949는 이지트랜스 호환 함수의
-  입출력에서만 쓰입니다.
+- **유니코드 코어**: 내부 처리는 모두 UTF-8입니다. 다른 문자 인코딩은 이지트랜스 호환 입출력과
+  문서 파일을 읽을 때 변환합니다.
 - **문맥을 기억하는 번역**: 한 문서(세션) 안에서 앞서 나온 이름과 문맥이 뒤 문장의 번역에 반영됩니다.
 - **풍부한 기본 사전**: 일반 어휘, 인명, 캐릭터, 지명, 단체, 작품명, 관용구, 속어, 이표기 사전을 함께 제공합니다.
 - **이지트랜스 호환 API**: `J2KEngine.dll`로 이지트랜스의 `J2K_*` 함수를 쓰는 도구에 연결합니다. 도구별 설치 조건과 검증 범위는 아래 사용법을 확인하세요.
@@ -51,6 +51,16 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 데이터 루트는 프로그램 옆의 `hdTrans/` 폴더(없으면 프로그램 폴더)이며, 그 안의 `user/hdtrans.config.yaml`로 설정합니다([예제](hdtrans.config.example.yaml)).
 
 전체 옵션과 환경 변수는 [docs/api.md](docs/api.md#명령줄-hdtrans)에 있습니다.
+
+### Windows 창: `hdTransGUI.exe`
+
+`hdTransGUI.exe`에서 단문을 번역하거나, **문서 번역**으로 텍스트 파일을 번역할 수 있습니다.
+실행 파일 옆에 `hdTrans/dicts/`를 두세요. 사용자 사전은 `hdTrans/user/userdict.tsv`,
+설정은 `hdTrans/user/hdtrans.config.yaml`에서 엔진을 처음 불러올 때 읽습니다. `hdTrans/`가 없으면
+실행 파일이 있는 폴더를 데이터 루트로 씁니다. 별도 엔진 DLL이나 Visual C++ 런타임 설치는 필요 없습니다.
+
+문서 입력은 Shift-JIS, UTF-8(BOM 유무 무관), UTF-16LE(BOM)를 읽고, 결과는 UTF-8 BOM으로
+저장합니다. 문서 전체의 문맥을 함께 번역하며, **중단**을 누르면 현재 문서 처리 후 결과를 저장하지 않습니다.
 
 ### 이지트랜스 대체: `J2KEngine.dll`
 

@@ -18,6 +18,7 @@
 #include "core/config/config.h"
 #include "core/dict/folders.h"
 #include "core/engine.h"
+#include "frontend/module_dir.h"
 
 namespace {
 
@@ -80,18 +81,6 @@ Char* Block(const std::basic_string<Char>& s) {
     return p;
 }
 
-// The folder of this DLL.
-std::string ModuleDir() {
-    HMODULE self = nullptr;
-    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                       reinterpret_cast<LPCWSTR>(&ModuleDir), &self);
-    wchar_t path[MAX_PATH];
-    const DWORD n = GetModuleFileNameW(self, path, MAX_PATH);
-    std::wstring dir(path, n);
-    const size_t slash = dir.find_last_of(L"\\/");
-    return Utf8FromWide(slash == std::wstring::npos ? L"." : dir.substr(0, slash));
-}
-
 hdTrans::internal::ConfigResult ReadConfig(const std::string& dir) {
     const std::string path = hdTrans::dict::ConfigFile(dir);
     auto config = hdTrans::internal::LoadConfig(path);
@@ -138,7 +127,7 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
         if (g_engine) return 1;
         generation = g_generation;
     }
-    const std::string dir = ModuleDir();
+    const std::string dir = hdTrans::frontend::ModuleDirectory();
     const auto config = ReadConfig(dir);
     const auto& settings = config.settings;
     const auto dirs = settings.dicts.value_or(std::vector<std::string>{hdTrans::dict::ShippedFolder(dir)});
@@ -208,7 +197,7 @@ void __stdcall J2K_ReloadUserDict() {
         if (!g_engine) return;
         generation = g_generation;
     }
-    const std::string dir = ModuleDir();
+    const std::string dir = hdTrans::frontend::ModuleDirectory();
     const auto config = ReadConfig(dir);
     const auto& settings = config.settings;
     const auto dirs = settings.dicts.value_or(std::vector<std::string>{hdTrans::dict::ShippedFolder(dir)});
