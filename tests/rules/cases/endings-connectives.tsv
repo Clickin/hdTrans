@@ -12,3 +12,22 @@ L4470	静かなの。	조용해.	keep	local-ending
 L2947	無理なのよ。	무리야.	fix	local-ending
 L2947	一般的なのよ。	일반적이야.	keep	local-ending
 L2947	簡単なのよ。	간단해.	keep	local-ending
+L4308	値段は安いものの味は悪い。	가격은 싸기는 하지만 맛은 나쁘다.	fix	local-ending
+L4308	値段は安いものの。	가격은 싸기는 하지만.	keep	local-ending
+L1744	泣き出さんばかりの声だ。	울기 시작할 듯한 목소리다.	fix	local-ending
+L1744	泣き出さんばかりに笑う。	울기 시작하듯이 웃는다.	keep	local-ending
+L2787	食べるように準備する。	먹도록 준비한다.	fix	local-ending
+L2787	教わったように準備する。	배운 것처럼 준비한다.	keep	local-ending
+L3950	確認したうえで、出発する。	확인한 후에, 출발한다.	fix	local-ending
+L3950	読んだうえでの判断だ。	읽은 후의 판단이다.	keep	local-ending
+L3452	一般的だと困る。	일반적이라면 곤란하다.	fix	local-ending
+L3452	一般的だと思う。	일반적이라고 생각한다.	keep	local-ending
+L3453	静かだと困る。	조용하다면 곤란하다.	fix	local-ending
+L3453	無理だと困る。	무리라면 곤란하다.	fix	local-ending
+L3453	静かだと知った。	조용하다고 알았다.	keep	local-ending
+L3453	静かだとしたら嬉しい。	조용하다고 하면 기쁘다.	keep	local-ending
+L3453	静かだとして話す。	조용하다고 해 이야기한다.	keep	local-ending
+L3598	涙が出る程面白い。	눈물이 나올 정도로 재미있다.	fix	local-ending
+L3598	声が出る程面白い。	목소리가 나올 정도로 재미있다.	fix	local-ending
+L3598	読めば読む程面白い。	읽으면 읽을수록 재미있다.	keep	local-ending
+L3598	読む程面白い。	읽을수록 재미있다.	keep	local-ending

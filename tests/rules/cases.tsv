@@ -225,7 +225,7 @@ L1730	「じゃ、また明日ね」	「그러면, 또 내일이네」	current	l
 L1730	じゃ私が行ってくるよ。	그러면 내가 다녀올게.	current	local
 L1741	彼は昨日の試合に勝ったみたいだ。	그는 어제의 시합에 이긴 것 같다.	current	local-ending
 L1741	あの人はもう帰ったにちがいない。	그 사람은 벌써 돌아간 것이 틀림없다.	current	local-ending
-L1744	飛び上がらんばかりの喜びだ。	뛰어넘 듯이 기쁨이다.	current	local-ending
+L1744	飛び上がらんばかりの喜びだ。	뛰어넘을 듯한 기쁨이다.	current	local-ending
 L1745	機械の点検を行った。	기계의 점검을 실시했다.	current	local
 L1745	市が人口調査を行う。	시가 인구조사를 실시한다.	current	local
 L1749	明日は雨が降ると思う。	내일은 비가 온다고 생각한다.	current	local-ending
@@ -562,7 +562,7 @@ L3581	母には内緒にしてください。	어머니에게는 비밀로 해 �
 L3587	いいか、よく聞けよ。	좋은가, 잘 들어.	current	local-ending
 L3587	それは君の荷物ではないか。	그것은 너의 짐이 아닌가.	current	local-ending
 L3597	電話ないし、メールで連絡する。	전화없고, 메일로 연락한다.	current	local
-L3598	涙が出る程美味しい。	눈물이 나올수록 맛있다.	current	local-ending
+L3598	涙が出る程美味しい。	눈물이 나올 정도로 맛있다.	current	local-ending
 L3602	あまりに高くて買えないよ。	너무나 비싸서 살 수 없어.	current	local-ending
 L3602	あまりに寒くて眠れなかった。	너무나 추워서 잘 수 없었다.	current	local-ending
 L3604	ここで騒ぐな。	여기서 떠들지 말아라.	current	local-ending
@@ -650,7 +650,7 @@ L4240	いただきます、後で返します。	잘 먹겠습니다, 나중에 
 L4280	一目彼女の顔を見たい。	일목 그녀의 얼굴을 보고 싶다.	current	local
 L4281	今日は友達と一緒に買い物へ行く。	오늘은 친구와 함께 쇼핑하러 간다.	current	local
 L4305	方針に従って申し込む。	방침에 따르고 신청한다.	current	local
-L4308	値段は高いものの品質が良い。	가격은 비싼 품질이 좋다.	current	local-ending
+L4308	値段は高いものの品質が良い。	가격은 비싸기는 하지만 품질이 좋다.	current	local-ending
 L4331	彼は医者であり、作家でもある。	그는 의사이며, 작가이기도 하다.	current	local-ending
 L4331	それは事実であり、変えられない。	그것은 사실이며, 바꿀 수 없다.	current	local-ending
 L4353	そんなこと知らなかったなあ。	그런 일 몰랐다.	current	local
