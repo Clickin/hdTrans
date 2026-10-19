@@ -121,6 +121,10 @@ struct Program {
     std::string literals;
     std::vector<uint32_t> localRules;  // root node of each local rule
     std::vector<GlobalRule> globalRules;
+    // Native code of rules (src/core/rules/compiled.h), by the index of localRules and
+    // globalRules; a rule without code (shorter vector or null) evaluates its nodes. The
+    // code of a rule makes the calls its nodes make.
+    std::vector<bool (*)(Item*)> localCode, globalCode;
 };
 
 // How often each rule ran and how often it was true: local rules by index, global rules by

@@ -76,7 +76,9 @@ bool RunLocal(const Program& program, Item* pwi, int ruleIndex, Tally* tally) {
     if (ruleIndex < 0 || static_cast<std::size_t>(ruleIndex) >= program.localRules.size()) return false;
     const std::size_t index = static_cast<std::size_t>(ruleIndex);
     if (pwi) pwi->SetRuleContext(false, ruleIndex);
-    const bool result = Run(program, program.localRules[index], pwi);
+    const bool result = index < program.localCode.size() && program.localCode[index]
+                            ? program.localCode[index](pwi)
+                            : Run(program, program.localRules[index], pwi);
     if (pwi) pwi->SetRuleContext(false, -1);
     if (tally && index < tally->localRuns.size()) {
         tally->localRuns[index]++;
@@ -95,7 +97,8 @@ bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char p
         if (r.uganRule != uganRule || r.pumsa != pumsa) continue;
         if (uganRule && (r.number <= lo || r.number >= hi)) continue;
         if (pwi) pwi->SetRuleContext(true, r.number);
-        const bool result = Run(program, r.root, pwi);
+        const bool result = i < program.globalCode.size() && program.globalCode[i] ? program.globalCode[i](pwi)
+                                                                                     : Run(program, r.root, pwi);
         if (pwi) pwi->SetRuleContext(true, -1);
         if (tally && i < tally->globalRuns.size()) {
             tally->globalRuns[i]++;

@@ -131,7 +131,7 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
         done.chunk = index;
         {
             std::lock_guard<std::mutex> lock(generated.mu);
-            ResolveSentence(RulesProgram(), generated.families, analysis, k);
+            ResolveSentence(options.rules ? *options.rules : RulesProgram(), generated.families, analysis, k);
             if (observer.resolved) observer.resolved(observer.context, index, static_cast<int>(k), sentence.chain);
             ResolvedItems(sentence.chain, s.items);
             BuildTexts(s.tokens, analysis, sentence.first, sentence.last, s.texts);

@@ -72,6 +72,7 @@ struct TranslationOptions {
     bool selectRules = false;
     const word::MisreadModel* misreadModel = nullptr;  // null: the built-in model
     rules::Tally* ruleTally = nullptr;  // counts the runs of the selection rules when set
+    const rules::Program* rules = nullptr;  // the selection rules; null for the built-in program
     // The pre-filter rewrites each line before translation and the post-filter its
     // translation; their user dictionary joins the lookups. Null for none.
     const filter::Filters* filters = nullptr;

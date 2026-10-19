@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(HDTRANS_WERROR "Treat compiler warnings as errors" ON)
+option(HDTRANS_INTERPRET_RULES "Evaluate every selection rule with the interpreter, ignoring compiled rules" OFF)
 
 if(MSVC)
     # Static CRT: the DLL is one file inside a host that ships no runtime of ours.
@@ -71,6 +72,9 @@ add_library(hdtrans STATIC ${HDTRANS_SOURCES}
     "${CMAKE_CURRENT_BINARY_DIR}/builtin_gen.cpp" "${CMAKE_CURRENT_BINARY_DIR}/builtin_extra_gen.cpp"
     "${CMAKE_CURRENT_BINARY_DIR}/rules_gen.cpp")
 target_link_libraries(hdtrans PRIVATE pcre2-16)
+if(HDTRANS_INTERPRET_RULES)
+    target_compile_definitions(hdtrans PRIVATE HDTRANS_INTERPRET_RULES)
+endif()
 file(GLOB_RECURSE HDTRANS_DATA_SOURCES CONFIGURE_DEPENDS src/core/*.cpp src/core/*.h)
 list(APPEND HDTRANS_DATA_SOURCES "${HDTRANS_RULES}")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${HDTRANS_DATA_SOURCES})
@@ -135,6 +139,29 @@ if(NOT EMSCRIPTEN)
     add_test(NAME host.admin_priority COMMAND admin_priority "${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/dict/testdata/folder")
     set_tests_properties(host.admin_priority PROPERTIES TIMEOUT 60 PROCESSORS 8
         ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/admin-priority-cache")
+
+    # The rule compiler (docs/rule-compiler.md), a host tool. The checks run on the shipped rules,
+    # and the committed compiled rules must be its output for them.
+    if(NOT CMAKE_CROSSCOMPILING)
+        # It builds from the rule and code sources only, not from the library that holds its output.
+        file(GLOB HDTRANS_RULEC_SOURCES CONFIGURE_DEPENDS src/rulec/*.cpp)
+        add_executable(hdrulec ${HDTRANS_RULEC_SOURCES} src/core/rules/load.cpp src/core/rules/eval.cpp
+            src/core/rules/match.cpp src/core/rules/attr_families_gen.cpp src/core/dict/codes.cpp
+            src/core/dict/pos_tags_gen.cpp)
+        target_include_directories(hdrulec PRIVATE src)
+        add_test(NAME rules.lint COMMAND hdrulec lint "${HDTRANS_RULES}")
+        add_test(NAME rules.verify COMMAND hdrulec verify "${HDTRANS_RULES}" -paths 4096)
+        add_test(NAME rules.generated COMMAND hdrulec cpp "${HDTRANS_RULES}" -local 0-499 -globals
+            -check "${CMAKE_CURRENT_SOURCE_DIR}/src/core/rules/compiled_gen.cpp")
+        # The test lines of the rules, one unit test each (ruletest_L3_1, ...), run with dicts/.
+        add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/rule_tests_gen.cpp"
+            COMMAND hdrulec tests "${HDTRANS_RULES}" -o "${CMAKE_CURRENT_BINARY_DIR}/rule_tests_gen.cpp"
+            DEPENDS hdrulec "${HDTRANS_RULES}" VERBATIM)
+        target_sources(hdtrans_tests PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/rule_tests_gen.cpp")
+        add_test(NAME rules.tests COMMAND hdtrans_tests ruletest_)
+        set_tests_properties(rules.tests PROPERTIES ENVIRONMENT
+            "HDTRANS_DICTS=${CMAKE_CURRENT_SOURCE_DIR}/dicts;HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/rules-cache")
+    endif()
 
     # Dumps compiled dictionary entries and lookups over input lines.
     add_executable(snapshot_check tests/snapshot_check/main.cpp)

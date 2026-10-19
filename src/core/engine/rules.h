@@ -10,7 +10,8 @@ namespace hdTrans::internal {
 // The lines of src/core/rules/rules.txt, each ending in "\n" (generated at build time).
 std::span<const std::string_view> RuleLines();
 
-// The loaded program; loaded on first use and immutable afterwards.
+// The loaded program, with the compiled code (compiled_gen.cpp) of the rules whose record
+// lines it was generated from; loaded on first use and immutable afterwards.
 const rules::Program& RulesProgram();
 // Whether RulesProgram loaded.
 bool RulesLoaded();
