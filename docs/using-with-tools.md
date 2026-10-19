@@ -78,6 +78,29 @@ Ehnd 데이터는 DLL 옆 `Ehnd/`에서 읽습니다. 지원 범위는 [Ehnd 호
 - **CI:** DLL 부분은 `host.anemone`과 같습니다. Textractor 자체의 직접 로드 검증이 아닙니다.
   게임 후킹, 선택한 텍스트 스레드, 클립보드 전달과 중복 번역은 실제 Windows에서 확인해야 합니다.
 
+### 아랄트랜스, AralTrans의 EzTransXP 플러그인
+
+- 공통 준비 후 EzTransXP 번역 플러그인을 선택합니다. [0.2 소스][aral02]는
+  **`HKCU\Software\ChangShin\ezTrans`의 `FilePath`**에서 엔진 폴더를 읽습니다. 값을 얻지 못하면 폴더 선택 창에서 `C:\hdTrans`를 지정할 수 있습니다.
+  한글 경로에는 경고를 띄우므로 영문 경로를 씁니다. ATCode는 엔진 로더가 아니라 별도 후킹 플러그인입니다.
+- 이지트랜스 없이 레지스트리 자동 탐색을 쓰려면 아래를 `.reg` 파일로 저장해 가져옵니다. 기존 값은 먼저 백업하세요.
+  다른 도구의 자동 탐색에도 영향을 줍니다. 이 키는 [32비트와 64비트가 공유][registry-view]하므로 **`Wow6432Node`를 넣지 않습니다**.
+
+  ```reg
+  Windows Registry Editor Version 5.00
+
+  [HKEY_CURRENT_USER\Software\ChangShin\ezTrans]
+  "FilePath"="C:\\hdTrans"
+  ```
+
+- 로드 경로는 `<폴더>\Dat\..\J2KEngine.dll`입니다. InitializeEx, TranslateMMNT, FreeMem, StopTranslation, Terminate 순으로
+  5개 export를 모두 확인한 뒤 `InitializeEx("CSUSER123455", "<폴더>\\Dat")`를 부릅니다. 경로는 시스템 ANSI입니다.
+  [ATCode 경계][aral-encoding]의 CP932 입력을 `TranslateMMNT(0, text)`에 넘기고 CP949 출력을 처리한 뒤 `FreeMem(pointer)`으로 해제합니다.
+  종료는 **`StopTranslation(0)`**이며 Terminate와 FreeLibrary는 호출하지 않습니다. W export를 탐지하거나 별도 Ehnd를 읽지는 않습니다.
+- **CI:** `host.aral02`는 로드부터 Stop까지 같은 작업 스레드에서 재현합니다. [0.3 소스][aral03]에 맞춘 `host.aral03`은
+  호출 측에서 로드와 export 조회, 작업 스레드에서 초기화와 번역, 다시 호출 측에서 Stop을 수행합니다.
+  없는 `Dat`를 거치는 로드 경로도 검사합니다. 레지스트리 UI, 실제 게임 주입, 필터와 ATCode 적용은 수동 검증 대상입니다.
+
 ### HTTP 중개: nanikit/eztrans-server
 
 - 공통 준비 후 terminal 버전에서 `EztransServer.exe --dll-path "C:\hdTrans\J2KEngine.dll"`로 지정합니다.
@@ -89,11 +112,30 @@ Ehnd 데이터는 DLL 옆 `Ehnd/`에서 읽습니다. 지원 범위는 [Ehnd 호
 - **CI:** `host.eztransserver`. 2.4.0을 표시한 소스의 네이티브 호출을 재현합니다. NuGet 바이너리 동일성, HTTP 요청과 응답,
   GUI 자동 탐색은 수동 검증 대상입니다. 기본 서버 주소는 `http://localhost:8000/`입니다.
 
+### HTTP 중개: HelloKS/ezTransWeb
+
+- 공통 준비의 파일을 소스에 지정된 `C:\Program Files (x86)\ChangShinSoft\ezTrans XP`에 두고,
+  기존 H 파일을 백업한 뒤 hdTrans의 `J2KEngine.dll`을 **`J2KEngineH.dll`** 이름으로도 복사합니다.
+  다른 폴더라면 [eztrans.py][eztransweb]의 DLL과 `Dat` 경로를 함께 수정합니다. x86 Python과 Flask를 사용합니다.
+- 소스는 WinDLL로 로드 → InitializeEx, TranslateW 조회 → 같은 키와 하드코딩한 ANSI `Dat`로 초기화
+  → `TranslateMMNTW(0, UTF-16)`입니다. `c_wchar_p`가 결과를 복사하며 **FreeMem, Terminate, unload는 없습니다**.
+  Flask의 `threaded=True` 요청들이 외부 잠금 없이 엔진을 부릅니다.
+- **CI:** `host.eztransweb`는 hdTrans의 H 이름 복사본을 로드하고, 두 스레드의 동시 호출과 원본처럼 해제하지 않는 순서를 재현합니다.
+  XUnity와 마찬가지로 **결과 버퍼 누수는 남습니다**. Python ctypes, Flask HTTP와 자체 전후처리는 수동 검증 대상입니다.
+
+### 투컨트롤, TwoControl
+
+- [2018년 사용 안내][twocontrol-guide]에는 후킹 후 나타나는 창에서 **ezTrans XP 설치 폴더를 선택**하는 절차가 있습니다.
+  기본 설치 폴더 예시가 나올 뿐, 그 경로가 프로그램에 하드코딩됐다는 근거는 아닙니다.
+- 공개 구현 소스는 확보하지 못했습니다. 자동 탐지 방식, 레지스트리 키, 경로 저장 위치, DLL 이름과 J2K 호출은 **직접 확인 못 함**입니다.
+  다른 도구와 같은 레지스트리 키를 쓸 것이라고 추정하지 않습니다.
+- **CI 없음.** 공통 준비의 hdTrans 폴더를 이 경로 선택 창에서 지정하는 구성은 실제 Windows에서 검증해야 합니다.
+  추가 파일 검사 여부도 알 수 없어 이지트랜스 없이 연결된다고 보장하지 않습니다.
+
 ### 그 밖의 도구
 
 | 도구 | 확인한 범위와 제한 |
 |---|---|
-| [HelloKS/ezTransWeb][eztransweb] | 소스 조사만 함, CI 없음. x86 Python의 WinDLL로 **J2KEngineH.dll**과 `Dat` 경로를 하드코딩하고 같은 키, W 번역을 사용합니다. FreeMem 없이 Flask 스레드들이 잠금 없이 부릅니다. 파일명만 바꿔 호환 확인 완료로 볼 수 없습니다. |
 | [Translator++ transEz][translatorez] | 공식 ezTransXP 지원 공지는 있으나 플러그인 구현 소스를 확보하지 못했습니다. DLL 이름, 호출, 설치 경로와 hdTrans 호환성은 미검증이므로 교체 절차를 제시하지 않습니다. |
 | [MTool][mtool] | 공개 ezTrans 연동 구현과 지원 여부를 확인하지 못했습니다. hdTrans 연결 절차와 CI 검증은 없습니다. |
 
@@ -162,7 +204,7 @@ Windows DLL을 WASM에 넣는 방식은 아닙니다.
 구현은 [네이티브 호스트](../tests/host/tool_compat.cpp)와 [C# 호스트](../tests/host/xunity_host.cs)에 있습니다.
 모든 모드는 없는 `Dat` 경로, 사전 없는 작업 폴더, 잘못된 `HDTRANS_DICTS`를 사용하고 DLL 옆 사전으로 초기화합니다.
 `こんにちは → 안녕하세요`, `日本語 → 일본어`를 반복하여 정확한 인코딩과 결과를 비교하고, 도구의 해제 및 종료 순서를 그대로 따릅니다.
-하네스로 재현한 도구는 DLL 번역을 직렬화하므로 여러 스레드의 동시 번역은 기존 `host.j2k`에서 별도로 검사합니다.
+직렬 처리하는 도구는 순차 호출하며, `host.eztransweb`는 두 스레드가 잠금 없이 부릅니다. 기존 `host.j2k`도 동시 번역을 별도로 검사합니다.
 x86 CI가 실제 엔진 ABI 검증이며 x64 실행은 같은 인터페이스의 추가 검사일 뿐, x64 이지트랜스 배포 지원을 뜻하지 않습니다.
 
 [luna-native]: https://github.com/HIllya51/LunaTranslator/blob/168272ad5088b4a235fd37e1c822d2cb5047c449/src/NativeImpl/LunaSubprocess/eztrans.cpp
@@ -181,3 +223,8 @@ x86 CI가 실제 엔진 ABI 검증이며 x64 실행은 같은 인터페이스의
 [ehnd]: https://github.com/sokcuri/ehnd/tree/a2c6e0fbb309690b440a2e65027076b67e1cd3a2/ehnd
 [translatorez]: https://dreamsavior.net/update-info-translator-ver-5-11-15/
 [mtool]: https://trstest.mtool.app/release.php?lang=en
+[twocontrol-guide]: https://umthink.tistory.com/117
+[aral02]: https://github.com/sokcuri/araltrans02/blob/d5128e3c112e234f2bef532fbd2e51c4e3e73b6d/Translator/ezTransXP/ezTransXP.cpp
+[aral03]: https://github.com/sokcuri/araltrans03/blob/6aa944d1829006a59d0f7e4cf2fef83e3f256481/Translator/ezTransXP/ezTransXP.cpp
+[aral-encoding]: https://github.com/sokcuri/araltrans02/blob/d5128e3c112e234f2bef532fbd2e51c4e3e73b6d/Algorithm/ATCode/HookPoint.cpp#L1558-L1593
+[registry-view]: https://learn.microsoft.com/en-us/windows/win32/winprog64/shared-registry-keys
