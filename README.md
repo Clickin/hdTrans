@@ -96,6 +96,9 @@ hdTrans_Terminate();
 품사를 생략하면 명사입니다. 사용자 사전 폴더를 기본 사전 뒤에 지정합니다:
 `hdtrans -dicts dicts,user`. 품사 목록과 옵션은 [docs/dictionaries.md](docs/dictionaries.md#사용자-사전)를 참고하세요.
 
+Ehnd(꿀도르 등)의 필터와 사용자 사전은 Ehnd 폴더를 그대로 지정해 씁니다:
+`hdtrans -dicts dicts -ehnd "C:\ezTrans XP\Ehnd"`. 형식과 차이는 [docs/ehnd-compat.md](docs/ehnd-compat.md)에 있습니다.
+
 ## 지원 플랫폼
 
 - Windows x86 / x64 (`hdtrans.exe`, `hdTransEngine.dll`, `J2KEngine.dll`)

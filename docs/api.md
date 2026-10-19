@@ -24,6 +24,7 @@ hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-verify-dicts] [-compile-d
 |---|---|
 | `-dicts DIR[,DIR...]` | 불러올 사전 폴더 (순서대로, 뒤가 앞을 덮어씀). 기본값은 현재 폴더 기준 `dicts/base` |
 | `-in FILE` | 표준 입력 대신 FILE을 읽음 |
+| `-ehnd DIR` | Ehnd 폴더 DIR의 필터·SkipLayer·사용자 사전을 씀. 건너뛴 줄은 표준 오류에 씀 ([ehnd-compat.md](ehnd-compat.md)) |
 | `-each` | 줄마다 새 세션 |
 | `-raw` | 줄마다 단어 파이프라인만으로 번역 |
 | `-reference` | 번역 개선 규칙을 끈 기준 모드 |
@@ -150,6 +151,10 @@ CI의 `tools/wasm_smoke.mjs`가 같은 순서로 동작을 확인합니다.
 - `hdTrans::Engine(bool reference = false, CacheWrite cacheWrite = CacheWrite::Sync)`: 불러온 사전.
   여러 세션과 스레드가 함께 씁니다. `Open(dirs, verifyDicts)`, `Reload()`, `loaded()`, `Dictionaries()`.
   `CacheWrite::Off`는 캐시 세대를 저장하지 않고, `Sync`는 `Open`이 끝나기 전에 저장을 시도합니다.
+  `OpenEhnd(dir)`은 Ehnd 폴더의 필터와 사용자 사전을 그 뒤에 만들거나 `Reset`한 세션에 씁니다(빈
+  경로는 뗌, 폴더를 못 읽으면 `false`). `Reload()`는 Ehnd 폴더도 다시 읽고, `FilterErrors()`는 필터
+  파일과 Ehnd 폴더에서 건너뛴 줄을 `파일:줄: 이유`로, `Filters()`는 현재 필터를 돌려줍니다
+  ([ehnd-compat.md](ehnd-compat.md)).
 - `hdTrans::Session(const Engine&, bool reference = false)`: 문맥을 기억하는 번역. 한 번에 한 스레드에서
   씁니다. `Translate(text)`는 `\n`으로 구분한 한 줄 이상을 번역하고(`\r`은 유지), 64 KiB가 넘는 줄은
   16 KiB 이하 조각으로 나눠 번역합니다. `Reset()`은 기억을 지우고 엔진의 현재 사전을 가져옵니다.
