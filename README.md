@@ -40,14 +40,12 @@ WebAssembly: `emcmake cmake --preset wasm && cmake --build --preset wasm`.
 
 `examples/` holds short Japanese documents and their translations:
 
-- `<case>.ja.txt`: the input, translated as one document;
-- `<case>.ko.txt`: the engine's current output, reviewed;
-- `<case>.want.ko.txt`: the correct translation, present only while the engine gets lines wrong;
-- `list.txt`: one line per case (name, line count, want lines correct, what it tests).
+- `<case>.ja.txt`: a `#` line describing the case, then the input, translated as one document;
+- `<case>.ko.txt`: the same `#` line, then the engine's current output, reviewed.
 
 ```sh
 tools/examples.sh build/mac/hdtrans DICTS            # fails on any change from *.ko.txt
-tools/examples.sh build/mac/hdtrans DICTS --accept   # takes the new output and refreshes list.txt
+tools/examples.sh build/mac/hdtrans DICTS --accept   # takes the new output
 ```
 
 Outputs go to `build/examples/`. `ctest` runs the check when `HDTRANS_DICTS` is set and skips it
