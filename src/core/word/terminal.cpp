@@ -79,21 +79,23 @@ bool PauseMarks(std::string_view s) {
 }
 
 // The nouns that an attributive before an ellipsis or a dash still modifies (行く……ことにした).
-constexpr std::string_view kDependentNouns[] = {"こと", "事", "もの", "物", "の", "はず", "筈", "ところ", "所",
+constexpr std::string_view kDependentNouns[] = {"こと", "事", "もの", "物", "の", "ん", "はず", "筈", "ところ", "所",
                                                 "わけ", "訳", "よう", "様", "つもり", "ため", "為", "まま", "ほう",
                                                 "方", "とき", "時", "うち", "くらい", "ぐらい", "ほど"};
 
-// Text input: it ends its token, only ellipsis or dash tokens stand between it and the
-// next item, and that item is a conjunction, or an adverb, a predicate or a noun that
-// does not start with one of kDependentNouns, the noun not ending the sentence
-// (知らない……本当に, 分からない……でも, 帰る――それでいい, 熱すぎる・・・勘弁して, but
-// 行く……ことにした, 消えた……直後。).
+// Text input: it ends its token and is not the quotative いう (とかいう……), only ellipsis
+// or dash tokens stand between it and the next item, and that item is a conjunction, or
+// an adverb, a predicate or a noun that does not start with one of kDependentNouns, the
+// noun not ending the sentence (知らない……本当に, 分からない……でも, 帰る――それでいい,
+// 熱すぎる・・・勘弁して, but 行く……ことにした, いた――んだけど, 消えた……直後。).
 bool PausedClause(const Flusher& f, const Item* it) {
     const Item* next = it->next;
     if (!f.w.settings.text || next == nullptr || next->tokenIndex <= it->tokenIndex + 1 ||
         static_cast<std::size_t>(it->start + it->length) != it->text.size()) {
         return false;
     }
+    const std::string ja = it->group->surface + std::string(it->DirectSurface());
+    if (ja == "いう" || ja == "言う") return false;
     for (int j = it->tokenIndex + 1; j < next->tokenIndex; j++) {
         const tokenizer::TokenView t = f.w.Tok(j);
         if (t.type != tokenizer::kTypeSymbol || !PauseMarks(t.text)) return false;
