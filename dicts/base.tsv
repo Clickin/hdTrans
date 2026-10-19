@@ -3987,8 +3987,8 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 いようですが	4듯 하지만	T500			GN		jisjk:265028		
 いようなら	1을 것 같다면	T500		Yn	GN		jisjk:265536		
 いように	4 것 처럼	T500			GN	1892	jisjk:258669		
-いように	1게	T500	XXX		GN		jisjk:266167		
-いように	1도록	T500			GN		jisjk:354765		
+いように	1게	T500			GN		jisjk:266167		
+いように	1도록	T500	XXX		GN		jisjk:354765		
 いようにと	1도록	T500			GN		jisjk:365570		
 いようにということで	1도록	T500			GN		jisjk:354767		
 いよぎんリース	이요긴 리스	I130	QIDVGt		GN		jisjk:40395		
@@ -119348,7 +119348,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 以降	이후	E310	UMe		GN		jisjk:1840		
 以降	이후	N110	UMe		GN		jisjk:125353		
 仮	가짜	N110			GN		jisjk:115498		
-仮	임시	N110	UMe		GN		jisjk:115499		
+仮	임시	N110	UMe		GN		jisjk:115499		1
 仮	가	N110		Z6	GN		jisjk:258387		
 仮	가	N110		On	GN		jisjk:344722		
 仮とじ	가제본	N110	VBkVSwVCm		GN		jisjk:169710		
@@ -311198,7 +311198,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 茶利	익살스러운 문구나 동작	N110		Hd	GN		jisjk:242864		
 茶利を入れ	익살을 &LG@	M447			GN		jisjk:139965		
 茶化	얼버무&AA@	M433	UTs		GN		jisjk:95192		
-茶化	놀&AA@	M443			GN		jisjk:141670		
+茶化	놀&AA@	M443			GN		jisjk:141670		1
 茶匙	찻숟가락	N110			GN		jisjk:35171		
 茶吉尼天	다키니텐	N110	VHnUCl		GN		jisjk:242298		
 茶器	찻그릇	N110			GN		jisjk:104975		
@@ -326529,7 +326529,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 諌	간언	N110	UTs		GN		jisjk:125377		
 諌	간	N110		On	GN		jisjk:259474		
 諌め	충고&AV@	M437	UTs		GN		jisjk:91660		
-諌め	간언&AV@	M447			GN		jisjk:140679		
+諌め	간언&AV@	M447			GN		jisjk:140679		1
 諌早	이사하야	N130	QCT		GN		jisjk:14551		
 諌早信用金庫	이사하야신용금고	I130			GN		jisjk:108233		
 諌早湾	이사하야만	N130	QCTVPl		GN		jisjk:354840		

@@ -1336,6 +1336,18 @@
 お風呂	욕조	作る,作っ,作り,作ろ,作れ,造る,造っ,造り,造ろ	after	n
 風呂	목욕물	沸かす,沸かし,沸かそ,沸かさ	after	n
 お風呂	목욕물	沸かす,沸かし,沸かそ,沸かさ	after	n
+クソ	똥	だ,だわ,だよ,だな,だね,だろ,だぞ,じゃん,です,でしょ	after	n
+覚える	배우다	言葉,言語,仕事,技,技術,魔法,文字,作法,礼儀,呪文,剣術,方言,ルール,マナー,手順	before	v1
+背	등	に	after	n
+向ける	향하다	マイク,カメラ,銃,銃口,剣,刃,切っ先,杖,矛先,槍,レンズ,スマホ,ライト	before	v1
+取れる	떨어지다	指,瓶,ボタン,蓋,首,腕,角,ネジ,キャップ	before	v1
+擦り付ける	문질러 대다	額,頭,顔,頬,鼻,体,身体,おでこ	before	v1
+方	분	たくさん,多く,大勢,沢山,たくさんの,多くの,大勢の,沢山の,一部の	before	n
+バイパス	우회	し,する,して,さ,させ	after	n
+風	풍	何気ない,さりげない,素知らぬ,何食わぬ,平気な	before	n
+制する	제지하다	手	before	v
+埋まる	파묻히다	壁,土,地面,雪,砂,瓦礫,土砂,泥	before	v5
+主	주인	の	before	n
 
 // Argument classes and case particles; literal collocations above take precedence.
 に	에게	sem:QPN@に/gram:Rc,sem:QNP@に/gram:Rc,sem:VHn@に/gram:Rc,sem:VAm@に/gram:Rc,sem:VGn@に/gram:Rc,sem:VQw@に/gram:Rc,sem:VQm@に/gram:Rc,sem:QAA@に/gram:Rc,sem:QAB@に/gram:Rc,sem:QAC@に/gram:Rc,sem:QAD@に/gram:Rc,sem:QAE@に/gram:Rc,sem:QAF@に/gram:Rc,sem:QAG@に/gram:Rc,sem:QAH@に/gram:Rc	before	p
