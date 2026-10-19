@@ -17,7 +17,7 @@ Ehnd 호환은 기능일 뿐입니다. 꿀도르 같은 Ehnd 사전은 `dicts/`�
 
 ## 쓰는 법
 
-- 실행 파일이나 DLL 옆의 `hdtrans.config.yaml`에 `ehnd: true`를 적으면 그 프로그램 옆의
+- 데이터 루트의 `user/hdtrans.config.yaml`에 `ehnd: true`를 적으면 실행 파일이나 DLL 옆의
   `Ehnd` 폴더를 씁니다. `ehnd: 경로`는 지정한 폴더(상대 경로는 설정 파일 기준)를 씁니다.
   생략하거나 `ehnd: false`이면 폴더가 있어도 쓰지 않습니다.
 - 라이브러리와 DLL은 켠 폴더를 `userdict.tsv`처럼 1초에 한 번까지 확인해, 바뀌면 사전과 함께

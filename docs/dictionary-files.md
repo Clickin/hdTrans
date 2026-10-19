@@ -88,8 +88,11 @@ TSV만 고칩니다. 내장 표의 행은 모두 같은 파일 번호로 컴파�
 
 - 사전 폴더 목록을 차례로 불러오며, 뒤 폴더가 앞 폴더를 덮어씁니다.
 - 각 폴더에서는 최상위의 `*.tsv` 파일만 이름 순서로 읽습니다. 하위 폴더는 읽지 않습니다.
-- CLI는 `-dicts DIR,DIR`(기본값: 실행 파일 옆 `dicts`, 없으면 현재 폴더의 `dicts`), C API는
-  `hdTrans_Initialize`에 폴더 목록을 줍니다. `J2KEngine.dll`은 DLL 옆의 `dicts\`를 씁니다.
+- 프로그램 폴더에 `hdTrans/` 디렉터리가 있으면 데이터 루트로 쓰고, 없으면 프로그램 폴더 자체를 씁니다.
+  이름은 대소문자를 가리지 않습니다. 사전은 `dicts/`, 설정과 사용자 사전은 `user/`에 둡니다.
+  Windows 배포는 `hdTrans/` 아래, macOS와 Linux CLI 배포는 최상위에 이 폴더들을 둡니다.
+- CLI는 `-dicts DIR,DIR`(기본값: 데이터 루트의 `dicts`, 없으면 현재 폴더의 `dicts`), C API는
+  `hdTrans_Initialize`에 폴더 목록을 줍니다. `J2KEngine.dll`은 데이터 루트의 `dicts/`를 씁니다.
 - 폴더 다음에 [사용자 사전 파일](#userdicttsv) `userdict.tsv`를 불러옵니다.
 - 목록의 첫 항목이 `.hdsnap` 파일이면 [컴파일한 사전](#컴파일한-사전-hdsnap)입니다.
 
@@ -140,7 +143,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 
 ## 사용자 사전
 
-사용자 사전은 프로그램 옆의 `userdict.tsv`([아래](#userdicttsv))이거나, 사전 폴더에 둔 머리줄 없는
+사용자 사전은 데이터 루트의 `user/userdict.tsv`([아래](#userdicttsv))이거나, 사전 폴더에 둔 머리줄 없는
 `.tsv` 파일입니다. UTF-8(BOM 허용), 한 줄에 한 항목:
 
 ```
@@ -201,8 +204,10 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 
 ### userdict.tsv
 
-- 위치: 실행 파일(`hdtrans`) 또는 DLL(`J2KEngine.dll`, `hdTransEngine.dll`) 옆. CLI는
-  `-userdict FILE`로 다른 파일을 주거나 빈 값으로 끕니다. 파일이 없으면 사용자 사전 없이 불러옵니다.
+- 위치: 데이터 루트의 `user/userdict.tsv`. 같은 폴더의 `userdict.example.tsv`를 복사해 만듭니다.
+  설정은 `user/hdtrans.config.yaml`입니다. 배포본에는 두 파일의 견본만 넣으며 견본은 읽지 않습니다.
+  옛 프로그램 옆 `userdict.tsv`도 지원합니다. CLI는 `-userdict FILE`로 다른 파일을 주거나 빈 값으로 끕니다.
+  파일이 없으면 사용자 사전 없이 불러옵니다.
 - 사전 폴더 다음에 불러오며, 이름과 위치 때문에 `user` 계층입니다. 머리줄은 없어도 되고, 있으면
   `#! layer=user`여야 합니다. 다른 머리줄은 이 파일 이름을 담은 오류로 불러오기를 실패시킵니다.
 - 일반 파일이면 마지막 사용자 사전(같은 키, 품사의 앞 항목을 대신함)이고, 열 파일이면 `user` 계층 열
@@ -226,10 +231,10 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 
 ### 사용자 사전 쓰기
 
-- CLI: 실행 파일 옆 `userdict.tsv` 또는 `-userdict FILE`. 폴더로 줄 수도 있습니다: `hdtrans -dicts dicts,user`
-- C API: 라이브러리 옆 `userdict.tsv`(자동 반영, 바로 반영은 `hdTrans_Reload()`), 또는
+- CLI: `user/userdict.tsv` 또는 `-userdict FILE`. 폴더로 줄 수도 있습니다: `hdtrans -dicts dicts,user`
+- C API: `user/userdict.tsv`(자동 반영, 바로 반영은 `hdTrans_Reload()`), 또는
   `hdTrans_Initialize("dicts\0user\0")`의 폴더(고친 뒤 `hdTrans_Reload()`)
-- `J2KEngine.dll`: DLL 옆 `userdict.tsv`(자동 반영, 바로 반영은 호스트의 사용자 사전 다시 읽기 `J2K_ReloadUserDict`)
+- `J2KEngine.dll`: `user/userdict.tsv`(자동 반영, 바로 반영은 호스트의 사용자 사전 다시 읽기 `J2K_ReloadUserDict`)
 
 ## 필터와 Ehnd 사전
 

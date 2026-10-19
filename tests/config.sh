@@ -103,4 +103,4 @@ printf 'dicts: missing\n' > "$tmp/bin/user/hdtrans.config.example.yaml"
 [ "$(cat "$tmp/out")" = 옛사전 ]
 "$cli" -in "$tmp/input" > "$tmp/out"
 [ "$(cat "$tmp/out")" = 야옹이 ]
-echo 'CLI config: PASS'  
+echo 'CLI config: PASS'

@@ -22,9 +22,9 @@ hdtrans [-config FILE] [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -r
 
 | 옵션 | 설명 |
 |---|---|
-| `-config FILE` | 실행 파일 옆 `hdtrans.config.yaml` 대신 읽을 설정 파일 |
-| `-dicts DIR[,DIR...]` | 불러올 사전 폴더 (순서대로, 뒤가 앞을 덮어씀). 기본값은 실행 파일 옆 `dicts`, 없으면 현재 폴더의 `dicts`. 첫 항목이 `FILE.hdsnap`이면 폴더의 열 파일 대신 그 [컴파일한 사전](dictionary-files.md#컴파일한-사전-hdsnap)을 씀 |
-| `-userdict FILE` | 사용자 사전 파일로, 불러오지 못하면 실패. 기본값은 실행 파일 옆 `userdict.tsv`(없으면 쓰지 않고, 불러오지 못하면 경고 후 빼고 번역), 빈 값이면 쓰지 않음 |
+| `-config FILE` | 기본 `user/hdtrans.config.yaml` 대신 읽을 설정 파일 |
+| `-dicts DIR[,DIR...]` | 불러올 사전 폴더 (순서대로, 뒤가 앞을 덮어씀). 기본값은 데이터 루트의 `dicts`, 없으면 현재 폴더의 `dicts`. 첫 항목이 `FILE.hdsnap`이면 폴더의 열 파일 대신 그 [컴파일한 사전](dictionary-files.md#컴파일한-사전-hdsnap)을 씀 |
+| `-userdict FILE` | 사용자 사전 파일로, 불러오지 못하면 실패. 기본값은 데이터 루트의 `user/userdict.tsv`(없으면 쓰지 않고, 불러오지 못하면 경고 후 빼고 번역), 빈 값이면 쓰지 않음 |
 | `-in FILE` | 표준 입력 대신 FILE을 읽음 |
 | `-ehnd DIR` | Ehnd 폴더 DIR의 필터, SkipLayer, 사용자 사전을 씀. 기본으로 쓰지 않으며 설정 파일로도 켤 수 있음. 건너뛴 줄은 표준 오류에 씀 ([ehnd-compat.md](ehnd-compat.md)) |
 | `-each` | 줄마다 새 세션 |
@@ -58,10 +58,15 @@ hdtrans [-config FILE] [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -r
 
 ### 설정 파일
 
-실행 파일이나 DLL 옆의 `hdtrans.config.yaml`을 시작할 때 읽습니다. DLL은
-`hdTrans_Reload`나 `J2K_ReloadUserDict`에서도 다시 읽습니다. 파일이 없으면 기존 기본값을 쓰되,
-Ehnd는 폴더가 있어도 자동으로 켜지지 않습니다. 예제: [`hdtrans.config.example.yaml`](../hdtrans.config.example.yaml).
-상대 경로는 설정 파일의 폴더 기준이며, CLI 플래그가 파일보다 우선합니다.
+프로그램 폴더에 `hdTrans/` 디렉터리가 있으면 그곳이 데이터 루트이고, 없으면 프로그램 폴더 자체입니다.
+이름은 대소문자를 가리지 않습니다. 사전은 `dicts/`, 사용자 파일은 `user/`에 두며, 옛 배치의 프로그램 옆
+`userdict.tsv`와 `hdtrans.config.yaml`도 지원합니다.
+
+데이터 루트의 `user/hdtrans.config.yaml`을 시작할 때 읽습니다. DLL은 `hdTrans_Reload`나
+`J2K_ReloadUserDict`에서도 다시 읽습니다. 파일이 없으면 기본값을 쓰며 Ehnd는 자동으로 켜지지 않습니다.
+배포본의 `user/`에는 견본만 있습니다. [`hdtrans.config.example.yaml`](../hdtrans.config.example.yaml)을
+같은 폴더의 `hdtrans.config.yaml`로 복사해 고칩니다. 상대 경로는 설정 파일의 폴더 기준이며,
+CLI 플래그가 파일보다 우선합니다.
 
 | 키 | 값과 기존 옵션 |
 |---|---|
@@ -77,7 +82,7 @@ Ehnd는 폴더가 있어도 자동으로 켜지지 않습니다. 예제: [`hdtra
 알 수 없는 키와 잘못된 값은 건너뛰고, 문법 오류 앞의 정상 항목은 유지합니다. 진단은 CLI의 표준 오류,
 C API의 `hdTrans_UserDictError`, J2K의 디버거 출력으로 알립니다.
 C API의 비어 있지 않은 `dirs`와 명시적인 `hdTrans_OpenEhnd`는 파일보다 우선합니다.
-WebAssembly에서는 가상 파일 시스템의 `/hdtrans.config.yaml`을 읽습니다.
+WebAssembly에도 같은 규칙을 적용하며 `/user/hdtrans.config.yaml`을 쓸 수 있습니다.
 
 ## C API (hdTransEngine)
 
@@ -87,7 +92,7 @@ WebAssembly에서는 가상 파일 시스템의 `/hdtrans.config.yaml`을 읽습
 - 프로세스에 엔진 하나, 세션 하나입니다. 앞선 호출에서 찾은 이름과 문맥이 이후 번역에 반영됩니다.
 - 호출은 스레드 안전하지만 재진입은 안 됩니다. 라이브러리를 내리기 전에 모든 호출을 끝내야 합니다.
 - 초기화, 다시 읽기, 종료는 대기 중인 번역보다 먼저 처리됩니다.
-- 라이브러리 옆의 `userdict.tsv`를 사전 폴더 다음에 읽고, 바뀌면 자동으로 다시 읽습니다
+- 데이터 루트의 `user/userdict.tsv`를 사전 폴더 다음에 읽고, 바뀌면 자동으로 다시 읽습니다
   ([dictionary-files.md](dictionary-files.md#userdicttsv)). 불러오지 못하면 빼고 시작합니다(`hdTrans_UserDictError`).
 - Ehnd는 설정 파일의 `ehnd`나 `hdTrans_OpenEhnd`로 켭니다. 켠 폴더가 바뀌면 함께 다시 읽습니다
   ([ehnd-compat.md](ehnd-compat.md)).
@@ -128,7 +133,7 @@ C API는 사전 캐시를 읽기만 하고 새로 저장하지 않습니다([dic
 이지트랜스의 `J2KEngine.dll`과 같은 이름의 함수를 `__stdcall`로 내보냅니다(`src/j2kengine/j2kengine.def`).
 Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비트이므로 x86 빌드를 씁니다.
 
-- 사전은 DLL 옆의 `dicts\` 폴더와 `userdict.tsv`에서 읽습니다. 호스트가 넘기는 사전 경로는 무시합니다.
+- 사전은 데이터 루트의 `dicts/` 폴더와 `user/userdict.tsv`에서 읽습니다. 호스트가 넘기는 사전 경로는 무시합니다.
   `userdict.tsv`는 바뀌면 자동으로 다시 읽습니다([dictionary-files.md](dictionary-files.md#userdicttsv)). 불러오지 못하면
   빼고 시작하며 이유를 디버거 출력(`OutputDebugString`)에 씁니다.
 - Ehnd는 설정 파일의 `ehnd`로 켭니다. 켠 폴더가 바뀌면 함께 다시 읽으며 건너뛴 줄은
@@ -168,7 +173,7 @@ Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비�
 - 내보내는 함수: `hdTrans_Initialize`, `hdTrans_Terminate`, `hdTrans_Translate`, `hdTrans_Reset`,
   `hdTrans_Reload`, `hdTrans_UserDictError`, `hdTrans_FreeMem`, `hdTrans_Version`, `hdTrans_Load`, `malloc`, `free`
 - 런타임 메서드: `FS`, `ccall`, `cwrap`, `UTF8ToString`, `stringToUTF8`, `lengthBytesUTF8`, `getValue`, `HEAPU8`
-- 사용자 사전은 파일 시스템 루트의 `/userdict.tsv`입니다. 스레드가 없어 자동으로 다시 읽지 않으므로, 파일을
+- 사용자 사전은 `/user/userdict.tsv`이며 옛 `/userdict.tsv`도 지원합니다. 스레드가 없어 자동으로 다시 읽지 않으므로, 파일을
   쓴 뒤 `hdTrans_Reload`를 부르거나 `hdTrans_Terminate` 다음 `hdTrans_Initialize`로 다시 불러옵니다.
 - `hdTrans_Load(name, data, n)`(사전 파일을 버퍼로 넘기는 입구, `src/wasm/main.cpp`)는 아직 구현되지 않아
   -1을 돌려줍니다.

@@ -42,13 +42,13 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 
 | 옵션 | 설명 |
 |---|---|
-| `-dicts DIR[,DIR...]` | 사전 폴더. 쉼표로 여러 개를 주면 뒤 폴더가 앞 폴더를 덮어씁니다 (기본값: 실행 파일 옆 `dicts`, 없으면 현재 폴더의 `dicts`) |
-| `-userdict FILE` | 사용자 사전 파일 (기본값: 실행 파일 옆 `userdict.tsv`, 빈 값이면 쓰지 않음) |
+| `-dicts DIR[,DIR...]` | 사전 폴더. 쉼표로 여러 개를 주면 뒤 폴더가 앞 폴더를 덮어씁니다 (기본값: 데이터 루트의 `dicts`, 없으면 현재 폴더의 `dicts`) |
+| `-userdict FILE` | 사용자 사전 파일 (기본값: 데이터 루트의 `user/userdict.tsv`, 빈 값이면 쓰지 않음) |
 | `-in FILE` | 표준 입력 대신 파일에서 읽기 |
 | `-each` | 줄마다 새 세션으로 번역 (줄끼리 문맥을 나누지 않음) |
 | `-compile-dicts` | 사전 캐시를 미리 만들고 종료 |
 
-실행 파일이나 DLL 옆에 `hdtrans.config.yaml`을 두어 설정할 수 있습니다([예제](hdtrans.config.example.yaml)).
+데이터 루트는 프로그램 옆의 `hdTrans/` 폴더(없으면 프로그램 폴더)이며, 그 안의 `user/hdtrans.config.yaml`로 설정합니다([예제](hdtrans.config.example.yaml)).
 
 전체 옵션과 환경 변수는 [docs/api.md](docs/api.md#명령줄-hdtrans)에 있습니다.
 
@@ -59,12 +59,12 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 32비트라서 `J2KEngine.dll`은 **Windows x86(32비트) 배포본에만** 들어 있습니다. x64 배포본에는 없습니다.
 
 1. 이지트랜스 폴더의 원래 `J2KEngine.dll`을 백업하고 hdTrans의 `J2KEngine.dll`로 바꿉니다.
-2. 같은 폴더에 `dicts\`를 만들고 저장소 `dicts/`의 `*.tsv` 파일을 복사합니다.
-3. 사용자 사전을 쓰려면 같은 폴더에 `userdict.tsv`를 둡니다. 도구가 실행 중일 때 고쳐 저장해도
+2. 같은 폴더에 `hdTrans/dicts/`를 만들고 저장소 `dicts/`의 `*.tsv` 파일을 복사합니다.
+3. 사용자 사전을 쓰려면 `hdTrans/user/userdict.example.tsv`를 `userdict.tsv`로 복사해 고칩니다. 도구가 실행 중일 때 고쳐 저장해도
    다음 번역부터 자동으로 반영됩니다. 도구의 사용자 사전 다시 읽기(`J2K_ReloadUserDict`)는 바로
    반영합니다.
 
-도구가 넘기는 사전 경로는 무시되고, 사전은 기본으로 DLL 옆의 `dicts\`와 `userdict.tsv`에서 찾습니다(설정 파일로 변경 가능).
+도구가 넘기는 사전 경로는 무시되고, 설정은 `hdTrans/user/hdtrans.config.yaml`에 둡니다. 옛 배치의 DLL 옆 `dicts/`, `userdict.tsv`도 지원합니다.
 
 ### C API: `hdTransEngine.dll`
 
@@ -74,7 +74,7 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 ```c
 #include "core/hdtrans.h"
 
-hdTrans_Initialize("dicts\0");    /* 사전 폴더 목록: NUL로 구분, 끝은 NUL 두 개. 라이브러리 옆 userdict.tsv도 읽음 */
+hdTrans_Initialize("dicts\0");    /* 사전 폴더 목록: NUL로 구분, 끝은 NUL 두 개. 기본 사용자 사전도 읽음 */
 char* out; size_t n;
 if (hdTrans_Translate(text, len, &out, &n) == 0) {
     /* out: 번역 결과 (UTF-8) */
@@ -87,8 +87,7 @@ hdTrans_Terminate();
 
 ### 사용자 사전
 
-프로그램(`hdtrans`, `J2KEngine.dll`, `hdTransEngine.dll`) 옆에 `userdict.tsv`를 만들고 한 줄에 한
-항목씩 탭으로 구분해 적습니다. `#`이나 `//`로 시작하는 줄은 주석입니다.
+데이터 루트의 `user/userdict.tsv`에 한 줄에 한 항목씩 탭으로 구분해 적습니다. `#`이나 `//`로 시작하는 줄은 주석입니다.
 
 ```
 # 일본어	한국어	품사
