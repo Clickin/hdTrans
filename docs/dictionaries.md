@@ -169,8 +169,10 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 Ehnd(이지트랜스 확장)의 전처리·후처리 필터, SkipLayer, 사용자 사전을 그대로 쓸 수 있습니다. 형식과
 적용 순서는 [ehnd-compat.md](ehnd-compat.md)에 있습니다.
 
-- 기존 Ehnd 폴더: CLI `hdtrans -dicts dicts -ehnd "C:\ezTrans XP\Ehnd"`, C++ `Engine::OpenEhnd(폴더)`.
+- 기존 Ehnd 폴더: 프로그램(`hdtrans`, `hdTransEngine`, `J2KEngine.dll`) 옆에 `Ehnd` 폴더를 두면 씁니다.
+  다른 폴더는 CLI `-ehnd DIR`, C API `hdTrans_OpenEhnd`, C++ `Engine::OpenEhnd`로 줍니다.
   `PreFilter*.txt`, `PostFilter*.txt`, `SkipLayer*.txt`, `UserDict*.txt`를 Ehnd와 같은 순서로 읽습니다.
+  꿀도르 같은 Ehnd 사전은 `dicts/`에 들어 있지 않고 기본으로 켜지지 않습니다.
 - 새 필터: 사전 폴더에 첫 줄이 `#! layer=prefilter` 또는 `#! layer=postfilter`인 파일을 둡니다. 행은
   Ehnd 필터 행과 같습니다.
 
@@ -182,7 +184,7 @@ Ehnd(이지트랜스 확장)의 전처리·후처리 필터, SkipLayer, 사용�
 ```
 
 - 열은 `원문<TAB>바꿀 글<TAB>차수[<TAB>정규식 여부]`입니다. 차수가 작은 행부터, 같은 차수는 읽은 순서로
-  적용합니다. 정규식은 ECMAScript이며 lookbehind `(?<=…)`는 쓸 수 없습니다.
+  적용합니다. 정규식은 Ehnd처럼 Perl 문법(PCRE2)이며 고정 길이 lookbehind `(?<=…)`도 씁니다.
 - 정규식이 안 되는 줄 같은 잘못된 줄은 건너뛰고, CLI는 표준 오류로 알립니다.
 
 ## 캐시

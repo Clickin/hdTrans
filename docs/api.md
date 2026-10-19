@@ -59,6 +59,8 @@ hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference
 - 초기화·다시 읽기·종료는 대기 중인 번역보다 먼저 처리됩니다.
 - 라이브러리 옆의 `userdict.tsv`를 사전 폴더 다음에 읽고, 바뀌면 자동으로 다시 읽습니다
   ([dictionaries.md](dictionaries.md#userdicttsv)). 불러오지 못하면 빼고 시작합니다(`hdTrans_UserDictError`).
+- 라이브러리 옆에 `Ehnd` 폴더가 있으면 그 필터와 사용자 사전을 쓰고, 바뀌면 함께 다시 읽습니다
+  ([ehnd-compat.md](ehnd-compat.md)).
 - Windows에서 프로세스 종료 시에는 엔진을 정리하지 않고 OS에 맡기며, `FreeLibrary`로 내릴 때는 진행 중인
   다시 읽기를 기다리지 않습니다. 깔끔하게 정리하려면 `hdTrans_Terminate`를 부릅니다.
 
@@ -67,8 +69,10 @@ hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference
 | `int hdTrans_Initialize(const char* dirs)` | 사전 폴더를 불러옴. `dirs`는 NUL로 구분하고 NUL 두 개로 끝나는 목록이며 뒤 폴더가 앞을 덮어씀. 0 성공, -1은 사전을 하나도 못 불러왔거나 동시에 진행된 Terminate·Initialize·Reload가 이 불러오기를 취소함 |
 | `void hdTrans_Terminate(void)` | 세션과 사전 해제. 여러 번 불러도 되고, 다시 Initialize할 수 있음 |
 | `int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn)` | `text[0..n)`(`\n`으로 구분한 한 줄 이상)을 프로세스 세션에서 번역. `*out`에 NUL로 끝나는 버퍼, `*outn`에 길이(NUL 제외). 0 성공, -1 초기화 전·종료 후 |
-| `int hdTrans_Reload(void)` | 같은 폴더와 `userdict.tsv`를 바로 다시 불러옴. 0 성공, -1 초기화 전·종료 후·실패(`userdict.tsv`를 불러오지 못한 경우 포함, 이전 사전 유지) |
+| `int hdTrans_Reload(void)` | 같은 폴더, `userdict.tsv`, Ehnd 폴더를 바로 다시 불러옴. 0 성공, -1 초기화 전·종료 후·실패(`userdict.tsv`를 불러오지 못한 경우 포함, 이전 사전 유지) |
 | `int hdTrans_UserDictError(char** out, size_t* outn)` | 마지막으로 읽은 `userdict.tsv`를 불러오지 못한 이유(오류마다 한 줄, 불러왔거나 없으면 빈 문자열)를 `hdTrans_Translate`처럼 버퍼로 돌려줌. 0 성공, -1 초기화 전·종료 후 |
+| `int hdTrans_OpenEhnd(const char* dir)` | Ehnd 폴더 `dir`의 필터와 사용자 사전을 이후 번역에 씀(NULL이나 빈 값은 뗌). `userdict.tsv`처럼 자동으로 다시 읽음. 0 성공, -1 초기화 전·종료 후·폴더를 못 읽음 |
+| `int hdTrans_FilterErrors(char** out, size_t* outn)` | 필터 파일과 Ehnd 폴더에서 건너뛴 줄(`파일:줄: 이유`, 줄마다 하나)을 버퍼로 돌려줌. 0 성공, -1 초기화 전·종료 후 |
 | `void hdTrans_FreeMem(void* p)` | `hdTrans_Translate`가 돌려준 버퍼 해제 |
 | `const char* hdTrans_Version(void)` | 라이브러리 버전 문자열 |
 
@@ -96,6 +100,8 @@ Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비�
 - 사전은 DLL 옆의 `dicts\` 폴더와 `userdict.tsv`에서 읽습니다. 호스트가 넘기는 사전 경로는 무시합니다.
   `userdict.tsv`는 바뀌면 자동으로 다시 읽습니다([dictionaries.md](dictionaries.md#userdicttsv)). 불러오지 못하면
   빼고 시작하며 이유를 디버거 출력(`OutputDebugString`)에 씁니다.
+- DLL 옆(이지트랜스 폴더)에 `Ehnd` 폴더가 있으면 그 필터와 사용자 사전을 쓰고 함께 다시 읽습니다. 건너뛴
+  줄은 디버거 출력에 씁니다 ([ehnd-compat.md](ehnd-compat.md)).
 - 프로세스 종료 시에는 엔진을 정리하지 않고, `FreeLibrary`로 내릴 때는 진행 중인 다시 읽기를 기다리지 않습니다.
 - Shift-JIS(932)·CP949(949)·UTF-16 변환은 OS 함수로 이 경계에서만 합니다. 엔진 안에는 코드 페이지
   표가 없습니다.
@@ -112,7 +118,7 @@ Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비�
 | `J2K_TranslateMM`, `J2K_TranslateMMEx`, `J2K_TranslateChat` | `J2K_TranslateMMNT`와 같음 |
 | `J2K_TranslateFM(HWND, char* fileName)` | 파일 번역 없음, null |
 | `J2K_FreeMem(void*)` | 번역 결과 해제 |
-| `J2K_ReloadUserDict()` | `dicts\`와 `userdict.tsv`를 바로 다시 불러옴 |
+| `J2K_ReloadUserDict()` | `dicts\`, `userdict.tsv`, `Ehnd\`를 바로 다시 불러옴 |
 | `J2K_StopTranslation` | 아무것도 하지 않고 1 |
 | `J2K_SetField`, `J2K_SetHnj2han`, `J2K_SetDelJPN`, `J2K_SetJWin`, `J2K_SetPriorDict`, `J2K_GetJ2KMainDir` | 호환용, 아무것도 하지 않음 |
 | `J2K_GetPriorDict` | null |

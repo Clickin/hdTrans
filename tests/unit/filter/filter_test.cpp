@@ -8,7 +8,6 @@
 
 #include "core/filter/ehnd.h"
 #include "core/filter/matcher.h"
-#include "core/filter/pattern.h"
 #include "hdtest.h"
 
 using namespace hdTrans;
@@ -137,14 +136,35 @@ HD_TEST(FilterGuards) {
     HD_CHECK_EQ(Run(*f, "a c e g j"), "a c f g j");
 }
 
-HD_TEST(FilterRejectsLookbehind) {
+HD_TEST(FilterRegexDialect) {
+    // Lookbehind, possessive quantifiers, back-references in lookaheads and escapes of
+    // punctuation compile; \d takes full-width digits.
+    auto f = Make({{Kind::PreFilter, "p.txt",
+                    "(?<=[一-龥].)る\tル\t1\t1\n"
+                    "(?<!見)え\tエ\t1\t1\n"
+                    "(か)(?=\\1)\tカ\t1\t1\n"
+                    "\\_+\t_\t1\t1\n"
+                    "\\d++\t#\t1\t1\n",
+                    false}});
+    HD_CHECK_EQ(Run(*f, "見える 消える かか __ 12３"), "見えル 消エル カか _ #");
+}
+
+HD_TEST(FilterReplacementSyntax) {
+    auto f = Make({{Kind::PreFilter, "p.txt", "(a)(b)?(c)\t[$3$1|${2}|\\1|$&|$$|$x|$9|\\x41\\t]\t1\t1\n", false}});
+    HD_CHECK_EQ(Run(*f, "ac"), "[ca||a|ac|$|$x||A\t]");
+    // After an empty match the next match may not be empty at the same place.
+    f = Make({{Kind::PreFilter, "p.txt", "x*\t-\t1\t1\n", false}});
+    HD_CHECK_EQ(Run(*f, "axb"), "-a--b-");
+}
+
+HD_TEST(FilterRejectsBadRegex) {
     std::vector<Error> errors;
-    auto f = Make({{Kind::PreFilter, "p.txt", "x\ty\t1\t0\n(?<=a)b\tc\t1\t1\n", false}}, &errors);
-    HD_CHECK_EQ(Shown(errors), "p.txt:2: regex rejected (lookbehind is not supported): (?<=a)b");
-    HD_CHECK_EQ(Run(*f, "abx"), "aby");
+    auto f = Make({{Kind::PreFilter, "p.txt", "x\ty\t1\t0\n(a\tc\t1\t1\n", false}}, &errors);
+    HD_CHECK_EQ(Shown(errors), "p.txt:2: regex rejected (missing closing parenthesis at 2): (a");
+    HD_CHECK_EQ(Run(*f, "ax"), "ay");
     errors.clear();
-    Make({{Kind::SkipLayer, "s.txt", "PRE\t1\t(?<!a)b\n", false}}, &errors);
-    HD_CHECK_EQ(Shown(errors), "s.txt:1: regex rejected (lookbehind is not supported): (?<!a)b");
+    Make({{Kind::SkipLayer, "s.txt", "PRE\t1\t[a\n", false}}, &errors);
+    HD_CHECK_EQ(Shown(errors), "s.txt:1: regex rejected (missing terminating ] for character class at 2): [a");
 }
 
 HD_TEST(FilterUserDict) {
@@ -196,55 +216,15 @@ HD_TEST(EhndFolderOrder) {
     HD_CHECK(!ReadEhndFolder((dir / "missing").string(), sources, errors));
 }
 
-HD_TEST(FilterPatternCheck) {
-    struct Case {
-        const wchar_t* pattern;
-        const char* want;  // the literal, or "!" and the error
-    };
-    const Case cases[] = {
-        {L"ませんでした(?:[のよ])(?=[Ⓖ-Ⓩ])", "ませんでした"},
-        {L"a+b", "ab"},
-        {L"x?yz", "yz"},
-        {L"ab|cd", ""},
-        {L"\\(か\\)", "(か)"},
-        {L"(a)\\1", ""},
-        {L"[^Ⓖ-Ⓩで]{1,3}", ""},
-        {L"(?<=a)b", "!lookbehind is not supported"},
-        {L"a?+", "!stacked quantifiers"},
-        {L"a{2,1}", "!a {} count out of order"},
-        {L"a{x}", "!malformed {}"},
-        {L"\\q", "!an escape that ECMAScript does not define"},
-        {L"\\ー", "!an escape of a non-ASCII character"},
-        {L"[b-a]", "!a range out of order"},
-        {L"[\\d-z]", "!a range bounded by a class"},
-        {L"(a)\\2", "!a back-reference to a group not closed before it"},
-        {L"(a\\1)", "!a back-reference to a group not closed before it"},
-        {L"(a)(?=\\1)", "!a back-reference in a lookahead"},
-        {L"(a*)*", "!nested unbounded repetition"},
-        {L"a]", "!unmatched ] or }"},
-        {L"^*", "!a quantifier after an assertion"},
-        {L"(a", "!unterminated group"},
-        {L"a)", "!unbalanced )"},
-        {L"[a", "!unterminated class"},
-        {L"[[:alpha:]]", "![: [. or [= in a class"},
-    };
-    for (const Case& c : cases) {
-        std::wstring literal;
-        std::string error;
-        const bool ok = CheckPattern(c.pattern, literal, error);
-        HD_CHECK_EQ(ok ? Narrow(literal) : "!" + error, std::string(c.want));
-    }
-}
-
 HD_TEST(FilterMatcher) {
     Matcher m;
-    const int he = m.Add(L"he"), she = m.Add(L"she"), his = m.Add(L"his"), hers = m.Add(L"hers");
-    HD_CHECK_EQ(m.Add(L"she"), she);
+    const int he = m.Add(u"he"), she = m.Add(u"she"), his = m.Add(u"his"), hers = m.Add(u"hers");
+    HD_CHECK_EQ(m.Add(u"she"), she);
     m.Build();
     std::vector<uint32_t> seen(m.Size());
-    m.Scan(L"ushers", seen, 1);
+    m.Scan(u"ushers", seen, 1);
     HD_CHECK(seen[static_cast<std::size_t>(he)] == 1 && seen[static_cast<std::size_t>(she)] == 1);
     HD_CHECK(seen[static_cast<std::size_t>(hers)] == 1 && seen[static_cast<std::size_t>(his)] == 0);
-    m.Scan(L"this", seen, 2);
+    m.Scan(u"this", seen, 2);
     HD_CHECK(seen[static_cast<std::size_t>(his)] == 2 && seen[static_cast<std::size_t>(he)] == 1);
 }

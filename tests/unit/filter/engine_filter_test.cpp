@@ -47,7 +47,7 @@ HD_TEST(EngineFilters) {
     dicts.Write("pre.tsv", "#! layer=prefilter\n# test\n猫\t犬\t1\t0\n");
     dicts.Write("post.tsv", "#! layer=postfilter\n# test\n개\t멍멍이\t1\t0\n");
     ehnd.Write("UserDict_a.txt", "ポチ\t바둑이\t1\tVHn\n");
-    ehnd.Write("PreFilter_a.txt", "(?<=x)y\tz\t1\t1\n");
+    ehnd.Write("PreFilter_a.txt", "(?<=犬が)タマ\tポチ\t1\t1\n(x\tz\t1\t1\n");
 
     // Without CacheWrite, so nothing is published from the temporary folder.
     hdTrans::Engine e(false, hdTrans::CacheWrite::Off);
@@ -58,10 +58,10 @@ HD_TEST(EngineFilters) {
 
     HD_CHECK(!e.OpenEhnd((ehnd.path / "missing").string()));
     HD_CHECK(e.OpenEhnd(ehnd.path.string()));
-    HD_CHECK_EQ(Translate(e, "猫がポチ"), "멍멍이가 바둑이");
+    HD_CHECK_EQ(Translate(e, "猫がタマ"), "멍멍이가 바둑이");
     const std::vector<std::string> errors = e.FilterErrors();
     HD_REQUIRE(errors.size() == 1);
-    HD_CHECK_EQ(errors[0], "PreFilter_a.txt:1: regex rejected (lookbehind is not supported): (?<=x)y");
+    HD_CHECK_EQ(errors[0], "PreFilter_a.txt:2: regex rejected (missing closing parenthesis at 2): (x");
 
     // Reload reads the Ehnd folder again; an empty folder name drops it.
     ehnd.Write("UserDict_a.txt", "ポチ\t흰둥이\t1\n");

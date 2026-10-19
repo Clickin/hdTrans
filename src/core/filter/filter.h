@@ -3,20 +3,22 @@
 // of a line before it is translated and over the Korean output after it, read from
 // filter files in the row format of Ehnd (docs/ehnd-compat.md).
 //
-// A stage runs its rows in order of layer, then of load order; each row sees the text
-// as the rows before it left it. Literal rows are found with one matcher over all their
-// sources; a regex row runs std::wregex only when the text holds the row's _AUX text
-// and the literal its pattern requires. Toggles live per line: Pre may set them for
-// Post, and the next line starts again from the declared states.
+// A stage runs its rows in order of layer, then of load order; each row sees the text,
+// in UTF-16 code units, as the rows before it left it. Literal rows are found with one
+// matcher over all their sources; regex rows are PCRE2 patterns, run only when the text
+// holds the row's _AUX text and the code units PCRE2 finds every match needs. Toggles
+// live per line: Pre may set them for Post, and the next line starts again from the
+// declared states.
 #include <cstdint>
 #include <memory>
-#include <regex>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "core/dict/dict.h"
 #include "core/filter/matcher.h"
+
+struct pcre2_real_code_16;
 
 namespace hdTrans::filter {
 
@@ -41,6 +43,11 @@ struct Error {
 
 class Filters {
 public:
+    Filters() = default;
+    ~Filters();
+    Filters(const Filters&) = delete;
+    Filters& operator=(const Filters&) = delete;
+
     // The toggle states of one line.
     using Toggles = std::vector<char>;
     Toggles Start() const { return defaults_; }
@@ -60,10 +67,12 @@ private:
     enum class Kind : uint8_t { Plain, Guard, Guarded };
 
     struct Rule {
-        std::wstring src, dest;
+        std::u16string src, dest;
         int layer = 0;
         int32_t regex = -1;    // the index in regexes; -1 for a literal row
-        int32_t pattern = -1;  // the matcher pattern of src, or of the literal a regex requires; -1 for none
+        // Matcher patterns the text must hold, -1 for none: of a literal row its src; of a
+        // regex row the code units every match starts with and holds.
+        int32_t units[2] = {-1, -1};
         int32_t aux = -1;      // the matcher pattern of the _AUX text; -1 for none
         int32_t gate = -1;     // the toggle that must be on (_CONN); -1 for none
         int32_t sets = -1;     // the toggle a firing row sets (_ON) or clears (_OFF); -1 for none
@@ -77,7 +86,7 @@ private:
     struct Condition {
         int layer = 0;
         int32_t regex = -1;
-        int32_t pattern = -1;  // the literal cond requires; -1 for none
+        int32_t units[2] = {-1, -1};
     };
 
     struct Program {
@@ -86,10 +95,11 @@ private:
         Matcher matcher;
     };
 
-    void Run(const Program& p, std::wstring& text, Toggles& toggles) const;
+    void Run(const Program& p, std::u16string& text, Toggles& toggles) const;
 
     Program pre_, post_;
-    std::vector<std::wregex> regexes_;
+    std::vector<pcre2_real_code_16*> regexes_;
+    uint32_t pairs_ = 1;  // the most offset pairs a match of the regexes needs
     Toggles defaults_;
     dict::CodeTable codes_;
     dict::Dict user_;
@@ -99,9 +109,18 @@ private:
 // not load are skipped and listed in errors.
 std::shared_ptr<const Filters> Build(const std::vector<Source>& sources, std::vector<Error>& errors);
 
-// UTF-8 to and from wide strings (UTF-16 or UTF-32, as wchar_t is); invalid bytes read
-// as U+FFFD.
-std::wstring Wide(std::string_view s);
-std::string Narrow(std::wstring_view s);
+// UTF-8 to and from UTF-16; invalid bytes and lone surrogates read as U+FFFD.
+std::u16string Utf16(std::string_view s);
+std::string Utf8(std::u16string_view s);
+
+// Appends to out the replacement fmt makes of a match of subject; ovector holds pairs
+// offset pairs, the first the match. As in Perl-style replacement strings: $n and ${n}
+// are groups (an unmatched or missing group is empty), $& the match, $` the text from the
+// end of the previous match (previous) to the match, $' the rest of the subject, $$ a
+// "$", and any other "$" is kept; after a backslash, 1 to 9 is a group, a e f n r t v the control
+// character, xHH or x{H...} and cX a character, 0 an octal character of up to four
+// digits, l u L U E nothing, and any other character itself.
+void AppendReplacement(std::u16string& out, std::u16string_view fmt, std::u16string_view subject,
+                       const std::size_t* ovector, uint32_t pairs, std::size_t previous);
 
 }  // namespace hdTrans::filter

@@ -5,6 +5,9 @@ hdTrans는 Ehnd 폴더를 그대로 읽어 같은 순서와 의미로 적용합�
 이름 대신 사전 폴더 안의 `#! layer=prefilter`, `#! layer=postfilter` 파일을 써도 됩니다
 ([hdTrans 필터 파일](#hdtrans-필터-파일)).
 
+Ehnd 호환은 기능일 뿐입니다. 꿀도르 같은 Ehnd 사전은 `dicts/`에 들어 있지 않고 기본으로 켜지지
+않으며, 사용자가 프로그램 옆에 `Ehnd` 폴더를 두거나 폴더를 직접 지정할 때만 씁니다.
+
 이 문서는 Ehnd 코드가 파일을 읽고 적용하는 방식을 그대로 적고, hdTrans가 다르게 하는 점을 따로
 밝힙니다. 기준은 Ehnd 공개 소스(`EHND_VER "V3.20"`: `filter.cpp`, `ehnd.cpp`, `watch.cpp`,
 `config.cpp`)와, 꿀도르 사전이 요구하는 3.20 꿀도르 수정판의 행 확장(`_TGL`, `_SkipLayer`,
@@ -13,10 +16,17 @@ hdTrans는 Ehnd 폴더를 그대로 읽어 같은 순서와 의미로 적용합�
 
 ## 쓰는 법
 
-- CLI: `hdtrans -dicts dicts -ehnd "C:\ezTrans XP\Ehnd"`. 건너뛴 줄은 표준 오류로 알립니다.
+- 프로그램 옆의 `Ehnd` 폴더: `hdtrans` CLI는 실행 파일 옆, `hdTransEngine` 라이브러리와
+  `J2KEngine.dll`은 DLL 옆(이지트랜스 폴더라면 Ehnd를 쓰던 그 `Ehnd` 폴더)에 `Ehnd` 폴더가 있으면
+  씁니다. 라이브러리와 DLL은 이 폴더를 `userdict.tsv`처럼 1초에 한 번까지 확인해, 바뀌면 사전과 함께
+  백그라운드에서 다시 읽습니다.
+- CLI: `hdtrans -dicts dicts -ehnd "C:\ezTrans XP\Ehnd"`로 다른 폴더를 줍니다. 건너뛴 줄은 표준 오류로
+  알립니다.
+- C API: `hdTrans_OpenEhnd(dir)`, `hdTrans_FilterErrors(...)` ([api.md](api.md#c-api-hdtransengine)).
 - C++: `Engine::OpenEhnd(dir)`로 폴더를 정하면 그 뒤에 만들거나 `Reset`한 세션부터 씁니다.
-  `Reload()`는 사전 폴더와 함께 Ehnd 폴더를 다시 읽고, `FilterErrors()`는 건너뛴 줄을
-  `파일:줄: 이유`로 돌려줍니다. 빈 경로는 Ehnd 폴더를 뗍니다. 정의: `include/core/engine.h`.
+  `Reload()`와 `UserReload::Auto`의 다시 읽기는 사전 폴더와 함께 Ehnd 폴더를 다시 읽고,
+  `FilterErrors()`는 건너뛴 줄을 `파일:줄: 이유`로 돌려줍니다. 빈 경로는 Ehnd 폴더를 뗍니다. 정의:
+  `include/core/engine.h`.
 - Ehnd 폴더도 필터 파일도 없으면 번역은 바이트 단위로 이전과 같습니다.
 
 ## 언제 적용되나
@@ -43,7 +53,7 @@ hdTrans:
 ## 파일 찾기, 인코딩, 순서
 
 - 폴더: Ehnd는 `<J2KEngine.dll 폴더>\Ehnd\`(3.20은 `FILTER_FILE_PATH` 설정으로 바꿀 수 있음),
-  hdTrans는 `OpenEhnd`에 준 폴더. 하위 폴더는 읽지 않습니다.
+  hdTrans는 프로그램 옆의 `Ehnd` 또는 지정한 폴더. 하위 폴더는 읽지 않습니다.
 - 파일: `PreFilter*.txt`, `PostFilter*.txt`, `SkipLayer*.txt`, `UserDict*.txt`. 이름은 대소문자를
   가리지 않습니다. 접두사 뒤(`_@Hdor`, `#0#req`, `_C` 등)는 이름표일 뿐 뜻이 없고 순서에만 영향을
   줍니다.
@@ -136,15 +146,16 @@ layer_prev = -1, guard = false
            검사 행     → SRC가 텍스트에 있으면 발동 (AUX 무시)
            그 밖       → AUX가 없거나 텍스트에 있으면 바꾸기
   정규식:  AUX가 있고 텍스트에 없으면 다음 행
-           검사 행     → regex_search가 맞으면 발동
-           그 밖       → regex_search가 맞으면 regex_replace, 텍스트가 바뀌면 발동
+           검사 행     → 텍스트에 맞으면 발동
+           그 밖       → 맞는 곳을 모두 바꾸고, 텍스트가 바뀌면 발동
   발동했으면: _ON:X → X 켬, _OFF:X → X 끔, _SkipLayer → guard 켬
 ```
 
 - 리터럴 바꾸기는 왼쪽부터 모든 SRC를 DEST로 바꾸고, 넣은 DEST 뒤에서 다시 찾습니다(자기가 넣은
   글자를 다시 보지 않음). 마지막으로 바꾼 자리의 끝이 0이 아니면 발동입니다. 그래서 텍스트 맨 앞을
   지우기만 한 행(DEST가 비고 마지막 일치가 0번째)은 텍스트를 바꾸고도 발동하지 않습니다.
-- 정규식 바꾸기는 겹치지 않는 모든 일치를 바꿉니다.
+- 정규식 바꾸기는 겹치지 않는 모든 일치를 바꿉니다. 빈 일치 바로 뒤에서는 빈 일치를 다시 찾지
+  않습니다(`x*`를 `-`로 바꾸면 `axb`는 `-a--b-`).
 - AUX는 정규식이 아닌 단순 찾기이며, 원래 입력이 아니라 앞 행들이 바꾼 현재 텍스트에서 찾습니다.
   3.20 바이너리는 보통 리터럴 행에도 AUX를 검사합니다(소스 스냅숏은 무시). hdTrans는 바이너리를
   따릅니다.
@@ -269,41 +280,39 @@ KR, 품사 `I110` 또는 `A9D0`, 의미 코드 ATTR, 문법 코드 없음, 사�
 
 ## 정규식
 
-hdTrans는 정규식 행과 SkipLayer 조건을 `std::wregex`(ECMAScript, 대소문자 구분)로 컴파일하고
-`regex_search`, `regex_replace`(기본 형식)로 적용합니다. 새 의존성은 없습니다.
+Ehnd는 2015-03-23 커밋 `24dac4e`("regex 라이브러리를 boost로 변경")부터 Boost.Regex(`boost::wregex`,
+Perl 문법, 기본 플래그)를 썼고 꿀도르는 그 문법으로 쓰였습니다(그 전의 초기 3.0x만 MSVC
+`std::wregex`). hdTrans는 함께 넣은 PCRE2(`third_party/pcre2`, 16비트 라이브러리)로 같은 Perl 문법을
+씁니다.
 
-- Ehnd 공개 소스는 2015-03-23 커밋 `24dac4e`("regex 라이브러리를 boost로 변경")부터 Boost.Regex
-  (`boost::wregex`, Perl 문법)를 씁니다. 그 전의 초기 3.0x는 MSVC `std::wregex` ECMAScript였습니다.
-  그래서 Boost에서는 되던 다음 행이 hdTrans에서는 버려집니다(꿀도르: 3,192행).
-  - lookbehind `(?<=…)`, `(?<!…)` (3,183행)
-  - possessive·겹친 수량자 `?+` (2행)
-  - lookahead 안의 역참조 `(?=…\2…)` (5행)
-  - 짝 없는 `]` (1행), `\_` (1행)
-- 빌드에 예외가 없으므로 `std::wregex`가 거부할 패턴은 컴파일 전에 걸러야 합니다. 검사는 지원하는
-  모든 표준 라이브러리가 똑같이 컴파일하는 ECMAScript의 부분집합만 받습니다(`src/core/filter/pattern.h`):
-  - 받음: 문자, `.`, `[…]`(범위·부정·`\d\s\w` 등), `^ $ \b \B`, `(…)`, `(?:…)`, `(?=…)`, `(?!…)`,
-    `* + ? {n} {n,} {n,m}`과 뒤의 `?`, `\1`처럼 이미 닫힌 그룹의 역참조, `\f\n\r\t\v`, `\cX`,
-    `\xHH`, `\uHHHH`, `\0`, ASCII 기호의 이스케이프.
-  - 거부: lookbehind와 그 밖의 `(?`, 겹친 수량자, 단언 뒤 수량자, 클래스 밖의 `] { }`, 거꾸로 된
-    범위나 클래스로 끝나는 범위, 클래스 안의 `[: [. [=`, 정의되지 않은 글자·숫자·`_` 이스케이프,
-    비ASCII 이스케이프, 닫히지 않은 그룹의 역참조, lookahead 안의 역참조, 무한 반복을 품은 그룹의
-    무한 반복(`(a+)+`처럼 시간이 폭발하는 꼴), 1000을 넘는 횟수.
-- 버린 행은 `파일:줄: regex rejected (이유): 패턴`으로 기록합니다.
-- 문자 단위는 `wchar_t`입니다: Windows는 UTF-16 코드 단위(Ehnd와 같음), 다른 플랫폼은 코드
-  포인트입니다. BMP 밖 글자에서만 `.`과 `{n}`의 셈이 다릅니다.
-- 치환 문자열은 ECMAScript 형식입니다: `$0`~`$9`·`$nn`(그룹), `$&`, `` $` ``, `$'`, `$$`, 그
-  밖의 `$`는 그대로. Boost 형식의 `\` 이스케이프와 `${n}`은 없습니다(꿀도르는 쓰지 않음).
-- `\d`, `\w`, `\s`는 프로그램의 전역 C++ 로캘(보통 `"C"`)의 문자 분류를 따릅니다.
+- 텍스트와 패턴은 Windows의 `wchar_t`처럼 UTF-16 코드 단위입니다. `.`과 `{n}`은 코드 단위를 셉니다
+  (PCRE2 비UTF 모드).
+- 옵션: 대소문자 구분, `PCRE2_UCP`(`\d`, `\w`, `\s`, `[[:alpha:]]`가 유니코드 분류를 따르므로 `\d`는
+  전각 숫자에도 맞음, Boost의 Windows 문자 분류와 같은 쪽), `PCRE2_MULTILINE`과 `PCRE2_DOTALL`(Boost
+  기본값처럼 `^ $`는 줄 경계, `.`은 줄바꿈에도 맞음; hdTrans는 줄마다 적용하므로 차이가 없음).
+- lookahead와 lookbehind `(?<=…)`, `(?<!…)`를 씁니다. lookbehind는 Boost처럼 고정 길이여야 하며, 가지마다
+  길이가 같아야 하는 Boost와 달리 PCRE2는 가지마다 길이가 달라도 받습니다. 꿀도르의 lookbehind는
+  모두 가지 길이가 같습니다. possessive 수량자 `?+`, 원자 그룹, lookahead 안의 역참조, `\_` 같은 기호
+  이스케이프도 됩니다.
+- PCRE2가 컴파일하지 못하는 행은 `파일:줄: regex rejected (PCRE2 메시지 at 위치): 패턴`으로 기록하고
+  건너뜁니다. 꿀도르는 모든 행이 컴파일됩니다. 일치 중 한도(PCRE2 기본 일치·힙 한도)에 걸리면 그
+  행은 그 텍스트에서 아무것도 하지 않습니다(Ehnd는 예외를 잡아 그 행을 건너뜀).
+- 치환 문자열은 Boost의 기본(Perl) 형식입니다: `$0`~`$99…`(그룹, 숫자를 이어 읽음), `${n}`, `$&`,
+  `` $` ``(이전 일치 끝부터 이 일치까지), `$'`, `$$`, 그 밖의 `$`는 그대로. `\1`~`\9`(그룹),
+  `\a \e \f \n \r \t \v`, `\xHH`, `\x{H…}`, `\cX`, `\0`(8진수), 그 밖의 `\`는 뒤 글자 그대로.
+  없거나 맞지 않은 그룹은 빈 문자열입니다. Boost의 대소문자 바꾸기 `\l \u \L \U \E`는 지우기만
+  합니다(꿀도르는 `$0`~`$9`만 씁니다).
+- `HDTRANS_PCRE2_JIT`(기본 꺼짐)로 PCRE2 JIT를 넣을 수 있습니다. WebAssembly에서는 쓰지 않습니다.
 
 ### 속도
 
 꿀도르 전처리만 2만 행이 넘으므로 hdTrans는 행을 하나씩 찾지 않습니다.
 
-- 리터럴 SRC, AUX 텍스트, 정규식마다 모든 일치가 반드시 품는 리터럴(최상위 선택지가 하나일 때 연속한
-  고정 글자 중 가장 긴 것)을 한 Aho-Corasick 자동자에 넣고, 텍스트가 바뀔 때마다 한 번 훑어 어떤 것이
-  들어 있는지 표시합니다.
-- 리터럴 행은 SRC가 있을 때만 바꾸기를 하고, 정규식 행은 AUX와 필요한 리터럴이 모두 있을 때만
-  `regex_search`를 부릅니다. 결과는 행을 하나씩 찾을 때와 같습니다.
+- 리터럴 SRC, AUX 텍스트, 그리고 PCRE2가 패턴에서 찾은 "모든 일치가 이 글자로 시작함"과 "모든 일치에
+  이 글자가 있음"을 한 Aho-Corasick 자동자에 넣고, 텍스트가 바뀔 때마다 한 번 훑어 어떤 것이 들어
+  있는지 표시합니다. 대소문자가 있을 수 있는 글자는 넣지 않습니다.
+- 리터럴 행은 SRC가 있을 때만 바꾸기를 하고, 정규식 행은 AUX와 그 글자들이 모두 있을 때만 PCRE2를
+  부릅니다. 결과는 행을 하나씩 찾을 때와 같습니다.
 
 ## 다시 읽기
 
@@ -311,8 +320,10 @@ hdTrans는 정규식 행과 SkipLayer 조건을 `std::wregex`(ECMAScript, 대소
   있으면 폴더 감시(`watch.cpp`: 500ms 타이머). 바뀐 파일 이름을 소문자로 보고 `prefilter`,
   `postfilter`, `userdic`, `skiplayer`가 들어 있으면 그 종류를, `ehnd_conf.ini`이면 설정을 다시
   읽습니다(3.20 꿀도르 수정판은 전·후처리 파일이 바뀌면 둘 다 다시 읽고 토글을 비웁니다).
-- hdTrans: `Engine::Reload()`가 사전 폴더와 Ehnd 폴더를 함께 다시 읽습니다. 폴더 감시는 엔진을
-  쓰는 쪽이 정합니다.
+- hdTrans: `Engine::Reload()`가 사전 폴더와 Ehnd 폴더를 함께 다시 읽습니다. `UserReload::Auto`(C API와
+  `J2KEngine.dll`)는 번역을 시작할 때 Ehnd 폴더의 파일 목록과 크기·시각을 1초에 한 번까지 확인해, 바뀌면
+  사전 폴더와 함께 백그라운드에서 다시 읽고 같은 순간에 바꿔 끼웁니다. 다시 읽기에 실패한 그 상태로는
+  다시 시도하지 않습니다.
 
 ## hdTrans 필터 파일
 
@@ -340,7 +351,7 @@ _TGL	_CONN:MY_SWITCH_	ござる	です	20000000	0
 | Ehnd | hdTrans |
 |---|---|
 | 요청 문자열 전체에 한 번 | 줄마다 |
-| Boost.Regex (Perl) | `std::wregex` ECMAScript, 그 밖의 패턴은 버리고 기록 |
+| Boost.Regex (Perl) | PCRE2 (Perl), 컴파일되지 않는 패턴은 버리고 기록 |
 | CP932·CP949 변환 손실 | 없음 |
 | 999자 넘는 줄은 둘로 읽음 | 나누지 않음 |
 | REGEX 필드가 없으면 초기화 안 된 값 | 0(리터럴) |

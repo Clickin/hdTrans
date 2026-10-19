@@ -6,18 +6,18 @@ namespace hdTrans::filter {
 
 namespace {
 
-uint64_t EdgeKey(int node, wchar_t c) {
+uint64_t EdgeKey(int node, char16_t c) {
     return static_cast<uint64_t>(node) << 32 | static_cast<uint32_t>(c);
 }
 
 }  // namespace
 
-int Matcher::Add(std::wstring_view p) {
-    const auto [it, added] = ids_.emplace(std::wstring(p), static_cast<int>(count_));
+int Matcher::Add(std::u16string_view p) {
+    const auto [it, added] = ids_.emplace(std::u16string(p), static_cast<int>(count_));
     if (!added) return it->second;
     if (ends_.empty()) ends_.push_back(-1);
     int node = 0;
-    for (const wchar_t c : p) {
+    for (const char16_t c : p) {
         const auto [e, fresh] = edges_.emplace(EdgeKey(node, c), static_cast<int32_t>(ends_.size()));
         if (fresh) ends_.push_back(-1);
         node = e->second;
@@ -36,12 +36,12 @@ void Matcher::Build() {
     child_.clear();
     for (const auto& [key, child] : edges) {
         first_[static_cast<std::size_t>(key >> 32) + 1]++;
-        label_.push_back(static_cast<wchar_t>(key & 0xFFFFFFFFu));
+        label_.push_back(static_cast<char16_t>(key & 0xFFFFFFFFu));
         child_.push_back(child);
     }
     for (std::size_t n = 0; n < nodes; n++) first_[n + 1] += first_[n];
     std::unordered_map<uint64_t, int32_t>().swap(edges_);
-    std::unordered_map<std::wstring, int>().swap(ids_);
+    std::unordered_map<std::u16string, int>().swap(ids_);
 
     fail_.assign(nodes, 0);
     link_.assign(nodes, -1);
@@ -68,17 +68,17 @@ void Matcher::Build() {
     }
 }
 
-int Matcher::Child(int node, wchar_t c) const {
+int Matcher::Child(int node, char16_t c) const {
     const auto begin = label_.begin() + first_[static_cast<std::size_t>(node)];
     const auto end = label_.begin() + first_[static_cast<std::size_t>(node) + 1];
     const auto it = std::lower_bound(begin, end, c);
     return it != end && *it == c ? child_[static_cast<std::size_t>(it - label_.begin())] : -1;
 }
 
-void Matcher::Scan(std::wstring_view text, std::vector<uint32_t>& seen, uint32_t stamp) const {
+void Matcher::Scan(std::u16string_view text, std::vector<uint32_t>& seen, uint32_t stamp) const {
     if (count_ == 0) return;
     int node = 0;
-    for (const wchar_t c : text) {
+    for (const char16_t c : text) {
         int next = Child(node, c);
         while (next < 0 && node != 0) {
             node = fail_[static_cast<std::size_t>(node)];
