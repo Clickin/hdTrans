@@ -44,6 +44,9 @@ ctest --preset mac
 
 이것이 기본 개발 루프입니다. 다른 네이티브 플랫폼에서는 `mac` 대신 해당 프리셋 이름을 씁니다.
 
+macOS에서 Command Line Tools만 쓰면 컴파일러 확인 단계에서 실패할 수 있습니다. 그때는 Xcode를 쓰게 합니다:
+`export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
+
 ## Windows
 
 Visual Studio 프리셋은 개발자 명령 프롬프트 없이 일반 터미널에서 동작합니다.

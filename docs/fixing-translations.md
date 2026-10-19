@@ -15,7 +15,7 @@
 ## 재현과 -why
 
 ```sh
-cmake --preset mac && cmake --build build/mac
+cmake --preset mac && cmake --build build/mac   # macOS 빌드가 실패하면 docs/build.md의 DEVELOPER_DIR
 H=$(mktemp -d)
 echo '競走で勝った。' | HOME=$H build/mac/hdtrans -dicts dicts -why 2>&1 | grep '^WHY' | cut -f5-17
 ```
@@ -62,6 +62,9 @@ echo '競走で勝った。' | HOME=$H build/mac/hdtrans -dicts dicts -why 2>&1 
 | `P2..` | 조사 | `(으)로` |
 
 `gram`의 `Hd`는 する가 붙는 명사, `Tu`는 앞말에 붙여 씀, `Ct`는 조수사입니다.
+
+품사는 띄어쓰기에도 영향을 줍니다. 명사(`N1..`) 뒤의 짧은 명사는 붙여 쓰는 경우가 있어(몫의자리), 꾸미는 말이면
+연체사(`E0H0`)로 둡니다. 같은 키의 후보끼리 품사가 다르면 분석이 다른 후보를 고를 수 있으니 함께 맞춥니다.
 
 ### 규칙
 

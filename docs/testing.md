@@ -10,7 +10,7 @@
 | `tools.selfbase` | `tools/snapshot.sh`와 `compare.sh`를 작은 사전으로 두 번 실행해 결과가 같은지 확인 (Unix) |
 | `examples` | `examples/` 번역 확인. `HDTRANS_DICTS`가 없으면 건너뜀 |
 | `rules.cases` | `tests/rules/cases.tsv`의 규칙 사례를 `dicts/`로 번역해 확인 ([아래](#규칙-사례-testsrulescasestsv)) |
-| `rules.cases.themes` | `tests/rules/cases/<규칙 파일>.tsv`(규칙 파일마다 하나, 같은 열)의 사례를 함께 확인 |
+| `rules.cases.themes` | `tests/rules/cases/<규칙 파일>.tsv`(규칙 파일 이름, 같은 열. 없으면 머리줄을 복사해 만듦)의 사례를 함께 확인 |
 | `testdata` | 테스트 데이터의 기대 출력과 비교 ([테스트 데이터](#테스트-데이터-비공개-저장소)). `HDTRANS_TESTDATA`가 없으면 건너뜀 |
 | `host.admin_priority` | C API에서 초기화, 다시 읽기, 종료가 대기 중인 번역보다 먼저 처리되는지 확인 |
 | `host.j2k` | `J2KEngine.dll`과 `hdTransEngine.dll`의 초기화, 종료와 동시 번역 확인 (Windows) |
@@ -142,6 +142,10 @@ ctest --preset mac -R testdata                                       # --expecte
 
 ### 번역이 바뀌었을 때
 
+`testdata`는 `main`의 출력을 기대값으로 삼으므로, 작업 브랜치에서는 기대값과 다를 수 있습니다. 내 변경의 영향은
+기대값이 아니라 고정한 기준 빌드와 비교해 봅니다([변경 판정](#변경-판정-e2e--모델-판정)). `build/e2e/`의 출력은
+저장소에 커밋되지 않지만 비공개 본문의 번역이므로 다 쓰면 지웁니다.
+
 번역 동작을 바꾸는 변경은 이유를 적은 별도 커밋으로 만듭니다. 그 커밋이 `main`에 들어가면, 그 커밋으로
 빌드한 CLI와 `dicts/`로 `--accept`를 실행하고, 테스트 데이터 저장소에 엔진 커밋을 적어 커밋합니다.
 
@@ -185,7 +189,9 @@ tools/e2e.sh --expected "$HDTRANS_TESTDATA" build/mac/hdtrans dicts --accept
    ```
 
 2. `e2e-pairs.py`에 base CLI, 사전, head CLI, 사전, 출력 파일, 입력 폴더들을 차례로 줍니다.
-   `RUN`은 저장소 밖의 결과 폴더, `DEV`와 `HELDOUT`은 서로 겹치지 않는 비공개 챕터 폴더로 지정합니다.
+   `RUN`은 저장소 밖의 결과 폴더입니다. 비공개 저장소의 `syosetu/`가 개발 세트(고칠 때 보는 챕터), `heldout/`이
+   held-out 세트(고칠 때 보지 않는 챕터, 다른 작품)입니다: `DEV=$HDTRANS_TESTDATA/syosetu`, `HELDOUT=$HDTRANS_TESTDATA/heldout`.
+   바뀐 줄이 없으면 판정 출력은 빈 파일이고 다음 단계도 대상 없이 끝납니다.
 
    ```sh
    mkdir -p "$RUN"

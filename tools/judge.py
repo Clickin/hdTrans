@@ -99,6 +99,7 @@ def main():
                 rows.append(row)
     print(f"{len(rows)} to judge", file=sys.stderr)
     if not rows:
+        args.out.touch()
         return
     base = os.environ.get("ANTHROPIC_BASE_URL", "https://api.anthropic.com").rstrip("/")
     url = base + ("/messages" if base.endswith("/v1") else "/v1/messages")
