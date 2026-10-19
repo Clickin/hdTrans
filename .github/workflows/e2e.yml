@@ -21,7 +21,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Select the base commit
@@ -38,6 +38,11 @@ jobs:
             echo "::notice::Base commit $base has no dicts/; the end-to-end comparison is skipped."
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Allow compiler warnings in translation comparisons
+        if: steps.base.outputs.run == 'true'
+        run: |
+          printf '#!/bin/sh\nexec "$@" -Wno-error\n' > "$RUNNER_TEMP/nowerror"
+          chmod +x "$RUNNER_TEMP/nowerror"
       - name: Build the base CLI
         if: steps.base.outputs.run == 'true'
         env:
@@ -45,16 +50,20 @@ jobs:
         run: |
           git worktree add --detach "$RUNNER_TEMP/base" "$BASE"
           cd "$RUNNER_TEMP/base"
-          cmake --preset linux
-          cmake --build --preset linux --target hdtrans_cli
+          cmake --preset linux -DHDTRANS_WERROR=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF \
+            -DCMAKE_CXX_COMPILER_LAUNCHER="$RUNNER_TEMP/nowerror" \
+            -DCMAKE_C_COMPILER_LAUNCHER="$RUNNER_TEMP/nowerror"
+          cmake --build --preset linux --target hdtrans_cli --parallel
       - name: Build the head CLI
         if: steps.base.outputs.run == 'true'
         run: |
-          cmake --preset linux
-          cmake --build --preset linux --target hdtrans_cli
+          cmake --preset linux -DHDTRANS_WERROR=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF \
+            -DCMAKE_CXX_COMPILER_LAUNCHER="$RUNNER_TEMP/nowerror" \
+            -DCMAKE_C_COMPILER_LAUNCHER="$RUNNER_TEMP/nowerror"
+          cmake --build --preset linux --target hdtrans_cli --parallel
       - name: Restore the chapter cache
         if: steps.base.outputs.run == 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: build/e2e/*.ja.txt
           key: syosetu-${{ hashFiles('tests/e2e/*.ja.txt') }}-${{ github.run_id }}
@@ -69,7 +78,7 @@ jobs:
           grep -q '^fetch: 0 downloaded' "$RUNNER_TEMP/fetch.log" || echo "changed=true" >> "$GITHUB_OUTPUT"
       - name: Save the chapter cache
         if: steps.fetch.outputs.changed == 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: build/e2e/*.ja.txt
           key: syosetu-${{ hashFiles('tests/e2e/*.ja.txt') }}-${{ github.run_id }}
