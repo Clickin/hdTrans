@@ -65,6 +65,44 @@ bool IsQuoteMark(std::string_view s) {
     return false;
 }
 
+bool HasTag(const Item* it, std::string_view tag) {
+    if (tag.starts_with("sem:")) return dict::SemCodes(it->Attr(it->selected)).HasCode(tag.substr(4));
+    return tag.starts_with("gram:") && dict::GramCodes(it->GAttr(it->selected)).HasCode(tag.substr(5));
+}
+
+bool SenseTrigger(const Item* x, const Item* it, std::string_view trigger) {
+    if (!trigger.starts_with("sem:") && !trigger.starts_with("gram:")) return IsWord(x, trigger);
+    const std::size_t at = trigger.find('@');
+    if (!HasTag(x, trigger.substr(0, at))) return false;
+    if (at == std::string_view::npos) return true;
+    if (At(x->Code(x->selected), 0) != '1') return false;
+    const std::string_view argument = trigger.substr(at + 1);
+    const std::size_t slash = argument.find('/');
+    const Item* particle = x->next;
+    if (particle == nullptr || particle->selected < 0 || At(particle->Code(particle->selected), 0) != '2' ||
+        particle->group->surface != argument.substr(0, slash)) return false;
+    // A particle sense must use its own argument, not a neighbouring case phrase.
+    if (At(it->Code(it->selected), 0) == '2' && particle != it) return false;
+    if (slash == std::string_view::npos) return true;
+    const std::string_view predicateTag = argument.substr(slash + 1);
+    const Item* predicate = particle;
+    for (int n = 0; n < 8; n++) {
+        predicate = predicate->next;
+        if (predicate == nullptr || predicate->selected < 0) return false;
+        const char cls = At(predicate->Code(predicate->selected), 0);
+        if (cls == '4') return HasTag(predicate, predicateTag);
+        if (cls == '7' || cls == '8' || cls == '5' || cls == '6') return false;
+    }
+    return false;
+}
+
+bool SenseTriggers(const Item* x, const Item* it, const userdict::Sense& sense) {
+    for (const auto& trigger : sense.triggers) {
+        if (SenseTrigger(x, it, trigger)) return true;
+    }
+    return false;
+}
+
 // Whether a trigger of sense s stands on its side of it: for Before and After within the
 // window (a quotation mark counts but does not stop it), with no clause boundary and no
 // other predicate in between. A sense with no triggers applies always, but for a one-kanji
@@ -73,7 +111,7 @@ bool Triggered(Flusher& f, const Item* it, const userdict::Sense& s) {
     if (s.triggers.empty()) return text::RuneCount(s.key) != 1 || !InKanjiCompound(it);
     if (s.side == userdict::Side::Sentence) {
         for (const Item* x = f.w.chain.head; x != nullptr; x = x->next) {
-            if (x != it && x->selected >= 0 && IsAny(x, s.triggers)) return true;
+            if (x != it && x->selected >= 0 && SenseTriggers(x, it, s)) return true;
         }
         return false;
     }
@@ -82,7 +120,7 @@ bool Triggered(Flusher& f, const Item* it, const userdict::Sense& s) {
         x = s.side == userdict::Side::After ? x->next : x->prev;
         if (x != nullptr && IsQuoteMark(x->group->surface)) continue;
         if (x == nullptr || x->selected < 0) return false;
-        if (IsAny(x, s.triggers)) return true;
+        if (SenseTriggers(x, it, s)) return true;
         const char cls = At(x->Code(x->selected), 0);
         if (cls == '6' || cls == '4' || cls == '7') return false;
     }

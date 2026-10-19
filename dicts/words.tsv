@@ -4963,7 +4963,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 ジーニー	지니	N110	UTt		GN				ジーニー	w:4958
 ジーンプール	유전자 풀	N110			GN		xxx llm	1		w:4959
 スイカズラ科	인동과	N110			GN				スイカズラか	w:4960
-スイッチ	스위치	N110			GN		xxx llm	1		w:4961
+スイッチ	스위치	N110		Ob	GN		xxx llm	1		w:4961
 スイッチバック	스위치백	N110		Hd	GN				スイッチバック	w:4962
 スイッチングレギュレータ	스위칭 레귤레이터	N110			GN		xxx llm	1		w:4963
 スイレン	수련	N110			GN				スイレン	w:4964
@@ -12551,7 +12551,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 再配置	재배치	N110			GN		llm		さいはいち	w:12543
 冒頭	서두	N110			GN		xxx llm	1		w:12544
 冗談半分	반농담조	N110			GN				じょうだんはんぶん	w:12545
-写メ	휴대폰 사진	N110			GN		llm			w:12546
+写メ	휴대폰 사진	N110		Op	GN		llm			w:12546
 写真乾板	사진건판	N110			GN				しゃしんかんぱん	w:12547
 写真屋	사진관	N110	VBlVHn		GN		xxx llm		しゃしんや	w:12548
 写真屋	카메라 가게	N110	VBl		GN		llm		しゃしんや	w:12549
@@ -12810,7 +12810,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 初項	초항	N110			GN				しょこう	w:12802
 判り	이해	N110	UTh		GN		llm		わかり	w:12803
 判別式	판별식	N110			GN				はんべつしき	w:12804
-判子	도장	N110			GN				はんこ	w:12805
+判子	도장	N110		Os	GN				はんこ	w:12805
 判決理由	판결이유	N110	ULw		GN				はんけつりゆう	w:12806
 別け	가름	N110			GN		xxx		わけ	w:12807
 別け	나눔	N110			GN		llm		わけ	w:12808
@@ -14384,7 +14384,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 夕潮	저녁 조수	N110			GN		xxx llm	1		w:14376
 夕霧	저녁 안개	N110	VFrVHn		GN		llm		ゆうぎり	w:14377
 夕靄	이내	N110	VHn		GN				ゆうもや	w:14378
-夕餉	석식	N110			GN				ゆうげ	w:14379
+夕餉	석식	N110		Om	GN				ゆうげ	w:14379
 外つ国	이국	N110			GN				とつくに	w:14380
 外交史	외교사	N110			GN				がいこうし	w:14381
 外付	외부에 장착&AV@	M429			GN		llm		そとづけ	w:14382
@@ -17830,7 +17830,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 晒菜升麻	촛대승마	N110			GN				さらしなしょうま	w:17820
 晨り鴨	흰줄박이오리	N110			GN				しのりがも	w:17821
 晨鴨	흰줄박이오리	N110			GN				しのりがも	w:17822
-晩ごはん	석식	N110			GN				ばんごはん	w:17823
+晩ごはん	석식	N110		Om	GN				ばんごはん	w:17823
 晩生	늦벼	N110			GN				おくて	w:17824
 普賢	보현보살	N110	VHn		GN		llm		ふげん	w:17825
 普賢菩薩	보현보살	N110			GN				ふげんぼさつ	w:17826
@@ -18684,7 +18684,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 毛じらみ	사면발니	N110			GN				けじらみ	w:18673
 毛ジラミ	사면발니	N110			GN				けじらみ	w:18674
 毛並み	털결	N110			GN		xxx llm	1		w:18675
-毛布	담요	N110			GN		xxx llm	1		w:18676
+毛布	담요	N110		Of	GN		xxx llm	1		w:18676
 毛帽子	털모자	N110			GN				けぼうし	w:18677
 毛氈苔	끈끈이주걱	N110			GN		xxx llm	1		w:18678
 毛深雀蜂	털보말벌	N110			GN				けぶかすずめばち	w:18679
@@ -20248,7 +20248,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 町づくり	공동체 개발	N110			GN				まちづくり	w:20236
 町並み	거리 풍경	N110	VPl		GN		llm		まちなみ	w:20237
 町作り	공동체 개발	N110			GN				まちづくり	w:20238
-画像	이미지	N110			GN		xxx llm	1		w:20239
+画像	이미지	N110		Op	GN		xxx llm	1		w:20239
 画引き	획수 색인	N110			GN		xxx llm	1		w:20240
 画材店	화방	N110			GN				がざいてん	w:20241
 画架座	화가자리	N110			GN				がかざ	w:20242
@@ -20367,7 +20367,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 瘢痕	흉터	N110	UTi		GN				はんこん	w:20355
 瘤歯鯨	혹부리고래	N110			GN				こぶはくじら	w:20356
 瘤蜜柑	카피르라임	N110			GN				こぶみかん	w:20357
-瘴気	독기	N110			GN		xxx llm	1		w:20358
+瘴気	독기	N110		Og	GN		xxx llm	1		w:20358
 瘻孔	누공	N110	UTi		GN				ろうこう	w:20359
 療治	치료	N110		Hd	GN				りょうじ	w:20360
 療治	치료&AV@	M429			GN				りょうじ	w:20361
@@ -22056,7 +22056,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 聖遺物	성유물	N110			GN				せいいぶつ	w:22044
 聖金曜日	성금요일	N110			GN				せいきんようび	w:22045
 聖骨	성골	N110			GN				せいこつ	w:22046
-聞	&J6@	M421			GN		xxx llm	1		w:22047
+聞	&J6@	M421		Rc	GN		xxx llm	1		w:22047
 聞きなれ	귀에 &He@	M427			GN		llm		ききなれる	w:22048
 聞き上手	잘 들어 주는 사람	N110	VHn		GN		llm		ききじょうず	w:22049
 聞き出	캐&A6@	M423			GN		xxx llm		ききだす	w:22050
@@ -23527,7 +23527,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 訓誡	훈계	N110		Hd	GN				くんかい	w:23515
 訓誡	훈계&AV@	M429			GN				くんかい	w:23516
 託つけ	빌미	N110			GN				かこつけ	w:23517
-記念写真	기념사진	N110			GN				きねんしゃしん	w:23518
+記念写真	기념사진	N110		Op	GN				きねんしゃしん	w:23518
 記念硬貨	기념주화	N110			GN				きねんこうか	w:23519
 記念論文集	기념논문집	N110			GN				きねんろんぶんしゅう	w:23520
 記憶術	기억술	N110			GN				きおくじゅつ	w:23521
@@ -23553,7 +23553,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 許し	용서	N110			GN		xxx	1	ゆるし	w:23541
 許し色	허용된 색	N110			GN		xxx llm	1		w:23542
 許可証	허가증	N110			GN				きょかしょう	w:23543
-訳	것	N110			GN		xxx llm	1		w:23544
+訳	것	N110		Oq	GN		xxx llm	1		w:23544
 訳がな	$GF@	H7U0			GN		llm		わけがない	w:23545
 訳が無	$GF@	H7U0			GN		llm		わけがない	w:23546
 訳ではない	는 것은 아니다	A9D0			GN		llm		わけではない	w:23547
@@ -23958,7 +23958,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 購読者	구독자	N110			GN				こうどくしゃ	w:23946
 贄	공물	N110			GN		llm		にえ	w:23947
 贅沢品	사치품	N110			GN				ぜいたくひん	w:23948
-贈	선물&AV@	M428			GN		xxx llm	1		w:23949
+贈	선물&AV@	M428		Rc	GN		xxx llm	1		w:23949
 贈り主	보낸 사람	N110	VHn		GN		llm		おくりぬし	w:23950
 贈主	보낸 사람	N110	VHn		GN		llm		おくりぬし	w:23951
 贋者	가짜	N110			GN				にせもの	w:23952

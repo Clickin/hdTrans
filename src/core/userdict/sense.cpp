@@ -15,6 +15,29 @@ std::string_view SensePos(std::string_view jp) {
     return "n";
 }
 
+bool ValidTag(std::string_view tag) {
+    const std::size_t width = tag.starts_with("sem:") ? 3 : tag.starts_with("gram:") ? 2 : 0;
+    if (width == 0) return false;
+    tag.remove_prefix(tag.find(':') + 1);
+    if (tag.size() != width) return false;
+    for (const char c : tag) {
+        if (!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'))) return false;
+    }
+    return true;
+}
+
+bool ValidTrigger(std::string_view trigger, Side side) {
+    if (!trigger.starts_with("sem:") && !trigger.starts_with("gram:")) return true;
+    const std::size_t at = trigger.find('@');
+    if (at == std::string_view::npos) return ValidTag(trigger);
+    if (side != Side::Before || !ValidTag(trigger.substr(0, at))) return false;
+    const std::string_view argument = trigger.substr(at + 1);
+    const std::size_t slash = argument.find('/');
+    const std::string_view particle = argument.substr(0, slash);
+    if (particle.empty() || particle.find('@') != std::string_view::npos) return false;
+    return slash == std::string_view::npos || ValidTag(argument.substr(slash + 1));
+}
+
 // The sense of one line, none for a blank or comment line. Returns an error message.
 std::string ParseSense(std::string_view line, Families& families, Sense& s, bool& found) {
     found = false;
@@ -32,8 +55,8 @@ std::string ParseSense(std::string_view line, Families& families, Sense& s, bool
         pos = pos.substr(0, colon);
     }
     if (pos.empty()) pos = SensePos(jp);
-    if (pos != "n" && pos != "v" && pos != "v1" && pos != "v5" && pos != "adj" && pos != "na") {
-        return "POS " + internal::Quote(pos) + ", want n, v, v1, v5, adj or na";
+    if (pos != "n" && pos != "v" && pos != "v1" && pos != "v5" && pos != "adj" && pos != "na" && pos != "p") {
+        return "POS " + internal::Quote(pos) + ", want n, v, v1, v5, adj, na or p";
     }
     Side sideValue = Side::Before;
     const bool known = side == "before" || side == "after" || side == "sentence";
@@ -47,11 +70,11 @@ std::string ParseSense(std::string_view line, Families& families, Sense& s, bool
     adjective = adjective && pos == "n" && !root.empty();
     if (adjective) kr = root;
     std::vector<internal::Rec> recs;
-    if (std::string err = internal::Compile(jp, kr, pos, cls, false, nullptr, families, recs); !err.empty()) return err;
+    if (std::string err = internal::Compile(jp, kr, pos == "p" ? "n" : pos, cls, false, nullptr, families, recs); !err.empty()) return err;
     const internal::Rec& e = recs[0];
     s = Sense();
     s.key = e.key;
-    s.classDigit = e.part.size() > 1 ? e.part[1] : 0;
+    s.classDigit = pos == "p" ? '2' : e.part.size() > 1 ? e.part[1] : 0;
     s.target = e.target;
     s.side = sideValue;
     s.adjective = adjective;
@@ -59,6 +82,7 @@ std::string ParseSense(std::string_view line, Families& families, Sense& s, bool
         for (std::string_view t : internal::Split(triggers, ',')) {
             t = internal::TrimSpace(t);
             if (t.empty()) return "empty trigger";
+            if (!ValidTrigger(t, sideValue)) return "invalid semantic trigger " + internal::Quote(t);
             s.triggers.emplace_back(t);
         }
     }

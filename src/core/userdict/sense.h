@@ -13,7 +13,11 @@
 // defaults to adj for a KEY ending in い, v for one ending in another dictionary-form
 // kana, else n. A noun KR in 하다 (大事 중요하다) is the root of a 하다 adjective: the
 // noun takes the root, and 한 before な. The first row of a key whose trigger is found
-// wins. Comments and blank lines are as in the plain format.
+// wins. POS p sets a particle target without conjugation. A trigger may instead be
+// sem:CODE or gram:CODE, optionally followed by @PARTICLE (before only) to test
+// the noun immediately before that particle. /gram:CODE or /sem:CODE then tests
+// the first following predicate, within eight items and without a clause boundary.
+// Comments and blank lines are as in the plain format.
 #include <cstdint>
 #include <string>
 #include <string_view>
