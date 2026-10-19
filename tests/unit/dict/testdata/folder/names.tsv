@@ -1,3 +1,4 @@
+#! layer=names
 key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 霧島	기리시마	N130	QPN		GN					names.1
 霧島	무엇	N130	QCT		GN					names.2

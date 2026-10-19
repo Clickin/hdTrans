@@ -44,11 +44,6 @@ bool Titled(std::string_view text, std::string_view key) {
     }
 }
 
-std::string_view BaseName(std::string_view path) {
-    const std::size_t slash = path.find_last_of("/\\");
-    return slash == std::string_view::npos ? path : path.substr(slash + 1);
-}
-
 // The codes of the entries compiled into codes get their with-XXX and plain views, as the
 // snapshot's own codes do.
 void FinishCodes(dict::CodeTable& codes) {
@@ -93,7 +88,7 @@ std::optional<std::string> WholeLineOf(const std::map<std::string, std::string>&
 struct DocumentData {
     explicit DocumentData(const dict::Snapshot& snap) : registry(&snap), wholeLines(WholeLineRows()) {
         for (const dict::File& f : snap.PlainFiles()) {
-            if (BaseName(f.name) == "readings.tsv") registry.LoadReadings(f.text);
+            if (f.layer == dict::FileLayer::Readings) registry.LoadReadings(dict::internal::WithoutHeader(f.text));
         }
         for (const dict::UserEntry& e : snap.TextPlain().Entries()) {
             if (e.file < 0) continue;
