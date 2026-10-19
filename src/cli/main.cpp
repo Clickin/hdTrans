@@ -238,8 +238,10 @@ int main(int argc, char** argv) {
     hdTrans::Engine engine(reference);
     if (!engine.Open(folders, verifyDicts, userFile)) {
         std::error_code ec;
-        const bool user = !userFile.empty() && std::filesystem::exists(
-            std::filesystem::path(std::u8string(userFile.begin(), userFile.end())), ec);
+        const bool user = !userFile.empty() &&
+                          std::filesystem::exists(std::u8string(reinterpret_cast<const char8_t*>(userFile.data()),
+                                                                userFile.size()),
+                                                  ec);
         std::fprintf(stderr, "hdtrans: no dictionary loaded from %s%s%s\n", dicts.c_str(),
                      user ? " with the user dictionary " : "", user ? userFile.c_str() : "");
         return 1;

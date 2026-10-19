@@ -12,12 +12,12 @@ using namespace hdTrans::dict;
 namespace {
 
 std::filesystem::path Path(const std::string& utf8) {
-    return std::filesystem::path(std::u8string(utf8.begin(), utf8.end()));
+    return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(utf8.data()), utf8.size()));
 }
 
 std::string Utf8(const std::filesystem::path& p) {
     const std::u8string s = p.u8string();
-    return std::string(s.begin(), s.end());
+    return std::string(reinterpret_cast<const char*>(s.data()), s.size());
 }
 
 }  // namespace

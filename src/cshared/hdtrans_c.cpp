@@ -76,15 +76,15 @@ std::string ModuleDir() {
         }
         path.resize(path.size() * 2);
     }
-    const std::filesystem::path module(path);
+    const std::filesystem::path image(path);
 #else
     Dl_info info{};
     if (!dladdr(reinterpret_cast<void*>(&ModuleDir), &info) || !info.dli_fname) return {};
     std::error_code ec;
-    const std::filesystem::path module = std::filesystem::canonical(info.dli_fname, ec);
+    const std::filesystem::path image = std::filesystem::canonical(info.dli_fname, ec);
     if (ec) return {};
 #endif
-    const std::u8string dir = module.parent_path().u8string();
+    const std::u8string dir = image.parent_path().u8string();
     return std::string(reinterpret_cast<const char*>(dir.data()), dir.size());
 #endif
 }
