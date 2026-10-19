@@ -3,6 +3,16 @@
 번역기를 쓰는 방법은 저장소 첫 화면의 [README](../README.md)에 있습니다. 이 폴더는 hdTrans를 빌드하고,
 고치고, 다른 프로그램에 넣는 사람을 위한 문서입니다. 코드 작성 규칙은 [AGENTS.md](../AGENTS.md)를 따릅니다.
 
+쓰는 사람에게 필요한 문서는 이 셋입니다.
+
+| 문서 | 내용 |
+|---|---|
+| [using-with-tools.md](using-with-tools.md) | LunaTranslator, XUnity.AutoTranslator, 아랄트랜스, VNR, 아네모네 같은 도구에 끼워 쓰기 |
+| [dictionary-files.md](dictionary-files.md#사용자-사전) | 사용자 사전 형식과 품사 |
+| [api.md](api.md#명령줄-hdtrans) | 명령줄 프로그램과 번역 창 |
+
+개발 문서:
+
 | 문서 | 내용 |
 |---|---|
 | [fixing-translations.md](fixing-translations.md) | 오역 하나를 고치는 순서: `-why` 진단, 고칠 곳 고르기, 테스트, 생성 파일, 판정, 커밋, 실제 사례 |
