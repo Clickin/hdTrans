@@ -31,7 +31,7 @@ hdTrans는 CMake 프리셋(`CMakePresets.json`)으로 빌드합니다. 외부 �
 | 산출물 | Windows | Linux | macOS |
 |---|---|---|---|
 | C API 라이브러리 | `hdTransEngine.dll` | `libhdTransEngine.so` | `libhdTransEngine.dylib` |
-| 이지트랜스 호환 DLL | `J2KEngine.dll` | - | - |
+| 이지트랜스 호환 DLL | `J2KEngine.dll`(배포본은 x86만) | - | - |
 | CLI | `hdtrans.exe` | `hdtrans` | `hdtrans` |
 
 ## macOS, Linux
@@ -55,7 +55,7 @@ ctest --preset windows-x64
 ```
 
 Release 바이너리는 `build\windows-x64\Release`(또는 `build\windows-x86\Release`)에 있습니다.
-이지트랜스를 쓰던 도구에 넣을 `J2KEngine.dll`은 대부분 32비트이므로 `windows-x86`으로 빌드합니다.
+이지트랜스를 쓰던 도구에 넣을 `J2KEngine.dll`은 32비트라 `windows-x86`으로 빌드합니다. `windows-x64`도 빌드는 되지만 배포본에는 넣지 않습니다.
 
 Ninja로 빌드하려면 아키텍처에 맞는 MSVC 개발자 명령 프롬프트나 `vcvarsall` 환경에서
 `windows-x64-ninja` 또는 `windows-x86-ninja`를 씁니다. 바이너리는 `build\<프리셋>`에 바로 생깁니다.

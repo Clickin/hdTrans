@@ -53,8 +53,8 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 ### 이지트랜스 대체: `J2KEngine.dll`
 
 `J2KEngine.dll`은 이지트랜스 엔진과 같은 `J2K_*` 함수를 내보냅니다. 이지트랜스 엔진을 불러오는
-기존 후킹, 번역 도구에서 원래 `J2KEngine.dll` 대신 이 파일을 쓰면 됩니다. 이런 도구는 대부분
-32비트이므로 **x86(32비트) 빌드**를 사용하세요.
+기존 후킹, 번역 도구에서 원래 `J2KEngine.dll` 대신 이 파일을 쓰면 됩니다. 이지트랜스와 이런 도구는
+32비트라서 `J2KEngine.dll`은 **Windows x86(32비트) 배포본에만** 들어 있습니다. x64 배포본에는 없습니다.
 
 1. 이지트랜스 폴더의 원래 `J2KEngine.dll`을 백업하고 hdTrans의 `J2KEngine.dll`로 바꿉니다.
 2. 같은 폴더에 `dicts\`를 만들고 저장소 `dicts/`의 `*.tsv` 파일을 복사합니다.
