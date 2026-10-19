@@ -1,7 +1,5 @@
 #include "hdTrans/pipeline/protect.h"
 
-#include <cstdio>
-#include <cstdlib>
 #include <memory>
 #include <string>
 #include <vector>
@@ -36,8 +34,6 @@ std::shared_ptr<const dict::Snapshot> Snapshot(const std::string& rows) {
     f.text = "key\tko\tpos\tsem\tgram\tdict\tid\n" + rows;
     return dict::Load({f}).snapshot;
 }
-
-using hdtest::DictsDir;
 
 }  // namespace
 
@@ -208,14 +204,30 @@ HD_TEST(pipeline_kata_speech) {
     HD_CHECK_EQ(Show(internal::KataSpeech(spans, ctx, *snap)), std::string("わたしは 〖1김〗ねこです"));
 }
 
-// The katakana rules on the dictionaries of dicts/base, when present.
 HD_TEST(pipeline_katakana_dictionary) {
-    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
-    const dict::LoadResult r = dict::LoadFolders({DictsDir()});
-    if (r.snapshot == nullptr || !r.snapshot->HasDictionary()) {
-        HD_SKIP(std::string("no dictionaries at ") + DictsDir());
-    }
-    const dict::Snapshot& snap = *r.snapshot;
+    const auto loaded = Snapshot(
+        "わたし\t나\tN110\t\t\tGN\t1\n"
+        "にほんご\t일본어\tN110\t\t\tGN\t2\n"
+        "わか\t알&AA@\tM428\t\t\tGN\t3\n"
+        "ロボット\t로봇\tN110\t\t\tGN\t4\n"
+        "おまえ\t너\tN110\t\t\tGN\t5\n"
+        "ころ\t죽이&AA@\tM428\t\t\tGN\t6\n"
+        "コロス\t코로스\tN130\tQPN\t\tGN\t7\n"
+        "こんにちは\t안녕\tN110\t\t\tGN\t8\n"
+        "アリス\t앨리스\tN130\tQPN\t\tGN\t9\n"
+        "もう\t이미\tN110\t\t\tGN\t10\n"
+        "とべ\t날&AA@\tM427\t\t\tGN\t11\n"
+        "ここ\t여기\tN110\t\t\tGN\t12\n"
+        "とお\t지나&AA@\tM428\t\t\tGN\t13\n"
+        "うそ\t거짓말\tN110\t\t\tGN\t14\n"
+        "まだ\t아직\tN110\t\t\tGN\t15\n"
+        "なにも\t아무것도\tN110\t\t\tGN\t16\n"
+        "てき\t적\tN110\t\t\tGN\t17\n"
+        "エビフライ\t새우튀김\tN110\t\t\tGN\t18\n"
+        "あれだけ\t그만큼\tN110\t\t\tGN\t19\n"
+        "からだ\t몸\tN110\t\t\tGN\t20\n");
+    HD_REQUIRE(loaded != nullptr);
+    const dict::Snapshot& snap = *loaded;
     const LineContext ctx;
     const struct {
         const char* in;

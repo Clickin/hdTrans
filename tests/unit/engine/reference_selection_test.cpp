@@ -63,3 +63,45 @@ HD_TEST(engine_reference_disables_selection_options) {
     HD_CHECK_EQ(changed[0], std::string("동경,"));
     HD_CHECK(scoreCalls > 0);
 }
+
+HD_TEST(engine_individual_improvement_outputs) {
+    using namespace hdTrans;
+    const struct {
+        bool word::Improvements::* flag;
+        const char* input;
+        const char* rows;
+        const char* plain;
+        const char* off;
+        const char* on;
+    } cases[] = {
+        {&word::Improvements::extraBuiltin, "がぼっ！", "", "", "가봇!", "커헉!"},
+        {&word::Improvements::literalCleanup, "何度も",
+         "何度も\t몇번\tN110\tXXX\t\tGN\t0\t1\n", "", "몇번", "몇 번"},
+        {&word::Improvements::exclamationNa, "日が暮れるな。", "",
+         "日が暮れるな\t저물지 마\tphrase\n日が暮れるなあ\t저무는구나\tphrase\n",
+         "저물지 마.", "저무는구나."},
+        {&word::Improvements::dialectForms, "待っとった。", "",
+         "待っとった\t기다렸다\tphrase\n待っていた\t기다리고 있었다\tphrase\n",
+         "기다렸다.", "기다리고 있었다."},
+    };
+    for (const auto& c : cases) {
+        const auto loaded = dict::Load({
+            {0, "base.tsv", std::string("key\tko\tpos\tsem\tgram\tdict\trule\tid\n") + c.rows},
+            {0, "plain.tsv", c.plain},
+        });
+        HD_REQUIRE(loaded.errors.empty());
+        HD_REQUIRE(loaded.snapshot != nullptr);
+        HD_CHECK(std::string(c.off) != c.on);
+        for (bool enabled : {false, true}) {
+            const auto generated = internal::NewGenerated(*loaded.snapshot);
+            internal::TranslationOptions options;
+            options.wordImprovements = word::Improvements::Reference();
+            options.wordImprovements.*(c.flag) = enabled;
+            const std::string input[] = {c.input};
+            internal::Memory memory;
+            const auto out = internal::TranslateDocument(*loaded.snapshot, *generated, input, memory, {}, options);
+            HD_REQUIRE(out.size() == 1);
+            HD_CHECK_EQ(out[0], std::string(enabled ? c.on : c.off));
+        }
+    }
+}

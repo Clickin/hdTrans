@@ -2,14 +2,10 @@
 // Reading and writing stage records: tab-separated lines whose text columns escape
 // \ TAB LF CR as \\ \t \n \r, the other C0 controls, DEL and every byte of an invalid
 // UTF-8 sequence as \xNN, and nothing else.
-#include <cstdio>
-#include <cstdlib>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include "hdTrans/text/utf8.h"
-#include "hdtest.h"
 
 namespace stagetest {
 
@@ -64,48 +60,6 @@ inline std::string UnescapeStageText(std::string_view s) {
         }
     }
     return out;
-}
-
-// Splits a line at tabs.
-inline std::vector<std::string_view> Columns(std::string_view line) {
-    std::vector<std::string_view> cols;
-    for (;;) {
-        const size_t tab = line.find('\t');
-        cols.push_back(line.substr(0, tab));
-        if (tab == std::string_view::npos) return cols;
-        line.remove_prefix(tab + 1);
-    }
-}
-
-// Splits a file at LF; a final LF ends the last line.
-inline std::vector<std::string_view> Lines(std::string_view text) {
-    std::vector<std::string_view> lines;
-    while (!text.empty()) {
-        const size_t lf = text.find('\n');
-        lines.push_back(text.substr(0, lf));
-        if (lf == std::string_view::npos) break;
-        text.remove_prefix(lf + 1);
-    }
-    return lines;
-}
-
-inline bool ReadFile(const std::string& path, std::string& text) {
-    std::FILE* f = std::fopen(path.c_str(), "rb");
-    if (f == nullptr) return false;
-    char buf[1 << 16];
-    for (size_t n; (n = std::fread(buf, 1, sizeof buf, f)) > 0;) text.append(buf, n);
-    std::fclose(f);
-    return true;
-}
-
-// The complete, explicitly configured stage folder.
-inline std::string StagesDir() {
-    if (hdtest::GoldenDir().empty()) return {};
-    const std::string dir = hdtest::GoldenDir() + "/stages/";
-    std::FILE* m = std::fopen((dir + "MANIFEST").c_str(), "rb");
-    if (m == nullptr) return {};
-    std::fclose(m);
-    return dir;
 }
 
 }  // namespace stagetest
