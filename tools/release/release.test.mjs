@@ -173,17 +173,23 @@ async function harness(t, options = {}) {
   let main = options.advanced ? newer : head;
   let checks = 0;
   let tag = options.existingTag;
-  let published;
-  let releaseFailed = false;
+  let localTag = options.localTag;
+  let published = options.existingRelease;
+  let failed = false;
   const calls = [];
+  const logs = [];
+  const lookups = [];
   if (options.resume) applyCandidate(root, candidate);
   const missing = () => { throw Object.assign(new Error('Not found'), { status: 404 }); };
-  const github = { paginate: async () => options.promotions ?? [pr], rest: {
+  const github = { paginate: async (method, args) => {
+    if (method === github.rest.repos.listReleases) return published ? [published] : [];
+    assert.equal(method, github.rest.repos.listPullRequestsAssociatedWithCommit);
+    lookups.push(args);
+    return options.promotions ?? [pr];
+  }, rest: {
     actions: {
       getWorkflow: async () => ({ data: { id: 42 } }),
       getWorkflowRun: async () => ({ data: { ...goodRun, ...options.run } }),
-      listWorkflowRuns: async () => ({ data: { workflow_runs: options.builds ?? [] } }),
-      createWorkflowDispatch: async args => { calls.push(['dispatch', args]); },
     },
     git: {
       getRef: async ({ ref }) => {
@@ -200,37 +206,50 @@ async function harness(t, options = {}) {
         return { data: { tag: 'v0.1.1', sha: annotation, message: 'Release v0.1.1',
           object: { type: 'commit', sha: options.taggedCommit ?? bot } } };
       },
-      createTag: async args => {
-        calls.push(['tag-object', args]);
-        return { data: { tag: args.tag, sha: annotation, message: args.message,
-          object: { type: args.type, sha: args.object } } };
-      },
-      createRef: async args => { calls.push(['tag', args]); tag = { type: 'tag', sha: args.sha }; },
     },
     repos: {
       listPullRequestsAssociatedWithCommit: () => {},
-      getReleaseByTag: async () => published ? { data: published } : missing(),
+      listReleases: () => {},
+      getReleaseByTag: async () => published && !options.draftHidden ? { data: published } : missing(),
       createRelease: async args => {
-        if (options.releaseFailure && !releaseFailed) {
-          releaseFailed = true;
+        if (options.releaseFailure && !failed) {
+          failed = true;
           throw new Error('API unavailable');
         }
-        calls.push(['release', args]); published = args;
+        calls.push(['release', args]); published = { ...args, id: 12 };
+        if (options.advanceAfterRelease) main = newer;
       },
     },
   } };
   const git = (...args) => {
-    if (args[0] === 'rev-parse') return head;
+    if (args[0] === 'rev-parse') return args[1] === 'HEAD' ? head : options.localTaggedCommit ?? bot;
     if (args[0] === 'status') return '';
-    if (args[0] === 'tag') return '';
-    if (args[0] === 'show') return args.includes('--format=%P') ? source : commitMessage('0.1.1', source, runId);
+    if (args[0] === 'tag') return args[1] === '--list' && localTag ? 'v0.1.1' : '';
+    if (args[0] === 'cat-file') return options.localTagType ?? 'tag';
+    if (args[0] === 'show') {
+      if (args.includes('--format=%P')) return source;
+      const message = commitMessage('0.1.1', source, options.wrongBuild ? '999' : runId);
+      return options.skipMessage ? message.replace('\n\n', ' [skip ci]\n\n') : message;
+    }
     if (args[0] === 'diff-tree') return options.badResume ? 'src/main.cpp' : 'CHANGELOG.md\nnpm/package.json';
     if (args[0] === 'add') { calls.push(['add', args]); return ''; }
     if (args.includes('commit')) { calls.push(['commit', args]); head = bot; return ''; }
+    if (args.includes('tag')) { calls.push(['tag-object', args]); localTag = true; return ''; }
     if (args[0] === 'push') {
-      calls.push(['push', args]);
-      if (options.pushRace) { main = newer; throw new Error('non-fast-forward'); }
-      main = head;
+      const tagging = args[2].startsWith('refs/tags/');
+      calls.push([tagging ? 'tag-push' : 'push', args]);
+      if (tagging) {
+        if (options.tagPushFailure && !failed) { failed = true; throw new Error('SSH unavailable'); }
+        if (options.tagPushRace) {
+          tag = { type: 'commit', sha: options.tagPushRace === 'owned' ? bot : newer };
+          throw new Error('tag already exists');
+        }
+        tag = { type: 'tag', sha: annotation };
+        if (options.advanceAfterTag) main = newer;
+      } else {
+        if (options.pushRace) { main = newer; throw new Error('non-fast-forward'); }
+        main = head;
+      }
       return '';
     }
     throw new Error(`Unexpected git command ${args.join(' ')}`);
@@ -240,55 +259,89 @@ async function harness(t, options = {}) {
       assert.equal(baseline, undefined);
       assert.equal(version, candidate.version.toString());
       return candidate;
-    }, log: () => {} });
-  return { run, calls, root };
+    }, log: message => logs.push(message) });
+  return { run, calls, logs, lookups, root, get main() { return main; } };
 }
 
-test('release uses only a normal main push, then tag, Release and explicit non-dry-run Build', async t => {
-  const h = await harness(t);
-  await h.run();
-  assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object', 'tag', 'release', 'dispatch']);
-  assert.deepEqual(h.calls.find(call => call[0] === 'push')[1], ['push', 'origin', 'HEAD:refs/heads/main']);
-  assert.match(h.calls.find(call => call[0] === 'commit')[1].at(-1), /\[skip ci\]/);
-  assert.deepEqual(h.calls.find(call => call[0] === 'tag-object')[1], {
-    ...repo, tag: 'v0.1.1', message: 'Release v0.1.1', object: bot, type: 'commit',
+for (const title of ['ci: recover main workflows', 'feat: add snapshots']) {
+  test(`a direct main push without a PR cannot release: ${title}`, async t => {
+    const h = await harness(t, { promotions: [], promotion: { title } });
+    const version = readVersion(h.root, false);
+    await h.run();
+    assert.deepEqual(h.calls, []);
+    assert.equal(readVersion(h.root, false), version);
+    assert.deepEqual(h.lookups, [{ ...repo, commit_sha: source, per_page: 100 }]);
+    assert.deepEqual(h.logs, ['A merged main PR is required for a release; skipping this direct push.']);
   });
-  assert.equal(h.calls.find(call => call[0] === 'tag')[1].sha, annotation);
-  assert.deepEqual(h.calls.at(-1)[1], { ...repo, workflow_id: 'build.yml', ref: 'v0.1.1', inputs: { dry_run: 'false' } });
-  assert.equal(readVersion(h.root), '0.1.1');
+}
+
+test('nonempty invalid PR associations still fail without release mutations', async t => {
+  for (const promotions of [
+    [{}], [{ ...promotion, merged_at: null }], [{ ...promotion, merge_commit_sha: previous }],
+    [{ ...promotion, base: { ref: 'develop', repo: promotion.base.repo } }],
+    [{ ...promotion, base: { ref: 'main', repo: { full_name: 'fork/hdTrans' } } }], [promotion, promotion],
+  ]) {
+    const h = await harness(t, { promotions });
+    await assert.rejects(h.run(), /exactly one merged main PR/);
+    assert.deepEqual(h.calls, []);
+    assert.equal(h.lookups.length, 1);
+  }
 });
 
-for (const options of [{ advanced: true }, { advanceOnCheck: 2 }, { advanceOnCheck: 3 }, { pushRace: true }, { promotion: { title: 'docs: promote docs' } }]) {
+test('release uses normal SSH pushes and a local annotated tag, without dispatch', async t => {
+  const h = await harness(t);
+  await h.run();
+  assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object', 'tag-push', 'release']);
+  assert.deepEqual(h.calls.find(call => call[0] === 'push')[1], ['push', 'origin', 'HEAD:refs/heads/main']);
+  assert.doesNotMatch(h.calls.find(call => call[0] === 'commit')[1].at(-1), /\[(?:skip ci|ci skip|no ci|skip actions|actions skip)\]/i);
+  assert.deepEqual(h.calls.find(call => call[0] === 'tag-object')[1].slice(-6),
+    ['tag', '-a', 'v0.1.1', bot, '-m', 'Release v0.1.1']);
+  assert.deepEqual(h.calls.find(call => call[0] === 'tag-push')[1], ['push', 'origin', 'refs/tags/v0.1.1:refs/tags/v0.1.1']);
+  const release = h.calls.at(-1)[1];
+  assert.equal(release.target_commitish, bot);
+  assert.equal(release.draft, true);
+  assert.equal(release.make_latest, 'false');
+  assert.equal(readVersion(h.root), '0.1.1');
+  assert.match(h.logs.at(-1), /tag pipeline builds and publishes/);
+  assert.doesNotMatch(readFileSync(new URL('./release.mjs', import.meta.url), 'utf8'), /createWorkflowDispatch|listWorkflowRuns|createTag|createRef/);
+  const workflow = readFileSync(new URL('../../.github/workflows/release-please.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /ssh-key: \$\{\{ secrets\.HDTRANS_RELEASE_PUSH_KEY \}\}/);
+});
+
+for (const options of [{ advanced: true }, { advanceOnCheck: 2 }, { advanceOnCheck: 3 }, { advanceOnCheck: 4 },
+  { pushRace: true }, { promotion: { title: 'docs: promote docs' } }]) {
   test(`no release for stale main or no changes: ${JSON.stringify(options)}`, async t => {
     const h = await harness(t, options);
     await h.run();
-    assert.ok(!h.calls.some(call => ['tag', 'release', 'dispatch'].includes(call[0])));
+    assert.ok(!h.calls.some(call => ['tag-object', 'tag-push', 'release'].includes(call[0])));
     assert.ok(!h.calls.some(call => call[1].includes?.('--force')));
   });
 }
 
-test('manual retry resumes only the validated Build\'s exact version-only bot child', async t => {
+test("manual retry resumes only the validated Build's exact version-only bot child", async t => {
   const h = await harness(t, { resume: true });
   await h.run();
-  assert.deepEqual(h.calls.map(call => call[0]), ['tag-object', 'tag', 'release', 'dispatch']);
+  assert.deepEqual(h.calls.map(call => call[0]), ['tag-object', 'tag-push', 'release']);
   const bad = await harness(t, { resume: true, badResume: true });
   await bad.run();
   assert.deepEqual(bad.calls, []);
 });
 
-test('retry after an API failure never pushes or retags again', async t => {
+test('retry after an API failure never pushes or retags again and reports manual tag recovery', async t => {
   const h = await harness(t, { releaseFailure: true });
   await assert.rejects(h.run(), /API unavailable/);
-  assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object', 'tag']);
+  assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object', 'tag-push']);
   await h.run();
-  assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object', 'tag', 'release', 'dispatch']);
+  assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object', 'tag-push', 'release']);
+  assert.match(h.logs.at(-1), /Publish npm manually at this tag with dry_run=false/);
 });
 
 for (const type of ['commit', 'tag']) {
   test(`retry accepts an existing ${type === 'tag' ? 'annotated' : 'lightweight'} tag targeting the release commit`, async t => {
     const h = await harness(t, { resume: true, existingTag: { type, sha: type === 'tag' ? annotation : bot } });
     await h.run();
-    assert.deepEqual(h.calls.map(call => call[0]), ['release', 'dispatch']);
+    assert.deepEqual(h.calls.map(call => call[0]), ['release']);
+    assert.match(h.logs.at(-1), /Publish npm manually/);
   });
 
   test(`retry rejects an existing ${type === 'tag' ? 'annotated' : 'lightweight'} tag targeting a different commit`, async t => {
@@ -298,24 +351,76 @@ for (const type of ['commit', 'tag']) {
   });
 }
 
-test('main advancing after annotation creation leaves the tag ref unpublished', async t => {
+test('main advancing after local annotation creation leaves the remote tag unpublished', async t => {
   const h = await harness(t, { advanceOnCheck: 5 });
   await h.run();
   assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object']);
 });
 
-test('a successful dry-run tag Build does not suppress the publishing Build', async t => {
-  const h = await harness(t, { resume: true, builds: [{
-    head_sha: bot, head_branch: 'v0.1.1', display_title: 'Build', status: 'completed', conclusion: 'success',
-  }] });
+for (const when of ['advanceAfterTag', 'advanceAfterRelease']) {
+  test(`main advancing after the immutable tag cannot abandon pinned publication: ${when}`, async t => {
+    const h = await harness(t, { [when]: true });
+    await h.run();
+    assert.equal(h.main, newer);
+    assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object', 'tag-push', 'release']);
+    assert.equal(h.calls.at(-1)[1].target_commitish, bot);
+  });
+}
+
+test('a tag push retry reuses its exact local annotation without retagging or forcing', async t => {
+  const h = await harness(t, { tagPushFailure: true });
+  await assert.rejects(h.run(), /SSH unavailable/);
   await h.run();
-  assert.ok(h.calls.some(call => call[0] === 'dispatch'));
+  assert.equal(h.calls.filter(call => call[0] === 'tag-object').length, 1);
+  assert.equal(h.calls.filter(call => call[0] === 'tag-push').length, 2);
+  assert.equal(h.calls.at(-1)[0], 'release');
 });
 
-test('an already successful stable Build is not dispatched twice', async t => {
-  const h = await harness(t, { resume: true, builds: [{
-    head_sha: bot, head_branch: 'v0.1.1', display_title: 'Release v0.1.1', status: 'completed', conclusion: 'success',
-  }] });
+for (const patch of [{ localTaggedCommit: newer }, { localTagType: 'commit' }]) {
+  test(`an unexpected local tag cannot be overwritten: ${JSON.stringify(patch)}`, async t => {
+    const h = await harness(t, { resume: true, localTag: true, ...patch });
+    await assert.rejects(h.run(), /expected local annotated tag/);
+    assert.deepEqual(h.calls, []);
+  });
+}
+
+test('a competing remote tag is accepted only at this exact release commit', async t => {
+  const owned = await harness(t, { resume: true, tagPushRace: 'owned' });
+  await owned.run();
+  assert.deepEqual(owned.calls.map(call => call[0]), ['tag-object', 'tag-push', 'release']);
+  assert.match(owned.logs.at(-1), /Publish npm manually/);
+  const other = await harness(t, { resume: true, tagPushRace: 'other' });
+  await assert.rejects(other.run(), /already targets another commit/);
+  assert.deepEqual(other.calls.map(call => call[0]), ['tag-object', 'tag-push']);
+});
+
+test('retry preserves both draft and published releases without recreating or deleting them', async t => {
+  for (const draft of [true, false]) {
+    const h = await harness(t, { resume: true, existingTag: { type: 'commit', sha: bot }, draftHidden: draft,
+      existingRelease: { tag_name: 'v0.1.1', draft, id: 12 } });
+    await h.run();
+    assert.deepEqual(h.calls, []);
+    assert.match(h.logs.at(-1), /Publish npm manually/);
+  }
+});
+
+test('the version commit Build skips without a new promotion PR or another version bump', async t => {
+  const h = await harness(t, { resume: true, run: { head_sha: bot }, promotions: [] });
   await h.run();
-  assert.ok(!h.calls.some(call => call[0] === 'dispatch'));
+  assert.deepEqual(h.calls, []);
+  assert.equal(readVersion(h.root), '0.1.1');
+  assert.deepEqual(h.lookups, [{ ...repo, commit_sha: bot, per_page: 100 }]);
+  assert.match(h.logs.at(-1), /skipping this direct push/);
+});
+
+test('an exact existing skip-marker release commit remains recoverable without retagging', async t => {
+  const h = await harness(t, { resume: true, skipMessage: true, existingTag: { type: 'commit', sha: bot } });
+  await h.run();
+  assert.deepEqual(h.calls.map(call => call[0]), ['release']);
+  assert.match(h.logs.at(-1), /Publish npm manually/);
+  for (const skipMessage of [false, true]) {
+    const wrong = await harness(t, { resume: true, skipMessage, wrongBuild: true });
+    await assert.rejects(wrong.run(), /Not this Build/);
+    assert.deepEqual(wrong.calls, []);
+  }
 });

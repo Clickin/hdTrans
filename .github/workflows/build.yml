@@ -4,8 +4,20 @@ run-name: ${{ github.event_name == 'workflow_dispatch' && !inputs.dry_run && for
 on:
   push:
     branches: [main, develop, 'ci/**']
-    tags: ['v*']
   pull_request:
+  workflow_call:
+    inputs:
+      dry_run:
+        description: Package artifacts without publishing a release
+        type: boolean
+        required: true
+    secrets:
+      HDTRANS_TESTDATA_KEY:
+        required: false
+    outputs:
+      release_published:
+        description: A stable GitHub release was published successfully
+        value: ${{ jobs.release.outputs.release_published }}
   workflow_dispatch:
     inputs:
       dry_run:
@@ -18,7 +30,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/ci/') }}
 
 env:
@@ -318,4 +330,4 @@ jobs:
       contents: write
     uses: ./.github/workflows/release.yml
     with:
-      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      dry_run: ${{ inputs.dry_run || false }}
