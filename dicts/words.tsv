@@ -19205,6 +19205,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 混淆	혼효	N110		Hd	GN				こんこう	w:19201
 混淆	혼효&AV@	M429			GN				こんこう	w:19202
 混迷	혼미&AV@	M429			GN		xxx	1	こんめい	w:19203
+淹れ	끓&AJ@	M427			GN					w:26619
 淹れ直	다시 끓&AJ@	M423			GN		llm			w:19204
 添い遂げ	끝까지 함께&AV@	M427			GN		xxx llm	1		w:19205
 添え	곁들&AJ@	M427			GN		xxx llm	1		w:19206
