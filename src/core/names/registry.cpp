@@ -209,6 +209,10 @@ void Registry::Add(std::string_view rawLine, Evidence* evidence) {
             chain = i + 1;
         }
         if (const std::string t = HonorificRun(line, run); !t.empty()) count(hon_, t, 2);
+        if (!run.kanji && RuneCount(run.text) >= 2 && line.substr(run.end).starts_with("と名乗") && !RoleLike(run.text) &&
+            !Flags(run.text).role) {
+            count(gloss_, std::string(run.text), 3);
+        }
     }
     for (std::size_t from = 0; from <= line.size();) {
         RubyMatch m;

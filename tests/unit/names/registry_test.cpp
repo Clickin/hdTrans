@@ -148,6 +148,24 @@ HD_TEST(names_honorifics) {
     HD_CHECK_EQ(r.Render("リン"), std::string("린"));
 }
 
+// A katakana word that introduces itself with と名乗る is a name in the whole document, also when
+// the dictionary has it as a common word; a kanji word, a role and other quotes are not.
+HD_TEST(names_self_introduction) {
+    const dict::Snapshot* snap = Dictionary();
+    HD_REQUIRE(snap != nullptr);
+    const std::vector<std::pair<std::string, std::vector<std::string>>> cases = {
+        {"ハルと名乗った少女が来た。\nハルは笑った。", {"ハル"}},
+        {"ソードと名乗る男", {"ソード"}},
+        {"ハルと言った。\nハルは笑った。", {}},
+        {"ウェイトレスと名乗った女", {}},
+        {"魔王と名乗った男", {}},
+    };
+    for (const auto& [doc, want] : cases) {
+        names::Registry r = Scan(snap, doc);
+        HD_CHECK(r.Names() == want);
+    }
+}
+
 HD_TEST(names_occurrences_and_guards) {
     const dict::Snapshot* snap = Dictionary();
     HD_REQUIRE(snap != nullptr);
