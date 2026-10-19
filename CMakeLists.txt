@@ -1,10 +1,7 @@
 # Static/shared engine libraries, CLI and unit tests on any C++20 compiler;
 # J2KEngine.dll (J2K_* exports) on Windows; WebAssembly with Emscripten. Presets: CMakePresets.json.
 cmake_minimum_required(VERSION 3.25)
-project(hdtrans LANGUAGES CXX)
-if(WIN32)
-    enable_language(C)
-endif()
+project(hdtrans LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -40,8 +37,11 @@ else()
     endif()
 endif()
 
+add_subdirectory(third_party/pcre2)
+
 file(GLOB_RECURSE HDTRANS_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(hdtrans STATIC ${HDTRANS_SOURCES})
+target_link_libraries(hdtrans PRIVATE pcre2-16)
 file(GLOB_RECURSE HDTRANS_DATA_SOURCES CONFIGURE_DEPENDS src/core/*.cpp src/core/*.h)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${HDTRANS_DATA_SOURCES})
 set(HDTRANS_DATA_HASHES "")

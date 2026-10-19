@@ -1,6 +1,8 @@
 # 빌드
 
-hdTrans는 CMake 프리셋(`CMakePresets.json`)으로 빌드합니다. 외부 라이브러리는 필요 없습니다.
+hdTrans는 CMake 프리셋(`CMakePresets.json`)으로 빌드합니다. 외부 라이브러리는 필요 없습니다. Ehnd 필터의
+정규식에 쓰는 PCRE2 10.49는 소스째 `third_party/pcre2`에 들어 있어(라이선스 `LICENCE.md`) 함께
+빌드되며, 16비트 라이브러리만 만듭니다.
 
 ## 요구 사항
 
@@ -90,7 +92,8 @@ cmake --build --preset wasm --parallel
 
 | 옵션 | 기본값 | 설명 |
 |---|---|---|
-| `HDTRANS_WERROR` | `ON` | 경고를 오류로 처리합니다 (MSVC `/WX`, clang·gcc `-Werror`) |
+| `HDTRANS_WERROR` | `ON` | 경고를 오류로 처리합니다 (MSVC `/WX`, clang·gcc `-Werror`). `third_party/`의 코드는 경고 없이 빌드합니다 |
+| `HDTRANS_PCRE2_JIT` | `OFF` | PCRE2 JIT 컴파일러를 넣습니다. WebAssembly에서는 쓰지 않습니다 |
 
 `cmake --preset linux -DHDTRANS_WERROR=OFF`처럼 끌 수 있지만, 저장소의 코드는 경고 없이 빌드되어야
 합니다. 경고는 플래그가 아니라 코드를 고쳐서 없앱니다.
