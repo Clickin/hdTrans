@@ -1,0 +1,12 @@
+hdTrans에 포함된 외부 라이브러리
+
+PCRE2 10.49
+  https://github.com/PCRE2Project/pcre2
+  BSD-3-Clause WITH PCRE2-exception
+  라이선스: third_party/pcre2/LICENCE.md
+  선택적 JIT, SLJIT(BSD-2-Clause): third_party/pcre2/deps/sljit/LICENSE
+
+libyaml 0.2.5
+  https://github.com/yaml/libyaml
+  MIT
+  라이선스: third_party/libyaml/License

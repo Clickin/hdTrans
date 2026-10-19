@@ -13,7 +13,7 @@ hdTrans는 일본어를 한국어로 옮기는 규칙 기반 번역 엔진입니
 - **풍부한 기본 사전**: 일반 어휘, 인명, 캐릭터, 지명, 단체, 작품명, 관용구, 속어, 이표기 사전을 함께 제공합니다.
 - **이지트랜스 호환**: `J2KEngine.dll`을 바꿔 넣으면 이지트랜스를 쓰던 후킹, 번역 도구를 그대로 쓸 수 있습니다.
 - **간단한 사용자 사전**: 한 줄에 `일본어<TAB>한국어` 한 항목. 동사, 형용사는 기본형만 적으면 활용됩니다.
-- **가볍고 빠름**: 함께 넣은 PCRE2 말고는 외부 의존성이 없고, 여러 스레드에서 동시에 번역할 수 있으며, 컴파일한 사전
+- **가볍고 빠름**: PCRE2와 libyaml을 함께 넣어 별도 설치가 필요 없고, 여러 스레드에서 동시에 번역할 수 있으며, 컴파일한 사전
   캐시로 빠르게 시작합니다.
 
 ## 웹 데모
@@ -48,6 +48,8 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 | `-each` | 줄마다 새 세션으로 번역 (줄끼리 문맥을 나누지 않음) |
 | `-compile-dicts` | 사전 캐시를 미리 만들고 종료 |
 
+실행 파일이나 DLL 옆에 `hdtrans.config.yaml`을 두어 설정할 수 있습니다([예제](hdtrans.config.example.yaml)).
+
 전체 옵션과 환경 변수는 [docs/api.md](docs/api.md#명령줄-hdtrans)에 있습니다.
 
 ### 이지트랜스 대체: `J2KEngine.dll`
@@ -62,7 +64,7 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
    다음 번역부터 자동으로 반영됩니다. 도구의 사용자 사전 다시 읽기(`J2K_ReloadUserDict`)는 바로
    반영합니다.
 
-도구가 넘기는 사전 경로는 무시되고, 사전은 항상 DLL 옆의 `dicts\`와 `userdict.tsv`에서 찾습니다.
+도구가 넘기는 사전 경로는 무시되고, 사전은 기본으로 DLL 옆의 `dicts\`와 `userdict.tsv`에서 찾습니다(설정 파일로 변경 가능).
 
 ### C API: `hdTransEngine.dll`
 
@@ -100,8 +102,8 @@ hdTrans_Terminate();
 반영됩니다. CLI는 시작할 때 읽으며(문제가 있으면 경고), 다른 파일은 `-userdict FILE`로 줍니다.
 품사 목록과 옵션은 [docs/dictionary-files.md](docs/dictionary-files.md#사용자-사전)를 참고하세요.
 
-Ehnd(꿀도르 등)의 필터와 사용자 사전은 `Ehnd` 폴더를 `hdtrans`나 `J2KEngine.dll` 옆에 두면 그대로
-씁니다(다른 폴더는 `hdtrans -ehnd DIR`). 형식과 차이는 [docs/ehnd-compat.md](docs/ehnd-compat.md)에 있습니다.
+Ehnd(꿀도르 등)는 기본으로 꺼져 있습니다. 쓰려면 설정 파일에 `ehnd: true`나 폴더 경로를 적거나
+`hdtrans -ehnd DIR`로 켭니다. 켜면 번역 품질이 떨어질 수 있습니다([형식과 차이](docs/ehnd-compat.md)).
 
 ## 지원 플랫폼
 
