@@ -1,9 +1,5 @@
-// Table tests of the per-line facts that the golden sets do not exercise: the names cued
-// by speaker labels of a text without a document, and the whole-line rows of lines.tsv.
-// Needs the base dictionary ($HDTRANS_DICTS); skipped when it is absent.
+// Per-line speaker cues, builtin whole-line rows and confirmed-name lookup caching.
 #include <algorithm>
-#include <cstdio>
-#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -15,19 +11,28 @@ using namespace hdTrans;
 
 namespace {
 
-using hdtest::DictsDir;
-
-const dict::Snapshot* Base() {
-    static const dict::LoadResult loaded = dict::LoadFolders({DictsDir()});
+const dict::Snapshot* Dictionary() {
+    static const dict::LoadResult loaded = dict::Load({
+        {0, "base.tsv",
+         "key\tko\tpos\tsem\tgram\tdict\tid\n"
+         "光\t히카루\tN130\tQPN\tWb\tGN\t1\n"
+         "睦月\t무쓰키\tN130\tQCT\t\tGN\t2\n"},
+        {0, "names.tsv",
+         "key\tko\tpos\tsem\tgram\tdict\tid\n"
+         "魅音\t미온\tN130\tQPN\tWb\tGN\t3\n"
+         "詩音\t시온\tN130\tQPN\tWb\tGN\t4\n"
+         "園崎詩音\t소노자키 시온\tN130\tQPN\t\tGN\t5\n"
+         "時雨\t시구레\tN130\tQPN\tWb\tGN\t6\n"
+         "睦月\t무츠키\tN130\tQPN\tWb\tGN\t7\n"},
+    });
     return loaded.snapshot.get();
 }
 
 }  // namespace
 
 HD_TEST(names_cued_names) {
-    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
-    const dict::Snapshot* snap = Base();
-    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
+    const dict::Snapshot* snap = Dictionary();
+    HD_REQUIRE(snap != nullptr);
     const std::vector<std::pair<std::string, std::vector<std::string>>> cases = {
         {"魅音「おはよう」", {"魅音"}},
         {"詩音さん", {}},
@@ -43,9 +48,8 @@ HD_TEST(names_cued_names) {
 }
 
 HD_TEST(names_whole_line_rows) {
-    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
-    const dict::Snapshot* snap = Base();
-    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
+    const dict::Snapshot* snap = Dictionary();
+    HD_REQUIRE(snap != nullptr);
     const std::vector<std::string> lines = {"つづきから"};
     auto doc = pipeline::BuildDocument(*snap, lines);
     HD_REQUIRE(doc != nullptr);
@@ -63,11 +67,11 @@ HD_TEST(names_whole_line_rows) {
 }
 
 HD_TEST(names_confirmed_cache) {
-    if (hdtest::DictsDir().empty()) HD_SKIP("HDTRANS_DICTS is not set; configure the dictionary folder");
-    const dict::Snapshot* snap = Base();
-    if (snap == nullptr) HD_SKIP("base dictionaries unavailable (HDTRANS_DICTS)");
+    const dict::Snapshot* snap = Dictionary();
+    HD_REQUIRE(snap != nullptr);
     const std::vector<std::string> lines = {"光さん、", "光さん、", "光さん、"};
     auto doc = pipeline::BuildDocument(*snap, lines);
+    HD_REQUIRE(doc != nullptr);
     HD_REQUIRE(doc->accepted.contains("光"));
     const std::vector<std::vector<std::string>> skips = {{}, {"光"}, {"光", "未登録"}};
     std::vector<pipeline::LineLookup> saved;
@@ -91,4 +95,19 @@ HD_TEST(names_confirmed_cache) {
     HD_CHECK(!saved[1].confirmed->contains("光"));
     HD_CHECK(!saved[2].confirmed->contains("光"));
     HD_CHECK(doc->accepted.contains("光"));
+}
+
+HD_TEST(document_skip_cache_length_prefix) {
+    const auto loaded = dict::Load({{0, "base.tsv", "key\tko\tpos\tsem\tgram\tdict\trule\tid\n"}});
+    HD_REQUIRE(loaded.snapshot != nullptr);
+    auto doc = pipeline::BuildDocument(*loaded.snapshot, {});
+    HD_REQUIRE(doc != nullptr);
+    pipeline::LineFacts one, two;
+    one.skip = {"a\tb"};
+    two.skip = {"a", "b"};
+    const auto first = pipeline::LookupOf(*doc, one);
+    const auto second = pipeline::LookupOf(*doc, two);
+    HD_CHECK(first.plain != second.plain);
+    HD_CHECK_EQ(doc->plainByKey.size(), std::size_t{2});
+    HD_CHECK(pipeline::LookupOf(*doc, one).plain == first.plain);
 }

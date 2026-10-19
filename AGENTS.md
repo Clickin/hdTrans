@@ -10,9 +10,9 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
   `wasm` is run as `emcmake cmake --preset wasm`.
 - `cmake --preset mac && cmake --build --preset mac && ctest --preset mac` is the
   development loop. The DLLs are the product and are built with MSVC.
-- `tools/golden.sh` runs the CLI on the expectation sets of `$HDTRANS_GOLDEN` and diffs;
-  a change that alters any expected line is a behaviour change and needs its own commit
-  with the reason.
+- Unit tests use small local fixtures, not external expectation sets or dictionary totals.
+- `tools/snapshot.sh` records built-CLI outputs; `tools/compare.sh` reports baseline changes.
+  A translation behaviour change needs its own commit with the reason.
 - C++20. Library and DLLs are built without exceptions and RTTI; errors are return
   values. Each DLL links the CRT statically and is a single file.
 - Warnings are errors; fix the code, not the flags.

@@ -60,6 +60,17 @@ if(NOT EMSCRIPTEN)
     target_link_libraries(hdtrans_tests PRIVATE hdtrans)
     enable_testing()
     add_test(NAME unit COMMAND hdtrans_tests)
+    if(UNIX)
+        add_test(NAME tools.selfbase COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/tests/selfbase.sh" "$<TARGET_FILE:hdtrans_cli>")
+    endif()
+
+    # Translates examples/ with the dictionaries in HDTRANS_DICTS at test time; skipped when unset.
+    find_program(HDTRANS_SH sh)
+    if(HDTRANS_SH)
+        add_test(NAME examples COMMAND "${HDTRANS_SH}" -c "exec \"$0\" \"$1\" \"$2\" \"$HDTRANS_DICTS\""
+            "${HDTRANS_SH}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/examples.sh" $<TARGET_FILE:hdtrans_cli>)
+        set_tests_properties(examples PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+    endif()
 
     find_package(Threads REQUIRED)
     add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp)
@@ -68,7 +79,7 @@ if(NOT EMSCRIPTEN)
     set_tests_properties(host.admin_priority PROPERTIES TIMEOUT 60
         ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/admin-priority-cache")
 
-    # Dumps the dictionary lookups over corpus lines for comparison with a reference dump.
+    # Dumps compiled dictionary entries and lookups over input lines.
     add_executable(snapshot_check tests/snapshot_check/main.cpp)
     target_include_directories(snapshot_check PRIVATE src)
     target_link_libraries(snapshot_check PRIVATE hdtrans)
