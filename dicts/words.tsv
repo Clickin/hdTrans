@@ -12234,6 +12234,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 兆し	징조	H110			GN		xxx	1	きざし	w:12229
 兇人	흉인	N110			GN				きょうじん	w:12230
 兇手	흉수	N110			GN				きょうしゅ	w:12231
+先	곳	N110	VPl		GN					w:26624
 先々代	선선대	N110			GN		llm			w:12232
 先々月	지지난달	N110			GN				せんせんげつ	w:12233
 先々週	지지난주	N110			GN				せんせんしゅう	w:12234
@@ -12247,6 +12248,8 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 先ず	우선	E300			GN		xxx	1	まず	w:12242
 先ず第一に	우선 첫째로	A9D0			GN		llm		まずだいいちに	w:12243
 先どり	선취	N110		Hd	GN				さきどり	w:12244
+先に	곳에	M300			GN					w:26625
+先に	앞에	M300			GN					w:26626
 先べん	선편	N110			GN		llm		せんべん	w:12245
 先便	지난번 편지	N110			GN		xxx llm	1		w:12246
 先先週	지지난주	N110			GN				せんせんしゅう	w:12247

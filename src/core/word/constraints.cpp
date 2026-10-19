@@ -37,6 +37,12 @@ constexpr ConstraintRule kRules[] = {
      "줄 첫머리가 아닌 曰く는 부사 뜻을 버림 (先生曰く 선생님 왈)", {}},
     {"tsui-numeral-ago", ConstraintWord::Source, "つい", ConstraintContext::BeforeNumeralAgo,
      ConstraintReject::OtherTargets, "수와 前 앞의 つい는 불과 (つい3時間前 무심코 3시간 전 → 불과 3시간 전). つい笑った는 그대로", "불과"},
+    {"saki-after-verb", ConstraintWord::Source, "先", ConstraintContext::AfterVerbEnding, ConstraintReject::OtherTargets,
+     "동사 た·だ·る 바로 뒤의 先은 곳 (嫁いだ先 시집간 앞 → 시집간 곳). まだ先, この先는 그대로", "곳"},
+    {"sakini-after-verb", ConstraintWord::Source, "先に", ConstraintContext::AfterVerbEnding,
+     ConstraintReject::OtherTargets, "동사 た·だ·る 바로 뒤의 先に는 곳에 (戻した先に 되돌린 먼저 → 되돌린 곳에)", "곳에"},
+    {"sakini-after-demonstrative", ConstraintWord::Source, "先に", ConstraintContext::AfterDemonstrative,
+     ConstraintReject::OtherTargets, "この·その·あの 뒤의 先に는 앞에 (この先に 이 먼저 → 이 앞에). 先に行く는 그대로 먼저", "앞에"},
 };
 
 struct HonorificSuffix {
@@ -139,9 +145,11 @@ bool StartsWithAny(std::string_view s, std::span<const std::string_view> list) {
 
 // Whether the context of rule holds for the word source of the candidates list: after is
 // the text after it, before the character before it in its token, previous the character
-// before it past spaces and token ends.
+// before it past spaces and token ends, preceding the text right before it (its token's
+// head, else the token before).
 bool ContextFits(const ConstraintRule& rule, const std::vector<dict::Candidate>& list, std::string_view source,
-                 std::string_view after, std::string_view before, std::string_view previous) {
+                 std::string_view after, std::string_view before, std::string_view previous,
+                 std::string_view preceding) {
     const bool exclamation = previous == "！" || previous == "？" || previous == "!" || previous == "?";
     switch (rule.context) {
     case ConstraintContext::Honorific:
@@ -157,6 +165,11 @@ bool ContextFits(const ConstraintRule& rule, const std::vector<dict::Candidate>&
                StartsWithAny(after, kQuotedNouns);
     case ConstraintContext::BeforeNumeralAgo:
         return NumeralAgo(after);
+    case ConstraintContext::AfterVerbEnding:
+        return (preceding.ends_with("た") || preceding.ends_with("だ") || preceding.ends_with("る")) &&
+               !preceding.ends_with("まだ");
+    case ConstraintContext::AfterDemonstrative:
+        return preceding.ends_with("この") || preceding.ends_with("その") || preceding.ends_with("あの");
     case ConstraintContext::LineOpening:
     case ConstraintContext::Elsewhere:
         return ((previous.empty() || StartsWithAny(previous, kOpeningBrackets)) &&
@@ -230,6 +243,7 @@ void Worker::ApplyConstraints(dict::Candidates& found, std::string_view query) {
     // The text after the query, in the tokens that follow when the query ends its token.
     std::string following;
     for (int j = current + 1; j < TokenCount() && following.size() < 32; j++) following += Tok(j).text;
+    const std::string_view preceding = !head.empty() || current <= 0 ? head : Tok(current - 1).text;
     std::vector<dict::Candidate>& list = found.list;
     for (const ConstraintRule& rule : kRules) {
         std::size_t i = 0;
@@ -241,7 +255,7 @@ void Worker::ApplyConstraints(dict::Candidates& found, std::string_view query) {
                 !ContextFits(rule, list, source,
                              query.size() > source.size() ? From(query, static_cast<long>(source.size()))
                                                           : std::string_view(following),
-                             before, previous)) {
+                             before, previous, preceding)) {
                 i++;
                 continue;
             }

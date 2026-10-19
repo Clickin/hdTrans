@@ -47,7 +47,12 @@ const dict::Snapshot* Dictionary() {
          "曰く\t왈\tN110\t\t\tGN\t27\n"
          "曰く\t듣자 하니\tE300\t\t\tGN\t28\n"
          "つい\t무심코\tE311\tXXX\t\tGN\t29\n"
-         "つい\t불과\tE311\t\t\tGN\t30\n"},
+         "つい\t불과\tE311\t\t\tGN\t30\n"
+         "先\t앞\tN110\tXXX\t\tGN\t31\n"
+         "先\t곳\tN110\tVPl\t\tGN\t32\n"
+         "先に\t먼저\tM300\tUMe\t\tGN\t33\n"
+         "先に\t곳에\tM300\t\t\tGN\t34\n"
+         "先に\t앞에\tM300\t\t\tGN\t35\n"},
         {0, "names.tsv",
          "#! layer=names\n"
          "key\tko\tpos\tsem\tgram\tdict\tid\n"
@@ -93,7 +98,7 @@ void CheckCases(std::initializer_list<Case> cases, std::string_view before = {})
 }  // namespace
 
 HD_TEST(constraint_rules_table) {
-    HD_CHECK_EQ(word::ConstraintRules().size(), size_t{9});
+    HD_CHECK_EQ(word::ConstraintRules().size(), size_t{12});
     for (const word::ConstraintRule& r : word::ConstraintRules()) {
         HD_CHECK(!r.id.empty());
         HD_CHECK(!r.note.empty());
@@ -183,5 +188,19 @@ HD_TEST(constraint_tsui_numeral_ago) {
         {"つい3回も言った", "つい3回も言った", "つい", "무심코 불과"},
         {"つい笑った", "つい笑った", "つい", "무심코 불과"},
         {"つい三、四日前", "つい三、四日前", "つい", "무심코 불과"},
+    });
+}
+
+// 先 and 先に right after a verb in た, だ or る are the place (곳, 곳에); 先に after この, その
+// or あの is 앞에. まだ先, 先に行く and 先 after a noun keep their senses.
+HD_TEST(constraint_saki_after_verb) {
+    CheckCases({
+        {"嫁いだ先は", "先は", "先", "곳"},
+        {"飛ばされる先は", "先は", "先", "곳"},
+        {"まだ先の話", "先の話", "先", "앞 곳"},
+        {"道の先", "先", "先", "앞 곳"},
+        {"戻した先に", "先に", "先に", "곳에"},
+        {"この先に", "先に", "先に", "앞에"},
+        {"先に行く", "先に行く", "先に", "먼저 곳에 앞에"},
     });
 }
