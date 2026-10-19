@@ -18,6 +18,7 @@ const dict::Snapshot* Dictionary() {
          "光\t히카루\tN130\tQPN\tWb\tGN\t1\n"
          "睦月\t무쓰키\tN130\tQCT\t\tGN\t2\n"},
         {0, "names.tsv",
+         "#! layer=names\n"
          "key\tko\tpos\tsem\tgram\tdict\tid\n"
          "魅音\t미온\tN130\tQPN\tWb\tGN\t3\n"
          "詩音\t시온\tN130\tQPN\tWb\tGN\t4\n"

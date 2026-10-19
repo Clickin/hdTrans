@@ -5,29 +5,33 @@
 // in its LookupContext.
 //
 // Loading (Load) reads the builtin folder (builtin.h) and the top-level *.tsv files
-// of the folders, those of each folder in name order:
+// of the folders, those of each folder in name order. A file may start with a
+// header line "#! layer=NAME" (after a byte order mark) that gives its layer; a
+// file without one is a base file, and another "#!" first line fails the load.
 //   - Column files (their first line that is neither blank nor a "#" comment is a
-//     header starting with the key column) make the base dictionary. The senses of
-//     a file shadow the senses of earlier files with the same key and class digit.
-//   - Column files named words*.tsv are lexicon layers: their senses are added to
+//     header starting with the key column) of the layer base make the base
+//     dictionary. The senses of a file shadow the senses of earlier files with the
+//     same key and class digit.
+//   - Column files of the layer words are lexicon layers: their senses are added to
 //     the senses of earlier files; only a sense with the flag replace shadows the
 //     earlier senses of its key and class.
 //   - The base senses of a key are ordered by prio, higher first, then by file and
 //     line order.
-//   - Column files named userdict.tsv make the user dictionary: its records match
+//   - Column files of the layer user make the user dictionary: its records match
 //     ahead of the base records and never shadow them.
-//   - Column files named names*.tsv make the name layer (see names.cpp): they
+//   - Column files of the layer names make the name layer (see names.cpp): they
 //     shadow earlier name files like base files, but never base senses. Senses with
 //     a key that holds 、 or 。 or is an inflected word, or with a long Korean, are
 //     dropped (Warnings counts them). A sense with the flag replace respells its key:
 //     the base senses of the key that name the same place take its Korean, and so do
 //     its senses in the layer; the senses of a respelled key in later name files are
 //     dropped unless they respell it too or name a person.
-//   - The other files are kept with their text, in order (PlainFiles). Files named
-//     readings.tsv are names readings tables, files named kana.tsv kana spellings
-//     of base words (userdict::KanaSpellings), and the rest plain dictionaries
+//   - The other files are kept with their text, in order (PlainFiles). Files of the
+//     layer readings are names readings tables, of the layer kana kana spellings of
+//     base words (userdict::KanaSpellings), and the base files plain dictionaries
 //     (userdict::Parse), numbered in order from 0; a plain line that does not compile
-//     fails the load.
+//     fails the load. The layers kana and readings are for plain files only, the
+//     others but base for column files only.
 //   - The builtin endings.tsv is a plain dictionary numbered -1, loaded before the
 //     others (their entries of an equal key and part code replace its entries); so
 //     are the builtin phrases.tsv (but its interjections in kana, which are
@@ -61,12 +65,25 @@ namespace internal {
 class SnapshotFile;
 }
 
+enum class FileLayer : uint8_t { Base, Words, Names, User, Kana, Readings };
+
 // A *.tsv file of a dictionary folder.
 struct File {
     int folder = 0;     // index of the folder in load order
     std::string name;   // the folder joined with the file name
     std::string text;
+    FileLayer layer = FileLayer::Base;  // set by the load from the header
 };
+
+namespace internal {
+
+// The layer of the header of text; Base without a "#!" first line, false for a "#!"
+// first line that is not a header.
+bool ReadLayer(std::string_view text, FileLayer& layer);
+// text with the content of its "#!" first line removed, so that line numbers stay.
+std::string_view WithoutHeader(std::string_view text);
+
+}  // namespace internal
 
 enum class LoadErrorKind : uint8_t {
     Folder,      // the folder cannot be listed
@@ -74,6 +91,7 @@ enum class LoadErrorKind : uint8_t {
     Tsv,         // a malformed line or header of a column file (tsv says which)
     UnknownPos,  // a line skipped for a pos that is neither a part code nor a known tag
     Plain,       // a line of a plain dictionary or sense table that does not compile
+    Header,      // a "#!" first line that is not a header or a layer the file cannot have
 };
 
 struct LoadError {
@@ -81,7 +99,7 @@ struct LoadError {
     LoadErrorKind kind = LoadErrorKind::Read;
     int line = 0;  // 1-based; 0 for the whole file
     TsvErrorKind tsv = TsvErrorKind::Read;
-    std::string message;  // why a Plain line does not compile
+    std::string message;  // why a Plain or Header line fails
 };
 
 using KeySet = std::unordered_set<std::string, StringHash, std::equal_to<>>;

@@ -53,7 +53,10 @@ tools/examples.sh build/mac/hdtrans DICTS --accept   # takes the new output and 
 Outputs go to `build/examples/`. `ctest` runs the check when `HDTRANS_DICTS` is set and skips it
 otherwise.
 
-Dictionaries are UTF-8 TSV folders and are not part of this repository.
+Dictionaries are UTF-8 TSV folders; `dicts/` holds the default set. Each folder loads its `*.tsv` files in name order; a file's first line `#! layer=NAME`
+gives its role (`base`, `words`, `names`, `user`, `kana` or `readings`, see
+`src/core/dict/snapshot.h`), and a file without it is a `base` file. The second line is a `#`
+comment saying what the file holds.
 Cache validation trusts source size, timestamps and file identity; after edits that preserve them,
 use `-verify-dicts` or `HDTRANS_VERIFY_DICTS=1` to check source contents.
 `CacheWrite::Off` never publishes a cache generation, but may write a `.bad` marker and

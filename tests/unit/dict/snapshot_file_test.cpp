@@ -856,13 +856,13 @@ HD_TEST(SnapshotWarmPlainEditsKeepColumnCache) {
     HD_CHECK(std::filesystem::last_write_time(Utf8Path(CacheResource(path))) == time);
 }
 
-HD_TEST(SnapshotPlainReadingsRecognizeBothPathSeparators) {
+HD_TEST(SnapshotPlainReadingsByLayer) {
     CacheTestEnvironment environment;
     const std::vector<std::string> lines{"風音「こんにちは」", "風音「ありがとう」"};
-    for (const char* name : {"readings.tsv", "first/readings.tsv", "first\\readings.tsv"}) {
+    for (const char* name : {"readings.tsv", "first/readings.tsv", "first\\zz-sounds.tsv"}) {
         const auto loaded = hdTrans::dict::Load({
             {0, "base.tsv", "key\tko\tpos\tid\n愛\t사랑\tN110\t1\n"},
-            {0, name, "風音\t카자네\n"},
+            {0, name, "#! layer=readings\n風音\t카자네\n"},
         });
         HD_REQUIRE(loaded.snapshot != nullptr && loaded.errors.empty());
         const auto doc = hdTrans::pipeline::BuildDocument(*loaded.snapshot, lines);
@@ -885,10 +885,10 @@ HD_TEST(SnapshotWarmPlainFileOrderAndReadings) {
     HD_REQUIRE(WriteText(first / "base.tsv", header + "愛\t사랑\tN110\t\t\tGN\t1\n"
                                                     "帰\t돌아가&AA@\tM428\t\t\tGN\t2\n"
                                                     "謎\t수수께끼\tunknown-tag\t\t\tGN\t3\n"));
-    HD_REQUIRE(WriteText(first / "names.tsv", header + "難、名\t이름\tN130\tQPN\t\tGN\t1\n"));
+    HD_REQUIRE(WriteText(first / "names.tsv", "#! layer=names\n" + header + "難、名\t이름\tN130\tQPN\t\tGN\t1\n"));
     HD_REQUIRE(WriteText(first / "a.tsv", "猫\t냥이\tn\n帰る\t돌아가다\tv\n白い\t하얗다\tadj\n"));
-    HD_REQUIRE(WriteText(first / "kana.tsv", "あい\t愛\t\n"));
-    HD_REQUIRE(WriteText(first / "readings.tsv", "風音\t카자네\n"));
+    HD_REQUIRE(WriteText(first / "kana.tsv", "#! layer=kana\nあい\t愛\t\n"));
+    HD_REQUIRE(WriteText(first / "readings.tsv", "#! layer=readings\n風音\t카자네\n"));
     HD_REQUIRE(WriteText(first / "userdict.tsv", "猫\t고양이\tn\n"));
     HD_REQUIRE(WriteText(second / "a.tsv", "猫\t야옹이\tn\n称える\t일컫다\tv1:ㄷ\n"));
     HD_REQUIRE(hdTrans::dict::LoadFolders(folders, cache).snapshot != nullptr);
@@ -906,9 +906,9 @@ HD_TEST(SnapshotWarmPlainFileOrderAndReadings) {
     const auto time = std::filesystem::last_write_time(Utf8Path(CacheResource(path)));
 
     HD_REQUIRE(WriteText(first / "a.tsv", "猫\t냥이\tn\n帰る\t돌아가다\tv\n黄色い\t누르다\tadj:러\n"));
-    HD_REQUIRE(WriteText(first / "kana.tsv", "いとし\t愛\t\n"));
+    HD_REQUIRE(WriteText(first / "kana.tsv", "#! layer=kana\nいとし\t愛\t\n"));
     HD_REQUIRE(WriteText(second / "names-plain.tsv", "犬\t멍멍이\tn\n"));
-    HD_REQUIRE(WriteText(second / "readings.tsv", "風音\t카논\n"));
+    HD_REQUIRE(WriteText(second / "readings.tsv", "#! layer=readings\n風音\t카논\n"));
     const auto changed = hdTrans::dict::LoadFolders(folders, cache, true);
     const auto editable = hdTrans::dict::LoadFoldersTsv(folders);
     HD_REQUIRE(changed.snapshot != nullptr && changed.snapshot->Mapped());
@@ -952,8 +952,9 @@ HD_TEST(SnapshotWarmPlainColumnMembershipChanges) {
         const auto cache = temp.File("cache");
         const std::vector<std::string> folders{temp.File("")};
         HD_REQUIRE(WriteText(temp.path / "base.tsv", "key\tko\tpos\tid\n愛\t사랑\tN110\t1\n"));
-        const std::string plain = name == "kana.tsv" ? "あい\t愛\t\n" :
-                                  name == "readings.tsv" ? "風音\t카자네\n" : "犬\t개\tn\n";
+        const std::string plain = name == "kana.tsv" ? "#! layer=kana\nあい\t愛\t\n" :
+                                  name == "readings.tsv" ? "#! layer=readings\n風音\t카자네\n" : "犬\t개\tn\n";
+        const std::string layer = name == "names.tsv" ? "#! layer=names\n" : name == "userdict.tsv" ? "#! layer=user\n" : "";
         const auto source = temp.path / Utf8Path(name);
         HD_REQUIRE(WriteText(source, plain));
         HD_REQUIRE(hdTrans::dict::LoadFolders(folders, cache).snapshot != nullptr);
@@ -964,7 +965,7 @@ HD_TEST(SnapshotWarmPlainColumnMembershipChanges) {
         HD_REQUIRE(!path.empty());
         const auto bytes = ReadBytes(path);
         HD_REQUIRE(bytes.size() >= 256);
-        HD_REQUIRE(WriteText(source, "key\tko\tpos\tid\n犬\t개\tN110\t1\n"));
+        HD_REQUIRE(WriteText(source, layer + "key\tko\tpos\tid\n犬\t개\tN110\t1\n"));
         const auto column = hdTrans::dict::LoadFolders(folders, cache, true);
         const auto columnTsv = hdTrans::dict::LoadFoldersTsv(folders);
         HD_REQUIRE(column.snapshot != nullptr && !column.snapshot->Mapped());
@@ -1008,7 +1009,7 @@ HD_TEST(SnapshotWarmPlainErrorsKeepOrder) {
     const std::vector<std::string> folders{temp.File("first"), temp.File("second")};
     HD_REQUIRE(WriteText(first / "base.tsv", "key\tko\tpos\tid\n猫\t고양이\tN110\t1\n謎\t수수께끼\tunknown-tag\t2\n"));
     HD_REQUIRE(WriteText(first / "a.tsv", "猫\t냥이\tn\n"));
-    HD_REQUIRE(WriteText(first / "readings.tsv", "malformed reading\n"));
+    HD_REQUIRE(WriteText(first / "readings.tsv", "#! layer=readings\nmalformed reading\n"));
     HD_REQUIRE(WriteText(first / "userdict.tsv", "犬\t개\tn\n"));
     HD_REQUIRE(WriteText(second / "a.tsv", "魚\t물고기\tn\n"));
     HD_REQUIRE(hdTrans::dict::LoadFolders(folders, cache).snapshot != nullptr);
@@ -1095,14 +1096,14 @@ HD_TEST(SnapshotWarmColumnUserCodesAndPlainViews) {
                                                         "犬\t강아지\tN110\tVAn\tWb\tBZ\t0\t2\n"
                                                         "愛\t사랑\tN110\t\t\tGN\t0\t3\n"
                                                         "帰\t돌아가&AA@\tM428\t\t\tGN\t0\t4\n"));
-    HD_REQUIRE(WriteText(temp.path / "names.tsv", header + "アリス\t앨리스\tN130\tQPN\tWa\tGN\t0\t1\n"
+    HD_REQUIRE(WriteText(temp.path / "names.tsv", "#! layer=names\n" + header + "アリス\t앨리스\tN130\tQPN\tWa\tGN\t0\t1\n"
                                                          "犬\t이누\tN130\tQPN\tWc\tPN\t0\t2\n"));
-    HD_REQUIRE(WriteText(temp.path / "userdict.tsv", header + "犬\t유저개\tN110\tQPNVHnZ9!\tWzQx\tUDX\t5\t1\n"
+    HD_REQUIRE(WriteText(temp.path / "userdict.tsv", "#! layer=user\n" + header + "犬\t유저개\tN110\tQPNVHnZ9!\tWzQx\tUDX\t5\t1\n"
                                                             "犬\t유저강아지\tN130\tZZZQCT\tAaBb\tNovel\t4\t2\n"
                                                             "愛\t유저사랑\tE300\tXXXVAn\tCc\tXP\t3\t3\n"));
     HD_REQUIRE(WriteText(temp.path / "plain.tsv", "帰る\t돌아가다\tv\n称える\t일컫다\tv1:ㄷ\n白い\t하얗다\tadj\n"));
-    HD_REQUIRE(WriteText(temp.path / "kana.tsv", "あい\t愛\t\n"));
-    HD_REQUIRE(WriteText(temp.path / "readings.tsv", "風音\t카자네\n"));
+    HD_REQUIRE(WriteText(temp.path / "kana.tsv", "#! layer=kana\nあい\t愛\t\n"));
+    HD_REQUIRE(WriteText(temp.path / "readings.tsv", "#! layer=readings\n風音\t카자네\n"));
     HD_REQUIRE(WriteText(temp.path / "names2.tsv", "翔太\t쇼타\tname\n"));
     const auto editable = hdTrans::dict::LoadFoldersTsv(folders);
     HD_REQUIRE(editable.snapshot != nullptr);

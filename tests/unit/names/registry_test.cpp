@@ -29,6 +29,7 @@ const dict::Snapshot* Dictionary() {
          "ソード\t소드\tN110\t\t\tGN\t10\n"
          "ワールド\t월드\tN110\t\t\tGN\t11\n"},
         {0, "names.tsv",
+         "#! layer=names\n"
          "key\tko\tpos\tsem\tgram\tdict\tid\n"
          "椎名\t시이나\tN130\tQPN\tWa\tGN\t12\n"
          "周\t아마네\tN130\tQPN\tWb\tGN\t13\n"
