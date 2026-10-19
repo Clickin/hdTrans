@@ -29,124 +29,12 @@ const goodRun = {
 };
 
 const publishWorkflow = readFileSync(fileURLToPath(new URL('../../.github/workflows/publish-npm.yml', import.meta.url)), 'utf8');
-const dispatchScript = publishWorkflow.match(/      - name: Start npm publication after Build completes\n[\s\S]*?          script: \|\n([\s\S]*?)\n  publish:/)?.[1];
-assert.ok(dispatchScript, 'The completed-Build dispatcher script is present.');
-const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-const runDispatch = new AsyncFunction('github', 'context', 'core', dispatchScript.replace(/^ {12}/gm, ''));
-const dispatchCondition = publishWorkflow.match(/  dispatch:\n    if: >-\n([\s\S]*?)\n    runs-on:/)?.[1];
-const concurrencyExpression = publishWorkflow.match(/  group: \$\{\{ (.+) \}\}/)?.[1];
-assert.ok(dispatchCondition);
-assert.ok(concurrencyExpression);
 
-function evaluateExpression(expression, github) {
-  return new Function('github', 'startsWith', 'contains', 'format', `return (${expression});`)(
-    github,
-    (value, prefix) => String(value).toLowerCase().startsWith(prefix.toLowerCase()),
-    (value, part) => String(value).toLowerCase().includes(part.toLowerCase()),
-    (template, value) => template.replace('{0}', String(value)),
-  );
-}
-
-function dispatchContext(overrides = {}, event = 'workflow_run') {
-  return {
-    event_name: event, repository: `${repo.owner}/${repo.repo}`,
-    event: { workflow_run: { ...goodRun, id: Number(runId), head_branch: 'v0.2.0', ...overrides } },
-  };
-}
-
-for (const [name, overrides, expected] of [
-  ['stable push', {}, true],
-  ['stable manual Build', { event: 'workflow_dispatch' }, true],
-  ['main', { head_branch: 'main' }, false],
-  ['develop', { head_branch: 'develop' }, false],
-  ['probe branch', { head_branch: 'ci/probe' }, false],
-  ['nightly', { head_branch: 'nightly' }, false],
-  ['prerelease', { head_branch: 'v0.2.0-rc.1' }, false],
-  ['build metadata', { head_branch: 'v0.2.0+local' }, false],
-  ['nonstable v branch', { head_branch: 'vnext' }, false],
-  ['running', { status: 'in_progress' }, false],
-  ['failure', { conclusion: 'failure' }, false],
-  ['cancellation', { conclusion: 'cancelled' }, false],
-  ['pull request', { event: 'pull_request' }, false],
-  ['fork', { head_repository: { full_name: 'fork/hdTrans' } }, false],
-  ['other workflow', { path: '.github/workflows/probe.yml' }, false],
-]) {
-  test(`pre-run npm dispatch gate accepts ${name}: ${expected}`, () => {
-    const github = dispatchContext(overrides);
-    const selected = evaluateExpression(dispatchCondition, github);
-    assert.equal(selected, expected);
-  });
-}
-
-test('explicit npm publication never allocates a dispatch runner', () => {
-  assert.equal(evaluateExpression(dispatchCondition, dispatchContext({}, 'workflow_dispatch')), false);
-});
-
-test('completion dispatches cannot replace a pending tagged publisher or each other', () => {
-  const first = evaluateExpression(concurrencyExpression, dispatchContext());
-  const second = evaluateExpression(concurrencyExpression, dispatchContext({ id: 124 }));
-  const publisher = evaluateExpression(concurrencyExpression, dispatchContext({}, 'workflow_dispatch'));
-  assert.equal(first, 'publish-npm-dispatch-123');
-  assert.equal(second, 'publish-npm-dispatch-124');
-  assert.equal(publisher, 'publish-npm');
-  assert.notEqual(first, publisher);
-  assert.notEqual(first, second);
-  assert.match(publishWorkflow, /  cancel-in-progress: false/);
-});
-
-async function dispatchFixture(overrides = {}, jobs = [{ name: 'release / release', conclusion: 'success' }]) {
-  const calls = [];
-  const run = { ...goodRun, id: Number(runId), head_branch: 'v0.2.0', ...overrides };
-  const listJobs = () => {};
-  await runDispatch({
-    rest: { actions: { listJobsForWorkflowRun: listJobs, createWorkflowDispatch: async args => calls.push(args) } },
-    paginate: async (method, args) => {
-      assert.equal(method, listJobs);
-      assert.deepEqual(args, { ...repo, run_id: Number(runId), filter: 'latest', per_page: 100 });
-      return jobs;
-    },
-  }, { repo, payload: { workflow_run: run } }, { info() {} });
-  return calls;
-}
-
-for (const event of ['push', 'workflow_dispatch']) {
-  test(`completed stable ${event} Build dispatches the immutable tag`, async () => {
-    assert.deepEqual(await dispatchFixture({ event }), [{
-      ...repo, workflow_id: 'publish-npm.yml', ref: 'v0.2.0', inputs: { build_run_id: runId },
-    }]);
-  });
-}
-
-for (const [name, overrides] of [
-  ['running Build', { status: 'in_progress' }],
-  ['failed Build', { conclusion: 'failure' }],
-  ['other workflow', { path: '.github/workflows/probe.yml' }],
-  ['pull request', { event: 'pull_request' }],
-  ['foreign repository', { head_repository: { full_name: 'other/hdTrans' } }],
-  ['main branch', { head_branch: 'main' }],
-  ['nightly', { head_branch: 'nightly' }],
-  ['prerelease', { head_branch: 'v0.2.0-rc.1' }],
-]) {
-  test(`npm dispatcher ignores ${name}`, async () => {
-    assert.deepEqual(await dispatchFixture(overrides), []);
-  });
-}
-
-for (const conclusion of ['skipped', 'failure', null]) {
-  test(`npm dispatcher ignores ${conclusion ?? 'pending'} release job`, async () => {
-    assert.deepEqual(await dispatchFixture({}, [{ name: 'release / release', conclusion }]), []);
-  });
-}
-
-test('npm dispatcher does not publish a dry-run with only packaged artifacts', async () => {
-  assert.deepEqual(await dispatchFixture({}, [{ name: 'release / package', conclusion: 'success' }]), []);
-});
-
-test('npm publication runs only after Build completion or an explicit retry', () => {
+test('npm publication has no Build-completion trigger or dispatch job', () => {
+  assert.doesNotMatch(publishWorkflow, /workflow_run:|  dispatch:|createWorkflowDispatch|Start npm publication after Build completes/);
+  assert.match(publishWorkflow, /workflow_dispatch:/);
   const buildWorkflow = readFileSync(fileURLToPath(new URL('../../.github/workflows/build.yml', import.meta.url)), 'utf8');
   assert.doesNotMatch(buildWorkflow, /createWorkflowDispatch|  publish-npm:/);
-  assert.match(publishWorkflow, /workflow_run:\n    workflows: \[Build\]\n    types: \[completed\]/);
-  assert.match(publishWorkflow, /  publish:\n    if: github.event_name == 'workflow_dispatch'/);
 });
 
 function fixture(messages, baseline, persisted = baseline ?? '0.1.0') {
