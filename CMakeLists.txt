@@ -223,6 +223,49 @@ elseif(WIN32)
     add_dependencies(j2k_host j2kengine hdtrans_dll)
     add_test(NAME host.j2k COMMAND j2k_host $<TARGET_FILE:j2kengine>)
     set_tests_properties(host.j2k PROPERTIES ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/host-cache")
+
+    add_custom_command(TARGET j2kengine POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different $<TARGET_FILE:j2kengine>
+            $<TARGET_FILE_DIR:j2kengine>/J2KEngineH.dll VERBATIM)
+    add_executable(tool_compat tests/host/tool_compat.cpp)
+    add_dependencies(tool_compat j2kengine)
+    set(toolCompatDir "${CMAKE_CURRENT_BINARY_DIR}/tool-compat-empty")
+    file(MAKE_DIRECTORY "${toolCompatDir}")
+    foreach(tool luna luna-ansi anemone anemone-ansi aral02 aral03 eztransserver)
+        add_test(NAME host.${tool} COMMAND tool_compat ${tool} $<TARGET_FILE:j2kengine>)
+        set_tests_properties(host.${tool} PROPERTIES WORKING_DIRECTORY "${toolCompatDir}"
+            LABELS tool-compat TIMEOUT 120)
+    endforeach()
+    add_test(NAME host.eztransweb COMMAND tool_compat eztransweb $<TARGET_FILE_DIR:j2kengine>/J2KEngineH.dll)
+    set_tests_properties(host.eztransweb PROPERTIES WORKING_DIRECTORY "${toolCompatDir}"
+        LABELS tool-compat TIMEOUT 120)
+
+    find_program(HDTRANS_CSC NAMES csc.exe
+        PATHS "$ENV{WINDIR}/Microsoft.NET/Framework/v4.0.30319" NO_DEFAULT_PATH REQUIRED)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        set(toolCompatPlatform x86)
+        foreach(tool vnr vnr-ansi)
+            add_test(NAME host.${tool} COMMAND tool_compat ${tool} $<TARGET_FILE:j2kengine>)
+            set_tests_properties(host.${tool} PROPERTIES WORKING_DIRECTORY "${toolCompatDir}"
+                LABELS tool-compat TIMEOUT 120)
+        endforeach()
+    else()
+        set(toolCompatPlatform x64)
+    endif()
+    set(xunityHost "${CMAKE_CURRENT_BINARY_DIR}/xunity_host.exe")
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests/host/xunity_host.cs" xunitySource)
+    file(TO_NATIVE_PATH "${xunityHost}" xunityOutput)
+    add_custom_command(OUTPUT "${xunityHost}"
+        COMMAND "${HDTRANS_CSC}" /nologo /optimize+ /warnaserror+ /codepage:65001 /platform:${toolCompatPlatform}
+            /out:${xunityOutput} "${xunitySource}"
+        DEPENDS tests/host/xunity_host.cs VERBATIM)
+    add_custom_target(xunity_host ALL DEPENDS "${xunityHost}")
+    add_dependencies(xunity_host j2kengine)
+    file(GENERATE OUTPUT "${xunityHost}.config" CONTENT
+        "<?xml version=\"1.0\"?><configuration><runtime><NetFx40_PInvokeStackResilience enabled=\"1\"/></runtime></configuration>\n")
+    add_test(NAME host.xunity COMMAND "${xunityHost}" $<TARGET_FILE:j2kengine>)
+    set_tests_properties(host.xunity PROPERTIES WORKING_DIRECTORY "${toolCompatDir}"
+        LABELS tool-compat TIMEOUT 120)
 else()
     add_library(hdtrans_shared SHARED src/cshared/hdtrans_c.cpp)
     set_target_properties(hdtrans_shared PROPERTIES OUTPUT_NAME hdTransEngine)
