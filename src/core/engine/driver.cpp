@@ -284,7 +284,7 @@ std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated
     std::vector<filter::Filters::Toggles> toggles(filtered.size(), f.Start());
     for (std::size_t i = 0; i < filtered.size(); i++) Filter(f, filter::Stage::Pre, filtered[i], toggles[i]);
     std::vector<std::string> out = TranslateDocumentPieces(snap, generated, filtered, memory, observer, options, filtered);
-    // As in Ehnd, an empty input is not filtered after translation either.
+    // An empty input line is not post-filtered either.
     for (std::size_t i = 0; i < out.size() && i < lines.size(); i++) {
         if (!lines[i].empty() && lines[i] != "\r") Filter(f, filter::Stage::Post, out[i], toggles[i]);
     }

@@ -45,7 +45,7 @@ std::string Shown(const std::vector<Error>& errors) {
 HD_TEST(FilterLiteralRows) {
     // A replacement resumes after the text it inserted. "x\ty" with its newline has three
     // fields (layer 0); the same row at the end of the file without one has two and is
-    // dropped, as Ehnd reads it.
+    // dropped.
     auto f = Make({{Kind::PreFilter, "p.txt", "//comment\na\taa\t1\t0\nx\ty\nq\tQ", false}});
     HD_CHECK_EQ(Run(*f, "aXa x q"), "aaXaa y q");
     HD_CHECK_EQ(Run(*f, ""), "");

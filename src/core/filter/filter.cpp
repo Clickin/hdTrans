@@ -62,9 +62,9 @@ int ToInt(std::wstring_view s) {
     return static_cast<int>(std::clamp<long long>(v, INT_MIN, INT_MAX));
 }
 
-// The fields of line (with its "\n", if any) from start, as Ehnd splits them: at a tab,
-// at "\n", at the end, and at the second "/" of "//", which with stop also ends the
-// line; the field before "//" keeps its first "/".
+// The fields of line (with its "\n", if any) from start: they end at a tab, at "\n", at the
+// end, and at the second "/" of "//", which with stop also ends the line; the field
+// before "//" keeps its first "/".
 std::vector<std::wstring_view> Fields(std::wstring_view line, std::size_t start, bool stop) {
     std::vector<std::wstring_view> out;
     for (std::size_t i = start, prev = start; i <= line.size(); i++) {
@@ -322,7 +322,7 @@ std::shared_ptr<const Filters> Build(const std::vector<Source>& sources, std::ve
 namespace {
 
 // Replaces every src in text, left to right, resuming after each replacement. Returns
-// whether the row fires: Ehnd counts it fired unless the last replacement ends at 0.
+// whether the row fires: it does unless the last replacement ends at 0.
 bool ReplaceAll(std::wstring& text, std::wstring_view src, std::wstring_view dest) {
     std::size_t offset = 0;
     for (std::size_t pos; (pos = text.find(src, offset)) != std::wstring::npos;) {

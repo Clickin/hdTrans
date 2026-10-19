@@ -9,13 +9,13 @@
 namespace hdTrans::filter {
 
 // Appends the PreFilter*.txt, PostFilter*.txt, SkipLayer*.txt and UserDict*.txt files of
-// the folder dir to sources, each kind in name order compared without ASCII case, as
-// NTFS lists them. A file reads as Ehnd opens it: UTF-16LE after its byte order mark,
-// otherwise UTF-8 (a UTF-8 mark is dropped), with CR LF as LF. false when dir cannot be
-// listed or a file cannot be read.
+// the folder dir to sources, each kind in name order compared without ASCII case, decoded
+// by EhndText. false, appending nothing, when dir cannot be listed or a file cannot be
+// read.
 bool ReadEhndFolder(std::string_view dir, std::vector<Source>& sources, std::vector<Error>& errors);
 
-// The text of a file as Ehnd reads it, in UTF-8.
+// The UTF-8 text of the bytes of a file: UTF-16LE after its byte order mark, otherwise
+// UTF-8 (a UTF-8 mark is dropped), with CR LF as LF.
 std::string EhndText(std::string_view bytes);
 
 // An entry of a UserDict file.
@@ -24,8 +24,9 @@ struct UserRow {
     bool phrase = false;  // TYPE 0 or 2: a fixed expression (A9D0); otherwise a noun (I110)
 };
 
-// The entries of the UserDict text of file. Lines over Ehnd's length limits and lines
-// without a key are listed in errors.
+// The entries of the UserDict text of file. Lines without a key, and lines whose key or
+// Korean takes more than 30 bytes or whose attribute takes more than 36 in a double-byte
+// code page, are listed in errors.
 std::vector<UserRow> ParseUserDict(std::string_view text, std::string_view file, std::vector<Error>& errors);
 
 }  // namespace hdTrans::filter

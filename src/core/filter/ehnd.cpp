@@ -138,7 +138,7 @@ std::vector<UserRow> ParseUserDict(std::string_view text, std::string_view file,
         number++;
         if (line.starts_with("//")) continue;
         if (line.ends_with('\r')) line.remove_suffix(1);
-        // Ehnd's splitter: a field ends at a tab or before "//", which ends the line without
+        // A field ends at a tab or before "//", which ends the line without
         // counting that field; the last field runs to the end of the line, a final tab
         // included. A line needs two counted fields.
         std::string_view fields[4];
