@@ -323,7 +323,10 @@ async function harness(t, options = {}) {
         return { data: { tag: args.tag, sha: annotation, message: args.message,
           object: { type: args.type, sha: args.object } } };
       },
-      createRef: async args => { calls.push(['tag', args]); tag = { type: 'tag', sha: args.sha }; },
+      createRef: async args => {
+        calls.push(['tag', args]); tag = { type: 'tag', sha: args.sha };
+        if (options.advanceOnCheck === 6) main = newer;
+      },
     },
     repos: {
       listPullRequestsAssociatedWithCommit: () => {},
@@ -334,6 +337,7 @@ async function harness(t, options = {}) {
           throw new Error('API unavailable');
         }
         calls.push(['release', args]); published = args;
+        if (options.advanceOnCheck === 7) main = newer;
       },
     },
   } };
@@ -359,7 +363,7 @@ async function harness(t, options = {}) {
       assert.equal(version, candidate.version.toString());
       return candidate;
     }, log: message => logs.push(message) });
-  return { run, calls, logs, lookups, root };
+  return { run, calls, logs, lookups, root, get main() { return main; } };
 }
 
 for (const title of ['ci: recover main workflows', 'feat: add snapshots']) {
@@ -401,7 +405,7 @@ test('release uses only a normal main push, then tag, Release and explicit non-d
   assert.equal(readVersion(h.root), '0.1.1');
 });
 
-for (const options of [{ advanced: true }, { advanceOnCheck: 2 }, { advanceOnCheck: 3 }, { pushRace: true }, { promotion: { title: 'docs: promote docs' } }]) {
+for (const options of [{ advanced: true }, { advanceOnCheck: 2 }, { advanceOnCheck: 3 }, { advanceOnCheck: 4 }, { pushRace: true }, { promotion: { title: 'docs: promote docs' } }]) {
   test(`no release for stale main or no changes: ${JSON.stringify(options)}`, async t => {
     const h = await harness(t, options);
     await h.run();
@@ -446,6 +450,20 @@ test('main advancing after annotation creation leaves the tag ref unpublished', 
   await h.run();
   assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object']);
 });
+
+for (const advanceOnCheck of [6, 7]) {
+  test(`main advancing after the immutable tag cannot abandon publication: check ${advanceOnCheck}`, async t => {
+    const h = await harness(t, { advanceOnCheck });
+    await h.run();
+    assert.equal(h.main, newer);
+    assert.deepEqual(h.calls.map(call => call[0]), ['add', 'commit', 'push', 'tag-object', 'tag', 'release', 'dispatch']);
+    assert.equal(h.calls.find(call => call[0] === 'tag-object')[1].object, bot);
+    assert.equal(h.calls.find(call => call[0] === 'release')[1].target_commitish, bot);
+    assert.deepEqual(h.calls.at(-1)[1], {
+      ...repo, workflow_id: 'build.yml', ref: 'v0.1.1', inputs: { dry_run: 'false' },
+    });
+  });
+}
 
 test('a successful dry-run tag Build does not suppress the publishing Build', async t => {
   const h = await harness(t, { resume: true, builds: [{

@@ -202,7 +202,6 @@ export async function releaseMain({ github, repo, runId, token, root = process.c
     if (!await isCurrent(releaseSha)) return;
     await github.rest.git.createRef({ ...repo, ref: `refs/tags/${tag}`, sha: annotation.sha });
   }
-  if (!await isCurrent(releaseSha)) return;
   const existingRelease = await optional(() => github.rest.repos.getReleaseByTag({ ...repo, tag }));
   if (!existingRelease) {
     await github.rest.repos.createRelease({
@@ -210,7 +209,6 @@ export async function releaseMain({ github, repo, runId, token, root = process.c
       body: releaseNotes(root, version), draft: false, prerelease: false, make_latest: 'true',
     });
   }
-  if (!await isCurrent(releaseSha)) return;
   const builds = (await github.rest.actions.listWorkflowRuns({
     ...repo, workflow_id: 'build.yml', head_sha: releaseSha, event: 'workflow_dispatch', per_page: 100,
   })).data.workflow_runs;
