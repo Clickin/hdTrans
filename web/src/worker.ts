@@ -1,8 +1,9 @@
 // The engine runs here, off the page's thread.
 //
-// in:  {type: 'init', engine, module, names, files}  engine is the URL of
-//      hdTransEngine.js, module the compiled hdTransEngine.wasm, files[i]
-//      the ArrayBuffer of the dictionary file names[i]
+// in:  {type: 'init', engine, module, snapshot, names, files}  engine is the
+//      URL of hdTransEngine.js, module the compiled hdTransEngine.wasm,
+//      snapshot the ArrayBuffer of the compiled column dictionaries, files[i]
+//      that of the other dictionary file names[i]
 //      {type: 'translate', id, mode, lines, userdict}
 // out: {type: 'ready', ms, memory} | {type: 'fatal', message}
 //      {type: 'result', id, lines, ms, warning, memory} | {type: 'error', id, message}
@@ -56,10 +57,12 @@ function translate(e: Module, text: string): string {
   }
 }
 
-/** Loads the dictionary folder /dicts and /userdict.tsv. */
+/** Loads the compiled /dicts.hdsnap, the other files of /dicts and /userdict.tsv. */
 function initialize(e: Module) {
   e._hdTrans_Terminate();
-  if (e.ccall('hdTrans_Initialize', 'number', ['string'], ['/dicts\0']) !== 0) throw new Error('hdtrans: the dictionaries do not load');
+  if (e.ccall('hdTrans_Initialize', 'number', ['string'], ['/dicts.hdsnap\0/dicts\0']) !== 0) {
+    throw new Error('hdtrans: the dictionaries do not load');
+  }
   warning = buffer(e, (out, outn) => e._hdTrans_UserDictError(out, outn)).replace(/^\/userdict\.tsv:/gm, '');
 }
 
@@ -75,6 +78,7 @@ self.onmessage = async (ev: MessageEvent) => {
           return {};
         },
       });
+      e.FS.writeFile('/dicts.hdsnap', new Uint8Array(msg.snapshot));
       e.FS.mkdir('/dicts');
       msg.names.forEach((n: string, i: number) => e.FS.writeFile('/dicts/' + n, new Uint8Array(msg.files[i])));
       initialize(e);

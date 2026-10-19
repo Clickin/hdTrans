@@ -15,6 +15,13 @@ enum SpanKind : int {
     SpanClose = 3,  // closing tag
 };
 
+// A particle mark at the end of a word span: the span takes the particles of a word
+// that ends in a vowel (U+E001), a consonant (U+E002) or ㄹ (U+E003) (섹○ of 섹스). The
+// restore stage drops it.
+constexpr char32_t kVowelMark = 0xE001;
+constexpr char32_t kConsonantMark = 0xE002;
+constexpr char32_t kRieulMark = 0xE003;
+
 struct Piece {
     std::string text;
     SpanKind span = SpanText;

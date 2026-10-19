@@ -17,12 +17,12 @@ hdTrans는 하나의 정적 라이브러리(`hdTransCore`)와 그 위의 얇은 
 각 줄 뒤에 `\n`을 붙입니다.
 
 ```
-hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-misread] [-stages DIR] [-in FILE]
+hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-cg] [-cg-learned] [-stages DIR] [-in FILE]
 ```
 
 | 옵션 | 설명 |
 |---|---|
-| `-dicts DIR[,DIR...]` | 불러올 사전 폴더 (순서대로, 뒤가 앞을 덮어씀). 기본값은 실행 파일 옆 `dicts`, 없으면 현재 폴더의 `dicts` |
+| `-dicts DIR[,DIR...]` | 불러올 사전 폴더 (순서대로, 뒤가 앞을 덮어씀). 기본값은 실행 파일 옆 `dicts`, 없으면 현재 폴더의 `dicts`. 첫 항목이 `FILE.hdsnap`이면 폴더의 열 파일 대신 그 [컴파일한 사전](dictionaries.md#컴파일한-사전-hdsnap)을 씀 |
 | `-userdict FILE` | 사용자 사전 파일로, 불러오지 못하면 실패. 기본값은 실행 파일 옆 `userdict.tsv`(없으면 쓰지 않고, 불러오지 못하면 경고 후 빼고 번역), 빈 값이면 쓰지 않음 |
 | `-in FILE` | 표준 입력 대신 FILE을 읽음 |
 | `-ehnd DIR` | Ehnd 폴더 DIR의 필터·SkipLayer·사용자 사전을 씀. 기본값은 실행 파일 옆 `Ehnd` 폴더(없으면 쓰지 않음). 건너뛴 줄은 표준 오류에 씀 ([ehnd-compat.md](ehnd-compat.md)) |
@@ -31,10 +31,12 @@ hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference
 | `-reference` | 번역 개선 규칙을 끈 기준 모드 |
 | `-verify-dicts` | 원본 해시와 모든 캐시 세그먼트를 검사 |
 | `-compile-dicts` | 사전 캐시를 컴파일·검사하고 종료. 캐시 경로 또는 `up to date`를 출력 |
-| `-no-cache` | 캐시 없이 TSV만 읽음 (`-compile-dicts`와 함께 쓸 수 없음) |
+| `-compile-snapshot FILE` | 폴더의 열 파일을 FILE(`.hdsnap`)에 컴파일하고 종료. FILE을 출력 |
+| `-no-cache` | 캐시 없이 TSV만 읽음 (`-compile-dicts`·`-compile-snapshot`과 함께 쓸 수 없음) |
 | `-why` | 단어 선택과 shadow 점수를 표준 오류에 씀 |
 | `-select-shadow` | 번역은 바꾸지 않고 가장 짧은 대상(`shortest-target`)으로 점수를 매김. `-why`에 나타남 |
 | `-misread` | 오독 필터(`misreadFilter`)를 켬: 모델이 오독으로 점수를 매긴 선택 후보를 대안으로 바꿈 ([misread-classifier.md](misread-classifier.md)) |
+| `-cg`, `-cg-learned` | CG-lite 규칙(`cgRules`·`cgLearned`)을 켬: 손 규칙·학습 규칙이 오독 결정의 후보를 지우거나 고름 |
 | `-stages DIR` | 단계 기록을 DIR에 씀 ([testing.md](testing.md#한-입력-살펴보기-단계-기록--stages)) |
 
 종료 코드: 0 성공, 1 사전을 못 불러옴·입력 읽기 실패·캐시 오류, 2 알 수 없는 옵션(사용법 출력).
@@ -67,7 +69,7 @@ hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference
 
 | 함수 | 설명 |
 |---|---|
-| `int hdTrans_Initialize(const char* dirs)` | 사전 폴더를 불러옴. `dirs`는 NUL로 구분하고 NUL 두 개로 끝나는 목록이며 뒤 폴더가 앞을 덮어씀. 0 성공, -1은 사전을 하나도 못 불러왔거나 동시에 진행된 Terminate·Initialize·Reload가 이 불러오기를 취소함 |
+| `int hdTrans_Initialize(const char* dirs)` | 사전 폴더를 불러옴. `dirs`는 NUL로 구분하고 NUL 두 개로 끝나는 목록이며 뒤 폴더가 앞을 덮어씀. 첫 항목은 [컴파일한 사전](dictionaries.md#컴파일한-사전-hdsnap) `.hdsnap`일 수 있음. 0 성공, -1은 사전을 하나도 못 불러왔거나 동시에 진행된 Terminate·Initialize·Reload가 이 불러오기를 취소함 |
 | `void hdTrans_Terminate(void)` | 세션과 사전 해제. 여러 번 불러도 되고, 다시 Initialize할 수 있음 |
 | `int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn)` | `text[0..n)`(`\n`으로 구분한 한 줄 이상)을 프로세스 세션에서 번역. `*out`에 NUL로 끝나는 버퍼, `*outn`에 길이(NUL 제외). 0 성공, -1 초기화 전·종료 후 |
 | `int hdTrans_Reset(void)` | 세션이 앞선 텍스트에서 배운 이름과 문맥을 잊어 다음 번역이 처음처럼 시작함. 0 성공, -1 초기화 전·종료 후 |
@@ -132,7 +134,9 @@ Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비�
 
 `emcmake cmake --preset wasm`으로 빌드한 `hdTransEngine.js`(ES6 모듈, `MODULARIZE`)와
 `hdTransEngine.wasm`입니다. C API를 그대로 내보내며, 사전 파일은 Emscripten 파일 시스템(`FS`)에 써서
-`hdTrans_Initialize`에 그 폴더를 줍니다.
+`hdTrans_Initialize`에 그 폴더를 줍니다. TSV를 컴파일하는 동안의 메모리가 WebAssembly 메모리에 그대로 남으므로,
+열 사전은 네이티브 CLI로 [컴파일한 사전](dictionaries.md#컴파일한-사전-hdsnap)으로 주는 편이 좋습니다:
+`hdTrans_Initialize("/dicts.hdsnap\0/dicts\0")`(나머지 파일은 `/dicts`에).
 
 - 내보내는 함수: `hdTrans_Initialize`, `hdTrans_Terminate`, `hdTrans_Translate`, `hdTrans_Reset`,
   `hdTrans_Reload`, `hdTrans_UserDictError`, `hdTrans_FreeMem`, `hdTrans_Version`, `hdTrans_Load`, `malloc`, `free`

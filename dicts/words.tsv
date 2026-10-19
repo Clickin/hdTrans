@@ -680,6 +680,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 せん妄	섬망	N110	UTi		GN				せんもう	w:677
 ぜいたく品	사치품	N110			GN				ぜいたくひん	w:678
 そいつ等	그놈들	N120	VHn		GN		llm		そいつら	w:679
+そういえば	그러고 보니	A9D0			GN					w:26620
 そういった	그런	E010			GN		llm			w:680
 そういった	그런	A9D0			GN		llm		そういった	w:681
 そうこう	이럭저럭	E300			GN		xxx llm	1		w:682
@@ -797,6 +798,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 ちりじょうほうシステム	지리 정보 시스템	N110	UMn		GN		llm		ちりじょうほうシステム	w:794
 ちん入	침입	N110		Hd	GN		llm		ちんにゅう	w:795
 ちん入	침입&AV@	M429			GN		llm		ちんにゅう	w:796
+つい	불과	E311			GN					w:26621
 つかまり立ち	붙잡고 서기	N110		Hd	GN		llm		つかまりだち	w:797
 つかみ取	싸&FK@	M428			GN				つかみとる	w:798
 つがい目	이음매	N110			GN		llm		つがいめ	w:799
@@ -12232,6 +12234,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 兆し	징조	H110			GN		xxx	1	きざし	w:12229
 兇人	흉인	N110			GN				きょうじん	w:12230
 兇手	흉수	N110			GN				きょうしゅ	w:12231
+先	곳	N110	VPl		GN					w:26624
 先々代	선선대	N110			GN		llm			w:12232
 先々月	지지난달	N110			GN				せんせんげつ	w:12233
 先々週	지지난주	N110			GN				せんせんしゅう	w:12234
@@ -12245,6 +12248,8 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 先ず	우선	E300			GN		xxx	1	まず	w:12242
 先ず第一に	우선 첫째로	A9D0			GN		llm		まずだいいちに	w:12243
 先どり	선취	N110		Hd	GN				さきどり	w:12244
+先に	곳에	M300			GN					w:26625
+先に	앞에	M300			GN					w:26626
 先べん	선편	N110			GN		llm		せんべん	w:12245
 先便	지난번 편지	N110			GN		xxx llm	1		w:12246
 先先週	지지난주	N110			GN				せんせんしゅう	w:12247
@@ -15301,6 +15306,8 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 小夜啼鳥	나이팅게일	N110			GN				さよなきどり	w:15298
 小夜鳴き鳥	나이팅게일	N110			GN				さよなきどり	w:15299
 小天狗蝙蝠	작은관코박쥐	N110			GN				こてんぐこうもり	w:15300
+小太り	통통한	N110			GN					w:26623
+小太りの	통통한	E0H0			GN					w:26622
 小家族	소가족	N110			GN				しょうかぞく	w:15301
 小山蝙蝠	일본멧박쥐	N110			GN				こやまこうもり	w:15302
 小川	시내	N110			GN		xxx	1	おがわ	w:15303
@@ -17882,6 +17889,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 曇り空	흐린 하늘	N110	VFr		GN		llm		くもりぞら	w:17879
 曰	말씀하&AE@	M420			GN		llm		のたまう	w:17880
 曰く	왈	N110			GN		xxx llm	1		w:17881
+曰く	듣자 하니	E300			GN					w:26618
 曰わく	이르기를	E300			GN		llm		のたまわく	w:17882
 曲がり角	모퉁이	I110	VPl		GN		xxx llm	1		w:17883
 曲り角	모퉁이	N110			GN		xxx		まがりかど	w:17884
@@ -19204,6 +19212,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 混淆	혼효	N110		Hd	GN				こんこう	w:19201
 混淆	혼효&AV@	M429			GN				こんこう	w:19202
 混迷	혼미&AV@	M429			GN		xxx	1	こんめい	w:19203
+淹れ	끓&AJ@	M427			GN					w:26619
 淹れ直	다시 끓&AJ@	M423			GN		llm			w:19204
 添い遂げ	끝까지 함께&AV@	M427			GN		xxx llm	1		w:19205
 添え	곁들&AJ@	M427			GN		xxx llm	1		w:19206

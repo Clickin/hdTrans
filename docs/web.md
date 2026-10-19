@@ -1,7 +1,7 @@
 # 웹 데모
 
 https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두 브라우저 안에서 하며, 서버는 정적
-파일(페이지, WebAssembly 엔진, `dicts/`의 사전 파일)만 내려 줍니다.
+파일(페이지, WebAssembly 엔진, `dicts/`의 열 사전을 컴파일한 `dicts.hdsnap`과 나머지 사전 파일)만 내려 줍니다.
 
 ## 구성
 
@@ -9,11 +9,11 @@ https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두
 |---|---|
 | `web/index.html`, `web/style.css` | 페이지 |
 | `web/src/app.ts` | 엔진과 사전을 받아(Cache Storage에 보관) 워커에 넘기고, 입력이 바뀌면 번역을 요청 |
-| `web/src/worker.ts` | 워커. `hdTransEngine.js`를 불러 사전을 `/dicts`에 쓰고 C API로 번역 |
+| `web/src/worker.ts` | 워커. `hdTransEngine.js`를 불러 `/dicts.hdsnap`과 나머지 사전 파일(`/dicts`)을 쓰고 C API로 번역 |
 | `web/src/grid.ts` | 사용자 사전·이름 표 편집기 (탭 구분 표, 붙여 넣기·파일 열기·저장) |
 | `web/src/names.ts` | 이름 표를 사용자 사전 줄로 바꿈 (품사가 없으면 `name`) |
 | `web/examples/`, `web/examples.tsv` | 예제 텍스트와 메뉴 이름 |
-| `web/build.mjs` | 사이트를 `build/web/dist`에 만듦 |
+| `web/build.mjs` | 네이티브 CLI로 `dicts.hdsnap`을 컴파일하고 사이트를 `build/web/dist`에 만듦 |
 | `web/check.mjs` | 헤드리스 Chrome으로 사이트를 확인 |
 | `web/deploy.sh` | 서버에 올림, 되돌림 |
 
@@ -25,9 +25,12 @@ https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두
 
 ## 빌드
 
-Node 22 이상과 Emscripten이 필요합니다.
+Node 22 이상과 Emscripten, 그리고 같은 소스로 빌드한 네이티브 CLI가 필요합니다. CLI가
+`hdtrans -dicts dicts -compile-snapshot build/web/dicts.hdsnap`으로 열 사전을 컴파일하고, build.mjs는 그 파일을
+WebAssembly 엔진이 불러오는지 확인한 뒤 올립니다. 엔진 데이터(`src/core/`)가 다른 빌드끼리는 맞지 않습니다.
 
 ```sh
+cmake --preset mac && cmake --build --preset mac --parallel   # 또는 linux
 emcmake cmake --preset wasm
 cmake --build --preset wasm --parallel
 npm --prefix web ci
@@ -38,11 +41,12 @@ node web/build.mjs
 |---|---|
 | `HDTRANS_DICTS` | 올릴 사전 폴더 (기본 `dicts`) |
 | `HDTRANS_WASM` | 엔진 빌드 폴더 (기본 `build/wasm`) |
+| `HDTRANS_CLI` | 사전을 컴파일할 CLI (기본 `build/mac/hdtrans`, 없으면 `build/linux/hdtrans`) |
 | `HDTRANS_WEB_EXAMPLES` | 저장소에 없는 예제 텍스트 폴더. `examples.tsv`에 적힌 파일 중 `web/examples/`에 없는 것을 여기서 찾음 |
 
 `build/web/dist`에는 `index.html`, `js/`, `examples/`, `manifest.json`과 내용 해시 폴더
-`assets/<sha256 앞 16자>/`(엔진과 사전 파일)가 생기고, 텍스트와 wasm 파일마다 `.br`, `.gz` 압축본이
-붙습니다. 서버는 브라우저가 받는 인코딩의 압축본을 보내고, `assets/`는 오래 캐시하게 합니다.
+`assets/<sha256 앞 16자>/`(엔진, `dicts.hdsnap`, 열 파일이 아닌 사전 파일)가 생기고, 텍스트·wasm·`.hdsnap`
+파일마다 `.br`, `.gz` 압축본이 붙습니다. 서버는 브라우저가 받는 인코딩의 압축본을 보내고, `assets/`는 오래 캐시하게 합니다.
 
 ## 확인
 
@@ -75,6 +79,6 @@ HDTRANS_WEB_HOST=user@host HDTRANS_WEB_SSH='ssh -i KEY' web/deploy.sh rollback <
 
 ## 메모리
 
-엔진은 TSV 사전 전체(약 82 MB)를 읽어 한 번에 컴파일합니다. 불러온 뒤 남는 사전은 약 44 MB지만
-컴파일하는 동안 최대 약 240 MB를 쓰므로 WebAssembly 메모리가 약 270 MB까지 커지고, WebAssembly 메모리는
-줄어들지 않습니다. 사용자 사전을 바꿀 때는 엔진을 내린 뒤 다시 불러오므로 더 커지지 않습니다.
+WebAssembly 메모리는 줄어들지 않으므로 불러오는 동안 가장 많이 쓴 양이 계속 남습니다. 페이지는 TSV를
+컴파일하지 않고 `dicts.hdsnap`(약 36 MB)을 읽으므로 엔진 메모리는 불러온 뒤 약 56 MB입니다(TSV를 엔진에서
+컴파일하면 약 120 MB). 사용자 사전을 바꿀 때는 엔진을 내린 뒤 다시 불러오므로 더 커지지 않습니다.

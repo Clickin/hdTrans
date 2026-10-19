@@ -463,7 +463,7 @@ std::pair<std::string, bool> Composer::Spacing(int i, std::string t, std::string
         case '1': {
             const TokenText& tok = tokens[item.tokenIndex];
             if (t == "(" || tok.span != 0 || WidthOf(tok.text) == 1 || nextKind == '2') return Result(std::move(t), false);
-            if (nextKind == '6') return Result(std::move(t), nextEntry == "0");
+            if (nextKind == '6') return Result(std::move(t), nd(nextTags));
             const std::string_view nextFirst = internal::EntryAt(next, 0).text;
             if (nextFirst == "(") break;
             if (nextFirst == ")") return Result(std::move(t), false);

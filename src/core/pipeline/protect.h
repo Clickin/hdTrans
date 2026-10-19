@@ -42,9 +42,10 @@ namespace internal {
 //   - entities &amp; &#123; &#x1F;  (SpanOpen);
 //   - the host markers, the longest that matches (SpanOpen);
 //   - the stutter marks U+E000 with their separators (SpanOpen);
-//   - Hangul runs joined by ASCII or full-width spaces (SpanWord);
-//   - runs of foreign characters other than white space (IsForeign), a ゔ taking the
-//     small vowel after it (SpanWord).
+//   - Hangul runs with the masks in or after them (자○), joined by ASCII or full-width
+//     spaces (SpanWord);
+//   - runs of foreign characters other than white space (IsForeign) or of ◯, a ゔ
+//     taking the small vowel after it (SpanWord).
 output::Pieces CutSpans(std::string_view text, std::span<const std::string> markers);
 
 // A character kept as written: outside CP932 and neither a Han character nor kana.

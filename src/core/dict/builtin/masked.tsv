@@ -1,0 +1,34 @@
+// Masked words (伏せ字) of the text path (JP, KR, WORD): JP is the word with ○
+// standing for its mask, a run of one mask character (○ ● ◯ 〇 ◎ × ✕ ＊ * ■ □ △ ▲ ◇ ◆),
+// and matches in hiragana and katakana alike; KR is written with the mask as it
+// stands in the text (セッ××ス 섹××). When KR ends in the mask, it takes the
+// particles of WORD (섹○를). A row with nothing on one side of ○ matches only where
+// no kana stands there. A dictionary key that covers the masked word wins (a user
+// entry オ○ニー<TAB>자위).
+オ○ニー	자○	자위
+オナ○ー	자○	자위
+○ナニー	자○	자위
+セッ○ス	섹○	섹스
+セ○クス	섹○	섹스
+セック○	섹○	섹스
+○ックス	섹○	섹스
+ち○こ	자○	자지
+ちん○	자○	자지
+ち○ぽ	자○	자지
+ち○ちん	자○	자지
+ちん○ん	자○	자지
+おち○ちん	자○	자지
+おちん○ん	자○	자지
+ま○こ	보○	보지
+まん○	보○	보지
+お○んこ	보○	보지
+おま○こ	보○	보지
+おまん○	보○	보지
+お○ぱい	가○	가슴
+おっ○い	가○	가슴
+フ○ラ	펠○	펠라
+フェ○	펠○	펠라
+レ○プ	강○	강간
+レイ○	강○	강간
+ア○ル	애○	애널
+パ○ツ	팬○	팬티

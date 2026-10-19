@@ -131,11 +131,40 @@ bool Nna(std::string_view s, size_t pos, Match& m) {
     return false;
 }
 
-// (何|なに|何を|なにを|どう|どー)すん(の|だ|です|じゃ)
+// Engine kanji: the CJK unified ideographs, extension A and 々.
+bool IsKanji(char32_t r) { return (r >= 0x4E00 && r <= 0x9FFF) || (r >= 0x3400 && r <= 0x4DBF) || r == U'々'; }
+
+// The kanji of the verbs in す (出す, 探す, 目指す): before すん they end a verb, not a
+// する noun.
+constexpr std::u32string_view kSuVerbKanji =
+    U"押刺指差挿出足増化貸返帰通直治回戻渡移写映隠消干話離放外許汚倒殺残越超試示探捜逃申召為成致灯燃卸下降伏冒侵犯推濁明";
+
+// The length of two kanji at pos that make a する noun (結婚すんの), or 0. One kanji
+// before す, or a second kanji of a verb in す, is a verb (出すんじゃ, 目指すんだろ).
+size_t TwoKanji(std::string_view s, size_t pos) {
+    size_t p = pos;
+    char32_t last = 0;
+    for (int n = 0; n < 2; n++) {
+        if (p >= s.size()) return 0;
+        const text::Rune r = text::DecodeRune(s.substr(p));
+        if (!IsKanji(r.cp)) return 0;
+        last = r.cp;
+        p += r.size;
+    }
+    return In(last, kSuVerbKanji) ? 0 : p - pos;
+}
+
+// (何|なに|何を|なにを|どう|どー|KK)すん(の|だ|です|じゃ), KK two kanji
 bool Sun(std::string_view s, size_t pos, Match& m) {
-    for (std::string_view w : {"何", "なに", "何を", "なにを", "どう", "どー"}) {
+    const size_t kanji = TwoKanji(s, pos);
+    for (std::string_view w : {"何", "なに", "何を", "なにを", "どう", "どー", "KK"}) {
         size_t p = pos;
-        if (!Lit(s, p, w)) continue;
+        if (w == "KK") {
+            if (kanji == 0) continue;
+            p += kanji;
+        } else if (!Lit(s, p, w)) {
+            continue;
+        }
         size_t q = p;
         if (!Lit(s, q, "すん")) continue;
         for (std::string_view e : {"の", "だ", "です", "じゃ"}) {
@@ -286,9 +315,6 @@ std::string ContractedRu(std::string_view stem, std::string_view after) {
     if (after == "の") return Cat({stem, "るの"});
     return Cat({stem, "るん", after});
 }
-
-// Engine kanji: the CJK unified ideographs, extension A and 々.
-bool IsKanji(char32_t r) { return (r >= 0x4E00 && r <= 0x9FFF) || (r >= 0x3400 && r <= 0x4DBF) || r == U'々'; }
 
 // The forms of おく for the contracted とく.
 std::string_view TokuForm(std::string_view w) {

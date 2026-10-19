@@ -176,6 +176,12 @@ HD_TEST(pipeline_write_stutters) {
     for (const auto& c : cases) HD_CHECK_EQ(pipeline::WriteStutters(c.in), std::string(c.want));
 }
 
+HD_TEST(pipeline_drop_particle_marks) {
+    HD_CHECK_EQ(pipeline::DropParticleMarks("섹○\uE001를 가○\uE002을 애○\uE003을"), std::string("섹○를 가○을 애○을"));
+    HD_CHECK_EQ(pipeline::DropParticleMarks("\uE000、아"), std::string("\uE000、아"));
+    HD_CHECK_EQ(pipeline::DropParticleMarks("a\xFF" "b"), std::string("a\xFF" "b"));
+}
+
 HD_TEST(pipeline_restore) {
     // A stutter span and a Hangul span come back as text in the line.
     {
@@ -221,6 +227,10 @@ HD_TEST(pipeline_literal_cleanup) {
         {"몇번몇번", "몇 번몇 번"},
         {"있읍니다 했읍니다 없읍니다", "있습니다 했습니다 없습니다"},
         {"모읍니다 기웁니다 읍니다", "모읍니다 기웁니다 읍니다"},
+        {"나갈 때에 돌아왔을 때에는 하는 때에,", "나갈 때 돌아왔을 때는 하는 때,"},
+        {"그 때에 때에 달게 함대 때에 비하면", "그 때에 때에 달게 함대 때에 비하면"},
+        {"상황 때에 따라 할 때에 따라", "상황 때에 따라 할 때에 따라"},
+        {"다닐 수 있고 있어", "다닐 수 있어"},
     };
     for (const auto& c : cases) HD_CHECK_EQ(pipeline::KoreanCleanup(c.in), std::string(c.want));
     const Pieces typed{{"何度も"}, {"몇번", SpanWord}};

@@ -3,11 +3,13 @@
 key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 いい加減にしなさい	작작 좀 해	A9D0			GN		llm			i:1
 いかなる場合でも	어떤 경우에도	A9D0			GN		llm			i:2
+お湯を沸か	물을 끓&AJ@	M443		Pn	GN					i:7766
 如何なる場合でも	어떤 경우에도	A9D0			GN		llm			i:3
 お出でにな	오&AE@	M428			GN		llm			i:4
 お座なりにな	소홀해&AL@	M428			GN		llm			i:5
 ケツの穴	똥구멍	N110			GN		llm			i:6
 ゲンを担	징크스를 따&AL@	M422		Pn	GN		llm			i:7
+湯を沸か	물을 끓&AJ@	M443		Pn	GN					i:7765
 験を担	징크스를 따&AL@	M422		Pn	GN		llm			i:8
 このような場合に	이런 경우에	E300			GN		llm			i:9
 この結果	그 결과	A9D0			GN		llm			i:10

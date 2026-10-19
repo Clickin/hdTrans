@@ -1,7 +1,14 @@
 #pragma once
-// The sound stage of the text path: sounds, elongation and stutter written before the
-// line is translated, and the spoken spellings inside words that need the dictionary
-// to be recognised.
+// The sound stage of the text path: masked words, sounds, elongation and stutter
+// written before the line is translated, and the spoken spellings inside words that
+// need the dictionary to be recognised.
+//
+// A masked word (伏せ字: オ○ニー, ち○こ, セッ××ス) is one word with its mask: a row of
+// the builtin masked.tsv writes its Korean with the mask as written (자○, 섹××); a
+// katakana word with katakana on both sides of each mask and a one-syllable piece of a
+// word next to it is transliterated around the masks (オ○ニ 오○니, but not キー○ボタン).
+// A mask without kana around it (○×クイズ, ○月○日, ○○さん) stays, and so does a masked
+// word that a dictionary key covers, so a user entry (オ○ニー 자위) wins.
 //
 // A sound of the builtin sound lexicon (sound.tsv, and the interjections in kana of
 // phrases.tsv) is written in Korean, so the protect stage makes it a Hangul span that
@@ -30,6 +37,9 @@
 //     there is elongation (パターン is not ぱたん lengthened), and a plain-dictionary
 //     entry at least as long as the sound's key (without a final と), win.
 //
+// A burst of breath that stands alone (かはっ, だっは, かッハ……) and that no dictionary
+// word reads is written as heard (카핫, 닷하, 캇하) rather than as particles.
+//
 // A stutter (な、なにを, だっ、だめ, べ…別に) becomes a stutter mark U+E000 before each
 // separator; the restore stage writes it as the first syllable of the next Korean word
 // (WriteStutters).
@@ -43,13 +53,16 @@
 
 namespace hdTrans::pipeline {
 
-// The normalized line after the sound stage: CompleteCutOffs, WriteSounds, then RewriteCasualAdjectives;
+// The normalized line after the sound stage: WriteMasked, CompleteCutOffs, WriteSounds, then RewriteCasualAdjectives;
 // when RewriteEmphasis changes that text, WriteSounds of the rewritten text instead.
 // Markup tags, BBCode tags, entities and ctx.markers are left as they are. The lookups
 // use ctx.lookup.
 std::string Sound(std::string_view normalized, const LineContext& ctx, const dict::Snapshot& snap);
 
 namespace internal {
+
+// text with its masked words in Korean (see the comment at the top).
+std::string WriteMasked(std::string_view text, const LineContext& ctx, const dict::Snapshot& snap);
 
 // The sounds of text in Korean and each stutter as stutter marks before its separators
 // (see the comment at the top). Invalid UTF-8 bytes are kept and read as neither kana
@@ -83,8 +96,10 @@ std::string RewriteCasualAdjectives(std::string_view text, const LineContext& ct
 // (いこー いこう). Returns text itself when nothing changes.
 std::string RewriteEmphasis(std::string_view text, const LineContext& ctx, const dict::Snapshot& snap);
 
-// korean with the elongation units of a sound match: 'v' for each lengthening
-// character, '~' for each run of ～, '!' for a closing ッ. When the last syllable
+// korean with the elongation units of a sound match: 'r' for each repeat of the
+// syllable the key ends with, which writes the last syllable again (아하하 아하하하) and
+// lets '!' give the last syllable the final ㅅ (아하하 + rr! 아하하하핫), then 'v' for each
+// lengthening character, '~' for each run of ～, '!' for a closing ッ. When the last syllable
 // carries the sound (the only syllable, or one without an initial consonant: 앙, 하아,
 // 우왓), each 'v' adds a syllable of its vowel, at most four, before the final
 // consonant if it has one (앙 아앙, 꺅 꺄악), and '!' gives it the final ㅅ when it has none
@@ -120,8 +135,12 @@ std::u32string ToKatakana(std::u32string_view rs);
 
 // The end of a match of row at f[p:] (f in katakana) and its elongation units (see
 // Lengthen), or false. In a key of three or more characters a small vowel also matches
-// the plain one (ふわぁ, ふわあ). Elongation may follow the key, or come before its last
-// character when that is ン or ッ; ッ may close it when no kana but ト or テ follows.
+// the plain one (ふわぁ, ふわあ). A key that ends in a doubled syllable, with or without
+// ッ, whose Korean ends in a doubled syllable, continues over more of that syllable
+// (あははは+はは, あっはっは+っはっ) with a unit 'r' for each, or 'h' when the syllable holds
+// ッ: such a match is written as heard, each syllable with its ㅅ (앗핫핫핫). Elongation may follow the key, or come before its last
+// character when that is ン or ッ; ッ may close it, with the ～ and ー after it, when no kana
+// but ト, テ, ～ or ー follows.
 bool MatchSound(const SoundRow& row, std::u32string_view f, size_t p, size_t& end, std::string& units);
 
 }  // namespace internal

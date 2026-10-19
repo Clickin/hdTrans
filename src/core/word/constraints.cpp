@@ -18,19 +18,31 @@ namespace {
 
 constexpr ConstraintRule kRules[] = {
     {"honorific-katakana", ConstraintWord::Katakana, "", ConstraintContext::Honorific, ConstraintReject::NonPerson,
-     "가타카나 단어 + 경칭(さん·くん·様 등): 사람·동물·직함 뜻이 없으면 일반 뜻을 버리고 인명 읽기 (ハル君 헐군 → 하루군)"},
+     "가타카나 단어 + 경칭(さん·くん·様 등): 사람·동물·직함 뜻이 없으면 일반 뜻을 버리고 인명 읽기 (ハル君 헐군 → 하루군)", {}},
     {"honorific-kanji-name", ConstraintWord::Kanji, "", ConstraintContext::FamiliarHonorific,
      ConstraintReject::NonName,
-     "한자 단어 + くん·君·ちゃん·たん: 사전에 인명 뜻이 있고 사람 명사 뜻이 없으면 인명 뜻만 (翼くん 날개 군 → 츠바사군)"},
+     "한자 단어 + くん·君·ちゃん·たん: 사전에 인명 뜻이 있고 사람 명사 뜻이 없으면 인명 뜻만 (翼くん 날개 군 → 츠바사군)", {}},
     {"honorific-kanji-name-place", ConstraintWord::Kanji, "", ConstraintContext::Honorific,
      ConstraintReject::NonNameBesidePlace,
-     "한자 단어 + 경칭: 인명 뜻 말고는 지명 뜻뿐이면 인명 뜻만 (太郎殿 타로전 → 타로님)"},
+     "한자 단어 + 경칭: 인명 뜻 말고는 지명 뜻뿐이면 인명 뜻만 (太郎殿 타로전 → 타로님)", {}},
     {"kimi-after-katakana", ConstraintWord::Source, "君", ConstraintContext::AfterKatakana, ConstraintReject::Pronoun,
-     "가타카나 바로 뒤의 君은 대명사(너·네)가 아니라 접미사 군 (バカ君が 바보네가 → 바보군이)"},
+     "가타카나 바로 뒤의 君은 대명사(너·네)가 아니라 접미사 군 (バカ君が 바보네가 → 바보군이)", {}},
     {"quote-after-exclamation", ConstraintWord::Source, "と", ConstraintContext::AfterExclamation,
-     ConstraintReject::NonQuote, "！·？ 바로 뒤의 と는 인용 조사 라고 (ドン！と 돈! 와 → 돈! 라고)"},
+     ConstraintReject::NonQuote, "！·？ 바로 뒤의 と는 인용 조사 라고 (ドン！と 돈! 와 → 돈! 라고)", {}},
     {"quote-tte-after-pause", ConstraintWord::Source, "って", ConstraintContext::AfterPause,
-     ConstraintReject::NonQuote, "！·？·、·… 뒤에서 명사(奴·こと·話 등)를 꾸미는 って는 인용 (休暇、って奴 휴가, 는 녀석 → 휴가, 라는 녀석)"},
+     ConstraintReject::NonQuote, "！·？·、·… 뒤에서 명사(奴·こと·話 등)를 꾸미는 って는 인용 (休暇、って奴 휴가, 는 녀석 → 휴가, 라는 녀석)", {}},
+    {"iwaku-line-opening", ConstraintWord::Source, "曰く", ConstraintContext::LineOpening, ConstraintReject::NonAdverb,
+     "줄 첫머리의 曰く、는 전하는 말을 여는 부사 (曰く、彼は 왈, 그는 → 듣자 하니, 그는)", {}},
+    {"iwaku-elsewhere", ConstraintWord::Source, "曰く", ConstraintContext::Elsewhere, ConstraintReject::Adverb,
+     "줄 첫머리가 아닌 曰く는 부사 뜻을 버림 (先生曰く 선생님 왈)", {}},
+    {"tsui-numeral-ago", ConstraintWord::Source, "つい", ConstraintContext::BeforeNumeralAgo,
+     ConstraintReject::OtherTargets, "수와 前 앞의 つい는 불과 (つい3時間前 무심코 3시간 전 → 불과 3시간 전). つい笑った는 그대로", "불과"},
+    {"saki-after-verb", ConstraintWord::Source, "先", ConstraintContext::AfterVerbEnding, ConstraintReject::OtherTargets,
+     "동사 た·だ·る 바로 뒤의 先은 곳 (嫁いだ先 시집간 앞 → 시집간 곳). まだ先, この先는 그대로", "곳"},
+    {"sakini-after-verb", ConstraintWord::Source, "先に", ConstraintContext::AfterVerbEnding,
+     ConstraintReject::OtherTargets, "동사 た·だ·る 바로 뒤의 先に는 곳에 (戻した先に 되돌린 먼저 → 되돌린 곳에)", "곳에"},
+    {"sakini-after-demonstrative", ConstraintWord::Source, "先に", ConstraintContext::AfterDemonstrative,
+     ConstraintReject::OtherTargets, "この·その·あの 뒤의 先に는 앞에 (この先に 이 먼저 → 이 앞에). 先に行く는 그대로 먼저", "앞에"},
 };
 
 struct HonorificSuffix {
@@ -42,6 +54,13 @@ constexpr HonorificSuffix kHonorifics[] = {
     {"さん", false}, {"さま", false}, {"様", false}, {"殿", false}, {"氏", false},  {"先輩", false},
     {"先生", false}, {"くん", true},  {"君", true},  {"ちゃん", true}, {"たん", true},
 };
+
+// The numerals that start a quantity (つい三時間前, つい3日前, つい数分前).
+constexpr std::u32string_view kNumerals = U"0123456789０１２３４５６７８９一二三四五六七八九十百千数何半";
+// The characters that end the quantity before 前 is found.
+constexpr std::u32string_view kQuantityBreaks = U"、。，．！？!?…「」『』（）() 　";
+
+constexpr std::string_view kOpeningBrackets[] = {"「", "『", "（", "(", "“", "‘", "【", "〈", "《", "［", "["};
 
 // What continues a word rather than follows a particle (とって, ととと, とぉぉ).
 constexpr std::string_view kDrawls[] = {"っ", "と", "ぉ", "ぁ", "ー", "～", "↓", "↑"};
@@ -108,15 +127,29 @@ bool WordFits(const ConstraintRule& rule, std::string_view source, std::string_v
     return false;
 }
 
+// Whether s starts with a numeral and has 前 within eight characters, before any break.
+bool NumeralAgo(std::string_view s) {
+    for (int n = 0; n < 9 && !s.empty(); n++) {
+        const text::Rune r = text::DecodeRune(s);
+        if (n == 0 && kNumerals.find(r.cp) == std::u32string_view::npos) return false;
+        if (r.cp == U'前') return n > 0;
+        if (kQuantityBreaks.find(r.cp) != std::u32string_view::npos) return false;
+        s.remove_prefix(r.size);
+    }
+    return false;
+}
+
 bool StartsWithAny(std::string_view s, std::span<const std::string_view> list) {
     return std::any_of(list.begin(), list.end(), [s](std::string_view p) { return s.starts_with(p); });
 }
 
 // Whether the context of rule holds for the word source of the candidates list: after is
 // the text after it, before the character before it in its token, previous the character
-// before it past spaces and token ends.
+// before it past spaces and token ends, preceding the text right before it (its token's
+// head, else the token before).
 bool ContextFits(const ConstraintRule& rule, const std::vector<dict::Candidate>& list, std::string_view source,
-                 std::string_view after, std::string_view before, std::string_view previous) {
+                 std::string_view after, std::string_view before, std::string_view previous,
+                 std::string_view preceding) {
     const bool exclamation = previous == "！" || previous == "？" || previous == "!" || previous == "?";
     switch (rule.context) {
     case ConstraintContext::Honorific:
@@ -130,6 +163,18 @@ bool ContextFits(const ConstraintRule& rule, const std::vector<dict::Candidate>&
     case ConstraintContext::AfterPause:
         return (exclamation || previous == "、" || previous == "…" || previous == "‥" || previous == ",") &&
                StartsWithAny(after, kQuotedNouns);
+    case ConstraintContext::BeforeNumeralAgo:
+        return NumeralAgo(after);
+    case ConstraintContext::AfterVerbEnding:
+        return (preceding.ends_with("た") || preceding.ends_with("だ") || preceding.ends_with("る")) &&
+               !preceding.ends_with("まだ");
+    case ConstraintContext::AfterDemonstrative:
+        return preceding.ends_with("この") || preceding.ends_with("その") || preceding.ends_with("あの");
+    case ConstraintContext::LineOpening:
+    case ConstraintContext::Elsewhere:
+        return ((previous.empty() || StartsWithAny(previous, kOpeningBrackets)) &&
+                (after.starts_with("、") || after.starts_with("，") || after.starts_with(","))) ==
+               (rule.context == ConstraintContext::LineOpening);
     }
     return false;
 }
@@ -195,6 +240,10 @@ void Worker::ApplyConstraints(dict::Candidates& found, std::string_view query) {
         else if (Tok(j).text.empty()) break;
     }
     if (previous.empty()) previous = settings.before;
+    // The text after the query, in the tokens that follow when the query ends its token.
+    std::string following;
+    for (int j = current + 1; j < TokenCount() && following.size() < 32; j++) following += Tok(j).text;
+    const std::string_view preceding = !head.empty() || current <= 0 ? head : Tok(current - 1).text;
     std::vector<dict::Candidate>& list = found.list;
     for (const ConstraintRule& rule : kRules) {
         std::size_t i = 0;
@@ -203,7 +252,10 @@ void Worker::ApplyConstraints(dict::Candidates& found, std::string_view query) {
             const bool first = std::none_of(list.begin(), list.begin() + static_cast<std::ptrdiff_t>(i),
                                             [&](const dict::Candidate& c) { return c.source == source; });
             if (source.empty() || list[i].codes == nullptr || !first || !WordFits(rule, source, before) ||
-                !ContextFits(rule, list, source, From(query, static_cast<long>(source.size())), before, previous)) {
+                !ContextFits(rule, list, source,
+                             query.size() > source.size() ? From(query, static_cast<long>(source.size()))
+                                                          : std::string_view(following),
+                             before, previous, preceding)) {
                 i++;
                 continue;
             }
@@ -234,6 +286,24 @@ void Worker::ApplyConstraints(dict::Candidates& found, std::string_view query) {
                 for (const std::size_t k : same) {
                     const dict::PartCode p = list[k].codes->part;
                     if (p.Tag() == 'N' && p.ClassDigit() == '1' && p.Sub() == '2') rejected.push_back(k);
+                }
+                if (rejected.size() == same.size()) rejected.clear();
+                break;
+            case ConstraintReject::NonAdverb:
+                for (const std::size_t k : same) {
+                    if (list[k].codes->part.Tag() != 'E') rejected.push_back(k);
+                }
+                if (rejected.size() == same.size()) rejected.clear();
+                break;
+            case ConstraintReject::Adverb:
+                for (const std::size_t k : same) {
+                    if (list[k].codes->part.Tag() == 'E') rejected.push_back(k);
+                }
+                if (rejected.size() == same.size()) rejected.clear();
+                break;
+            case ConstraintReject::OtherTargets:
+                for (const std::size_t k : same) {
+                    if (list[k].target != rule.target) rejected.push_back(k);
                 }
                 if (rejected.size() == same.size()) rejected.clear();
                 break;
