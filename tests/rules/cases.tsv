@@ -291,7 +291,7 @@ L2059	文字は小さくされた。	문자는 작게 여겨졌다.	current	loca
 L2060	私は友達に本を返そうとした。	나는 친구에게 책을 돌려주려고 했다.	current	local-ending
 L2060	彼は急いで電話を取ろうとした。	그는 서둘러 전화를 취하려고 했다.	current	local-ending
 L2062	天気が良い限り外で遊ぶ。	날씨가 좋을 따름 밖에서 논다.	current	local-ending
-L2073	彼が来るなんて噂だ。	그가 오다는 소문이다.	current	local-ending
+L2073	彼が来るなんて噂だ。	그가 온다는 소문이다.	current	local-ending
 L2078	夜は寝ずに勉強した。	밤에는 자지 않고 공부했다.	current	local
 L2078	何も食べずに家を出た。	아무것도 먹지 않고 집을 나갔다.	current	local
 L2084	学生として、ルールは守ります。	학생으로서 룰은 지킵니다.	current	local
@@ -339,9 +339,9 @@ L2221	そんなことだって、やればできるさ。	그런 일도, 하면 
 L2228	「ありがとう」って言った。	「고마워요」라고 말했다.	current	local
 L2228	「やった」って思ってるよ。	「해냈다」라고 생각하고 있어.	current	local
 L2245	もっとも、例外もある。	무엇보다, 예외도 있다.	current	local
-L2252	明日は雨が降るって噂です。	내일은 비가 온다 라는 소문입니다.	current	local-ending
-L2252	来月結婚するって話を聞きました。	내달 결혼한다 라는 이야기를 들었습니다.	current	local-ending
-L2252	行くって話です。	간다 라는 이야기입니다.	current	local-ending
+L2252	明日は雨が降るって噂です。	내일은 비가 온다는 소문입니다.	current	local-ending
+L2252	来月結婚するって話を聞きました。	내달 결혼한다는 이야기를 들었습니다.	current	local-ending
+L2252	行くって話です。	간다는 이야기입니다.	current	local-ending
 L2256	彼に助けてもらえない。	그에게 도와 주지 않는다.	current	local
 L2262	あと、牛乳も買ってきて。	그리고, 우유도 사 와.	current	local
 L2262	あと、傘を忘れないでね。	그리고, 우산을 잊지 마.	current	local
@@ -450,7 +450,7 @@ L2930	毎日走れるようになりました。	매일 달릴 수 있게 되었
 L2930	朝早く起きられるようになりたい。	아침 일찍 일어날 수 있게 되고 싶다.	current	local
 L2943	そんなに急がないで。	그렇게 서두르지 마.	current	local-ending
 L2943	ここでは走らないで。	여기에서는 달리지 마.	current	local-ending
-L2947	無理なのよ。	무리이야.	current	local-ending
+L2947	無理なのよ。	무리야.	current	local-ending
 L2956	子供のすることだ。	아이가 하는 것이다.	current	local
 L2962	京都巡りツアーに参加する。	교토 둘러싸고 투어에 참가한다.	current	local
 L2963	店員さんに道を聞いた。	점원에 길을 물었다.	current	local
@@ -514,7 +514,7 @@ L3293	週末に部屋を掃除する。	주말에 방을 청소한다.	current	l
 L3293	健康のために毎晩運動する。	건강을 위해 매일 밤 운동한다.	current	local
 L3302	私が代わりにやるよ。	내가 대신에 할게.	current	local-ending
 L3302	荷物を持ってあげるよ。	짐을 들어 줄게.	current	local-ending
-L3302	彼は料理するよ。	그는 요리할게.	current	local-ending
+L3302	彼は料理するよ。	그는 요리해.	current	local-ending
 L3315	私にとって家族は一番大切です。	나에게 있어 가족은 제일 중요합니다.	current	local
 L3315	子どもにとって遊びは学びの場だ。	아이에게 있어 놀이는 배움의 장소다.	current	local
 L3318	私は走っていないのに汗が出る。	나는 달리지 않았는데 땀이 난다.	current	local-ending
@@ -663,9 +663,9 @@ L4398	兄と同じ色のシャツを買った。	형과 같은 색의 셔츠를 
 L4421	人生ってそんなものさ。	인생은 그런 것이야.	current	local
 L4421	それが男というものさ。	그것이 남자라는 것이야.	current	local
 L4433	電話とかで話す。	전화등에서 이야기한다.	current	local
-L4470	ここに座ってはだめなの？	여기에 앉아서는 안돼?	current	local-ending
+L4470	ここに座ってはだめなの？	여기에 앉아서는 안 돼?	current	local-ending
 L4470	本当にそれで大丈夫なの？	정말로 그래서 괜찮아?	current	local-ending
-L4470	だめなの？	안돼?	current	local-ending
+L4470	だめなの？	안 돼?	current	local-ending
 L4475	何もしてくれんかった。	아무것도 해 줘.	current	local
 L4480	私は掃除をさせられた。	나는 청소를 하게 했다.	current	local
 L4541	やっと終わったって感じです。	드디어 끝났다 라는 느낌입니다.	current	local-ending
