@@ -124,6 +124,15 @@ jobs:
         env:
           EM_COMPILER_WRAPPER: ${{ matrix.preset == 'wasm' && 'ccache' || '' }}
         run: cmake --build --preset "${{ matrix.preset }}" --parallel "$BUILD_JOBS"
+      - name: Stage dictionaries for the Windows host probe
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dicts = "build/${{ matrix.preset }}/dicts"
+          New-Item -ItemType Directory -Force "$dicts/base" | Out-Null
+          Copy-Item 'dicts/*' $dicts -Recurse -Force
+          # Remove the base copy once dict-paths adopts the flat DLL layout.
+          Copy-Item 'dicts/*' "$dicts/base" -Recurse -Force
       - name: Test without external fixtures
         run: |
           unset HDTRANS_REQUIRE_ALL HDTRANS_GOLDEN HDTRANS_DICTS HDTRANS_TEST_EXCLUDE
