@@ -1,0 +1,11 @@
+name: 기타 문의
+description: 사용법, 제안, 그 밖의 질문
+title: "[문의] "
+labels: [question]
+body:
+  - type: textarea
+    id: body
+    attributes:
+      label: 내용
+    validations:
+      required: true
