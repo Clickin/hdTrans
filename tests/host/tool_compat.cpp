@@ -1,6 +1,7 @@
 #include <windows.h>
 
 #include <barrier>
+#include <cstdint>
 #include <cstdio>
 #include <cwchar>
 #include <string>
@@ -15,6 +16,9 @@ using FreeMemFn = void(__stdcall*)(void*);
 using FreeMemIntFn = int(__stdcall*)(char*);
 using StopFn = int(__stdcall*)(int);
 using TerminateFn = int(__stdcall*)();
+using TranslateAddressFn = int(__stdcall*)(int, const char*);
+using TranslateWideAddressFn = int(__stdcall*)(int, const wchar_t*);
+using FreeAddressFn = int(__stdcall*)(int);
 
 constexpr const char* kExports[] = {
     "J2K_FreeMem", "J2K_GetPriorDict", "J2K_GetProperty", "J2K_Initialize", "J2K_InitializeEx",
@@ -188,6 +192,91 @@ bool RunAral(const std::wstring& dllPath, bool splitThreads) {
     return ok;
 }
 
+#ifndef _WIN64
+struct VnrEngine {
+    HMODULE module = nullptr;
+    TranslateAddressFn translate = nullptr;
+    TranslateWideAddressFn translateW = nullptr;
+    FreeAddressFn freeMem = nullptr;
+    bool ansi = false;
+};
+
+bool TranslateVnr(VnrEngine& engine, const wchar_t* text, const char* sjis, const wchar_t* expected) {
+    if (!engine.translate && !engine.translateW) {
+        const auto wideAddress = GetProcAddress(engine.module, "J2K_TranslateMMNTW");
+        if (!engine.ansi && wideAddress) {
+            engine.translateW = reinterpret_cast<TranslateWideAddressFn>(wideAddress);
+        } else {
+            engine.translate = Export<TranslateAddressFn>(engine.module, "J2K_TranslateMMNT");
+            if (!engine.translate) return false;
+        }
+    }
+    const int address = engine.translateW ? engine.translateW(0, text) : engine.translate(0, sjis);
+    if (!address) return false;
+    const auto* raw = reinterpret_cast<const void*>(static_cast<std::uintptr_t>(static_cast<std::uint32_t>(address)));
+    bool matches;
+    if (engine.translateW) {
+        const std::wstring copied = static_cast<const wchar_t*>(raw);
+        matches = expected ? copied == expected : !copied.empty();
+    } else {
+        const std::string copied = static_cast<const char*>(raw);
+        matches = expected ? copied == Encode(expected, 949) : !copied.empty();
+    }
+    if (!engine.freeMem) engine.freeMem = Export<FreeAddressFn>(engine.module, "J2K_FreeMem");
+    if (!engine.freeMem) return false;
+    engine.freeMem(address);
+    return matches;
+}
+
+bool RunVnr(const std::wstring& dllPath, bool ansi) {
+    const size_t slash = dllPath.find_last_of(L"\\/");
+    if (slash == std::wstring::npos) return false;
+    const std::wstring directory = dllPath.substr(0, slash);
+    const DWORD pathSize = GetEnvironmentVariableW(L"PATH", nullptr, 0);
+    std::wstring searchPath(pathSize, L'\0');
+    if (pathSize) searchPath.resize(GetEnvironmentVariableW(L"PATH", searchPath.data(), pathSize));
+    if (!searchPath.empty()) searchPath += L';';
+    searchPath += directory;
+    SetEnvironmentVariableW(L"PATH", searchPath.c_str());
+    VnrEngine engine;
+    engine.ansi = ansi;
+    engine.module = LoadLibraryW(L"J2KEngine.dll");
+    if (!Check(engine.module != nullptr, "bare-name J2KEngine.dll load with configured directory appended to PATH")) return false;
+    HMODULE native = LoadLibraryW(L"J2KEngine.dlx");
+    if (!native) native = LoadLibraryW(L"J2KEngine.dll");
+    if (!Check(native == engine.module, "native-directory probe: .dlx first, then .dll")) return false;
+    char modulePath[MAX_PATH]{};
+    if (!GetModuleFileNameA(native, modulePath, MAX_PATH)) return false;
+    const std::string originalPath = modulePath;
+    const size_t originalSlash = originalPath.find_last_of("\\/");
+    if (originalSlash == std::string::npos) return false;
+    const std::string datPath = originalPath.substr(0, originalSlash + 1) + "Dat";
+    if (!Check(GetFileAttributesA(datPath.c_str()) == INVALID_FILE_ATTRIBUTES, "native-directory Dat does not exist")) return false;
+    const auto initialize = Export<InitializeExFn>(engine.module, "J2K_InitializeEx");
+    if (!initialize || !Check(initialize("CSUSER123455", datPath.c_str()) == 1, "InitializeEx(key, native-directory Dat) returns exactly 1"))
+        return false;
+    if (ansi) std::puts("ANSI fallback forced; Shift-JIS fixtures use the sjis codec, not CP932 extensions");
+    bool ok = Check(TranslateVnr(engine, L"あ", "\x82\xa0", nullptr), "main-thread warmup Translate(0, text) and FreeMem");
+    if (!ansi) ok = Check(engine.translateW != nullptr, "Unicode export selects the Unicode branch") && ok;
+    bool workerOk = true;
+    std::thread worker([&engine, &workerOk] {
+        constexpr const char* inputs[] = {"\x82\xb1\x82\xf1\x82\xc9\x82\xbf\x82\xcd", "\x93\xfa\x96\x7b\x8c\xea"};
+        for (int round = 0; round < 16; ++round) {
+            for (size_t index = 0; index < 2; ++index) {
+                workerOk = TranslateVnr(engine, kSamples[index].input, inputs[index], kSamples[index].expected) && workerOk;
+            }
+        }
+    });
+    worker.join();
+    ok = Check(workerOk, "worker translations preserve c_int pointer bits and release original addresses") && ok;
+    const auto terminate = Export<TerminateFn>(engine.module, "J2K_Terminate");
+    if (!terminate) return false;
+    terminate();
+    std::puts("PASS explicit Loader.destroy: Terminate without StopTranslation or FreeLibrary");
+    return ok;
+}
+#endif
+
 bool RunWeb(HMODULE module) {
     const auto initialize = Export<InitializeExFn>(module, "J2K_InitializeEx");
     const auto translate = Export<TranslateWFn>(module, "J2K_TranslateMMNTW");
@@ -219,7 +308,7 @@ bool RunWeb(HMODULE module) {
 
 int wmain(int argc, wchar_t** argv) {
     if (argc != 3) {
-        std::puts("usage: tool_compat <luna|luna-ansi|anemone|anemone-ansi|aral02|aral03|eztransserver|eztransweb> <DLL>");
+        std::puts("usage: tool_compat <luna|luna-ansi|anemone|anemone-ansi|aral02|aral03|vnr|vnr-ansi|eztransserver|eztransweb> <DLL>");
         return 2;
     }
     wchar_t cwd[MAX_PATH]{};
@@ -231,6 +320,11 @@ int wmain(int argc, wchar_t** argv) {
     if (std::wcscmp(argv[1], L"aral02") == 0 || std::wcscmp(argv[1], L"aral03") == 0) {
         return RunAral(argv[2], std::wcscmp(argv[1], L"aral03") == 0) ? 0 : 1;
     }
+#ifndef _WIN64
+    if (std::wcscmp(argv[1], L"vnr") == 0 || std::wcscmp(argv[1], L"vnr-ansi") == 0) {
+        return RunVnr(argv[2], std::wcscmp(argv[1], L"vnr-ansi") == 0) ? 0 : 1;
+    }
+#endif
     const HMODULE module = LoadLibraryW(argv[2]);
     if (!Check(module != nullptr, "LoadLibraryW")) return 1;
     bool ok = false;
