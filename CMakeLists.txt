@@ -228,9 +228,11 @@ elseif(WIN32)
         set(toolCompatPlatform x64)
     endif()
     set(xunityHost "${CMAKE_CURRENT_BINARY_DIR}/xunity_host.exe")
+    file(TO_NATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests/host/xunity_host.cs" xunitySource)
+    file(TO_NATIVE_PATH "${xunityHost}" xunityOutput)
     add_custom_command(OUTPUT "${xunityHost}"
         COMMAND "${HDTRANS_CSC}" /nologo /optimize+ /warnaserror+ /codepage:65001 /platform:${toolCompatPlatform}
-            /out:${xunityHost} "${CMAKE_CURRENT_SOURCE_DIR}/tests/host/xunity_host.cs"
+            /out:${xunityOutput} "${xunitySource}"
         DEPENDS tests/host/xunity_host.cs VERBATIM)
     add_custom_target(xunity_host ALL DEPENDS "${xunityHost}")
     add_dependencies(xunity_host j2kengine)
