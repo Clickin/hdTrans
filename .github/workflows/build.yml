@@ -129,10 +129,8 @@ jobs:
         shell: pwsh
         run: |
           $dicts = "build/${{ matrix.preset }}/dicts"
-          New-Item -ItemType Directory -Force "$dicts/base" | Out-Null
+          New-Item -ItemType Directory -Force $dicts | Out-Null
           Copy-Item 'dicts/*' $dicts -Recurse -Force
-          # Remove the base copy once dict-paths adopts the flat DLL layout.
-          Copy-Item 'dicts/*' "$dicts/base" -Recurse -Force
       - name: Test without external fixtures
         run: |
           unset HDTRANS_REQUIRE_ALL HDTRANS_GOLDEN HDTRANS_DICTS HDTRANS_TEST_EXCLUDE

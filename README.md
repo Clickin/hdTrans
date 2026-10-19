@@ -42,7 +42,8 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 
 | 옵션 | 설명 |
 |---|---|
-| `-dicts DIR[,DIR...]` | 사전 폴더. 쉼표로 여러 개를 주면 뒤 폴더가 앞 폴더를 덮어씁니다 (기본값 `dicts/base`) |
+| `-dicts DIR[,DIR...]` | 사전 폴더. 쉼표로 여러 개를 주면 뒤 폴더가 앞 폴더를 덮어씁니다 (기본값: 실행 파일 옆 `dicts`, 없으면 현재 폴더의 `dicts`) |
+| `-userdict FILE` | 사용자 사전 파일 (기본값: 실행 파일 옆 `userdict.tsv`, 빈 값이면 쓰지 않음) |
 | `-in FILE` | 표준 입력 대신 파일에서 읽기 |
 | `-each` | 줄마다 새 세션으로 번역 (줄끼리 문맥을 나누지 않음) |
 | `-compile-dicts` | 사전 캐시를 미리 만들고 종료 |
@@ -56,11 +57,12 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 32비트이므로 **x86(32비트) 빌드**를 사용하세요.
 
 1. 이지트랜스 폴더의 원래 `J2KEngine.dll`을 백업하고 hdTrans의 `J2KEngine.dll`로 바꿉니다.
-2. 같은 폴더에 `dicts\base\`를 만들고 저장소 `dicts/`의 `*.tsv` 파일을 복사합니다.
-3. 사용자 사전을 쓰려면 `dicts\user\`에 넣습니다. 도구의 사용자 사전 다시 읽기
-   (`J2K_ReloadUserDict`)로 바로 반영됩니다.
+2. 같은 폴더에 `dicts\`를 만들고 저장소 `dicts/`의 `*.tsv` 파일을 복사합니다.
+3. 사용자 사전을 쓰려면 같은 폴더에 `userdict.tsv`를 둡니다. 도구가 실행 중일 때 고쳐 저장해도
+   다음 번역부터 자동으로 반영됩니다. 도구의 사용자 사전 다시 읽기(`J2K_ReloadUserDict`)는 바로
+   반영합니다.
 
-도구가 넘기는 사전 경로는 무시되고, 사전은 항상 DLL 옆의 `dicts\`에서 찾습니다.
+도구가 넘기는 사전 경로는 무시되고, 사전은 항상 DLL 옆의 `dicts\`와 `userdict.tsv`에서 찾습니다.
 
 ### C API: `hdTransEngine.dll`
 
@@ -70,7 +72,7 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 ```c
 #include "core/hdtrans.h"
 
-hdTrans_Initialize("dicts\0");    /* 사전 폴더 목록: NUL로 구분, 끝은 NUL 두 개 */
+hdTrans_Initialize("dicts\0");    /* 사전 폴더 목록: NUL로 구분, 끝은 NUL 두 개. 라이브러리 옆 userdict.tsv도 읽음 */
 char* out; size_t n;
 if (hdTrans_Translate(text, len, &out, &n) == 0) {
     /* out: 번역 결과 (UTF-8) */
@@ -83,18 +85,19 @@ hdTrans_Terminate();
 
 ### 사용자 사전
 
-사전 폴더에 `.tsv` 파일을 만들고 한 줄에 한 항목씩 탭으로 구분해 적습니다.
-`//`로 시작하는 줄은 주석입니다.
+프로그램(`hdtrans`, `J2KEngine.dll`, `hdTransEngine.dll`) 옆에 `userdict.tsv`를 만들고 한 줄에 한
+항목씩 탭으로 구분해 적습니다. `#`이나 `//`로 시작하는 줄은 주석입니다.
 
 ```
-// 일본어	한국어	품사
+# 일본어	한국어	품사
 魔導具	마도구
 蒼月	아오츠키	surname
 走り回る	뛰어다니다	v5
 ```
 
-품사를 생략하면 명사입니다. 사용자 사전 폴더를 기본 사전 뒤에 지정합니다:
-`hdtrans -dicts dicts,user`. 품사 목록과 옵션은 [docs/dictionaries.md](docs/dictionaries.md#사용자-사전)를 참고하세요.
+품사를 생략하면 명사입니다. 두 DLL은 파일이 바뀌면 알아서 다시 읽으므로, 번역 도구를 켜 둔 채
+편집기로 고쳐 저장하면 됩니다. CLI는 시작할 때 읽으며, 다른 파일은 `-userdict FILE`로 줍니다.
+품사 목록과 옵션은 [docs/dictionaries.md](docs/dictionaries.md#사용자-사전)를 참고하세요.
 
 ## 지원 플랫폼
 

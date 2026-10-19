@@ -22,8 +22,9 @@
 
 - 사전 폴더 목록을 차례로 불러오며, 뒤 폴더가 앞 폴더를 덮어씁니다.
 - 각 폴더에서는 최상위의 `*.tsv` 파일만 이름 순서로 읽습니다. 하위 폴더는 읽지 않습니다.
-- CLI는 `-dicts DIR,DIR`, C API는 `hdTrans_Initialize`에 폴더 목록을 줍니다. `J2KEngine.dll`은
-  DLL 옆의 `dicts\base`, 그리고 있으면 `dicts\user`를 씁니다.
+- CLI는 `-dicts DIR,DIR`(기본값: 실행 파일 옆 `dicts`, 없으면 현재 폴더의 `dicts`), C API는
+  `hdTrans_Initialize`에 폴더 목록을 줍니다. `J2KEngine.dll`은 DLL 옆의 `dicts\`를 씁니다.
+- 폴더 다음에 [사용자 사전 파일](#userdicttsv) `userdict.tsv`를 불러옵니다.
 
 ## 파일 머리줄
 
@@ -70,14 +71,15 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 
 ## 사용자 사전
 
-머리줄 없는 `.tsv` 파일을 사전 폴더에 두면 사용자 사전으로 읽습니다. UTF-8(BOM 허용), 한 줄에 한 항목:
+사용자 사전은 프로그램 옆의 `userdict.tsv`([아래](#userdicttsv))이거나, 사전 폴더에 둔 머리줄 없는
+`.tsv` 파일입니다. UTF-8(BOM 허용), 한 줄에 한 항목:
 
 ```
 일본어 <TAB> 한국어 [<TAB> 품사[:부류] [<TAB> 옵션]]
 ```
 
 ```
-// 주석은 //로 시작합니다. 빈 줄은 무시합니다.
+# 주석은 #이나 //로 시작합니다. 빈 줄은 무시합니다.
 魔導具	마도구
 蒼月	아오츠키	surname
 ユキ	유키	name
@@ -87,8 +89,8 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 さん	씨	hon
 ```
 
-`//`로 시작하는 필드부터 줄 끝까지도 주석입니다. `#` 줄은 주석이 아니므로 일반 파일에는 `//`를
-씁니다. 필드는 최대 4개입니다.
+`//`로 시작하는 필드부터 줄 끝까지도 주석입니다. 첫 줄의 `#!`은 주석이 아니라 머리줄입니다.
+필드는 최대 4개입니다.
 
 ### 품사
 
@@ -128,11 +130,33 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 
 정의: `src/core/userdict/userdict.h`.
 
+### userdict.tsv
+
+- 위치: 실행 파일(`hdtrans`) 또는 DLL(`J2KEngine.dll`, `hdTransEngine.dll`) 옆. CLI는
+  `-userdict FILE`로 다른 파일을 주거나 빈 값으로 끕니다. 파일이 없으면 사용자 사전 없이 불러옵니다.
+- 사전 폴더 다음에 불러오며, 이름과 위치 때문에 `user` 계층입니다. 머리줄은 없어도 되고, 있으면
+  `#! layer=user`여야 합니다. 다른 머리줄은 이 파일 이름을 담은 오류로 불러오기를 실패시킵니다.
+- 일반 파일이면 마지막 사용자 사전(같은 키·품사의 앞 항목을 대신함)이고, 열 파일이면 `user` 계층 열
+  사전입니다. 열 형식은 캐시 없이 읽습니다.
+- 컴파일되지 않는 줄이 있으면 불러오기가 실패합니다(`hdTrans_Initialize`·`J2K_Initialize` 실패).
+- 불러온 뒤에는 파일을 열어 두지 않습니다(Windows에서도 읽는 동안 쓰기·이름 바꾸기·삭제를 허용).
+  프로그램이 실행 중일 때 편집기로 저장해도 됩니다.
+
+자동 다시 읽기(`UserReload::Auto`, 두 DLL에서 켜짐, CLI에서 꺼짐):
+
+- 번역을 시작할 때 파일의 크기와 수정 시각을 1초에 한 번까지 확인합니다.
+- 바뀌었으면 사전 폴더와 함께 백그라운드에서 다시 불러오고, 준비되면 한 번에 바꿉니다. 그동안의
+  번역은 이전 사전을 씁니다. 바뀐 사전을 처음 쓰는 세션은 그때까지의 문맥 기억을 지웁니다.
+- 새 파일을 불러오지 못하면 이전 사전을 그대로 쓰고, 파일이 다시 바뀔 때까지 그 판을 다시 시도하지
+  않습니다.
+- `J2K_ReloadUserDict`와 `hdTrans_Reload`는 바로 다시 불러옵니다.
+
 ### 사용자 사전 쓰기
 
-- CLI: 기본 사전 뒤에 폴더를 붙입니다. `hdtrans -dicts dicts,user`
-- C API: `hdTrans_Initialize("dicts\0user\0")`, 파일을 고친 뒤 `hdTrans_Reload()`
-- `J2KEngine.dll`: DLL 옆 `dicts\user\`에 두고, 고친 뒤 호스트의 사용자 사전 다시 읽기(`J2K_ReloadUserDict`)
+- CLI: 실행 파일 옆 `userdict.tsv` 또는 `-userdict FILE`. 폴더로 줄 수도 있습니다: `hdtrans -dicts dicts,user`
+- C API: 라이브러리 옆 `userdict.tsv`(자동 반영, 바로 반영은 `hdTrans_Reload()`), 또는
+  `hdTrans_Initialize("dicts\0user\0")`의 폴더(고친 뒤 `hdTrans_Reload()`)
+- `J2KEngine.dll`: DLL 옆 `userdict.tsv`(자동 반영, 바로 반영은 호스트의 사용자 사전 다시 읽기 `J2K_ReloadUserDict`)
 
 ## 캐시
 
