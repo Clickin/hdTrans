@@ -3,20 +3,67 @@
 # per hit: FILE:LINE, the pattern id and the matched span with a few characters around it.
 #   tools/detect-bad.sh FILE...        (a file's first line is skipped when it starts with '#')
 #   tools/detect-bad.sh -c FILE...     (hit counts per pattern instead)
+#   tools/detect-bad.sh [-c] --source JA KO [JA KO]...
+#                                      (source-aware checks on line-aligned pairs; see below)
 # Patterns:
 #   ending-honorific      a final ending followed by 군/씨/님/짱 (했다님, 있어요씨)
 #   doubled-ending        two final endings in a row (그렇네요군요, 이에요입니다)
 #   stem-eung             the interjection 응 right after a verb stem (하응, 않응)
 #   particle-after-punct  a particle standing after , . ! ? … or ~ (…를, ! 와); not 가 주 (go) or 와? (come)
 #   residue               Japanese script or engine markers left in the output (승용き, &AV@, (이)가)
+# Source-aware patterns (--source): both files of a pair are cut at the same punctuation
+# (「」『』（）、。！？…‥―), and when they give the same number of segments, each Japanese
+# segment that reads as a sound (two to five kana, ー or ～ with ッ, not first, not starting with
+# を) is checked in its Korean segment:
+#   sound-function        a function word or particle as a word (인가 하, 하지만 하, 아는 은 은);
+#                         not a stutter, a syllable that starts the next segment (こっ、この 이, 이)
 # Exit: 0 without hits, 1 with hits, 2 invalid arguments.
 set -eu
-count=0
+count=0 source=0
 if [ "${1:-}" = -c ]; then count=1; shift; fi
-[ $# -gt 0 ] || { echo 'usage: tools/detect-bad.sh [-c] FILE...' >&2; exit 2; }
+if [ "${1:-}" = --source ]; then source=1; shift; fi
+[ $# -gt 0 ] || { echo 'usage: tools/detect-bad.sh [-c] [--source JA KO ...] FILE...' >&2; exit 2; }
+if [ $source = 1 ] && [ $(($# % 2)) -ne 0 ]; then
+    echo 'usage: tools/detect-bad.sh [-c] --source JA KO [JA KO]...' >&2; exit 2
+fi
 for f in "$@"; do
     [ -f "$f" ] || { echo "no file $f" >&2; exit 2; }
 done
+if [ $source = 1 ]; then
+    LC_ALL=C.UTF-8 exec perl -CSD -Mutf8 -e '
+        my $count = shift @ARGV;
+        my %hits = ("sound-function" => 0);
+        my $cut = qr/[「」『』（）()、，,。.！!？?…‥―]+/;
+        my $function = qr/(?:^|\s)(?:인가|하지만|그러나|그리고|그래서|그런데|또는|혹은|의|를|을|은|는|이|가|와|과|도|에|로|으로)(?=\s|$)/;
+        while (@ARGV) {
+            my ($ja, $ko) = splice(@ARGV, 0, 2);
+            open(my $j, "<", $ja) or die "$ja: $!";
+            open(my $k, "<", $ko) or die "$ko: $!";
+            my $n = 0;
+            while (defined(my $a = <$j>)) {
+                my $b = <$k>;
+                last unless defined $b;
+                $n++;
+                chomp($a, $b);
+                next if $n == 1 && $a =~ /^#/;
+                my @js = grep { $_ ne "" } map { s/^[\s　]+|[\s　]+$//gr } split($cut, $a);
+                my @ks = grep { $_ ne "" } map { s/^[\s　]+|[\s　]+$//gr } split($cut, $b);
+                next unless @js == @ks;
+                for my $i (0 .. $#js) {
+                    my ($s, $t) = ($js[$i], $ks[$i]);
+                    next unless $s =~ /^[ぁ-ゖァ-ヶー～]{2,5}$/ && $s =~ /^[^をっッーぁぃぅぇぉゃゅょァィゥェォャュョ～]./ && $s =~ /[っッ]/;
+                    next unless $t =~ $function;
+                    next if $i < $#ks && length($t) == 1 && index($ks[$i + 1], $t) == 0;
+                    $hits{"sound-function"}++;
+                    print "$ko:$n\tsound-function\t$s\t$t\n" unless $count;
+                }
+            }
+        }
+        if ($count) { printf "%s\t%d\n", $_, $hits{$_} for sort keys %hits; }
+        my $total = 0; $total += $_ for values %hits;
+        exit($total ? 1 : 0);
+    ' "$count" "$@"
+fi
 LC_ALL=C.UTF-8 perl -CSD -Mutf8 -e '
     my $count = shift @ARGV;
     my @patterns = (
