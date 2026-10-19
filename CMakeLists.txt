@@ -41,12 +41,17 @@ endif()
 set(HDTRANS_BUILTIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/core/dict/builtin")
 file(GLOB HDTRANS_BUILTIN_TSV CONFIGURE_DEPENDS "${HDTRANS_BUILTIN_DIR}/*.tsv")
 file(GLOB HDTRANS_BUILTIN_EXTRA_TSV CONFIGURE_DEPENDS "${HDTRANS_BUILTIN_DIR}/extra/*.tsv")
+# A stamp lists the table files; it changes only when a table is added or removed, so that a
+# removed table also regenerates the source.
 function(hdtrans_builtin_source output dir array accessor inputs)
     set(script "${CMAKE_CURRENT_SOURCE_DIR}/cmake/builtin_tables.cmake")
+    set(stamp "${CMAKE_CURRENT_BINARY_DIR}/${output}.tables")
+    string(REPLACE ";" "\n" names "${${inputs}}")
+    file(CONFIGURE OUTPUT "${stamp}" CONTENT "${names}\n" @ONLY)
     add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${output}"
         COMMAND "${CMAKE_COMMAND}" "-DDIR=${dir}" "-DOUT=${CMAKE_CURRENT_BINARY_DIR}/${output}"
             "-DTABLES=${array}" "-DACCESSOR=${accessor}" -P "${script}"
-        DEPENDS ${${inputs}} "${script}" VERBATIM)
+        DEPENDS ${${inputs}} "${stamp}" "${script}" VERBATIM)
 endfunction()
 hdtrans_builtin_source(builtin_gen.cpp "${HDTRANS_BUILTIN_DIR}" kTables BuiltinTables HDTRANS_BUILTIN_TSV)
 hdtrans_builtin_source(builtin_extra_gen.cpp "${HDTRANS_BUILTIN_DIR}/extra" kFiles ExtraBuiltinFiles
