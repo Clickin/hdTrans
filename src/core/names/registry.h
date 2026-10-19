@@ -119,7 +119,9 @@ private:
 
     // Rendering (render.cpp).
     std::string RenderName(std::string_view t, const Name& n);
-    std::string RenderPart(std::string_view t);
+    // whole: t is the whole name, which a katakana name reads as its name-layer person
+    // reading before its transliteration.
+    std::string RenderPart(std::string_view t, bool whole = false);
     std::string PersonName(std::string_view t);
     std::string PrefixForm(std::string_view x);
 

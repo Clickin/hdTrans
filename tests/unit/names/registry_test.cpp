@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "core/dict/snapshot.h"
+#include "core/names/historical.h"
 #include "core/names/registry.h"
 #include "hdtest.h"
 
@@ -27,13 +28,15 @@ const dict::Snapshot* Dictionary() {
          "前原\t마에바라\tN130\tQPN\tWa\tGN\t8\n"
          "圭一\t케이이치\tN130\tQPN\tWb\tGN\t9\n"
          "ソード\t소드\tN110\t\t\tGN\t10\n"
-         "ワールド\t월드\tN110\t\t\tGN\t11\n"},
+         "ワールド\t월드\tN110\t\t\tGN\t11\n"
+         "ハル\t헐\tN110\t\t\tGN\t15\n"},
         {0, "names.tsv",
          "#! layer=names\n"
          "key\tko\tpos\tsem\tgram\tdict\tid\n"
          "椎名\t시이나\tN130\tQPN\tWa\tGN\t12\n"
          "周\t아마네\tN130\tQPN\tWb\tGN\t13\n"
-         "樹\t이츠키\tN130\tQPN\tWb\tGN\t14\n"},
+         "樹\t이츠키\tN130\tQPN\tWb\tGN\t14\n"
+         "ハル\t하루\tN130\tQPNVHn\tWb\tGN\t16\n"},
     });
     return loaded.snapshot.get();
 }
@@ -216,6 +219,10 @@ HD_TEST(names_katakana_full_names) {
 
     names::Registry alone = Scan(snap, Repeat("アル君、おはよう。", 2));
     HD_CHECK_EQ(alone.Render("アル"), std::string("알"));
+    // A whole katakana name reads as the name layer's person reading of its kana, whatever
+    // the base dictionary makes of the word.
+    names::Registry hal = Scan(snap, Repeat("ハル君、おはよう。", 8));
+    HD_CHECK_EQ(hal.Render("ハル"), std::string("하루"));
 
     names::Registry one = Scan(snap, "アルくんが来た。\n" + Repeat("アルガルドは王子だ。", 2));
     HD_CHECK_EQ(one.Render("アル"), std::string("아르"));
@@ -335,4 +342,16 @@ HD_TEST(names_registry_forget_actors) {
     fresh = names::Registry(nullptr);
     fresh.Add("a \"こんにちは\"");
     HD_CHECK_EQ(document.Key(), fresh.Key());
+}
+
+// An honorific after a common name is not read as the given name (太郎君 is not 타로 키미).
+HD_TEST(names_historical_honorific_not_given) {
+    const dict::Snapshot* snap = Dictionary();
+    HD_REQUIRE(snap != nullptr);
+    for (const char* text : {"太郎君は走った。", "次郎殿が来た。", "一郎様、どうぞ。"}) {
+        const std::string line = text;
+        const std::string rows = names::HistoricalNames(*snap, {&line, 1});
+        HD_CHECK(rows.find("君") == std::string::npos && rows.find("殿") == std::string::npos &&
+                 rows.find("様") == std::string::npos);
+    }
 }

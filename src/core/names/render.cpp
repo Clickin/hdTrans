@@ -60,7 +60,7 @@ std::string Registry::Render(std::string_view t) {
 }
 
 std::string Registry::RenderName(std::string_view t, const Name& n) {
-    if (!n.hasParts) return RenderPart(t);
+    if (!n.hasParts) return RenderPart(t, true);
     std::string out;
     for (std::size_t i = 0; i < n.parts.size(); i++) {
         const std::string part = RenderPart(n.parts[i]);
@@ -71,7 +71,7 @@ std::string Registry::RenderName(std::string_view t, const Name& n) {
     return out;
 }
 
-std::string Registry::RenderPart(std::string_view t) {
+std::string Registry::RenderPart(std::string_view t, bool whole) {
     const std::string key(t);
     if (const auto f = tables_->fixed.find(key); f != tables_->fixed.end() && !f->second.empty()) return f->second;
     if (const auto r = reading_.find(key); r != reading_.end() && !r->second.empty()) {
@@ -96,7 +96,10 @@ std::string Registry::RenderPart(std::string_view t) {
     const auto acc = Accepted().find(key);
     const bool given = acc != Accepted().end() && acc->second.given;
     if (!layer.empty() && !katakana && ((!Flags(t).common && RuneCount(t) > 1) || given)) return layer;
-    if (std::string kr = PersonName(t); !kr.empty()) return kr;
+    if (std::string kr = whole && katakana && snap_ != nullptr ? snap_->NameReading(t) : PersonName(t);
+        IsHangulText(kr)) {
+        return kr;
+    }
     if (katakana) {
         std::string tr;
         if (word::TransliterateName(t, tr) && IsHangulText(tr)) return tr;
