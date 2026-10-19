@@ -15,6 +15,7 @@
 | [rule-compiler.md](rule-compiler.md) | 규칙 컴파일러 `hdrulec`: 검사(lint), 읽기 쉬운 문법과 변환, C++ 코드 생성, 검증 |
 | [ehnd-compat.md](ehnd-compat.md) | Ehnd 필터, SkipLayer, 사용자 사전 형식과 적용 순서, hdTrans 필터 파일 |
 | [api.md](api.md) | CLI 옵션, C API, J2K 함수, WebAssembly, C++ API |
+| [using-with-tools.md](using-with-tools.md) | LunaTranslator, XUnity, 아네모네, Textractor 연결과 검증 범위, CLI, Python ctypes, 웹 |
 | [web.md](web.md) | 웹 데모(`web/`) 빌드, 확인, 배포 |
 
 ## 저장소 구성
