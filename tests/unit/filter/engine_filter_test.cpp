@@ -8,6 +8,7 @@
 
 #include "core/dict/snapshot.h"
 #include "core/engine.h"
+#include "core/engine/user_watch.h"
 #include "hdtest.h"
 
 namespace {
@@ -69,6 +70,26 @@ HD_TEST(EngineFilters) {
     HD_CHECK_EQ(Translate(e, "ポチ"), "흰둥이");
     HD_CHECK(e.OpenEhnd(""));
     HD_CHECK_EQ(Translate(e, "ポチ"), "포치");
+}
+
+HD_TEST(EngineEhndAutoReload) {
+    TempFolder dicts("dicts"), ehnd("ehnd");
+    dicts.Write("base.tsv",
+                "key\tko\tpos\tsem\tgram\tdict\trule\tflags\tprio\treading\tid\n"
+                "犬\t개\tN110\t\t\tGN\t\t\t\t\t1\n");
+    ehnd.Write("UserDict_a.txt", "ポチ\t바둑이\t1\n");
+    hdTrans::Engine e(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    // Before Open the folder is only named; Open reads it.
+    HD_CHECK(e.OpenEhnd(ehnd.path.string()));
+    HD_REQUIRE(e.Open({dicts.path.string()}));
+    hdTrans::Session s(e);
+    HD_CHECK_EQ(s.Translate("ポチ"), "바둑이");
+    // Nothing changed: no reload. A changed or new file of the folder reloads it, and the
+    // session takes the new filters.
+    HD_CHECK(!hdTrans::internal::CheckUserFile(e));
+    ehnd.Write("PostFilter_a.txt", "바둑이\t흰둥이\t1\t0\n");
+    HD_CHECK(hdTrans::internal::CheckUserFile(e));
+    HD_CHECK_EQ(s.Translate("ポチ"), "흰둥이");
 }
 
 HD_TEST(FilterLayersArePlain) {

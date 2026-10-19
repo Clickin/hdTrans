@@ -107,8 +107,8 @@ struct UserWatch {
 // Reload threads running in the process.
 int RunningReloads();
 
-// Checks the user dictionary file of e now, whatever the interval, and waits for the
-// reload it starts; false when it starts none.
+// Checks the user dictionary file and the Ehnd folder of e now, whatever the interval,
+// and waits for the reload it starts; false when it starts none.
 bool CheckUserFile(const Engine& e);
 // Like CheckUserFile, without waiting for the reload.
 bool StartUserFileCheck(const Engine& e);

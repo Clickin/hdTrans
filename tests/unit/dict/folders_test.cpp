@@ -38,6 +38,12 @@ HD_TEST(DictFoldersOfProgram) {
     std::filesystem::create_directory(dir / "dicts", ec);
     HD_REQUIRE(!ec);
     HD_CHECK(Path(DefaultFolder(program)) == dir / "dicts");
+    // The Ehnd folder only when it is there.
+    HD_CHECK_EQ(EhndFolder(program), "");
+    HD_CHECK_EQ(EhndFolder(""), "");
+    std::filesystem::create_directory(dir / "Ehnd", ec);
+    HD_REQUIRE(!ec);
+    HD_CHECK(Path(EhndFolder(program)) == dir / "Ehnd");
 
     std::filesystem::remove_all(dir, ec);
 }

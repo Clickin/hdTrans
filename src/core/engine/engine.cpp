@@ -207,6 +207,7 @@ struct Access {
         UserWatch& w = *e.watch_;
         w.done.wait(lock, [&w] { return !w.running; });
         w.watch.next = {};
+        w.ehnd.next = {};
         if (!StartReload(e, std::chrono::steady_clock::now(), kCheckInterval)) return false;
         if (wait) w.done.wait(lock, [&w] { return !w.running; });
         return true;
