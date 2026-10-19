@@ -61,6 +61,10 @@ macOS, Linux 판에는 명령줄 프로그램만 있습니다([명령줄 사용�
 
 [이슈](https://github.com/sokcuri/hdTrans/issues/new/choose)에 남겨 주세요.
 
+## 기여
+
+풀 리퀘스트는 `develop` 브랜치로 보내 주세요. 사전과 규칙을 고치는 방법은 [오역 고치기](docs/fixing-translations.md)에 있습니다.
+
 ## 라이선스
 
 [AGPL-3.0-or-later](LICENSE)

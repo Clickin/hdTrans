@@ -36,6 +36,10 @@ README.md is for users; developer documentation is in docs/ (index: docs/README.
   values. Each DLL links the CRT statically and is a single file.
 - Warnings are errors; fix the code, not the flags.
 
+## Branches
+- `develop` is the default branch: work branches start from it and pull requests target it.
+- `main` holds released states; it moves only by merging `develop` for a release, and release tags are cut on it.
+
 ## Fixing a translation
 - docs/fixing-translations.md has the steps. Data (dictionary rows, codes) before rules, rules
   before engine code. Each fix gets a fix test and a keep test.
