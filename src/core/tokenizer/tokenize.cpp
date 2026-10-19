@@ -210,12 +210,26 @@ private:
         }
     }
 
+    // Whether the ー at i is in a run of two or more that stands for a dash: after other
+    // than kana and before a kanji or a kana that is not small (その時ーー扉, but
+    // 兄上ーーっ).
+    bool DashRun(size_t i) const {
+        size_t from = i, to = i;
+        while (Before(from) == U'ー') from--;
+        while (At(to) == U'ー') to++;
+        const char32_t next = At(to);
+        return to - from >= 2 && ClassFlags(Before(from), 6) == 0 && ClassFlags(next, 7) != 0 &&
+               !OneOf(next, U"ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ");
+    }
+
     // The type of the non-ASCII character at p; halfWidth reports a half-width
     // katakana or punctuation character. May rewrite the character.
     int WideType(bool& halfWidth) {
         halfWidth = false;
         const size_t n = s_.size();
         const char32_t c = s_[p_];
+        if (dashes_ && (c == U'・' || c == U'。') && (Before(p_) == c || At(p_ + 1) == c)) return kTypeSymbol;
+        if (dashes_ && c == U'ー' && DashRun(p_)) return kTypeSymbol;
         if (c == U'・') {
             if (p_ + 1 == n || IsWideSymbol(s_[p_ + 1]) || Before(p_) == U'・') return kTypeSentenceEnd;
             return kTypeJapanese;

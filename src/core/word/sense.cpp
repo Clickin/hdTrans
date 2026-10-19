@@ -9,6 +9,7 @@
 #include "core/word/flush.h"
 #include "core/word/kana.h"
 #include "core/word/strings.h"
+#include "core/word/terminal.h"
 #include "core/word/util.h"
 
 namespace hdTrans::word {
@@ -87,22 +88,28 @@ constexpr InitialConjunction kInitialConjunctions[] = {
     {"でも", "그렇지만"}, {"では", "그럼"}, {"なんで", "어째서"}, {"だって", "왜냐하면"},
 };
 
-// Whether the text ends in a dash, after trailing spaces.
-bool EndsInDash(std::string_view s) {
+// Whether the text ends in a dash, or with ellipsis also in an ellipsis, after trailing
+// spaces.
+bool EndsInPause(std::string_view s, bool ellipsis) {
     while (!s.empty() && (s.back() == ' ' || s.ends_with("　"))) {
         s.remove_suffix(s.ends_with("　") ? 3 : 1);
     }
-    return s.ends_with("―") || s.ends_with("─") || s.ends_with("—");
+    if (s.ends_with("―") || s.ends_with("─") || s.ends_with("—")) return true;
+    return ellipsis && (s.ends_with("…") || s.ends_with("‥") || s.ends_with("・") || s.ends_with("·"));
 }
 
 // An item that starts its sentence: the first of the chain, or one right after an opening
-// bracket or a dash.
+// bracket or a dash, or after an ellipsis when the utterance goes on after it (……でも、
+// but not ……だって」).
 bool SentenceInitial(Flusher& f, const Item* it) {
-    if (EndsInDash(std::string_view(it->text).substr(0, static_cast<std::size_t>(it->start)))) return true;
+    const Item* n = it->next;
+    const bool ellipsis = n != nullptr && n->group->surface != "。" && !InSet(kClosingQuoteItems, n->group->surface) &&
+                          !InSet(kSentenceEndItems, n->group->surface);
+    if (EndsInPause(std::string_view(it->text).substr(0, static_cast<std::size_t>(it->start)), ellipsis)) return true;
     const Item* p = it->prev;
     if (p == nullptr) return true;
     for (int t = it->tokenIndex - 1; t > p->tokenIndex && t >= 0; t--) {
-        if (EndsInDash(f.w.Tok(t).text)) return true;
+        if (EndsInPause(f.w.Tok(t).text, ellipsis)) return true;
     }
     const std::string_view s = p->group->surface;
     return s == "「" || s == "『" || s == "（" || s == "(" || s == "【" || s == "〈" || s == "《";
