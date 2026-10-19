@@ -798,6 +798,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 ちりじょうほうシステム	지리 정보 시스템	N110	UMn		GN		llm		ちりじょうほうシステム	w:794
 ちん入	침입	N110		Hd	GN		llm		ちんにゅう	w:795
 ちん入	침입&AV@	M429			GN		llm		ちんにゅう	w:796
+つい	불과	E311			GN					w:26621
 つかまり立ち	붙잡고 서기	N110		Hd	GN		llm		つかまりだち	w:797
 つかみ取	싸&FK@	M428			GN				つかみとる	w:798
 つがい目	이음매	N110			GN		llm		つがいめ	w:799
