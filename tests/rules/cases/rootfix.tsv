@@ -23,3 +23,5 @@ L3093	なんか静かだ。	어쩐지 조용하다.	keep	local
 senses	病の重さというより東宮だからであろう。	병의 심함이라고 하는 것보다 동궁이니까일 것이다.	keep	senses
 dict:Tu	二人分の食事。	두 사람분의 식사.	fix	compose
 L727	パンを焼いた。	빵을 구웠다.	keep	senses
+L2568	皆様にご意見をさせていただいた。	여러분에게 의견을 했다.	keep	local
+L1961	全てが元へ戻った。	모두가 원래로 돌아왔다.	fix	local
