@@ -21,14 +21,14 @@ L107	彼は部屋から出て行った。	그는 방에서 나와 갔다.	curren
 L107	私は電車から降りて走った。	나는 전철에서 내려 달렸다.	current	local
 L108	私は犬が何より好きだ。	나는 개를 무엇보다 좋아한다.	current	local
 L108	休みの日は映画が見たい。	휴일은 영화를 보고 싶다.	current	local
-L118	友人と集まった。	친구씩 모였다.	current	local
-L118	友人と話さない。	친구도 이야기하지 않는다.	current	local
+L118	友人と集まった。	친구와 모였다.	current	local
+L118	友人と話さない。	친구와 이야기하지 않는다.	current	local
 L127	お金持ちというわけではない。	부자라고 하는 것은 아니다.	current	local
 L130	この問題は簡単ではない。	이 문제는 간단하지 않다.	current	local
 L131	彼が約束を破ったためしがない。	그가 약속을 어긴 적이 없다.	current	local
 L131	あんな失礼な話は、あり得ないよ。	저런 실례인 이야기는, 있을 수 없어.	current	local
 L134	彼はいつも早く来るね。	그는 언제나 빨리 오는군.	current	local-ending
-L138	どんなのが好きなの？	어떤 것이 좋아해?	current	local
+L138	どんなのが好きなの？	어떤 것을 좋아해?	current	local
 L138	そんなの私には無理だよ。	그런 것 나에게는 무리야.	current	local
 L139	天気の悪さに少し驚いた。	날씨의 나쁨에 조금 놀랐다.	current	local
 L139	今日の天気はとても良いです。	오늘의 날씨는 매우 좋습니다.	current	local
@@ -88,11 +88,11 @@ L285	「だが、それは違うと思う」	「하지만, 그것은 다르다�
 L285	「だが今さら引き返せない」	「하지만 이제 와서 되돌아갈 수 없다」	current	local
 L289	彼は医者だったらしい。	그는 의사였던 것 같다.	current	local
 L289	学生だった頃の友達に会った。	학생이었던 무렵의 친구를 만났다.	current	local
-L291	私だって！	나래!	current	local
+L291	私だって！	나도!	current	local
 L291	雨だって。	비래.	current	local
 L292	それが正しいだと信じている。	그것이 올바른이라고 믿고 있다.	current	local
-L292	雨だと困る。	비라고 곤란하다.	current	local
-L292	それだと困る。	그것이라고 곤란하다.	current	local
+L292	雨だと困る。	비라면 곤란하다.	current	local
+L292	それだと困る。	그것이라면 곤란하다.	current	local
 L292	だとしたら	라고 하면	current	local
 L295	図書館では静かにしてください。	도서관에서는 조용하게 해 주세요.	current	local
 L295	この市場では新鮮な魚が安く買える。	이 시장에서는 신선한 생선을 싸게 살 수 있다.	current	local
@@ -137,7 +137,7 @@ L817	振り返っても誰もいない。	되돌아 보고 아무도 없다.	cur
 L916	今日は三時で仕事が終わる。	오늘은 3시에 일이 끝난다.	current	local
 L925	駅前の店で靴を買った。	역 앞의 가게에서 구두를 샀다.	current	local
 L925	会議で来月の予定が決まった。	회의에서 내달의 예정이 정해졌다.	current	local
-L925	ポイントで買った。	포인트에서 샀다.	current	local
+L925	ポイントで買った。	포인트로 샀다.	current	local
 L925	コンビニで買った。	편의점에서 샀다.	current	local
 L932	忘れた傘を取りに戻った。	잊은 우산을 취하러 돌아왔다.	current	local-ending
 L932	駅前の店へ本を買いに行く。	역 앞의 가게에 책을 사러 간다.	current	local-ending
@@ -193,7 +193,7 @@ L1247	小さな声で言った。	작은 목소리로 말했다.	current	local
 L1247	友達と英語で話す。	친구와 영어로 한다.	current	local
 L1276	決勝戦で勝ったので嬉しい。	결승전에서 이겼으므로 기쁘다.	current	local
 L1276	ワールドカップで優勝した。	월드컵에서 우승했다.	current	local
-L1276	作戦で敵を倒した。	작전에서 적을 쓰러뜨렸다.	current	local
+L1276	作戦で敵を倒した。	작전으로 적을 쓰러뜨렸다.	current	local
 L1276	決勝戦で負けた。	결승전에서 졌다.	current	local
 L1286	この問題を解決する方法がまだ見つからない。	이 문제를 해결할 방법이 아직 발견되지 않는다.	current	local-ending
 L1287	明日は雨が降るようだ。	내일은 비가 오는 것 같다.	current	local-ending
@@ -240,7 +240,7 @@ L1832	今日は休みじゃん。	오늘은 휴일야.	current	local
 L1840	ひが昇る。	히가 오른다.	current	local
 L1865	実はこれが私の宝物なんだよ。	실은 이것이 나의 보물이야.	current	local
 L1865	あいつはいつもああなんだよ。	저녀석은 언제나 아야.	current	local
-L1865	それはなんだよ？	그것은이야?	current	local
+L1865	それはなんだよ？	그것은 뭐야?	current	local
 L1865	本当なんだよ。	사실이야.	current	local
 L1869	第5章を読み終えました。	제5장을 다 읽었습니다.	current	local
 L1869	これは第2の人生の始まりだ。	이것은 제2의 인생의 시작이다.	current	local
@@ -260,8 +260,8 @@ L1942	まだ宿題をやってない。	아직 숙제를 하지 않다.	current	
 L1942	朝から何も食べてないんだ。	아침부터 아무것도 먹지 않다.	current	local-ending
 L1948	この計画は来月に移します。	이 계획은 내달로 옮깁니다.	current	local
 L1948	お客様に合わせた方法に仕立てます。	손님에 맞춘 방법으로 짓습니다.	current	local
-L1948	憲法に違反する。	헌법으로 위반한다.	current	local
-L1948	魔法に驚いた。	마법으로 놀랐다.	current	local
+L1948	憲法に違反する。	헌법에 위반한다.	current	local
+L1948	魔法に驚いた。	마법에 놀랐다.	current	local
 L1948	この方法にする。	이 방법으로 한다.	current	local
 L1951	弟が部屋で歌を歌ってる。	남동생이 방에서 노래를 부르고 있다.	current	local-ending
 L1951	猫がソファの上で寝てる。	고양이가 소파 위에서 자고 있다.	current	local-ending
@@ -331,9 +331,9 @@ L2213	私が悪い。	내가 나쁘다.	current	local
 L2213	最近は私が忙しい。	최근에는 내가 바쁘다.	current	local
 L2218	寿司を自分で握ったこともあるんだ。	스시를 스스로 만든 적도 있는 거야.	current	local-ending
 L2218	その映画なら、前に見たこともあるよ。	그 영화라면, 전에 본 적도 있어.	current	local-ending
-L2220	私だって知っているよ。	나라도 알고 있어.	current	local
+L2220	私だって知っているよ。	나도 알고 있어.	current	local
 L2220	子供だって泣くことはある。	아이라도 우는 것은 있다.	current	local
-L2220	私だって知っている。	나라도 알고 있다.	current	local
+L2220	私だって知っている。	나도 알고 있다.	current	local
 L2220	誰だって知っている。	누구라도 알고 있다.	current	local
 L2221	そんなことだって、やればできるさ。	그런 일도, 하면 할 수 있고 말이야.	current	local
 L2228	「ありがとう」って言った。	「고마워요」라고 말했다.	current	local
@@ -382,7 +382,7 @@ L2475	そんなことを言わないでください。	그런 일을 말하지 �
 L2476	おかしなことを言うね。	이상한 것을 말하는군.	current	local
 L2486	私の姉は看護師です。	나의 언니는 간호사입니다.	current	local
 L2486	あちらが駅の入口です。	저쪽이 역의 입구입니다.	current	local
-L2528	友人といる。	친구라고 있다.	current	local
+L2528	友人といる。	친구와 있다.	current	local
 L2568	先生に本を読んでいただいた。	선생님에게 책을 읽어 주었다.	current	local
 L2571	肉を薄く切った。	고기를 싱겁게 잘랐다.	current	local
 L2580	ちょっといいですか。	조금 괜찮습니까.	current	local
@@ -413,7 +413,7 @@ L2692	仕事にかかった。	일에 걸렸다.	current	local
 L2716	私にできる仕事です。	내가 할 수 있는 일입니다.	current	local
 L2738	初心に立ち返って頑張ろう。	초심으로 되돌아와 노력하자.	current	local
 L2738	あの子はきっと美人に育つよ。	그 아이는 분명 미인으로 자라.	current	local
-L2738	友人に翻訳してもらった。	친구로 번역받았다.	current	local
+L2738	友人に翻訳してもらった。	친구에게 번역받았다.	current	local
 L2738	日本語に翻訳する。	일본어로 번역한다.	current	local
 L2741	来月から大阪で働くことになった。	내달부터 오사카에서 일하게 되었다.	current	local-ending
 L2741	急に出張に行くことになってしまった。	갑자기 출장하러 가게 되어 버렸다.	current	local-ending
@@ -466,7 +466,7 @@ L3059	「ん？　どうかした？」	「응? 어떻게든 했어?」	current	
 L3059	「ん？　もう一回言って？」	「응? 다시 한번 말해?」	current	local
 L3093	なんか寒いね。	어쩐지 춥네.	current	local
 L3093	今日は、なんか眠い。	오늘은, 어쩐지 졸리다.	current	local
-L3093	なんか食べたい。	어쩐지 먹고 싶다.	current	local
+L3093	なんか食べたい。	뭔가 먹고 싶다.	current	local
 L3093	なんか変だ。	어쩐지 이상하다.	current	local
 L3094	パンを、どうぞ運んでください。	빵을, 어서 옮겨 주세요.	fix	local
 L3131	値段より品質で選びます。	가격보다 품질로 선택합니다.	current	local
@@ -479,7 +479,7 @@ L3138	友達について来る。	친구를 따라 온다.	current	local
 L3151	私は何も知らないと答えた。	나는 아무것도 모른다고 대답했다.	current	local-ending
 L3151	もう痛くないと話していた。	이제 아프지 않다고 이야기하고 있었다.	current	local-ending
 L3152	彼は約束を守らないな。	그는 약속을 지키지 않는데.	current	local
-L3172	私とは、少し違う。	나란, 조금 다르다.	current	local
+L3172	私とは、少し違う。	나와는, 조금 다르다.	current	local
 L3180	明日は休みね。	내일은 휴일이군요.	current	local
 L3180	続きね。	계속이군요.	current	local
 L3182	はやく、寝なさい。	빠르게, 자세요.	fix	local
@@ -680,7 +680,7 @@ L4577	彼はそういうのを食べる。	그는 그렇게 말하는 것을 먹
 L4587	として当然だ。	로서 당연하다.	current	local
 L4624	彼は毎日練習している。	그는 매일 연습하고 있다.	current	local
 L4624	私は結果に期待している。	나는 결과에 기대하고 있다.	current	local
-L4655	君のことは忘れない。	너의 일은 잊지 않는다.	current	local
+L4655	君のことは忘れない。	너는 잊지 않는다.	current	local
 L4664	もう帰らなければと思います。	이제 돌아가지 않으면이라고 생각합니다.	current	local
 L4741	今度友達と旅行に行きます。	이번에 친구와 여행하러 갑니다.	current	local
 L4741	今度家に遊びに来てください。	이번에 집에 놀러 와 주세요.	current	local

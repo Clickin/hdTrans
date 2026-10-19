@@ -211,10 +211,9 @@ bool RuleL22([[maybe_unused]] Item* p) {
 }
 
 // # 조사(で·に·と·は·が·を·の·も·から·まで…)의 번역 선택. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
-// # 사람이나 역할·중심을 나타내는 말 뒤의 'として'를 자격을 나타내는 '(으)로서'로 고른다.
-// # [의심] S+1== "当L"는 접두 비교가 아니라 当L이라는 문자열과의 완전 일치라서 의도한 当~ 검사가 작동하지 않는다. 자작 예 学生として当然だ。 → 학생으로서 당연하다.(-why: として LocalRule 23)는 별도의 사람 의미 대안이 성공한 것이므로 전체 규칙이 불발하는 것은 아니다.
+// # として는 지정된 사람 명사와 当로 시작하는 명사 사이 또는 사람·역할·中心 뒤에서 자격의 ‘(으)로서’를 고른다.
 // local 23
-//     (src[-1] == "学生" or src[-1] == "男" or src[-1] == "女" or src[-1] == "親" or src[-1] == "息子" or src[-1] == "娘") and pos[-1] is 1** and src[+1] == "当L" and pos[+1] is 1**
+//     (src[-1] == "学生" or src[-1] == "男" or src[-1] == "女" or src[-1] == "親" or src[-1] == "息子" or src[-1] == "娘") and pos[-1] is 1** and src[+1] starts "当" and pos[+1] is 1**
 //     sem[-1] has VHn|UQf
 //     src[-1] == "中心"
 bool RuleL23([[maybe_unused]] Item* p) {
@@ -223,7 +222,7 @@ bool RuleL23([[maybe_unused]] Item* p) {
            SrcEq(p, -1, "女"sv) ||
            SrcEq(p, -1, "親"sv) ||
            SrcEq(p, -1, "息子"sv) ||
-           SrcEq(p, -1, "娘"sv)) && PumsaEq(p, -1, "1**"sv) && SrcEq(p, 1, "当L"sv) && PumsaEq(p, 1, "1**"sv)) ||
+           SrcEq(p, -1, "娘"sv)) && PumsaEq(p, -1, "1**"sv) && SrcEq(p, 1, "L当"sv) && PumsaEq(p, 1, "1**"sv)) ||
            AttrEq(p, -1, "VHnUQf"sv) ||
            SrcEq(p, -1, "中心"sv);
 }
@@ -1102,14 +1101,15 @@ bool RuleL117([[maybe_unused]] Item* p) {
            AttrEq(p, 1, "USe"sv)));
 }
 
-// # と는 人으로 끝나는 앞말과 뒤의 동사·부정 표현을 보고 '도'를 고르거나 集ま・あつま 앞에서 '씩'으로 바꾼다.
-// # [의심] 人으로 끝나는 앞말만 보아 인원수와 友人·他人·人을 구별하지 못한다; 자작문 友人と集まった。 → 친구씩 모였다.; 友人と話さない。 → 친구도 이야기하지 않는다.; -why: 두 문장의 と LocalRule 118.
+// # と는 一人 또는 숫자·人 뒤의 부정문에서 ‘도’를 고르고, 그 인원수 뒤의 集ま·あつま 앞에서는 ‘씩’으로 바꾼다.
 // local 118
-//     src[-1] ends "人" and pos[+1] is 4** and pos[+2] is 7** and gram[+2] has Xn
-//     src[-1] ends "人" and (src[+1] == "集ま" or src[+1] == "あつま") and pos[+1] is 4** and ko := "씩"
+//     (src[-1] == "一人" or src[-1] == "人" and gram[-2] has Nj|Nd) and pos[+1] is 4** and pos[+2] is 7** and gram[+2] has Xn
+//     (src[-1] == "一人" or src[-1] == "人" and gram[-2] has Nj|Nd) and (src[+1] == "集ま" or src[+1] == "あつま") and pos[+1] is 4** and ko := "씩"
 bool RuleL118([[maybe_unused]] Item* p) {
-    return (SrcEq(p, -1, "R人"sv) && PumsaEq(p, 1, "4**"sv) && PumsaEq(p, 2, "7**"sv) && GramEq(p, 2, "Xn"sv)) ||
-           (SrcEq(p, -1, "R人"sv) && (SrcEq(p, 1, "集ま"sv) ||
+    return ((SrcEq(p, -1, "一人"sv) ||
+           (SrcEq(p, -1, "人"sv) && GramEq(p, -2, "NjNd"sv))) && PumsaEq(p, 1, "4**"sv) && PumsaEq(p, 2, "7**"sv) && GramEq(p, 2, "Xn"sv)) ||
+           ((SrcEq(p, -1, "一人"sv) ||
+           (SrcEq(p, -1, "人"sv) && GramEq(p, -2, "NjNd"sv))) && (SrcEq(p, 1, "集ま"sv) ||
            SrcEq(p, 1, "あつま"sv)) && PumsaEq(p, 1, "4**"sv) && DstSet(p, 0, "씩"sv));
 }
 
@@ -2228,13 +2228,12 @@ bool RuleL214([[maybe_unused]] Item* p) {
            (SrcEq(p, 1, "お願い"sv) && SrcEq(p, 2, "する"sv) && PumsaEq(p, 2, "4**"sv));
 }
 
-// # でも는 지정 의미코드를 가진 말이나 的으로 끝난 말 뒤에서 ‘(으)로도’를 고른다.
-// # [의심] 의미코드 값에 문법코드 Ct가 끼어 있어 3바이트 분할이 UCl/CtV/Pe가 된다; CtV는 없는 의미코드이고 의도한 VPe도 2바이트 부분문자열 비교로 바뀐다.
+// # でも는 운송·수단·재료·금전·도구 등의 의미 코드가 있는 말이나 的으로 끝나는 말 뒤에서 ‘(으)로도’를 고른다.
 // local 215
-//     sem[-1] has VTp|QAA|VPa|VCp|VTw|VMo|UCl|CtV|Pe
+//     sem[-1] has VTp|QAA|VPa|VCp|VTw|VMo|UCl|VPe
 //     src[-1] ends "的"
 bool RuleL215([[maybe_unused]] Item* p) {
-    return AttrEq(p, -1, "VTpQAAVPaVCpVTwVMoUClCtVPe"sv) ||
+    return AttrEq(p, -1, "VTpQAAVPaVCpVTwVMoUClVPe"sv) ||
            SrcEq(p, -1, "R的"sv);
 }
 
@@ -2942,25 +2941,23 @@ bool RuleL290([[maybe_unused]] Item* p) {
     return PumsaEq(p, 1, "4**7**8**"sv);
 }
 
-// # 「だって」가 문장 끝에 오면 전언 표현 ‘(이)래’를 고른다.
-// # [의심] 문장 끝의 강조·첨가 용법 私だって까지 전언으로 읽는다. 자작문 私だって！ → CLI: 나래!; -why: だって LocalRule 291 (이)래. 통상적인 나도라는 항의·강조 읽기가 사라진다.
+// # 문장 끝의 だって는 대명사 뒤의 첨가·강조를 제외하고 전언 표현 ‘(이)래’를 고른다.
 // local 291
-//     gram has Ow
+//     gram has Ow and pos[-1] is not 12*
 bool RuleL291([[maybe_unused]] Item* p) {
-    return GramEq(p, 0, "Ow"sv);
+    return (GramEq(p, 0, "Ow"sv) && PumsaNe(p, -1, "12*"sv));
 }
 
-// # 뒤에 동사나 발화·인식 관련 표현 등이 오면 'だと'를 인용 조사 '(이)라고'로 고른다.
-// # [의심] 조건의 だと와 인용의 だと를 다음 동사가 있다는 이유만으로 구분하지 않는다. 자작 예 雨だと困る。 → 비라고 곤란하다.; -why: だと LocalRule 292 (이)라고. 여기서는 비가 오면 곤란하다는 조건이다.
+// # だとは 발화·인식 등의 문맥에서 ‘(이)라고’를 고르되, 바로 뒤의 困る·助かる는 조건형으로 남긴다.
 // local 292
-//     pos[+1] is 4**
+//     pos[+1] is 4** and src[+1] != "困" and src[+1] != "助か"
 //     src[+1] == "指摘" and pos[+1] is 1**
 //     pos[+1] is 1** and (sem[+1] has UTs or sem[+1] has UTh or sem[+1] has UMn or sem[+1] has USe)
 //     pos[+3] is 4** and (sem[+3] has UTs or sem[+3] has UTh or sem[+3] has UMn or sem[+3] has USe)
 //     (sem[+2] has UTs or sem[+2] has UTh or sem[+2] has UMn or sem[+2] has USe)
 //     (src[+1] == "いえなくもな" or src[+1] == "言えなくもな") and pos[+1] is 7**
 bool RuleL292([[maybe_unused]] Item* p) {
-    return PumsaEq(p, 1, "4**"sv) ||
+    return (PumsaEq(p, 1, "4**"sv) && SrcNe(p, 1, "困"sv) && SrcNe(p, 1, "助か"sv)) ||
            (SrcEq(p, 1, "指摘"sv) && PumsaEq(p, 1, "1**"sv)) ||
            (PumsaEq(p, 1, "1**"sv) && (AttrEq(p, 1, "UTs"sv) ||
            AttrEq(p, 1, "UTh"sv) ||
@@ -4973,7 +4970,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL20, 0xdfda05d292fd2d6aull},
     {RuleL21, 0xe9e31a206015f805ull},
     {RuleL22, 0x63fee27b17126605ull},
-    {RuleL23, 0x6ffe0676f8a46367ull},
+    {RuleL23, 0xc779e017097dad25ull},
     {RuleL24, 0x997bd6d403455375ull},
     {RuleL25, 0xac5367147057260cull},
     {RuleL26, 0x3585dfd78286f36full},
@@ -5068,7 +5065,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL115, 0xc7b6f756cf91dfcaull},
     {RuleL116, 0x1ffe95015a046a0dull},
     {RuleL117, 0x12f227f673957d67ull},
-    {RuleL118, 0x14843e28b23d44faull},
+    {RuleL118, 0x0ebd96643d3ba466ull},
     {RuleL119, 0x699720f146dd6623ull},
     {RuleL120, 0xa15c85d03a280c34ull},
     {RuleL121, 0x854b6d69763d402full},
@@ -5165,7 +5162,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL212, 0x70d80a842cc00bacull},
     {RuleL213, 0xc6591e5bccd20c62ull},
     {RuleL214, 0xe5faf79bf356ba51ull},
-    {RuleL215, 0xae9bcadd1c5bc70cull},
+    {RuleL215, 0x5f3cc605b63c2841ull},
     {RuleL216, 0xe28018a00574c2f6ull},
     {RuleL217, 0x50229149668c968full},
     {RuleL218, 0x4250444f16a1fb83ull},
@@ -5241,8 +5238,8 @@ constexpr CompiledRule kLocal[] = {
     {RuleL288, 0x63a02f40fc6a2e5bull},
     {RuleL289, 0xe001ca47a1fc05e3ull},
     {RuleL290, 0x776fffbb4c9d28f4ull},
-    {RuleL291, 0xb747d68e1139e4eeull},
-    {RuleL292, 0xc9c98f5917035c56ull},
+    {RuleL291, 0x1a03d2b8464b908dull},
+    {RuleL292, 0xf0693e0ae0c0e714ull},
     {RuleL293, 0x98cae8e9e12b4685ull},
     {RuleL294, 0x748132045f1d0a1cull},
     {RuleL295, 0x486c352d7016a6b0ull},
