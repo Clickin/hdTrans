@@ -615,6 +615,7 @@ void Composer::BuildAction(int i, int action, std::string_view mode) {
     std::vector<ResolvedItem>& items = *items_;
     ResolvedItem& it = items[i];
     Scratch& sc = state_[i];
+    if (!sc.text.empty() && sc.text != " ") return;
     if (it.selected == -1) SetSelectedIndex(it, 0);
     if (action < 10 && it.directIndex == -1) {
         sc.text = kInversionFailed;

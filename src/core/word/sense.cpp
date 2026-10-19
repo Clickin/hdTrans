@@ -220,6 +220,7 @@ void ChooseSenses(Flusher& f) {
     const dict::Snapshot& snapshot = f.w.snapshot;
     for (Item* it = f.w.chain.head; it != nullptr; it = it->next) {
         if (it->Fixed() || it->selected < 0 || it->selected >= static_cast<int>(it->group->entries.size())) continue;
+        if (it->group->At(it->selected)->neighbourAssigned) continue;
         const auto senses = snapshot.Senses().find(it->group->surface);
         if (senses == snapshot.Senses().end()) continue;
         for (const userdict::Sense& s : senses->second) {

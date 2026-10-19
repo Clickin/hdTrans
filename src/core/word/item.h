@@ -46,6 +46,7 @@ struct Entry {
     bool fixed = false;         // no rule selects another entry or changes the target
     const dict::UserEntry* user = nullptr;  // the plain entry, null for base records
     Selection targetChoice;  // a rule or rewrite that changed this candidate's target
+    bool neighbourAssigned = false;  // a rule running on another item assigned the target
 };
 
 // The candidates of one surface: the leading records of a list that share the first
