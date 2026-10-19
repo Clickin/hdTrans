@@ -47,7 +47,7 @@ dict:石	石で城を作った。	돌로 성을 만들었다.	fix	defaults
 dict:石	石を拾った。	돌을 주웠다.	keep	defaults
 dict:殿下たち	殿下たち、黙った。	전하들, 입을 다물었다.	fix	defaults
 dict:殿下たち	殿下が来た。	전하가 왔다.	keep	defaults
-sense:金	金と銀がある。	금과은이 있다.	fix	senses
+sense:金	金と銀がある。	금과 은이 있다.	fix	senses
 sense:金	金を払う。	돈을 지불한다.	keep	senses
 sense:弁	友人の弁だ。	친구의 말이다.	fix	senses
 sense:弁	弁護士が来た。	변호사가 왔다.	keep	senses

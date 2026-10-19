@@ -19,6 +19,11 @@ int ClassifySelected(const ResolvedItem& it) {
 // The part class of an item's first entry ('0'..'9').
 char Kind(const ResolvedItem& it) { return First(internal::EntryAt(it, 0).code); }
 
+bool NominalHead(const ResolvedItem& it) {
+    const std::string_view g = internal::Selected(it).gattr;
+    return Kind(it) == '1' || Kind(it) == '8' || Contains(g, "Nd") || Contains(g, "Nj");
+}
+
 }  // namespace
 
 void BuildItems(const std::vector<ResolvedItem>& items, const std::vector<TokenText>& tokens, Nodes& nodes) {
@@ -39,7 +44,7 @@ void BuildItems(const std::vector<ResolvedItem>& items, const std::vector<TokenT
                         if (cls != 500) break;
                     }
                 }
-                if (cls == 500 || index >= count) break;
+                if (cls == 500 || index >= count || !NominalHead(items[index])) break;
                 if (ClassifySelected(items[index]) == 0) {
                     if (tokens[items[index].tokenIndex].type == tokenizer::kTypeJapanese) {
                         index++;

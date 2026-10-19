@@ -715,8 +715,8 @@ L5015	星がついた。	별이 붙었다.	current	local
 L5031	彼はとても行けない。	그는 도저히 갈 수 없다.	current	local
 L5031	とても高い。	매우 높다.	current	local
 L5034	健康のため歩く。	건강이기 때문에 걷는다.	current	local
-L5067	毎日の残業にうんざりと息をついた。	매일의 잔업에 지긋지긋한숨을 쉬었다.	current	local
-L5067	彼は何だかんだと理由をつけて断った。	그는 이러니저러니이유를 붙여 끊었다.	current	local
+L5067	毎日の残業にうんざりと息をついた。	매일의 잔업에 지긋지긋 한숨을 쉬었다.	current	local
+L5067	彼は何だかんだと理由をつけて断った。	그는 이러니저러니 이유를 붙여 끊었다.	current	local
 L5088	昨日はお腹すいた。	어제는 배 고팠다.	current	local
 G30	電車では窓側席に座りたい。	전철에서는 창가석에 앉고 싶다.	current	global-stem
 G40	小顔になるマッサージを試した。	소얼굴이 되는 맛사지를 시험했다.	current	global-stem

@@ -399,7 +399,23 @@ std::pair<std::string, bool> Composer::Spacing(int i, std::string t, std::string
     const std::vector<ResolvedItem>& items = *items_;
     const std::vector<TokenText>& tokens = *tokens_;
     const ResolvedItem& item = items[i];
-    const int nextIndex = i + 1 < static_cast<int>(items.size()) ? i + 1 : -1;
+    const int count = static_cast<int>(items.size());
+    int nextIndex = i + 1;
+    if (kind == '3') {
+        // Omitted trailing particles do not erase an adverb's word boundary.
+        while (nextIndex < count && items[nextIndex].tokenIndex == item.tokenIndex &&
+               First(Code(items[nextIndex])) == '2' && EntryText(items[nextIndex]).empty()) {
+            nextIndex++;
+        }
+        if (nextIndex != i + 1) {
+            isLast = true;
+            if (nextIndex < count) {
+                nextTags = GAttr(items[nextIndex]);
+                nextKind = First(Code(items[nextIndex]));
+            }
+        }
+    }
+    if (nextIndex == count) nextIndex = -1;
     const int previous = i - 1;
     using Result = std::pair<std::string, bool>;
     if (nextIndex < 0 || t.empty() || item.selectionFlag == 1 ||
