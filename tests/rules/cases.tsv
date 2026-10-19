@@ -141,7 +141,7 @@ L925	ポイントで買った。	포인트에서 샀다.	current	local
 L925	コンビニで買った。	편의점에서 샀다.	current	local
 L932	忘れた傘を取りに戻った。	잊은 우산을 취하러 돌아왔다.	current	local-ending
 L932	駅前の店へ本を買いに行く。	역 앞의 가게에 책을 사러 간다.	current	local-ending
-L940	安く高い性能を得る。	싸고 비싼 성능을 얻는다.	current	local
+L940	安く高い性能を得る。	싸고 높은 성능을 얻는다.	current	local
 L940	高い性能が必要だ。	높은 성능이 필요하다.	current	local
 L945	明日は車で行きます。	내일은 차로 갑니다.	current	local
 L945	彼は自転車で来ました。	그는 자전거로 왔습니다.	current	local
@@ -234,7 +234,7 @@ L1778	台風による被害が大きかった。	태풍에 의한 피해가 컸�
 L1778	先生に対する態度を改めなさい。	선생님에 대한 태도를 고치세요.	current	local-ending
 L1810	「え、あれ？」	「어, 어?」	current	local
 L1810	「ああ、あれ」	「아, 어」	current	local
-L1810	彼の名前はあれ？	그의 이름은 어?	current	local
+L1810	彼の名前はあれ？	그의 이름은 저것?	current	local
 L1832	それ嘘じゃん。	그것거짓말야.	current	local
 L1832	今日は休みじゃん。	오늘은 휴일야.	current	local
 L1840	ひが昇る。	히가 오른다.	current	local
@@ -312,7 +312,7 @@ L2128	それって本物じゃねえ？	그 거 진짜가 아니야?	current	loc
 L2128	これ、あなたの鞄じゃないか？	이것, 당신의 가방이 아닌가?	current	local
 L2131	え、え、もう終わったの？	네, 네, 벌써 끝났어?	current	local
 L2131	あの、え、これ本当に私の？	저, 네, 이것 정말로 나의?	current	local
-L2141	ねえ、ところで明日は暇ですか。	있잖아, 곳에서 내일은 한가합니까.	current	local
+L2141	ねえ、ところで明日は暇ですか。	있잖아, 그런데 내일은 한가합니까.	current	local
 L2155	それは彼の役目なのである。	그것은 그의 역할인 것이다.	current	local
 L2157	「足、まだ痛いの？」	「다리, 아직 아픈거야?」	current	local-ending
 L2157	「これ、本当においしいの？」	「이것, 정말로 맛있는거야?」	current	local-ending
@@ -703,7 +703,7 @@ L4919	今日は朝から寒いな。	오늘은 아침부터 추운데.	current	l
 L4934	別に構わないけど。	별로 상관없는데.	current	local-ending
 L4934	ちょっと眠いけど。	조금 졸린데.	current	local-ending
 L4938	もう１個ください。	1개 주세요.	current	local
-L4941	パンをどうぞ。	빵을 부탁합니다.	current	local
+L4941	パンをどうぞ。	빵을 드세요.	current	local
 L4951	右へどうぞ進んでください。	오른쪽으로 오세요 진행해 주세요.	current	local
 L4979	犯人は彼とのことです。	범인은 그와의 일입니다.	current	local
 L4988	汚れ防止の布です。	더러운 방지의 옷감입니다.	current	local
