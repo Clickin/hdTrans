@@ -114,52 +114,72 @@ void Layer::Compact() {
 // Orders the rows by key, then, when prio_, by prio, higher first, keeping the order
 // of equal ones (a stable sort). The rows are usually a few long runs in key order,
 // one per file: runs are merged as they are, short runs are sorted together first.
+// The sort orders row indexes, then moves the rows into place.
 void Layer::Sort() {
-    auto less = [this](const Row& a, const Row& b) {
-        if (const int c = a.key.compare(b.key); c != 0) return c < 0;
-        return prio_ && a.prio > b.prio;
+    auto less = [this](uint32_t a, uint32_t b) {
+        const Row& x = rows_[a];
+        const Row& y = rows_[b];
+        if (const int c = x.key.compare(y.key); c != 0) return c < 0;
+        return prio_ && x.prio > y.prio;
     };
     constexpr std::size_t kShortRun = 256;
-    std::vector<std::size_t> segments{0};  // segment i is rows_[segments[i], segments[i+1])
     const std::size_t n = rows_.size();
+    std::vector<uint32_t> order(n);
+    for (std::size_t i = 0; i < n; i++) order[i] = static_cast<uint32_t>(i);
+    std::vector<std::size_t> segments{0};  // segment i is order[segments[i], segments[i+1])
     for (std::size_t start = 0; start < n;) {
         std::size_t end = start + 1;
-        while (end < n && !less(rows_[end], rows_[end - 1])) end++;
+        while (end < n && !less(order[end], order[end - 1])) end++;
         if (end - start < kShortRun) {
             // Join the following short runs.
             std::size_t stop = end;
             while (stop < n) {
                 std::size_t e = stop + 1;
-                while (e < n && !less(rows_[e], rows_[e - 1])) e++;
+                while (e < n && !less(order[e], order[e - 1])) e++;
                 if (e - stop >= kShortRun) break;
                 stop = e;
             }
             end = stop;
-            std::stable_sort(rows_.begin() + static_cast<std::ptrdiff_t>(start),
-                             rows_.begin() + static_cast<std::ptrdiff_t>(end), less);
+            std::stable_sort(order.begin() + static_cast<std::ptrdiff_t>(start),
+                             order.begin() + static_cast<std::ptrdiff_t>(end), less);
         }
         segments.push_back(end);
         start = end;
     }
-    std::vector<Row> buf;
+    std::vector<uint32_t> buf;
     while (segments.size() > 2) {
         std::vector<std::size_t> merged{0};
         buf.resize(n);
         std::size_t i = 0;
         for (; i + 2 < segments.size(); i += 2) {
-            const auto lo = rows_.begin() + static_cast<std::ptrdiff_t>(segments[i]);
-            const auto mid = rows_.begin() + static_cast<std::ptrdiff_t>(segments[i + 1]);
-            const auto hi = rows_.begin() + static_cast<std::ptrdiff_t>(segments[i + 2]);
+            const auto lo = order.begin() + static_cast<std::ptrdiff_t>(segments[i]);
+            const auto mid = order.begin() + static_cast<std::ptrdiff_t>(segments[i + 1]);
+            const auto hi = order.begin() + static_cast<std::ptrdiff_t>(segments[i + 2]);
             std::merge(lo, mid, mid, hi, buf.begin() + static_cast<std::ptrdiff_t>(segments[i]), less);
             merged.push_back(segments[i + 2]);
         }
         if (i + 1 < segments.size()) {
-            std::copy(rows_.begin() + static_cast<std::ptrdiff_t>(segments[i]), rows_.end(),
+            std::copy(order.begin() + static_cast<std::ptrdiff_t>(segments[i]), order.end(),
                       buf.begin() + static_cast<std::ptrdiff_t>(segments[i]));
             merged.push_back(n);
         }
-        rows_.swap(buf);
+        order.swap(buf);
         segments = std::move(merged);
+    }
+    std::vector<uint32_t>().swap(buf);
+    // Row i takes row order[i], cycle by cycle; a done index j has order[j] == j.
+    for (std::size_t i = 0; i < n; i++) {
+        if (order[i] == i) continue;
+        const Row first = rows_[i];
+        std::size_t j = i;
+        while (order[j] != i) {
+            const std::size_t k = order[j];
+            rows_[j] = rows_[k];
+            order[j] = static_cast<uint32_t>(j);
+            j = k;
+        }
+        rows_[j] = first;
+        order[j] = static_cast<uint32_t>(j);
     }
 }
 
