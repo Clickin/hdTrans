@@ -13,83 +13,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  syosetu:
-    name: syosetu chapters, base vs head
+  testdata:
+    name: test data, expected vs head
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     defaults:
       run:
         shell: bash
+    env:
+      # Secrets are not given to pull requests from forks; the comparison is then skipped.
+      HAS_KEY: ${{ secrets.HDTRANS_TESTDATA_KEY != '' }}
     steps:
+      - name: Skip without the test-data key
+        if: env.HAS_KEY != 'true'
+        run: echo "::notice::HDTRANS_TESTDATA_KEY is not available; the test-data comparison is skipped."
       - uses: actions/checkout@v7
+        if: env.HAS_KEY == 'true'
+      - name: Check out the test data
+        if: env.HAS_KEY == 'true'
+        uses: actions/checkout@v7
         with:
-          fetch-depth: 0
-      - name: Select the base commit
-        id: base
-        env:
-          EVENT: ${{ github.event_name }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          repository: sokcuri/hdTrans-data
+          ssh-key: ${{ secrets.HDTRANS_TESTDATA_KEY }}
+          persist-credentials: false
+          path: testdata
+      - name: Build the CLI
+        if: env.HAS_KEY == 'true'
         run: |
-          if [[ "$EVENT" == pull_request ]]; then base=$PR_BASE; else base=$(git rev-parse HEAD^); fi
-          echo "sha=$base" >> "$GITHUB_OUTPUT"
-          if git cat-file -e "$base:dicts" 2>/dev/null; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "::notice::Base commit $base has no dicts/; the end-to-end comparison is skipped."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Allow compiler warnings in translation comparisons
-        if: steps.base.outputs.run == 'true'
-        run: |
-          printf '#!/bin/sh\nexec "$@" -Wno-error\n' > "$RUNNER_TEMP/nowerror"
-          chmod +x "$RUNNER_TEMP/nowerror"
-      - name: Build the base CLI
-        if: steps.base.outputs.run == 'true'
-        env:
-          BASE: ${{ steps.base.outputs.sha }}
-        run: |
-          git worktree add --detach "$RUNNER_TEMP/base" "$BASE"
-          cd "$RUNNER_TEMP/base"
-          cmake --preset linux -DHDTRANS_WERROR=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF \
-            -DCMAKE_CXX_COMPILER_LAUNCHER="$RUNNER_TEMP/nowerror" \
-            -DCMAKE_C_COMPILER_LAUNCHER="$RUNNER_TEMP/nowerror"
+          cmake --preset linux -DHDTRANS_WERROR=OFF
           cmake --build --preset linux --target hdtrans_cli --parallel
-      - name: Build the head CLI
-        if: steps.base.outputs.run == 'true'
-        run: |
-          cmake --preset linux -DHDTRANS_WERROR=OFF -DCMAKE_COMPILE_WARNING_AS_ERROR=OFF \
-            -DCMAKE_CXX_COMPILER_LAUNCHER="$RUNNER_TEMP/nowerror" \
-            -DCMAKE_C_COMPILER_LAUNCHER="$RUNNER_TEMP/nowerror"
-          cmake --build --preset linux --target hdtrans_cli --parallel
-      - name: Restore the chapter cache
-        if: steps.base.outputs.run == 'true'
-        uses: actions/cache/restore@v6
-        with:
-          path: build/e2e/*.ja.txt
-          key: syosetu-${{ hashFiles('tests/e2e/*.ja.txt') }}-${{ github.run_id }}
-          restore-keys: |
-            syosetu-${{ hashFiles('tests/e2e/*.ja.txt') }}-
-            syosetu-
-      - name: Fetch missing chapters
-        id: fetch
-        if: steps.base.outputs.run == 'true'
-        run: |
-          tools/fetch-syosetu.sh tests/e2e build/e2e | tee "$RUNNER_TEMP/fetch.log"
-          grep -q '^fetch: 0 downloaded' "$RUNNER_TEMP/fetch.log" || echo "changed=true" >> "$GITHUB_OUTPUT"
-      - name: Save the chapter cache
-        if: steps.fetch.outputs.changed == 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: build/e2e/*.ja.txt
-          key: syosetu-${{ hashFiles('tests/e2e/*.ja.txt') }}-${{ github.run_id }}
-      - name: Compare base and head translations
-        if: steps.base.outputs.run == 'true'
-        env:
-          HDTRANS_DICTS_A: ${{ runner.temp }}/base/dicts
+      - name: Compare with the expected outputs
+        if: env.HAS_KEY == 'true'
         # Exit 1 means translations changed, which is reported, not a failure; 2 is an error.
+        # The texts are private: the summary gets counts only, the log the first changed lines.
         run: |
           set +e
-          tools/e2e.sh "$RUNNER_TEMP/base/build/linux/hdtrans" build/linux/hdtrans "$GITHUB_WORKSPACE/dicts" build/e2e | tee "$RUNNER_TEMP/e2e.log"
-          status=${PIPESTATUS[0]}
-          tail -n 1 "$RUNNER_TEMP/e2e.log" >> "$GITHUB_STEP_SUMMARY"
+          tools/e2e.sh --expected testdata build/linux/hdtrans "$GITHUB_WORKSPACE/dicts" > "$RUNNER_TEMP/e2e.log"
+          status=$?
+          if [ "$(wc -l < "$RUNNER_TEMP/e2e.log")" -le 20 ]; then
+            cat "$RUNNER_TEMP/e2e.log"
+          else
+            head -n 19 "$RUNNER_TEMP/e2e.log"; echo '...'; tail -n 1 "$RUNNER_TEMP/e2e.log"
+          fi
+          tail -n 1 "$RUNNER_TEMP/e2e.log" | grep '^e2e: ' >> "$GITHUB_STEP_SUMMARY"
+          case $status in
+            0) echo 'No translation changed.' >> "$GITHUB_STEP_SUMMARY" ;;
+            1) echo 'Translations changed; accept them in the test data once this is on main.' >> "$GITHUB_STEP_SUMMARY" ;;
+          esac
           [ "$status" -le 1 ]
