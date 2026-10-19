@@ -505,8 +505,8 @@ L3258	私が待ってた電車はまだ来ない。	내가 기다리고 있었�
 L3258	さっき読んでた本を貸してください。	조금 전 읽고 있었던 책을 빌려 주세요.	current	local-ending
 L3261	この仕事は今日中に終わりそう。	이 일은 오늘중에 끝날 것 같다.	current	local
 L3261	あのケーキ、とても美味しそう。	그 케이크, 매우 맛있을 것 같다.	current	local
-L3263	嫌がらせをされた。	괴롭힘을 하셨다.	current	local
-L3263	告白をされた。	고백을 하셨다.	current	local
+L3263	嫌がらせをされた。	괴롭힘을 당했다.	current	local
+L3263	告白をされた。	고백을 받았다.	current	local
 L3263	先生が挨拶をされた。	선생님이 인사를 하셨다.	current	local
 L3274	もう試合は終わったみたい。	이제 시합은 끝난 것 같다.	current	local
 L3274	風邪をひいたみたいな気分だ。	감기에 걸린 것 같은 기분이다.	current	local
@@ -669,7 +669,7 @@ L4470	だめなの？	안돼?	current	local-ending
 L4475	何もしてくれんかった。	아무것도 해 줘.	current	local
 L4480	私は掃除をさせられた。	나는 청소를 하도록 강요받았다.	current	local
 L4541	やっと終わったって感じです。	드디어 끝났다 라는 느낌입니다.	current	local-ending
-L4554	勉強させられた。	공부 하도록 강요받았다.	current	local
+L4554	勉強させられた。	공부 당했다.	current	local
 L4564	それより早く帰ろう。	그것보다 빨리 돌아가자.	current	local
 L4567	兄に車で送ってもらった。	형에게 차로 보내 주었다.	current	local
 L4567	友達に宿題を教えてもらった。	친구에게 숙제를 가르쳐 주었다.	current	local
