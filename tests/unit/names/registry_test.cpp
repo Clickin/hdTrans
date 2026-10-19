@@ -348,8 +348,8 @@ HD_TEST(names_registry_forget_actors) {
 HD_TEST(names_historical_honorific_not_given) {
     const dict::Snapshot* snap = Dictionary();
     HD_REQUIRE(snap != nullptr);
-    for (const char* text : {"太郎君は走った。", "次郎殿が来た。", "一郎様、どうぞ。"}) {
-        const std::string line = text;
+    for (const char* jp : {"太郎君は走った。", "次郎殿が来た。", "一郎様、どうぞ。"}) {
+        const std::string line = jp;
         const std::string rows = names::HistoricalNames(*snap, {&line, 1});
         HD_CHECK(rows.find("君") == std::string::npos && rows.find("殿") == std::string::npos &&
                  rows.find("様") == std::string::npos);
