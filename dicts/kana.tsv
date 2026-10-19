@@ -1,4 +1,5 @@
 #! layer=kana
+# 한자 단어의 히라가나 표기 (읽기 → 한자 키, 활용 부류)
 // Kana spellings: hiragana reading, kanji key, class (build/words/kana.py).
 あいえんか	愛煙家	
 あいかた	相方	

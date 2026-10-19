@@ -1,4 +1,5 @@
 #! layer=base
+# 기본 사전: 일반 어휘·어미·조사·조동사, 품사·의미 코드 포함
 key	ko	pos	sem	gram	dict	rule	id	raw	prio
 いいえ	아니오	K110			GN		jisjk:114801		
 わりと	비교적	C0H1			GN		jisjk:114797		

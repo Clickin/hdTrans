@@ -41,6 +41,8 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
 ## Repository hygiene
 - One coherent change per commit; the message says what changed and whether the
   expectation sets moved.
-- Never commit build outputs, dictionaries, expectation sets, machine names, user
+- `dicts/` is the shipped dictionary set and is committed; each file starts with
+  `#! layer=...` and a `#` description line.
+- Never commit build outputs, expectation sets, machine names, user
   names or absolute paths. Locations outside the repository come from environment
   variables with relative defaults.

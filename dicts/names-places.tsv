@@ -1,4 +1,5 @@
 #! layer=names
+# 일본 지명: 역·노선·도도부현·시정촌·명소 (Wikidata)
 key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 DMMかりゆし水族館	DMM 카리유시 수족관	N130	QCT VPl		GN		replace			places:1
 IRいしかわ鉄道線	IR 이시카와 철도 IR 이시카와 철도선	N130	VTp		GN		replace			places:2

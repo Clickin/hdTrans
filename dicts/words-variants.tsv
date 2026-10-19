@@ -1,4 +1,5 @@
 #! layer=words
+# 기존 단어의 다른 표기: 이표기·가나 표기·반복 부호
 key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 あ・うんの呼吸	척척 맞는 호흡	N110			GN		llm			w:25249
 天魚	치어	N110	VAm		GN					jisjk:227566
