@@ -16,16 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         preset: ${{ fromJSON((github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && '["linux","windows-x64","windows-x86","mac"]' || '["linux","windows-x64","windows-x86"]') }}
-        include:
-          - preset: linux
-            os: ubuntu-latest
-          - preset: windows-x64
-            os: windows-latest
-          - preset: windows-x86
-            os: windows-latest
-          - preset: mac
-            os: macos-latest
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.preset == 'linux' && 'ubuntu-latest' || startsWith(matrix.preset, 'windows-') && 'windows-latest' || 'macos-latest' }}
     timeout-minutes: 30
     defaults:
       run:
