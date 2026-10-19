@@ -64,3 +64,13 @@
 高くはなかった	높지는 않았다	pat
 書きそうにない	쓸 것 같지 않다	pat
 書きそうにありません	쓸 것 같지 않습니다	pat
+// 〜なのかしら after a noun or an adjectival noun, a lady's wondering.
+学生なのかしら	학생인 걸까	pat
+静かなのかしら	조용한 걸까	pat
+学生なのかしらね	학생인 걸까	pat
+静かなのかしらね	조용한 걸까	pat
+書くのかしらね	쓰는 걸까	pat
+書いたのかしらね	쓴 걸까	pat
+// 〜したっす after a する noun, closing a clause.
+学生したっす	학생했어요	pat
+学生したっすね	학생했네요	pat
