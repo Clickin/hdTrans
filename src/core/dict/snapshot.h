@@ -173,6 +173,9 @@ struct LoadResult {
 
 // Lists the *.tsv files of the folders in order, those of each folder in name order,
 // and reads them, then the user dictionary file userFile (none when empty or missing).
+// A first entry ending in .hdsnap is a snapshot compiled by CompileSnapshot from as many
+// folders or fewer: its column layers stand for the column files of the other entries,
+// which are not read, and no cache is used. A column userFile fails such a load.
 LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir = {}, bool verify = false,
                        bool cacheWrite = true, std::string_view userFile = {});
 // Loads the editable files without reading or writing a cache.
@@ -181,7 +184,8 @@ LoadResult LoadFoldersTsv(const std::vector<std::string>& folders, std::string_v
 // plain userFile.
 LoadResult LoadPlainFolders(std::shared_ptr<Snapshot> snapshot, const std::vector<std::string>& folders,
                            std::vector<LoadError> errors, std::string_view userFile = {});
-// Compiles the folders to an immutable resource; publishes only a fully validated file.
+// Compiles the column files of the folders to an immutable resource; publishes only a
+// fully validated file. Any build of the same engine data reads it (LoadFolders).
 bool CompileSnapshot(const std::vector<std::string>& folders, std::string_view outPath);
 // Loads files in load order.
 LoadResult Load(std::vector<File> files);

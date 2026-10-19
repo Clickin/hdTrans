@@ -25,6 +25,7 @@
 - CLI는 `-dicts DIR,DIR`(기본값: 실행 파일 옆 `dicts`, 없으면 현재 폴더의 `dicts`), C API는
   `hdTrans_Initialize`에 폴더 목록을 줍니다. `J2KEngine.dll`은 DLL 옆의 `dicts\`를 씁니다.
 - 폴더 다음에 [사용자 사전 파일](#userdicttsv) `userdict.tsv`를 불러옵니다.
+- 목록의 첫 항목이 `.hdsnap` 파일이면 [컴파일한 사전](#컴파일한-사전-hdsnap)입니다.
 
 ## 파일 머리줄
 
@@ -178,3 +179,27 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 - 캐시 끄기: `-no-cache`, `HDTRANS_SNAPSHOT=off`, 또는 `HDTRANS_CACHE_DIR`를 빈 값·상대 경로·`off`로.
 - 저장된 캐시 세대는 그 자리에서 덮어쓰거나 자르면 안 됩니다. 손상이 확인된 세대는 저장하지 않는
   모드에서도 `.bad` 표시를 남기고 이름을 바꿀 수 있습니다.
+
+## 컴파일한 사전 (.hdsnap)
+
+사전 폴더의 열 파일을 캐시와 같은 형식의 파일 하나로 컴파일해 두고 TSV 대신 불러올 수 있습니다. 웹
+데모가 이렇게 씁니다([web.md](web.md)). 불러오는 데 TSV를 컴파일하는 메모리와 시간이 들지 않습니다.
+
+```sh
+hdtrans -dicts dicts -compile-snapshot "$PWD/build/dicts.hdsnap"
+hdtrans -dicts "$PWD/build/dicts.hdsnap",dicts -in in.txt
+```
+
+- `-compile-snapshot FILE`은 폴더의 열 파일을 FILE에 컴파일하고 종료합니다. `userdict.tsv`는 넣지 않습니다.
+  FILE이 있는 폴더는 심볼릭 링크가 아니어야 합니다.
+- 폴더 목록(`-dicts`, `hdTrans_Initialize`)의 첫 항목이 `.hdsnap`으로 끝나면 그 파일의 열 사전이 나머지
+  폴더의 열 파일을 대신합니다. 나머지 폴더의 열 파일은 읽지 않고, 열 파일이 아닌 파일(`kana.tsv` 등)과
+  사용자 사전만 그 위에 불러옵니다. 캐시는 쓰지 않습니다.
+- 나머지 폴더는 컴파일할 때 준 폴더 수 이상이어야 합니다. 오류와 경고의 파일 이름은 같은 순서의 폴더로
+  나타납니다.
+- 형식은 고정 폭 리틀 엔디언이라 포인터 크기나 컴파일러와 관계없이 같은 엔진 데이터(같은 `src/core/`)로
+  빌드한 엔진이면 읽습니다. 64비트 CLI로 컴파일한 파일을 32비트 DLL이나 WebAssembly가 읽을 수 있습니다.
+  엔진 데이터가 다르면 불러오기가 실패합니다.
+- 열 형식 사용자 사전은 함께 쓸 수 없습니다(불러오기 실패, 엔진은 사용자 사전 없이 시작).
+- 원본 TSV와 맞는지는 확인하지 않습니다. TSV를 고쳤으면 다시 컴파일합니다. 손상된 파일은 불러오기를
+  실패시키며 캐시와 달리 이름을 바꾸지 않습니다.
