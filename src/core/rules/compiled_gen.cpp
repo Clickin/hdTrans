@@ -611,20 +611,17 @@ bool RuleL68([[maybe_unused]] Item* p) {
            PumsaEq(p, -1, "1**"sv);
 }
 
-// # よう의 '같다' 후보를 정해진 형용사·형용동사 어미나 동사 어미 뒤에서 선택한다.
-// # [의심] 넷째 분기의 M-1== "4 \xb0\xcd"는 어미 품사 검사에 활용형 숫자와 CP949 문자열을 넣은 것으로, 5로 시작하는 어미 코드와 일치할 수 없다
+// # よう의 같다 후보를 지정된 형용사·형용동사 어미나 동사 어미 뒤에서 고른다.
 // local 69
 //     pos[-1] is 8** and end.src[-1] == "だった" and end.ko[-1] == "5던 것"
 //     pos[-1] is 7** and end.src[-1] == "かった" and end.ko[-1] == "5던 것"
 //     pos[-1] is 8** and end.src[-1] == "な" and end.ko[-1] == "4 것"
-//     pos[-1] is 7** and end.src[-1] == "い" and end.pos[-1] is "4 \xB0\xCD"
 //     pos[-1] is 4** and end.pos[-1] is 50*|56*
 //     pos[-1] is 4** and end.src[-1] == "まいりました"
 bool RuleL69([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "8**"sv) && GobiSrcEq(p, -1, "だった"sv) && GobiDstEq(p, -1, "5던 것"sv)) ||
            (PumsaEq(p, -1, "7**"sv) && GobiSrcEq(p, -1, "かった"sv) && GobiDstEq(p, -1, "5던 것"sv)) ||
            (PumsaEq(p, -1, "8**"sv) && GobiSrcEq(p, -1, "な"sv) && GobiDstEq(p, -1, "4 것"sv)) ||
-           (PumsaEq(p, -1, "7**"sv) && GobiSrcEq(p, -1, "い"sv) && GobiPumsaEq(p, -1, "4 \260\315"sv)) ||
            (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "50*56*"sv)) ||
            (PumsaEq(p, -1, "4**"sv) && GobiSrcEq(p, -1, "まいりました"sv));
 }
@@ -5032,7 +5029,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL66, 0x6fbe657463f4cafcull},
     {RuleL67, 0x22f8ca20895b391dull},
     {RuleL68, 0xef82ebb6707bde90ull},
-    {RuleL69, 0x36799fdc5b054a50ull},
+    {RuleL69, 0x2f066365431199e0ull},
     {RuleL70, 0x959781bbf950809cull},
     {RuleL71, 0x921504b148faf3e8ull},
     {RuleL72, 0xd81770f12c95d607ull},
