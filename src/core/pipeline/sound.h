@@ -1,7 +1,14 @@
 #pragma once
-// The sound stage of the text path: sounds, elongation and stutter written before the
-// line is translated, and the spoken spellings inside words that need the dictionary
-// to be recognised.
+// The sound stage of the text path: masked words, sounds, elongation and stutter
+// written before the line is translated, and the spoken spellings inside words that
+// need the dictionary to be recognised.
+//
+// A masked word (伏せ字: オ○ニー, ち○こ, セッ××ス) is one word with its mask: a row of
+// the builtin masked.tsv writes its Korean with the mask as written (자○, 섹××); a
+// katakana word with katakana on both sides of each mask and a one-syllable piece of a
+// word next to it is transliterated around the masks (オ○ニ 오○니, but not キー○ボタン).
+// A mask without kana around it (○×クイズ, ○月○日, ○○さん) stays, and so does a masked
+// word that a dictionary key covers, so a user entry (オ○ニー 자위) wins.
 //
 // A sound of the builtin sound lexicon (sound.tsv, and the interjections in kana of
 // phrases.tsv) is written in Korean, so the protect stage makes it a Hangul span that
@@ -46,13 +53,16 @@
 
 namespace hdTrans::pipeline {
 
-// The normalized line after the sound stage: CompleteCutOffs, WriteSounds, then RewriteCasualAdjectives;
+// The normalized line after the sound stage: WriteMasked, CompleteCutOffs, WriteSounds, then RewriteCasualAdjectives;
 // when RewriteEmphasis changes that text, WriteSounds of the rewritten text instead.
 // Markup tags, BBCode tags, entities and ctx.markers are left as they are. The lookups
 // use ctx.lookup.
 std::string Sound(std::string_view normalized, const LineContext& ctx, const dict::Snapshot& snap);
 
 namespace internal {
+
+// text with its masked words in Korean (see the comment at the top).
+std::string WriteMasked(std::string_view text, const LineContext& ctx, const dict::Snapshot& snap);
 
 // The sounds of text in Korean and each stutter as stutter marks before its separators
 // (see the comment at the top). Invalid UTF-8 bytes are kept and read as neither kana

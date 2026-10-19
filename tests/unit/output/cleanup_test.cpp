@@ -84,6 +84,8 @@ HD_TEST(output_stand_in) {
         {"김철수", 'v', "김철수"}, {"이메일", 'l', "이메일"}, {"ᄒᆞᆫ글", 'l', "ᄒᆞᆫ글"},
         {"똠방각하", 'v', "똠방각하"}, {"ㅋㅋ", 'c', "각"}, {"ㅏ", 'v', "가"},
         {"ㄹ", 'l', "갈"}, {"🍣", 'c', "각"},
+        // A particle mark decides for the masked word before it.
+        {"섹○\uE001", 'v', "가"}, {"가○\uE002", 'c', "각"}, {"애○\uE003", 'l', "갈"},
     };
     for (const auto& c : cases) {
         HD_CHECK_EQ(Show(SpanFinal(c.in)), Show(c.final));

@@ -14,7 +14,7 @@ struct RestoreSteps {
     output::Pieces spaced;     // DropAddedSpaces
     output::Pieces bracketed;  // RestoreBrackets; equal to spaced without keepBrackets
     output::Pieces korean;     // KoreanForms and optional spelling replacements on text pieces
-    std::string line;          // WriteStutters(WriteDropped(String(korean)))
+    std::string line;          // DropParticleMarks(WriteStutters(WriteDropped(String(korean))))
 };
 
 // cleaned is the output of the cleanup, typed the pieces of the line as the protected
@@ -57,6 +57,9 @@ std::string WriteDropped(std::string_view s);
 // start of the line or after an opening bracket are dropped; a mark with no syllable
 // after it (past spaces, marks and separators) is dropped with its separator.
 std::string WriteStutters(std::string_view s);
+
+// s without the particle marks of word spans (output::kVowelMark ...).
+std::string DropParticleMarks(std::string_view s);
 
 // The offset of the kana the composer writes for kana it drops.
 constexpr char32_t kDropShift = 0xC000;

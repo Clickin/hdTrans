@@ -119,6 +119,9 @@ std::string_view StandIn(std::string_view text) {
 
 char SpanFinal(std::string_view text) {
     const char32_t r = LastRune(text);
+    if (r == kVowelMark) return 'v';
+    if (r == kConsonantMark) return 'c';
+    if (r == kRieulMark) return 'l';
     if (r == U'ㄹ' || r == 0x1105 || r == 0x11AF || r == 0xFFA9) return 'l';
     if ((r >= 0x314F && r <= 0x3163) || (r >= 0x3187 && r <= 0x318E) || (r >= 0x1160 && r <= 0x11A7) ||
         (r >= 0xD7B0 && r <= 0xD7C6) || (r >= 0xFFC2 && r <= 0xFFDC)) {

@@ -176,6 +176,12 @@ HD_TEST(pipeline_write_stutters) {
     for (const auto& c : cases) HD_CHECK_EQ(pipeline::WriteStutters(c.in), std::string(c.want));
 }
 
+HD_TEST(pipeline_drop_particle_marks) {
+    HD_CHECK_EQ(pipeline::DropParticleMarks("섹○\uE001를 가○\uE002을 애○\uE003을"), std::string("섹○를 가○을 애○을"));
+    HD_CHECK_EQ(pipeline::DropParticleMarks("\uE000、아"), std::string("\uE000、아"));
+    HD_CHECK_EQ(pipeline::DropParticleMarks("a\xFF" "b"), std::string("a\xFF" "b"));
+}
+
 HD_TEST(pipeline_restore) {
     // A stutter span and a Hangul span come back as text in the line.
     {

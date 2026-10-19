@@ -69,6 +69,13 @@ HD_TEST(pipeline_cut_spans) {
         // not foreign; invalid bytes are.
         {"Ωé αβ☆ｱ ไทย", "Ω〖1é〗 αβ☆ｱ 〖1ไทย〗"},
         {"あ\xFFい", "あ〖1\xFF〗い"},
+        // Masks and particle marks in or after a Hangul run belong to it; masks without
+        // Hangul before them do not.
+        {"자○が", "〖1자○〗が"},
+        {"섹××\uE001を", "〖1섹××\uE001〗を"},
+        {"오○니 자○", "〖1오○니 자○〗"},
+        {"○○さん", "○○さん"},
+        {"○김", "○〖1김〗"},
     };
     for (const auto& c : cases) HD_CHECK_EQ(Show(internal::CutSpans(c.in, {})), std::string(c.want));
 

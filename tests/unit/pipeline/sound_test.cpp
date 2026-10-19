@@ -2,7 +2,9 @@
 
 #include <string>
 
+#include "core/dict/builtin.h"
 #include "core/dict/snapshot.h"
+#include "core/dict/tsv.h"
 #include "hdtest.h"
 
 using namespace hdTrans;
@@ -26,7 +28,8 @@ const dict::LoadResult& SoundDictionary() {
         "冷た\t차갑\tH100\t10\n"
         "とは\t(이)란\tP200\t11\n"
         "かは\t1는가는\tS561\t12\n"
-        "では\t그럼\tP250\t13\n",
+        "では\t그럼\tP250\t13\n"
+        "キー\t키\tN110\t14\n",
     }});
     return result;
 }
@@ -160,6 +163,71 @@ HD_TEST(pipeline_sound) {
 }
 
 // A verb cut off before a dash or an ellipsis, completed when the dictionary has it.
+// Masked words: rows of masked.tsv with the mask as written and a particle mark when
+// the Korean ends in the mask, katakana transliterated around a mask, and masks that
+// stand for no word.
+HD_TEST(pipeline_write_masked) {
+    const auto& loaded = SoundDictionary();
+    HD_REQUIRE(loaded.errors.empty());
+    const auto& snap = loaded.snapshot;
+    HD_REQUIRE(snap != nullptr);
+    LineContext ctx;
+    ctx.lookup.plain = &snap->TextPlain();
+    const Case cases[] = {
+        {"オ○ニーしてた。", "자○\uE001してた。"},
+        {"ち○ちん", "자○\uE001"},
+        {"ち●こが", "자●\uE001が"},
+        {"お○んこ", "보○\uE001"},
+        {"セッ○スしたい", "섹○\uE001したい"},
+        {"セッ××スしたい", "섹××\uE001したい"},
+        {"お○ぱいを", "가○\uE002を"},
+        {"ア＊ルに", "애＊\uE003に"},
+        {"ワ○ピース", "와○피스"},
+        {"オ○ニ", "오○니"},
+        // A row with nothing before its mask needs no kana there; with kana there the word
+        // is transliterated.
+        {"○ナニー", "자○\uE001"},
+        {"ア○ナニー", "아○나니"},
+        // Not masked words: no kana on both sides, × between names, a syllable that a
+        // mask cuts (ポケ○ン), hiragana that no row holds.
+        {"○×クイズ", "○×クイズ"},
+        {"○月○日", "○月○日"},
+        {"○○さん", "○○さん"},
+        {"◯◯さんが来た", "◯◯さんが来た"},
+        {"あの○○が", "あの○○が"},
+        {"これに○をつけて", "これに○をつけて"},
+        {"・りんご", "・りんご"},
+        {"ナルト×サスケ", "ナルト×サスケ"},
+        {"ポケ○ントレーナー", "ポケ○ントレーナー"},
+        {"ヨド○シカメラ", "ヨド○シカメラ"},
+        {"キー○ボタン", "キー○ボタン"},
+        {"ガン○ム", "간○무"},
+        {"ふ○ふ", "ふ○ふ"},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(internal::WriteMasked(c.in, ctx, *snap), std::string(c.want));
+
+    // Every row of masked.tsv has a mask in its Japanese and Korean and a word.
+    const std::string table = dict::BuiltinText("masked.tsv");
+    dict::TsvReader reader(table, "//");
+    int rows = 0;
+    while (reader.Next()) {
+        const auto& f = reader.Fields();
+        if (f.empty() || f[0].empty()) continue;
+        rows++;
+        HD_CHECK(f.size() == 3 && f[0].find("○") != std::string_view::npos && f[1].find("○") != std::string_view::npos &&
+                 !f[2].empty());
+    }
+    HD_CHECK(rows > 0);
+
+    // A dictionary key that covers the masked word wins.
+    const auto user = dict::Load({{0, "base.tsv", "key\tko\tpos\tid\n"}, {1, "user.tsv", "オ○ニー\t자위\n"}});
+    HD_REQUIRE(user.errors.empty() && user.snapshot != nullptr);
+    LineContext userCtx;
+    userCtx.lookup.plain = &user.snapshot->TextPlain();
+    HD_CHECK_EQ(internal::WriteMasked("オ○ニー", userCtx, *user.snapshot), std::string("オ○ニー"));
+    HD_CHECK_EQ(internal::WriteMasked("オ●ニー", userCtx, *user.snapshot), std::string("자●\uE001"));
+}
+
 HD_TEST(pipeline_complete_cut_offs) {
     const auto loaded = dict::Load({{
         0, "base.tsv",

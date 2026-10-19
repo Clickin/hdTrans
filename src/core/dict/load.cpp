@@ -284,7 +284,7 @@ bool ReadColumnFile(const File& f, CodeReader& reader, internal::Layer& layer, s
 // plain dictionaries.
 bool OwnBuiltin(std::string_view name) {
     return name == "sound.tsv" || name == "phrases.tsv" || name == "patterns.tsv" || name == "senses.tsv" ||
-           name == "lines.tsv" || name == "cleanup.tsv";
+           name == "lines.tsv" || name == "cleanup.tsv" || name == "masked.tsv";
 }
 
 // Whether a line of phrases.tsv is an interjection in kana: an utterance of the sound

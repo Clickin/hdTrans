@@ -141,12 +141,18 @@ bool IsHangul(char32_t r) {
            (r >= 0xAC00 && r <= 0xD7A3) || (r >= 0xD7B0 && r <= 0xD7FF) || (r >= 0xFFA0 && r <= 0xFFDC);
 }
 
-// Hangul runs joined by ASCII or full-width spaces.
+bool IsHangulOrMask(char32_t r) {
+    return IsHangul(r) || IsMaskRune(r) || r == output::kVowelMark || r == output::kConsonantMark || r == output::kRieulMark;
+}
+
+// Hangul runs, with the masks and particle marks in them or after them (자○, 오○니),
+// joined by ASCII or full-width spaces.
 Match HangulSpan(std::string_view s) {
-    size_t n = RunOf(s, IsHangul);
+    if (!IsHangul(text::DecodeRune(s).cp)) return {0, output::SpanWord};
+    size_t n = RunOf(s, IsHangulOrMask);
     while (n > 0) {
         const size_t gap = RunOf(s.substr(n), [](char32_t r) { return r == U' ' || r == U'　'; });
-        const size_t more = RunOf(s.substr(n + gap), IsHangul);
+        const size_t more = IsHangul(text::DecodeRune(s.substr(n + gap)).cp) ? RunOf(s.substr(n + gap), IsHangulOrMask) : 0;
         if (gap == 0 || more == 0) break;
         n += gap + more;
     }

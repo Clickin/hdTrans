@@ -328,6 +328,19 @@ std::string WriteStutters(std::string_view s) {
     return Utf8(out);
 }
 
+std::string DropParticleMarks(std::string_view s) {
+    std::string out;
+    out.reserve(s.size());
+    for (std::string_view rest = s; !rest.empty();) {
+        const text::Rune r = text::DecodeRune(rest);
+        if (r.cp != output::kVowelMark && r.cp != output::kConsonantMark && r.cp != output::kRieulMark) {
+            out += rest.substr(0, r.size);
+        }
+        rest.remove_prefix(r.size);
+    }
+    return out;
+}
+
 RestoreSteps RestoreAll(const Pieces& cleaned, const Pieces& typed, bool keepBrackets, bool literalCleanup) {
     RestoreSteps st;
     st.spaced = DropAddedSpaces(typed, cleaned);
@@ -336,7 +349,7 @@ RestoreSteps RestoreAll(const Pieces& cleaned, const Pieces& typed, bool keepBra
         const std::string korean = KoreanForms(s);
         return literalCleanup ? KoreanCleanup(korean) : korean;
     });
-    st.line = WriteStutters(WriteDropped(output::String(st.korean)));
+    st.line = DropParticleMarks(WriteStutters(WriteDropped(output::String(st.korean))));
     return st;
 }
 
