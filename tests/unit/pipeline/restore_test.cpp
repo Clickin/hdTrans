@@ -219,6 +219,8 @@ HD_TEST(pipeline_literal_cleanup) {
         {"고 싶다라고 했었었다", "고 싶다고 했었다"},
         {"안되 제안되 고안된 감안되", "안되 제안되 고안된 감안되"},
         {"몇번몇번", "몇 번몇 번"},
+        {"있읍니다 했읍니다 없읍니다", "있습니다 했습니다 없습니다"},
+        {"모읍니다 기웁니다 읍니다", "모읍니다 기웁니다 읍니다"},
     };
     for (const auto& c : cases) HD_CHECK_EQ(pipeline::KoreanCleanup(c.in), std::string(c.want));
     const Pieces typed{{"何度も"}, {"몇번", SpanWord}};

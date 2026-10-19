@@ -37,10 +37,26 @@ else()
     endif()
 endif()
 
+# The builtin dictionary tables, src/core/dict/builtin/*.tsv and builtin/extra/*.tsv, compiled in.
+set(HDTRANS_BUILTIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/core/dict/builtin")
+file(GLOB HDTRANS_BUILTIN_TSV CONFIGURE_DEPENDS "${HDTRANS_BUILTIN_DIR}/*.tsv")
+file(GLOB HDTRANS_BUILTIN_EXTRA_TSV CONFIGURE_DEPENDS "${HDTRANS_BUILTIN_DIR}/extra/*.tsv")
+function(hdtrans_builtin_source output dir array accessor inputs)
+    set(script "${CMAKE_CURRENT_SOURCE_DIR}/cmake/builtin_tables.cmake")
+    add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${output}"
+        COMMAND "${CMAKE_COMMAND}" "-DDIR=${dir}" "-DOUT=${CMAKE_CURRENT_BINARY_DIR}/${output}"
+            "-DTABLES=${array}" "-DACCESSOR=${accessor}" -P "${script}"
+        DEPENDS ${${inputs}} "${script}" VERBATIM)
+endfunction()
+hdtrans_builtin_source(builtin_gen.cpp "${HDTRANS_BUILTIN_DIR}" kTables BuiltinTables HDTRANS_BUILTIN_TSV)
+hdtrans_builtin_source(builtin_extra_gen.cpp "${HDTRANS_BUILTIN_DIR}/extra" kFiles ExtraBuiltinFiles
+    HDTRANS_BUILTIN_EXTRA_TSV)
+
 add_subdirectory(third_party/pcre2)
 
 file(GLOB_RECURSE HDTRANS_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
-add_library(hdtrans STATIC ${HDTRANS_SOURCES})
+add_library(hdtrans STATIC ${HDTRANS_SOURCES}
+    "${CMAKE_CURRENT_BINARY_DIR}/builtin_gen.cpp" "${CMAKE_CURRENT_BINARY_DIR}/builtin_extra_gen.cpp")
 target_link_libraries(hdtrans PRIVATE pcre2-16)
 file(GLOB_RECURSE HDTRANS_DATA_SOURCES CONFIGURE_DEPENDS src/core/*.cpp src/core/*.h)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${HDTRANS_DATA_SOURCES})
@@ -51,9 +67,14 @@ foreach(dataFile IN LISTS HDTRANS_DATA_SOURCES)
     string(APPEND HDTRANS_DATA_HASHES "${dataName}:${dataHash}\n")
 endforeach()
 string(SHA256 HDTRANS_DATA_ID "${HDTRANS_DATA_HASHES}")
-file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/src/core/dict/builtin_gen.cpp" builtinBaseHash)
-file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/src/core/dict/builtin_extra_gen.cpp" builtinExtraHash)
-string(SHA256 HDTRANS_BUILTIN_ID "${builtinBaseHash}${builtinExtraHash}")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${HDTRANS_BUILTIN_TSV} ${HDTRANS_BUILTIN_EXTRA_TSV})
+set(HDTRANS_BUILTIN_HASHES "")
+foreach(tableFile IN LISTS HDTRANS_BUILTIN_TSV HDTRANS_BUILTIN_EXTRA_TSV)
+    file(SHA256 "${tableFile}" tableHash)
+    file(RELATIVE_PATH tableName "${HDTRANS_BUILTIN_DIR}" "${tableFile}")
+    string(APPEND HDTRANS_BUILTIN_HASHES "${tableName}:${tableHash}\n")
+endforeach()
+string(SHA256 HDTRANS_BUILTIN_ID "${HDTRANS_BUILTIN_HASHES}")
 string(SHA256 HDTRANS_COMPILER_ID "${CMAKE_CXX_COMPILER_ID}:${CMAKE_CXX_COMPILER_VERSION}:${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}:${CMAKE_SIZEOF_VOID_P}:${CMAKE_BUILD_TYPE}:${CMAKE_CXX_FLAGS}:${CMAKE_CXX_FLAGS_RELEASE}:${CMAKE_CXX_FLAGS_DEBUG}")
 file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dictionary_ids.h" CONTENT
 "#pragma once\n#define HDTRANS_DATA_ID \"${HDTRANS_DATA_ID}\"\n#define HDTRANS_BUILTIN_ID \"${HDTRANS_BUILTIN_ID}\"\n#define HDTRANS_COMPILER_ID \"${HDTRANS_COMPILER_ID}\"\n")

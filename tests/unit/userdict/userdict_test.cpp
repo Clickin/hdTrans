@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "core/dict/builtin.h"
 #include "core/userdict/compile.h"
 #include "hdtest.h"
 
@@ -289,6 +290,8 @@ HD_TEST(userdict_endings) {
         {"書きました\t썼습니다\tend\tregister=formal", "ました 5습니다 S5:0 register=4 polite @1.0"},
         {"書け\t쓰세요\tend", "A세요 S5;0 @1.0"},
         {"書こう\t씁시다\tend", "9시다 S550 @1.0"},
+        {"書きまする\t쓰옵니다\tend", "まする A옵니다 S5:0 polite @1.0"},
+        {"書きますのよ\t쓴답니다\tend", "ますのよ 4답니다 S5:0 polite @1.0"},
         {"書けば\t쓰면\tpat", "2면 S530 @1.0"},
         {"書いた\t씀\tend\tregister=하오", "B S560 register=5 @1.0"},
         {"高かった\t높았어\tend", "かった 5어 T500 @1.0"},
@@ -297,6 +300,7 @@ HD_TEST(userdict_endings) {
         {"静かなら\t조용하면\tpat", "なら 2면 U500 @1.0"},
         {"学生だにゃ\t학생이다냥\tend", "だにゃ (이)다냥 P200 @1.0"},
         {"学生でござる\t학생이오\tend", "でござる 이오 P200 @1.0"},
+        {"学生でしてよ\t학생이랍니다\tend", "でしてよ (이)랍니다 P200 polite @1.0"},
         {"学生は\t학생은 좋아\tpat", "は (은)는 좋아 P200 @1.0"},
         {"分かる\t알다\tv5\tneg=모르다", "分か &K6@ M428 neg=&LS@ @1.0"},
     };
@@ -305,6 +309,17 @@ HD_TEST(userdict_endings) {
         Run(p, c.in);
         HD_CHECK_EQ(Errors(p.out.errors), std::string());
         HD_CHECK_EQ(ShowEndings(p.out.entries), std::string(c.want));
+    }
+}
+
+// A builtin row that does not compile makes every dictionary load fail.
+HD_TEST(userdict_builtin_tables_compile) {
+    for (const char* name : {"endings.tsv", "patterns.tsv", "phrases.tsv", "sound.tsv"}) {
+        for (const std::string& text : {dict::BuiltinText(name), dict::ExtraBuiltinText(name)}) {
+            Parsed p;
+            Run(p, text);
+            HD_CHECK_EQ(Errors(p.out.errors), std::string());
+        }
     }
 }
 

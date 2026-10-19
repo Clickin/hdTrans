@@ -1,10 +1,10 @@
 #pragma once
-// The builtin dictionary folder, compiled into the library and loaded ahead of the
-// dictionary folders (see Load): the end rows, register table and sentence-final
-// particles (endings.tsv), and for the text path its phrases (phrases.tsv), grammar
-// patterns (patterns.tsv), sense table (senses.tsv), whole-line rows (lines.tsv) and
-// sound lexicon (sound.tsv). All but senses.tsv and lines.tsv are in the plain
-// dictionary format.
+// The builtin dictionary folder, compiled into the library from src/core/dict/builtin/ and
+// loaded ahead of the dictionary folders (see Load): the end rows, register table and
+// sentence-final particles (endings.tsv), and for the text path its phrases (phrases.tsv),
+// grammar patterns (patterns.tsv), sense table (senses.tsv), whole-line rows (lines.tsv) and
+// sound lexicon (sound.tsv). All but senses.tsv and lines.tsv are in the plain dictionary
+// format. The extra/ tables are loaded only where Load asks for them.
 #include <span>
 #include <string>
 #include <string_view>

@@ -35,13 +35,14 @@ std::string VerbForm(std::string_view kr, char& code, std::string& text) {
             case U'썼': return form('5', rest);
             case U'써': return form('6', rest);
             case U'쓸': return form('3', rest);
-            case U'쓴': return form(next == U"다" ? '4' : '8', rest);
+            case U'쓴': return form(next == U"다" || next == U"답" || next == U"단" ? '4' : '8', rest);
             case U'씁': return form(next == U"시" ? '9' : '7', rest);
             case U'씀': return form('B', rest);
             case U'쓰':
                 if (next == U"는") return form('0', Utf8(std::u32string_view(r).substr(2)));
                 if (next == U"면" || next == U"러" || next == U"려") return form('2', rest);
-                if (next == U"니" || next == U"며" || next == U"오" || next == U"세" || next == U"시" || next == U"십") {
+                if (next == U"니" || next == U"며" || next == U"오" || next == U"옵" || next == U"세" || next == U"시" ||
+                    next == U"십") {
                     return form('A', rest);
                 }
                 return form('1', rest);
@@ -71,11 +72,11 @@ std::string FormByPrefix(std::string_view kr, std::string_view model, std::initi
 // The particles after a noun that alternate with the noun's final consonant:
 // "이었" -> "(이었)였", and "이" + X -> "(이)" + X.
 constexpr std::pair<std::string_view, std::string_view> kJosaForms[] = {
-    {"이었", "(이었)였"}, {"이에", "(이에)예"}, {"이어", "(이어)여"}, {"이다", "(이)다"},   {"이라", "(이)라"},
-    {"이래", "(이)래"},   {"이예", "(이)예"},   {"이군", "(이)군"},   {"이구", "(이)구"},   {"이지", "(이)지"},
-    {"이면", "(이)면"},   {"이니", "(이)니"},   {"이겠", "(이)겠"},   {"이야", "(이)야"},   {"이든", "(이)든"},
-    {"이란", "(이)란"},   {"이나", "(이)나"},   {"이고", "(이)고"},   {"이 ", "(이)가 "},   {"을 ", "(을)를 "},
-    {"은 ", "(은)는 "},   {"으로", "(으)로"},
+    {"이었", "(이었)였"}, {"이에", "(이에)예"}, {"이어", "(이어)여"}, {"이다", "(이)다"}, {"이라", "(이)라"},
+    {"이랍", "(이)랍"}, {"이래", "(이)래"}, {"이예", "(이)예"}, {"이군", "(이)군"}, {"이구", "(이)구"},
+    {"이지", "(이)지"}, {"이면", "(이)면"}, {"이니", "(이)니"}, {"이겠", "(이)겠"}, {"이야", "(이)야"},
+    {"이든", "(이)든"}, {"이란", "(이)란"}, {"이나", "(이)나"}, {"이고", "(이)고"}, {"이 ", "(이)가 "},
+    {"을 ", "(을)를 "}, {"은 ", "(은)는 "}, {"으로", "(으)로"},
 };
 
 // The Korean after the noun model with its alternating particle.

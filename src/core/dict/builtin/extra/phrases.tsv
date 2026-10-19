@@ -1,0 +1,97 @@
+いいなあ	좋겠다	intj
+駄目で元々	밑져야 본전	phrase
+ダメで元々	밑져야 본전	phrase
+だめで元々	밑져야 본전	phrase
+どうしたもこうしたもない	이러고 저러고 할 것도 없다	phrase
+説明がつく	설명이 되다	v
+// Speech styles: pronouns, set phrases, archaic negatives (〜ませぬ, ござらん), the question words
+// before じゃ and doubled polite endings (〜ですぅ, 〜ますです).
+わらわ	이 몸	n	attr=VHn
+余は	짐은	phrase
+余が	짐이	phrase
+余に	짐에게	phrase
+余を	짐을	phrase
+余も	짐도	phrase
+どこじゃ	어디냐	intj
+なんじゃ	뭐냐	intj
+だれじゃ	누구냐	intj
+どうじゃ	어떠냐	intj
+なぜじゃ	어째서냐	intj
+いつじゃ	언제냐	intj
+ことであろう	것이리라	phrase
+思うておる	생각하고 있다	v5
+言うておる	말하고 있다	v5
+何故ですの	어째서죠	phrase
+なぜですの	어째서죠	intj
+よろしくってよ	좋아요	intj
+すごいっす	대단해요	intj
+すごいっすね	대단하네요	intj
+ありがとうっす	고마워요	intj
+了解っす	알겠어요	phrase
+お疲れっす	수고하셨어요	phrase
+おはようっす	안녕하세요	intj
+すいませんっす	죄송해요	intj
+そうっす	그래요	intj
+そうっすね	그렇네요	intj
+そうっすか	그래요	intj
+ごめんなさいですぅ	미안해요	intj
+どうなのかしら	어떨까	phrase
+どうかしら	어떨까	phrase
+ものなのかしら	것일까	phrase
+つもりなのかしら	생각일까	phrase
+つもりなのかしらね	생각일까	phrase
+某は	소인은	phrase
+某が	소인이	phrase
+某に	소인에게	phrase
+某も	소인도	phrase
+某の	소인의	phrase
+承知つかまつりました	분부 받들겠사옵니다	phrase
+承知つかまつった	알겠소	phrase
+面を上げよ	고개를 들라	phrase
+面を上げい	고개를 들라	phrase
+行ってくるッス	다녀올게요	phrase
+行ってくるっす	다녀올게요	phrase
+お手伝いしますわ	도와 드릴게요	phrase
+失礼いたしますわ	실례하겠어요	phrase
+失礼致しますわ	실례하겠어요	phrase
+失礼しますわ	실례하겠어요	phrase
+失礼いたしますわね	실례하겠어요	phrase
+失礼致しますわね	실례하겠어요	phrase
+失礼しますわね	실례하겠어요	phrase
+ありませぬ	없사옵니다	phrase
+ございませぬ	없사옵니다	phrase
+ございませぬか	없사옵니까	phrase
+そうではありませぬ	그렇지 않사옵니다	phrase
+分かりませぬ	모르옵니다	phrase
+わかりませぬ	모르옵니다	phrase
+知りませぬ	모르옵니다	phrase
+存じませぬ	모르옵니다	phrase
+なりませぬ	아니 되옵니다	phrase
+なりませぬか	아니 되옵니까	phrase
+できませぬ	할 수 없사옵니다	phrase
+出来ませぬ	할 수 없사옵니다	phrase
+有り得ませぬ	있을 수 없사옵니다	phrase
+ありえませぬ	있을 수 없사옵니다	phrase
+ござらん	없소	phrase
+ござらぬ	없소	phrase
+ござらんか	없소	phrase
+ござらぬか	없소	phrase
+お言葉にございます	말씀이옵니다	phrase
+以上にございます	이상이옵니다	phrase
+こんにちはです	안녕하세요	intj
+おはようございますです	좋은 아침입니다요	phrase
+いただきますです	잘 먹겠습니다요	intj
+おめでとうです	축하해요	intj
+明けましておめでとうです	새해 복 많이 받으세요	phrase
+よろしくです	잘 부탁해요	phrase
+ただいまです	다녀왔어요	phrase
+ごめんなさいです	미안해요	intj
+お疲れさまっす	수고하셨어요	phrase
+行ってきますね	다녀올게요	phrase
+お待たせしましたです	기다리게 해서 죄송합니다요	phrase
+どうぞよろしくです	잘 부탁해요	phrase
+仕方ありませんです	어쩔 수 없습니다요	phrase
+仕方ありませんですよ	어쩔 수 없습니다요	phrase
+ありませんです	없습니다요	phrase
+ありませんですよ	없습니다요	phrase
+お疲れさまです	수고하셨습니다	phrase
