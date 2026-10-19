@@ -493,7 +493,7 @@ L3210	買います品物が決まりました。	사는 물건이 정해졌습�
 L3210	私が行きます時間は夕方です。	내가 가는 시간은 저녁입니다.	current	local-ending
 L3211	この部屋は静かで広い。	이 방은 조용하고 넓다.	current	local-ending
 L3211	彼は親切で優しい人だ。	그는 친절하고 상냥한 사람이다.	current	local-ending
-L3215	食べてないと困る。	먹지 않으면 곤란하다.	current	local-ending
+L3215	食べてないと困る。	먹지 않았다고 곤란하다.	current	local-ending
 L3230	彼は悪いとされている。	그는 나쁘다고 여겨지고 있다.	current	local-ending
 L3244	会議で新しい案が提案された。	회의에서 새로운 안이 제안되었다.	current	local
 L3244	この道具は父に愛用されている。	이 도구는 아버지에게 애용되고 있다.	current	local
