@@ -95,6 +95,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 いっかくじゅう座	외뿔소자리	N110			GN				いっかくじゅうざ	w:92
 いっその事	숫제	E300			GN				いっそのこと	w:93
 いったい全体	도대체	E300			GN				いったいぜんたい	w:94
+いつのまにかに	어느새	E311			GN				いつのまにかに	w:26635
 いつまで経っても	아무리 시간이 지나도	A9D0			GN		llm		いつまでたっても	w:95
 いつもの様に	여느때처럼	E300			GN				いつものように	w:96
 いつも通り	평소처럼	N110			GN		llm		いつもどおり	w:97
@@ -709,6 +710,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 その割に	그런 것치고는	A9D0			GN		llm			w:705
 その名のとおり	이름 그대로	E300			GN		llm		そのなのとおり	w:706
 その向こう	그 너머	I110			GN		xxx llm	1		w:707
+その向こう側	그 너머	I110			GN				そのむこうがわ	w:26639
 その日その日	그날그날	A9D0			GN				そのひそのひ	w:708
 その辺	그 근처	N110			GN		xxx llm	1		w:709
 その辺り	그 근처	A9D0	VPl		GN		xxx llm		そのあたり	w:710
@@ -1168,6 +1170,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 まっ赤	빨강	N110			GN				まっか	w:1163
 まつ毛	속눈썹	N110			GN				まつげ	w:1164
 まともに	제대로	E300			GN		xxx llm	1		w:1165
+まとわりつ	달라&HC@	M421			GN				まとわりつく	w:26627
 まま親	계친	N110			GN				ままおや	w:1166
 まるっきり	통	E300			GN				まるっきり	w:1167
 まる一日	하루 종일	N110	UMe	Tm	GN		llm		まるいちにち	w:1168
@@ -11490,6 +11493,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 二度寝	다시 &AK@	M429			GN		llm		にどね	w:11485
 二形	후타나리	N110			GN				ふたなり	w:11486
 二指樹懶	린네두발가락나무늘보	N110			GN				ふたゆびなまけもの	w:11487
+二日目	이틀째	N110			GN				ふつかめ	w:26638
 二日間	이틀	N110			GN				ふつかかん	w:11488
 二期作	이기작	I110			GN		xxx	1	にきさく	w:11489
 二本	두 개	N110			GN		xxx llm	1		w:11490
@@ -13999,6 +14003,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 嘴黒鶲	사막딱새	N110			GN				はしぐろひたき	w:13991
 噂話	소문	N110			GN		xxx llm			w:13992
 噂話	뒷소문	N110			GN				うわさばなし	w:13993
+噂通り	소문대로	E300			GN				うわさどおり	w:26634
 噎せ	사레들&AA@	M427			GN		llm		むせる	w:13994
 噛みしめ	깨&L5@	M427			GN				かみしめる	w:13995
 噛みつ	&L5@	M421			GN		xxx llm	1		w:13996
@@ -15395,6 +15400,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 尖	뾰족해&AL@	M428			GN		xxx llm	1		w:15385
 尖度	첨도	N110			GN				せんど	w:15386
 尖閣土竜	센카쿠두더지	N110			GN				せんかくもぐら	w:15387
+尚も	더욱	E300			GN				なおも	w:26630
 尚且つ	더욱이	E300			GN		xxx		なおかつ	w:15388
 尚且つ	또한	E300			GN				なおかつ	w:15389
 尚更	더욱더	E300			GN		xxx llm			w:15390
@@ -18273,6 +18279,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 案内書	안내서	N110	VSw		GN		llm		あんないしょ	w:18262
 案内板	안내판	N110			GN				あんないばん	w:18263
 案内状	안내장	N110			GN				あんないじょう	w:18264
+桐箱	오동나무 상자	N110			GN				きりばこ	w:26631
 桐花大綬章	동화대수장	N110			GN				とうかだいじゅしょう	w:18265
 桐花章	동화장	N110			GN				とうかしょう	w:18266
 桑畠	뽕나무밭	N110			GN				くわばたけ	w:18267
@@ -18493,6 +18500,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 橙色	주황	N110			GN				だいだいいろ	w:18482
 機内誌	기내지	N110			GN				きないし	w:18483
 機内食	기내식	N110			GN				きないしょく	w:18484
+機密保持	기밀 유지	N110			GN				きみつほじ	w:26633
 機密保護	보안	N110	UTt		GN		llm		きみつほご	w:18485
 機密文書	기밀문서	N110			GN				きみつぶんしょ	w:18486
 機序	기전	N110			GN		xxx llm	1		w:18487
@@ -20836,6 +20844,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 石蚕	날도래목	N110			GN		xxx		とびけら	w:20824
 石蚕	날도래 유충	N110	VAm		GN		llm		いさごむし	w:20825
 石貝	말조개	N110			GN				いしがい	w:20826
+石鹸水	비눗물	N110			GN				せっけんすい	w:26632
 石鹸草	비누풀	N110			GN				サボンそう	w:20827
 石鼈	딱지조개	N110			GN				ひざらがい	w:20828
 砂の城	모래성	N110			GN				すなのしろ	w:20829
@@ -21881,6 +21890,8 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 纏ま	모&AJ@	M428			GN		xxx		まとまる	w:21869
 纏ま	정리&C6@	M428			GN		llm		まとまる	w:21870
 纏わせ	두르게 &AV@	M427			GN		llm			w:21871
+纏わりつ	달라&HC@	M421			GN				まとわりつく	w:26629
+纏わり付	달라&HC@	M421			GN				まとわりつく	w:26628
 纏足	전족	N110		Hd	GN				てんそく	w:21872
 纏足	전족&AV@	M429			GN				てんそく	w:21873
 纒足	전족	N110		Hd	GN				てんそく	w:21874
@@ -25838,6 +25849,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 駒繋ぎ	낭아초	N110			GN				こまつなぎ	w:25826
 駒鶇	미국지빠귀	N110			GN				こまつぐみ	w:25827
 騎馬像	기마상	N110			GN				きばぞう	w:25828
+騒めき	웅성거림	N110			GN				ざわめき	w:26637
 騒然	술렁임	N110			GN		xxx llm	1		w:25829
 験の証拠	이질풀	N110			GN				げんのしょうこ	w:25830
 騙	사칭&AV@	M428			GN		xxx llm	1		w:25831
