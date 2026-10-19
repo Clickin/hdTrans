@@ -7,6 +7,7 @@
 
 #include "core/pipeline/restore.h"
 #include "core/pipeline/runes.h"
+#include "core/text/kana.h"
 #include "core/text/unicode.h"
 #include "core/text/utf8.h"
 #include "core/word/conjugation.h"
@@ -268,6 +269,7 @@ private:
     size_t WordLen(size_t p) const;
     size_t Adverbial(size_t i) const;
     size_t Stutter(size_t p, std::vector<std::u32string_view>& seps) const;
+    size_t Burst(size_t p) const;
 
     std::string_view text_;
     const LineContext& ctx_;
@@ -588,6 +590,44 @@ size_t SoundText::Stutter(size_t p, std::vector<std::u32string_view>& seps) cons
     return 0;
 }
 
+// The end of the burst at character p, or 0: a syllable, then ハ ヒ フ ヘ or ホ, with ッ
+// after either or both (かはっ, だっは, かッハ, げはッ; hiragana, or hiragana and
+// katakana), that starts an utterance or follows 、 or an ellipsis and ends before a
+// pause, an ellipsis, a dash, ～ or a space, when no dictionary key of two or more
+// characters other than an ending or the key of a sound row that is no lead row reaches
+// into the second syllable (では, とは).
+size_t SoundText::Burst(size_t p) const {
+    const std::u32string_view rs = rs_, f = f_;
+    if (!(IsHiraganaRune(rs[p]) || IsKatakanaRune(rs[p])) || In(f[p], U"ッンーァィゥェォャュョヮ")) return 0;
+    if (!UtteranceStart(p) && !In(rs[p - 1], U"、…‥")) return 0;
+    size_t i = p + 1;
+    if (i < f.size() && In(f[i], U"ャュョ")) i++;
+    const bool tsuBefore = i < f.size() && f[i] == U'ッ';
+    if (tsuBefore) i++;
+    if (i >= f.size() || !In(f[i], U"ハヒフヘホ")) return 0;
+    const size_t second = i++;
+    const bool tsuAfter = i < f.size() && f[i] == U'ッ';
+    if (tsuAfter) i++;
+    if (!tsuBefore && !tsuAfter) return 0;
+    if (i < rs.size() && !PauseAt(i) && !In(rs[i], U"…‥―～ 　")) return 0;
+    bool hiragana = false;
+    for (size_t k = p; k < i; k++) hiragana = hiragana || IsHiraganaRune(rs[k]);
+    if (!hiragana) return 0;
+    for (size_t k = p; k <= second; k++) {
+        const dict::Candidates rd = snap_.GetWordInfo(Bytes(k, i), dict::LookupMode::General, ctx_.lookup);
+        for (const dict::Candidate& c : rd.list) {
+            const size_t n = text::RuneCount(c.source);
+            if (n < 2 || k + n <= second || c.codes == nullptr || c.codes->part.TagIn("SU")) continue;
+            const std::u32string key = ToKatakana(DecodeText(c.source));
+            const auto rows = SoundRows(key[0], ctx_.extraBuiltin);
+            if (std::none_of(rows.begin(), rows.end(), [&](const SoundRow& r) { return r.key == key && !r.phrase && !r.lead; })) {
+                return 0;
+            }
+        }
+    }
+    return i;
+}
+
 std::string SoundText::Write() {
     const std::u32string_view rs = rs_;
     std::string b;
@@ -625,6 +665,9 @@ std::string SoundText::Write() {
                 }
             }
             if (Spaced(next)) b += ' ';
+        } else if (const size_t burst = Burst(i); burst > 0) {
+            b += text::FromKana(EncodeText(std::u32string_view(f_).substr(i, burst - i)), text::Preset::Fan);
+            next = burst;
         } else {
             if (IsKatakanaRune(rs[i])) {
                 next = KatakanaEnd(rs, i);
@@ -642,8 +685,44 @@ std::string SoundText::Write() {
 
 }  // namespace
 
+namespace {
+
+// The syllable a key repeats at its end, as kana: X or a small tsu with X (ハハ, ッハッハ,
+// クッ+クッ), when the Korean also ends in a doubled syllable (아하하, 킥킥); empty otherwise
+// and for a vowel, which lengthens instead (ぐおお).
+std::u32string_view RepeatedUnit(const SoundRow& row) {
+    const std::u32string_view key = row.key;
+    const std::u32string ko = DecodeText(row.korean);
+    if (ko.size() < 2 || ko[ko.size() - 1] != ko[ko.size() - 2]) return {};
+    for (size_t n = 1; n <= 2 && 2 * n <= key.size(); n++) {
+        const std::u32string_view unit = key.substr(key.size() - n);
+        if (key.substr(key.size() - 2 * n, n) != unit) continue;
+        size_t syllables = 0;
+        for (const char32_t r : unit) {
+            if (r == U'ッ') continue;
+            if (In(r, U"ンーァィゥェォャュョ") || PlainVowel(r) != 0) return {};
+            syllables++;
+        }
+        if (syllables == 1) return unit;
+    }
+    return {};
+}
+
+// The characters after f[i:] that repeat unit, one 'r' unit for each.
+size_t Repeats(std::u32string_view unit, std::u32string_view f, size_t i, std::string& units) {
+    size_t n = 0;
+    while (!unit.empty() && f.substr(i + n).starts_with(unit)) {
+        n += unit.size();
+        units += 'r';
+    }
+    return n;
+}
+
+}  // namespace
+
 bool MatchSound(const SoundRow& row, std::u32string_view f, size_t p, size_t& end, std::string& units) {
     units.clear();
+    const std::u32string_view unit = RepeatedUnit(row);
     std::u32string_view stem = row.key;
     char32_t tail = 0;
     if (const size_t n = row.key.size(); n >= 2 && (row.key[n - 1] == U'ン' || row.key[n - 1] == U'ッ')) {
@@ -660,6 +739,7 @@ bool MatchSound(const SoundRow& row, std::u32string_view f, size_t p, size_t& en
     char32_t last = stem.back();
     if (last == U'ー' && stem.size() > 1) last = stem[stem.size() - 2];
     size_t i = p + stem.size();
+    if (tail == 0) i += Repeats(unit, f, i, units);
     for (; i < f.size() && Lengthens(f[i], last); i++) {
         if (f[i] != U'～') {
             units += 'v';
@@ -669,16 +749,19 @@ bool MatchSound(const SoundRow& row, std::u32string_view f, size_t p, size_t& en
     }
     if (tail != 0) {
         if (i >= f.size() || f[i] != tail) return false;
-        for (i++; i < f.size() && (f[i] == U'ー' || f[i] == U'～' || f[i] == U'ッ' || f[i] == tail); i++) {
+        i++;
+        i += Repeats(unit, f, i, units);
+        for (; i < f.size() && (f[i] == U'ー' || f[i] == U'～' || f[i] == U'ッ' || f[i] == tail); i++) {
         }
         end = i;
         return true;
     }
     size_t j = i;
     while (j < f.size() && f[j] == U'ッ') j++;
-    if (j > i && (j == f.size() || !IsKana(f[j]) || f[j] == U'ト' || f[j] == U'テ')) {
+    if (j > i && (j == f.size() || !IsKana(f[j]) || In(f[j], U"トテ～ー"))) {
         units += '!';
-        i = j;
+        for (i = j; i < f.size() && In(f[i], U"～ー"); i++) {
+        }
     }
     end = i;
     return true;
@@ -687,6 +770,15 @@ bool MatchSound(const SoundRow& row, std::u32string_view f, size_t p, size_t& en
 std::string Lengthen(std::string_view korean, std::string_view units) {
     std::u32string rs = DecodeText(korean);
     if (rs.empty() || units.empty()) return std::string(korean);
+    if (units[0] == 'r') {
+        const size_t n = std::min(units.find_first_not_of('r'), units.size());
+        rs.append(n, rs.back());
+        std::string rest(units.substr(n));
+        if (std::erase(rest, '!') > 0 && rs.back() >= 0xAC00 && rs.back() <= 0xD7A3 && (rs.back() - 0xAC00) % 28 == 0) {
+            rs.back() += static_cast<char32_t>(19);  // ㅅ
+        }
+        return Lengthen(EncodeText(rs), rest);
+    }
     const char32_t last = rs.back();
     if (last < 0xAC00 || last > 0xD7A3) return std::string(korean);
     const int s = static_cast<int>(last - 0xAC00);
