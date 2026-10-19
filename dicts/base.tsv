@@ -121959,7 +121959,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 住戸	세대	N110			GN		jisjk:236910		
 住所	주소	N110	VSwVPl		GN		jisjk:34066		
 住所まで	주소로	E300			GN		jisjk:340161		
-住所不定	주소 부정	N110			GN		jisjk:194361		
+住所不定	주거 부정	N110			GN		jisjk:194361		
 住所地	주소지	N110			GN		jisjk:160343		
 住所大山	스민죠오야마	I130	QCTVPl		GN		jisjk:303690		
 住所宛	주소앞	N110	VBl		GN		jisjk:194349		
@@ -185731,7 +185731,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 小天地	소천지	N110	VPl		GN		jisjk:191092		
 小天橋	쇼텐쿄	I110	QCT		GN		jisjk:75115		
 小天温泉	오아마온센	I110	QCT		GN		jisjk:75116		
-小太り	약간 뚱뚱%A1@	G8U0			GN		jisjk:121476		
+小太り	통통%A1@	G8U0			GN		jisjk:121476		
 小太刀	작은 칼	I110	VPeVCkVTw		GN		jisjk:75152		
 小太刀	코다치	N130	QPN	Wa	GN		jisjk:75153		
 小太刀	코타치	N130	QPN	Wa	GN		jisjk:346429		
@@ -276815,7 +276815,6 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 男	남자	N110	XXXVQmVHn		GN	1101	jisjk:116023		
 男	남	N110		Z7	GN		jisjk:116896		
 男	남	N110		On	GN		jisjk:259046		
-男が立	남자로서의 체면이 &AD@	M424	UYi		GN		jisjk:117205		
 男たち	남자들	N110	VHn		GN		jisjk:160000		
 男だて	협객	I110	VHnQAB		GN		jisjk:64122		
 男っぷり	남자의 용모	N110	VBp		GN		jisjk:165675		
