@@ -9,6 +9,7 @@
 | `unit` | 단위 테스트 `hdtrans_tests` |
 | `tools.selfbase` | `tools/snapshot.sh`와 `compare.sh`를 작은 사전으로 두 번 실행해 결과가 같은지 확인 (Unix) |
 | `examples` | `examples/` 번역 확인. `HDTRANS_DICTS`가 없으면 건너뜀 |
+| `rules.cases` | `tests/rules/cases.tsv`의 규칙 사례를 `dicts/`로 번역해 확인 ([아래](#규칙-사례-testsrulescasestsv)) |
 | `host.admin_priority` | C API에서 초기화·다시 읽기·종료가 대기 중인 번역보다 먼저 처리되는지 확인 |
 | `host.j2k` | `J2KEngine.dll`과 `hdTransEngine.dll`의 초기화·종료와 동시 번역 확인 (Windows) |
 
@@ -36,6 +37,24 @@ build/mac/hdtrans_tests userdict   # 이름에 userdict가 들어간 테스트�
 | `HDTRANS_REQUIRE_ALL=1` | 건너뛴 테스트가 하나라도 있으면 실패 |
 | `HDTRANS_TEST_EXCLUDE=a,b` | 쉼표로 구분한 이름의 테스트를 건너뜀 |
 | `HDTRANS_CACHE_DIR` | 테스트가 쓸 캐시 폴더 (절대 경로) |
+
+## 규칙 사례 (tests/rules/cases.tsv)
+
+규칙 프로그램(`src/core/rules/rules.txt`)의 단어 선택을 고정하는 표입니다. 열은 `rule input expected kind`이고
+입력 한 줄을 한 세션으로 번역합니다(`-each -why`).
+
+- `rule`: 사례가 겨냥하는 규칙(`L1276`, `G32`)
+- `input`: 직접 쓴 짧은 일본어 문장
+- `expected`: 번역 전체, 또는 `rule:L1276=<번역>`(그 줄의 어떤 단어를 지역 규칙 1276이 그 번역으로 골랐음, `-why` 기준)
+- `kind`: `fix`(고친 규칙이 이제 맞게 고르는 문장), `keep`(고치기 전 선택이 맞아서 그대로 남아야 하는 문장),
+  `current`(지금 동작을 그대로 적어 둔 문장)
+
+```sh
+tools/rule-cases.sh build/mac/hdtrans dicts            # 다르면 규칙·입력·기대값·실제값을 보이고 실패
+tools/rule-cases.sh build/mac/hdtrans dicts --accept   # current 행의 번역 전체 기대값을 새 출력으로 바꿈
+```
+
+규칙을 고칠 때는 `fix` 행과 `keep` 행을 하나 이상씩 더하고, 커밋 전에 표 전체와 `examples/`를 돌립니다.
 
 ## 예제 문서 (examples/)
 

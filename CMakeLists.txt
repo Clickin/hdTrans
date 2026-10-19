@@ -122,6 +122,11 @@ if(NOT EMSCRIPTEN)
             "${HDTRANS_SH}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/examples.sh" $<TARGET_FILE:hdtrans_cli>)
         set_tests_properties(examples PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300
             ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/examples-cache")
+        # Pins the word choices of the rules program: tests/rules/cases.tsv with dicts/.
+        add_test(NAME rules.cases COMMAND "${HDTRANS_SH}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/rule-cases.sh"
+            $<TARGET_FILE:hdtrans_cli> "${CMAKE_CURRENT_SOURCE_DIR}/dicts")
+        set_tests_properties(rules.cases PROPERTIES TIMEOUT 300
+            ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/examples-cache")
     endif()
 
     add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp)

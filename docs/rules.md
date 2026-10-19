@@ -266,5 +266,6 @@ TSV로 씁니다. 지역 규칙은 `L 번호`, 전역 규칙은 `G 번호`와 �
    지역 규칙을 새로 쓰면 사전 행의 `rule` 열에 그 번호를 적습니다.
 2. 다시 빌드합니다. 빌드가 `rules_gen.cpp`를 새로 만듭니다.
 3. `ctest`(단위 테스트가 규칙을 불러 보고, `tests/unit/word/rule_edit_test.cpp`가 줄 하나를 고쳐 번역이
-   바뀌는지 봄), `tools/examples.sh`, `tools/e2e.sh`로 바뀐 번역을 확인합니다. 번역이 바뀌는 수정은
+   바뀌는지 봄, `rules.cases`가 `tests/rules/cases.tsv`의 사례를 확인함), `tools/examples.sh`, `tools/e2e.sh`로
+   바뀐 번역을 확인합니다. 고친 규칙마다 `fix`·`keep` 사례를 `tests/rules/cases.tsv`에 더합니다([testing.md](testing.md)). 번역이 바뀌는 수정은
    이유를 적은 따로의 커밋으로 둡니다.

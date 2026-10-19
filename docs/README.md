@@ -29,4 +29,4 @@
 | `tests/host/` | C API·J2K DLL을 불러 쓰는 호스트 테스트 |
 | `tests/e2e/` | 엔드투엔드 테스트가 쓰는 웹소설 챕터를 가리키는 한 줄짜리 스텁 |
 | `examples/` | 입력·출력 예제 문서 |
-| `tools/` | `snapshot.sh`, `compare.sh`, `explain.sh`(자체 기준선), `examples.sh`(예제), `fetch-syosetu.sh`, `e2e.sh`(엔드투엔드), `detect-bad.sh`(잘못된 출력 찾기), `build.ps1`(Windows 빌드), `wasm_smoke.mjs`(WebAssembly 확인) |
+| `tools/` | `snapshot.sh`, `compare.sh`, `explain.sh`(자체 기준선), `examples.sh`(예제), `rule-cases.sh`(규칙 사례), `fetch-syosetu.sh`, `e2e.sh`(엔드투엔드), `detect-bad.sh`(잘못된 출력 찾기), `build.ps1`(Windows 빌드), `wasm_smoke.mjs`(WebAssembly 확인) |
