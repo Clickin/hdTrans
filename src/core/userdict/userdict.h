@@ -5,8 +5,8 @@
 //
 //   JP <TAB> KR [<TAB> POS[:class] [<TAB> OPTIONS]]
 //
-// A line whose first non-blank characters are "//" is a comment, a field that starts
-// with "//" ends the line, and blank lines are ignored. POS defaults to n:
+// A line whose first non-blank characters are "//" or "#" is a comment, a field that
+// starts with "//" ends the line, and blank lines are ignored. POS defaults to n:
 //
 //   n               noun (N110)
 //   phrase          fixed expression (A9D0)
