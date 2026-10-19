@@ -332,12 +332,11 @@ bool RuleL34([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "1**"sv) && AttrEq(p, -1, "VHn"sv));
 }
 
-// # はっきり를 다음 단어의 코드에 따라 분명히로 고르려 한다. (미발동: impossible)
-// # [오류] P+1은 숫자로 시작하는 품사 코드인데 UTs·USe는 의미 코드여서 일치하지 않는다.
+// # はっきり는 뒤 단어가 사고·언어 또는 시각 의미 코드이면 분명히로 고른다.
 // local 35
-//     pos[+1] is UTs|USe
+//     sem[+1] has UTs|USe
 bool RuleL35([[maybe_unused]] Item* p) {
-    return PumsaEq(p, 1, "UTsUSe"sv);
+    return AttrEq(p, 1, "UTsUSe"sv);
 }
 
 // # 가나 표기·의성어·의태어·소리. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
@@ -4994,7 +4993,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL32, 0xea10be5a4020d4d7ull},
     {RuleL33, 0x44f9f9d9f01180aeull},
     {RuleL34, 0xe07b424218efef2dull},
-    {RuleL35, 0xbd93813e73af6417ull},
+    {RuleL35, 0x2585dad18f97f75aull},
     {RuleL36, 0x141ffbaf7c8b8ed5ull},
     {RuleL37, 0xb998f48905d463ddull},
     {RuleL38, 0x34c656eacfbd88a0ull},
