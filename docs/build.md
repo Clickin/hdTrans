@@ -119,14 +119,14 @@ cmake --build --preset wasm --parallel
 - **release.yml**: `build.yml`의 결과를 받아 Windows ZIP과 Linux, macOS tar.gz, `SHA256SUMS.txt`를
   만듭니다. Windows는 x86 `J2KEngine.dll`, x64 CLI, GUI, C API와 별도의 x86 CLI, C API를 담습니다.
   WASM은 기존 빌드 아티팩트로 제공하며 웹 번들 ZIP은 만들지 않습니다.
-- **e2e.yml**: 풀 리퀘스트와 `main` 푸시 때, 현재 커밋의 CLI로 비공개 테스트 데이터를 번역해 기대 출력과
+- **e2e.yml**: 풀 리퀘스트와 `main`, `develop` 푸시 때, 현재 커밋의 CLI로 비공개 테스트 데이터를 번역해 기대 출력과
   달라진 줄을 보고합니다. 자세한 내용은 [testing.md](testing.md#ci)에 있습니다.
 
 로컬 빌드에는 sccache와 ccache 모두 필요 없습니다.
 
 ## 릴리스
 
-릴리스할 커밋에서 태그를 푸시합니다.
+`main`에 `develop`을 병합한 뒤 릴리스할 커밋에서 태그를 푸시합니다.
 
 ```sh
 git tag v0.1.0 && git push github v0.1.0
@@ -134,7 +134,7 @@ git tag v0.1.0 && git push github v0.1.0
 
 전체 플랫폼 빌드와 테스트가 통과하면 패키지와 SHA-256 목록을 GitHub Release에 올립니다.
 릴리스 노트는 이전 태그 이후의 커밋 제목이며 머지 커밋을 먼저 나열합니다.
-`main` 푸시는 `nightly` 태그를 옮기고 같은 이름의 사전 릴리스 하나와 첨부 파일을 갱신합니다.
+`develop` 푸시는 `nightly` 태그를 옮기고 같은 이름의 사전 릴리스 하나와 첨부 파일을 갱신합니다.
 
 Actions의 **Build → Run workflow**에서 `dry_run=true`로 실행하면 패키지를 `release-packages`
 아티팩트로만 올립니다. 수동 실행이나 `ci/**` 브랜치에서는 태그와 릴리스를 공개하지 않습니다.
