@@ -1,9 +1,9 @@
-#include "hdTrans/output/markers.h"
+#include "core/output/markers.h"
 
 #include <string>
 
 #include "fnv.h"
-#include "hdTrans/output/families.h"
+#include "core/output/families.h"
 #include "hdtest.h"
 
 using namespace hdTrans::output;

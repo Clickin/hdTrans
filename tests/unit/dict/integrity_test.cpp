@@ -1,4 +1,4 @@
-#include "hdTrans/dict/integrity.h"
+#include "core/dict/integrity.h"
 
 #include <algorithm>
 #include <string>

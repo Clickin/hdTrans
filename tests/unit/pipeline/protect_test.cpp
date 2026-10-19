@@ -1,4 +1,4 @@
-#include "hdTrans/pipeline/protect.h"
+#include "core/pipeline/protect.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "hdTrans/dict/snapshot.h"
+#include "core/dict/snapshot.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

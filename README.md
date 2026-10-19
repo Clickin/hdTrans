@@ -26,8 +26,8 @@ WebAssembly: `emcmake cmake --preset wasm && cmake --build --preset wasm`.
 
 | path | contents |
 |---|---|
-| `include/hdTrans/` | public headers: `engine.h` (C++), `hdtrans.h` (C) |
-| `src/hdTrans/` | the library, one directory per pipeline stage |
+| `include/core/` | public headers: `engine.h` (C++), `hdtrans.h` (C) |
+| `src/core/` | the library, one directory per pipeline stage |
 | `src/cli/` | `hdtrans` command |
 | `src/cshared/` | `hdTransEngine.dll`: the C API |
 | `src/j2kengine/` | `J2KEngine.dll`: `J2K_*` exports |

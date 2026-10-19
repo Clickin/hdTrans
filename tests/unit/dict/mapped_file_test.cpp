@@ -1,4 +1,4 @@
-#include "hdTrans/dict/mapped_file.h"
+#include "core/dict/mapped_file.h"
 
 #include <chrono>
 #include <cstdio>

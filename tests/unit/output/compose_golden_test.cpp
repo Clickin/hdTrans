@@ -18,10 +18,10 @@
 #include <system_error>
 #include <vector>
 
-#include "hdTrans/output/compose.h"
-#include "hdTrans/output/korean.h"
-#include "hdTrans/output/text.h"
-#include "hdTrans/tokenizer/tokenize.h"
+#include "core/output/compose.h"
+#include "core/output/korean.h"
+#include "core/output/text.h"
+#include "core/tokenizer/tokenize.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "stage_records.h"

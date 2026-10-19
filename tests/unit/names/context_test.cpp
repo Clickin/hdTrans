@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/names/document.h"
+#include "core/dict/snapshot.h"
+#include "core/names/document.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

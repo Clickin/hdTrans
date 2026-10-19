@@ -1,5 +1,5 @@
-#include "hdTrans/dict/codes.h"
-#include "hdTrans/dict/dict.h"
+#include "core/dict/codes.h"
+#include "core/dict/dict.h"
 
 #include <iterator>
 #include <memory>

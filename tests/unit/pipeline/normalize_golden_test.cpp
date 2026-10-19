@@ -11,8 +11,8 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/pipeline/normalize.h"
-#include "hdTrans/pipeline/stage_text.h"
+#include "core/pipeline/normalize.h"
+#include "core/pipeline/stage_text.h"
 #include "hdtest.h"
 #include "golden.h"
 

@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "hdTrans/engine.h"
-#include "hdTrans/engine/driver.h"
-#include "hdTrans/word/select.h"
+#include "core/engine.h"
+#include "core/engine/driver.h"
+#include "core/word/select.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "tokenizer/stage_records.h"

@@ -9,10 +9,10 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/engine.h"
-#include "hdTrans/engine/driver.h"
-#include "hdTrans/word/document_senses.h"
-#include "hdTrans/word/item.h"
+#include "core/engine.h"
+#include "core/engine/driver.h"
+#include "core/word/document_senses.h"
+#include "core/word/item.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "tokenizer/stage_records.h"

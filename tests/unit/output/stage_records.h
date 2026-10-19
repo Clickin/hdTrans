@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/text/utf8.h"
+#include "core/text/utf8.h"
 #include "hdtest.h"
 
 namespace stagerecords {

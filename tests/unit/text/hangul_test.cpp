@@ -1,4 +1,4 @@
-#include "hdTrans/text/hangul.h"
+#include "core/text/hangul.h"
 
 #include "hdtest.h"
 

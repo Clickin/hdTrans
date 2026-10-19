@@ -14,14 +14,14 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/output/families.h"
-#include "hdTrans/rules/rules.h"
-#include "hdTrans/tokenizer/tokenize.h"
-#include "hdTrans/word/analyze.h"
-#include "hdTrans/word/flush.h"
-#include "hdTrans/word/util.h"
-#include "hdTrans/word/worker.h"
+#include "core/dict/snapshot.h"
+#include "core/output/families.h"
+#include "core/rules/rules.h"
+#include "core/tokenizer/tokenize.h"
+#include "core/word/analyze.h"
+#include "core/word/flush.h"
+#include "core/word/util.h"
+#include "core/word/worker.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "tokenizer/stage_records.h"

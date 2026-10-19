@@ -18,9 +18,9 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/engine/driver.h"
-#include "hdTrans/engine/glue.h"
+#include "core/dict/snapshot.h"
+#include "core/engine/driver.h"
+#include "core/engine/glue.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "output/stage_records.h"

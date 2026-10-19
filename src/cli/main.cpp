@@ -22,10 +22,10 @@
 #include <io.h>
 #endif
 
-#include "hdTrans/engine.h"
-#include "hdTrans/dict/snapshot_file.h"
-#include "hdTrans/engine/driver.h"
-#include "hdTrans/word/select.h"
+#include "core/engine.h"
+#include "core/dict/snapshot_file.h"
+#include "core/engine/driver.h"
+#include "core/word/select.h"
 
 namespace {
 

@@ -2,7 +2,7 @@
 #include <iterator>
 #include <string_view>
 
-#include "hdTrans/word/analyze.h"
+#include "core/word/analyze.h"
 #include "hdtest.h"
 
 HD_TEST(word_improvements_defaults_and_reference) {

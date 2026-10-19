@@ -1,10 +1,10 @@
-#include "hdTrans/userdict/userdict.h"
+#include "core/userdict/userdict.h"
 
 #include <string>
 #include <vector>
 
-#include "hdTrans/dict/builtin.h"
-#include "hdTrans/userdict/compile.h"
+#include "core/dict/builtin.h"
+#include "core/userdict/compile.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

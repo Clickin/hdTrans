@@ -1,4 +1,4 @@
-#include "hdTrans/dict/snapshot.h"
+#include "core/dict/snapshot.h"
 
 #include <cstdint>
 #include <initializer_list>

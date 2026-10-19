@@ -1,4 +1,4 @@
-#include "hdTrans/hdtrans.h"
+#include "core/hdtrans.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "hdTrans/engine.h"
+#include "core/engine.h"
 
 namespace {
 

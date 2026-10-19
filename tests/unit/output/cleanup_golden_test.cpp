@@ -10,7 +10,7 @@
 #include <system_error>
 #include <vector>
 
-#include "hdTrans/output/cleanup.h"
+#include "core/output/cleanup.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "stage_records.h"

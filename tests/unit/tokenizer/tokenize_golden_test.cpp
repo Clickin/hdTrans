@@ -9,8 +9,8 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/text/utf8.h"
-#include "hdTrans/tokenizer/tokenize.h"
+#include "core/text/utf8.h"
+#include "core/tokenizer/tokenize.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "stage_records.h"

@@ -1,4 +1,4 @@
-#include "hdTrans/tokenizer/canonical.h"
+#include "core/tokenizer/canonical.h"
 
 #include "fnv.h"
 #include "hdtest.h"

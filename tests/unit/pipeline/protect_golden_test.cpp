@@ -21,10 +21,10 @@
 #include <system_error>
 #include <vector>
 
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/pipeline/protect.h"
-#include "hdTrans/pipeline/segment.h"
-#include "hdTrans/text/utf8.h"
+#include "core/dict/snapshot.h"
+#include "core/pipeline/protect.h"
+#include "core/pipeline/segment.h"
+#include "core/text/utf8.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "output/stage_records.h"

@@ -1,4 +1,4 @@
-#include "hdTrans/dict/char_readings.h"
+#include "core/dict/char_readings.h"
 
 #include "hdtest.h"
 

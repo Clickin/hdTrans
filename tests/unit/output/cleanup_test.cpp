@@ -1,8 +1,8 @@
-#include "hdTrans/output/cleanup.h"
+#include "core/output/cleanup.h"
 
 #include <string>
 
-#include "hdTrans/output/particle.h"
+#include "core/output/particle.h"
 #include "hdtest.h"
 
 using namespace hdTrans::output;

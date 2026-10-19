@@ -9,7 +9,7 @@
 #include <thread>
 #include <vector>
 
-#include "hdTrans/engine.h"
+#include "core/engine.h"
 #include "hdtest.h"
 
 HD_TEST(engine_mixed_session_modes_with_reload) {

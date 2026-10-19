@@ -13,7 +13,7 @@
 #include <system_error>
 #include <vector>
 
-#include "hdTrans/pipeline/restore.h"
+#include "core/pipeline/restore.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "output/stage_records.h"

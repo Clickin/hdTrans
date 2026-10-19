@@ -1,6 +1,6 @@
 #include <string>
 
-#include "hdTrans/names/registry.h"
+#include "core/names/registry.h"
 #include "hdtest.h"
 
 HD_TEST(names_occurrence_guards_ignore_plain_endings) {

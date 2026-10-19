@@ -1,4 +1,4 @@
-#include "hdTrans/tokenizer/classify.h"
+#include "core/tokenizer/classify.h"
 
 #include "hdtest.h"
 

@@ -1,4 +1,4 @@
-#include "hdTrans/word/conjugation.h"
+#include "core/word/conjugation.h"
 
 #include <string>
 

@@ -1,4 +1,4 @@
-#include "hdTrans/pipeline/segment.h"
+#include "core/pipeline/segment.h"
 
 #include <string>
 #include <vector>

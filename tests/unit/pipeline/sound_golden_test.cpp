@@ -16,8 +16,8 @@
 #include <system_error>
 #include <vector>
 
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/pipeline/sound.h"
+#include "core/dict/snapshot.h"
+#include "core/pipeline/sound.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "output/stage_records.h"

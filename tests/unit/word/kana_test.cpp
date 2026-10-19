@@ -3,7 +3,7 @@
 #include <string>
 #include <string_view>
 
-#include "hdTrans/word/kana.h"
+#include "core/word/kana.h"
 #include "hdtest.h"
 #include "golden.h"
 

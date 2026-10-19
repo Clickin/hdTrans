@@ -8,7 +8,7 @@
 #include <string>
 #include <string_view>
 
-#include "hdTrans/rules/rules.h"
+#include "core/rules/rules.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "scripted_item.h"

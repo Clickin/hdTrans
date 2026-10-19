@@ -1,0 +1,36 @@
+#pragma once
+// Splitting a chunk of text into typed tokens.
+#include <span>
+#include <string_view>
+
+#include "core/tokenizer/token.h"
+
+namespace hdTrans::tokenizer {
+
+// Splits the pieces into tokens and prepares them (Prepare). Each protected span
+// becomes a token of its own, type 79 for a word span and 77 for the others, with the
+// span text as its text. Text after a NUL is ignored and trailing spaces are dropped.
+// No input gives no tokens; otherwise the last token is {kTypeEnd, ""}.
+// With dashes (text input), a － before other than Japanese text and a run of two or
+// more ― stay dashes after Japanese text instead of becoming ー (あんたが―― 네가――,
+// ロンド－( 론도－(, but シャ－カ－ン 샤칸), and a 」 that closes the line's utterance
+// is a token of its own.
+void TokenizeSpans(std::span<const Piece> pieces, bool dashes, Tokens& out);
+
+// TokenizeSpans of input as one text piece, without dashes.
+void Tokenize(std::string_view input, Tokens& out);
+
+// Visits every token in order as the per-token stage does: merges the control markers
+// that follow a type-24 token into it, then canonicalises the text of punctuation,
+// symbol, space and terminator types. Sets the merged and canonical views, clearedBy
+// and the markers.
+void Prepare(Tokens& tokens);
+
+// Whether visiting a token replaces its text by its canonical form.
+bool CanonicalType(int type);
+
+// The canonical form of a non-empty token text: the FirstForm of its first character,
+// or the concatenated canonical forms of its characters; trailing spaces dropped.
+void AppendCanonicalText(std::string& out, std::string_view s);
+
+}  // namespace hdTrans::tokenizer

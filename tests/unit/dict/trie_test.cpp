@@ -1,4 +1,4 @@
-#include "hdTrans/dict/trie.h"
+#include "core/dict/trie.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "hdTrans/dict/tsv.h"
+#include "core/dict/tsv.h"
 #include "hdtest.h"
 
 using hdTrans::dict::Trie;

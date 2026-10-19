@@ -1,8 +1,8 @@
-#include "hdTrans/userdict/sense.h"
+#include "core/userdict/sense.h"
 
 #include <string>
 
-#include "hdTrans/dict/builtin.h"
+#include "core/dict/builtin.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

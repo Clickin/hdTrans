@@ -13,10 +13,10 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/tokenizer/tokenize.h"
-#include "hdTrans/word/analyze.h"
-#include "hdTrans/word/worker.h"
+#include "core/dict/snapshot.h"
+#include "core/tokenizer/tokenize.h"
+#include "core/word/analyze.h"
+#include "core/word/worker.h"
 #include "hdtest.h"
 #include "golden.h"
 #include "word/analyze_records.h"
