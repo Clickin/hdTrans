@@ -128,7 +128,7 @@ cmake --build --preset wasm --parallel
 
 `develop`을 `main`에 병합하면 release-please가 여러 변경을 릴리스 PR 하나에 모읍니다.
 그 PR을 합칠 때만 버전, `CHANGELOG.md`, 태그와 GitHub Release를 만듭니다.
-`fix`는 patch, `feat`는 minor, `!`나 `BREAKING CHANGE:`는 major를 올립니다. 첫 버전은 `0.1.0`입니다.
+`fix`는 patch, `feat`는 minor, `!`나 `BREAKING CHANGE:`는 major를 올립니다. 첫 GitHub 릴리스 버전은 `0.1.1`입니다.
 커밋과 PR 제목, 병합 방법은 [contributing.md](contributing.md)에 있습니다.
 
 release-please가 태그를 만든 뒤 **Build**를 명시적으로 실행합니다. 전체 플랫폼 빌드와 테스트가 통과하면
