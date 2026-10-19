@@ -5,3 +5,14 @@ L4567	水を運んでもらった。	물을 옮겨 주었다.	keep	local
 L4567	姉に読んでもらった。	언니가 읽어 주었다.	keep	local
 L4567	彼には笑ってもらった。	그는 웃어 주었다.	keep	local
 L4567	庭に花を植えてもらった。	뜰에 꽃을 심어 주었다.	keep	local
+L2245	もっとも、雨なら休む。	다만, 비라면 쉰다.	fix	local
+L2245	もっとも大事な話だ。	무엇보다 소중한 이야기다.	keep	local
+L2245	もっとも急ぐ必要がある。	무엇보다 서두를 필요가 있다.	keep	local
+G230	階段を走り上がる。	계단을 달려 오른다.	fix	global-last
+G230	歌を歌い上げた。	노래를 불렀다.	keep	global-last
+L3395	夜は更ける。	밤은 깊어진다.	fix	local
+L3395	夜は続いた。	밤은 계속되었다.	fix	local
+L3395	夜は歩いた。	밤에는 걸었다.	keep	local
+L3395	夜走った。	밤에 달렸다.	keep	local
+L4990	選んだうちの一つだ。	선택한 것 중 하나다.	fix	local
+L4990	うちの犬は元気だ。	우리 개는 건강하다.	keep	local

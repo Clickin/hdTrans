@@ -4853,15 +4853,14 @@ bool RuleG220([[maybe_unused]] Item* p) {
            (SrcEq(p, 0, "あ"sv) && PumsaEq(p, -1, "8**"sv) && GobiSrcEq(p, -1, "で"sv) && DstSet(p, 0, ""sv) && GobiDstSetW(p, -1, 0));
 }
 
-// # 동사의 연용형 뒤에 오는 あが·上が·あげ·上げ를 생략하고 그 어미 번역을 앞 동사로 옮긴다.
-// # [의심] 상승 방향을 나타내는 上がる도 연용형 뒤라는 이유만으로 지운다. 자작문 階段を走り上がった。 → 계단을 달렸다.; -why: 上が GlobalRule 3, 번역 빈 문자열이며 앞 走의 어미도 GlobalRule 3이다. 달려 올라갔다의 상승 의미가 소실된다.
+// # 이동 의미가 아닌 동사의 연용형 뒤에서는 あが·上が·あげ·上げ를 생략하고 어미를 앞 동사로 옮긴다. 이동 동사 뒤에는 상승 방향을 남긴다.
 // global 3 stem pos 4 prio 230
-//     (src == "あが" or src == "上が" or src == "あげ" or src == "上げ") and pos[-1] is 4** and end.pos[-1] is 58*|5:0 and ko := "" and end.ko[-1] := end.ko
+//     (src == "あが" or src == "上が" or src == "あげ" or src == "上げ") and pos[-1] is 4** and end.pos[-1] is 58*|5:0 and sem[-1] lacks UMv and ko := "" and end.ko[-1] := end.ko
 bool RuleG230([[maybe_unused]] Item* p) {
     return ((SrcEq(p, 0, "あが"sv) ||
            SrcEq(p, 0, "上が"sv) ||
            SrcEq(p, 0, "あげ"sv) ||
-           SrcEq(p, 0, "上げ"sv)) && PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "58*5:0"sv) && DstSet(p, 0, ""sv) && GobiDstSetW(p, -1, 0));
+           SrcEq(p, 0, "上げ"sv)) && PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "58*5:0"sv) && AttrNe(p, -1, "UMv"sv) && DstSet(p, 0, ""sv) && GobiDstSetW(p, -1, 0));
 }
 
 // # 현재 동사가 い·お이고 앞동사에 Xj 문법 코드와 57* 어미가 있으면 현재 어간 번역을 지우고 그 어미 번역을 앞동사로 복사한다.
@@ -5488,7 +5487,7 @@ constexpr CompiledRule kGlobal[] = {
     {RuleG200, 0x6b080de836eac7c3ull},
     {RuleG210, 0xb3957b1b2f2f5f2bull},
     {RuleG220, 0x2608949cebf02116ull},
-    {RuleG230, 0xb221b6f0ebb96c51ull},
+    {RuleG230, 0xac898bb258de8875ull},
     {RuleG240, 0xa1900d31f3906c8bull},
     {RuleG250, 0x8266a0032983f64eull},
     {RuleG260, 0xec2ce21adb66f2fbull},

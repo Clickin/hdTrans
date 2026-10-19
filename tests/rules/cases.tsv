@@ -338,7 +338,7 @@ L2220	誰だって知っている。	누구라도 알고 있다.	current	local
 L2221	そんなことだって、やればできるさ。	그런 일도, 하면 할 수 있고 말이야.	current	local
 L2228	「ありがとう」って言った。	「고마워요」라고 말했다.	current	local
 L2228	「やった」って思ってるよ。	「해냈다」라고 생각하고 있어.	current	local
-L2245	もっとも、例外もある。	무엇보다, 예외도 있다.	current	local
+L2245	もっとも、例外もある。	다만, 예외도 있다.	current	local
 L2252	明日は雨が降るって噂です。	내일은 비가 온다 라는 소문입니다.	current	local-ending
 L2252	来月結婚するって話を聞きました。	내달 결혼한다 라는 이야기를 들었습니다.	current	local-ending
 L2252	行くって話です。	간다 라는 이야기입니다.	current	local-ending
@@ -535,7 +535,7 @@ L3390	すごい人が来たね。	대단한 사람이 왔네.	current	local
 L3390	すごい力で扉を開けた。	대단한 힘으로 문을 열었다.	current	local
 L3391	朝からずっと待っていたの？	아침부터 쭉 기다리고 있었어?	current	local-ending
 L3391	昨日の夜は何を食べていたの？	어제 밤은 무엇을 먹고 있었어?	current	local-ending
-L3395	夜は深まった。	밤에는 깊어졌다.	current	local
+L3395	夜は深まった。	밤은 깊어졌다.	current	local
 L3400	お送りしました資料をご確認ください。	보내 드렸던 자료를 확인해 주십시오.	current	local-ending
 L3400	私が先に着きましたとき、誰もいなかった。	내가 먼저 도착했던이라고 해 아무도 없었다.	current	local-ending
 L3403	子供の元へ帰る。	아이의 슬하로 돌아간다.	current	local
@@ -708,7 +708,7 @@ L4951	右へどうぞ進んでください。	오른쪽으로 오세요 진행�
 L4979	犯人は彼とのことです。	범인은 그와의 일입니다.	current	local
 L4988	汚れ防止の布です。	더러운 방지의 옷감입니다.	current	local
 L4988	汚れ対策を考える。	더러운 대책을 생각한다.	current	local
-L4990	残ったうちの半分を使う。	남은 우리 반을 사용한다.	current	local
+L4990	残ったうちの半分を使う。	남은 것 중 반을 사용한다.	current	local
 L4990	うちの猫だ。	우리 고양이다.	current	local
 L4993	ステンレス流しを買う。	스텐레스 흘려 보내기를 산다.	current	local
 L5015	星がついた。	별이 되었다.	current	local
@@ -734,7 +734,7 @@ G200	ねえ、なんか音がしない？	있잖아, 어쩐지 소리가 나지 
 G200	ええと、だから明日は行けません。	음, 그러니까 내일은 안 됩니다.	current	global-stem
 G210	駅で先生をお見かけしました。	역에서 선생님을 보았습니다.	current	global-last
 G210	社長にはあとでお伝えします。	사장에게는 나중에 전하겠습니다.	current	global-last
-G230	階段を走り上がった。	계단을 달렸다.	current	global-last
+G230	階段を走り上がった。	계단을 달려 올랐다.	current	global-last
 G240	みんなが同じことを言っています。	모두가 같은 것을 말합니다.	current	global-last
 G240	彼がいつも言っていることは正しい。	그가 언제나 말하는 것은 올바르다.	current	global-last
 G250	毎晩お酒飲んで寝る。	매일 밤 술 마시고 잔다.	current	global-stem
