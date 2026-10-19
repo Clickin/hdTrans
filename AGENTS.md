@@ -4,13 +4,17 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
 (J2K_* exports for hosts that load that DLL), WebAssembly. No dependencies.
 
 ## Build and test
-- CMake presets (CMakePresets.json): `mac` / `linux` build the static/shared libraries,
-  CLI and tests with clang or gcc; `windows-x86` / `windows-x64` build them and
-  J2KEngine.dll with Visual Studio 2026. `tools/build.ps1` selects the installed
-  Visual Studio version (2022 or 2026). Windows Release binaries are under `build/<preset>/Release`.
-  `wasm` is run as `emcmake cmake --preset wasm`.
-- `cmake --preset mac && cmake --build --preset mac && ctest --preset mac` is the
-  development loop; substitute any native platform's preset for `mac`.
+- CMake presets (CMakePresets.json): `mac` / `linux` use Ninja with clang or gcc;
+  `windows-x86` / `windows-x64` use Visual Studio 2026 without a Developer prompt
+  (CMake 4.2+). `windows-x86-ninja` / `windows-x64-ninja` need Ninja and a matching
+  MSVC Developer prompt or `vcvarsall` environment. All native presets build the
+  static/shared libraries, CLI and tests; J2KEngine.dll is Windows-only.
+  `tools/build.ps1` selects installed Visual Studio 2022 or 2026. Visual Studio
+  Release binaries are under `build/<preset>/Release`; Ninja binaries are directly
+  under `build/<preset>`. `wasm` needs Emscripten and Ninja: `emcmake cmake --preset wasm`.
+- `cmake --preset mac && cmake --build --preset mac --parallel && ctest --preset mac`
+  is the development loop; substitute any native platform's preset for `mac`.
+- CI uses Ninja and sccache; sccache is optional and not required by local presets.
 - Unit tests use small local fixtures, not external expectation sets or dictionary totals.
 - `tools/snapshot.sh` records built-CLI outputs; `tools/compare.sh` reports baseline changes.
   A translation behaviour change needs its own commit with the reason.

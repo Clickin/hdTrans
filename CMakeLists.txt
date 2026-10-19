@@ -17,6 +17,10 @@ if(MSVC)
     # Replace CMake's defaults so the command line holds only what we ask for.
     set(CMAKE_CXX_FLAGS "/EHs-c- /GR- /utf-8 /permissive- /W4 /WX /Zc:inline /diagnostics:column")
     set(CMAKE_C_FLAGS "/utf-8 /W4 /WX /diagnostics:column")
+    if(CMAKE_GENERATOR MATCHES "^Visual Studio ")
+        string(APPEND CMAKE_CXX_FLAGS " /MP")
+        string(APPEND CMAKE_C_FLAGS " /MP")
+    endif()
     set(CMAKE_C_FLAGS_RELEASE "/O2 /Oi /Gy /DNDEBUG")
     set(CMAKE_C_FLAGS_DEBUG "/Od /RTC1 /Zi /D_DEBUG")
     set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Oi /Gy /DNDEBUG")
@@ -73,13 +77,14 @@ if(NOT EMSCRIPTEN)
     if(HDTRANS_SH)
         add_test(NAME examples COMMAND "${HDTRANS_SH}" -c "exec \"$0\" \"$1\" \"$2\" \"$HDTRANS_DICTS\""
             "${HDTRANS_SH}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/examples.sh" $<TARGET_FILE:hdtrans_cli>)
-        set_tests_properties(examples PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+        set_tests_properties(examples PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300
+            ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/examples-cache")
     endif()
 
     add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp)
     target_link_libraries(admin_priority PRIVATE hdtrans)
     add_test(NAME host.admin_priority COMMAND admin_priority "${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/dict/testdata/folder")
-    set_tests_properties(host.admin_priority PROPERTIES TIMEOUT 60
+    set_tests_properties(host.admin_priority PROPERTIES TIMEOUT 60 PROCESSORS 8
         ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/admin-priority-cache")
 
     # Dumps compiled dictionary entries and lookups over input lines.

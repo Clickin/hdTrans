@@ -35,7 +35,7 @@ foreach ($a in $archs) {
     & $cmake --preset $preset -G $generator "-DCMAKE_GENERATOR_INSTANCE=$vs"
     $buildExit = $LASTEXITCODE
     if ($buildExit -eq 0) {
-        & $cmake --build --preset $preset
+        & $cmake --build --preset $preset --parallel
         $buildExit = $LASTEXITCODE
     }
     if ($buildExit -eq 0) {

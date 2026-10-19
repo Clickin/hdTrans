@@ -8,19 +8,34 @@ Conventions: AGENTS.md.
 
 ## Build
 
+macOS and Linux need CMake 3.25+, a C++20 compiler, and Ninja:
+
 ```sh
 cmake --preset mac          # or linux
-cmake --build --preset mac
+cmake --build --preset mac --parallel
 ctest --preset mac
 ```
 
-Windows (Visual Studio 2022 or later with the C++ tools):
+Windows needs Visual Studio 2026 with the C++ tools and CMake 4.2+. The Visual Studio
+presets work from a normal terminal, without a Developer command prompt:
 
 ```powershell
-powershell -File tools\build.ps1 -arch x86   # builds build\msvc-x86\{hdTransEngine,J2KEngine}.dll and runs the tests
+cmake --preset windows-x64  # or windows-x86
+cmake --build --preset windows-x64 --parallel
+ctest --preset windows-x64
 ```
 
-WebAssembly: `emcmake cmake --preset wasm && cmake --build --preset wasm`.
+Release binaries are in `build/windows-x64/Release` (or `windows-x86/Release`).
+`tools/build.ps1 -arch all` builds and tests both architectures with the installed Visual Studio.
+For Ninja, use `windows-x64-ninja` or `windows-x86-ninja` from a matching MSVC Developer
+command prompt or `vcvarsall` environment; these binaries are in `build/<preset>`.
+
+WebAssembly needs Emscripten and Ninja:
+`emcmake cmake --preset wasm && cmake --build --preset wasm --parallel`.
+
+The native C API library is `hdTransEngine.dll`, `libhdTransEngine.so`, or
+`libhdTransEngine.dylib`; `J2KEngine.dll` is Windows-only.
+CI uses Ninja and sccache on all platforms; sccache is not needed for local builds.
 
 ## Layout
 

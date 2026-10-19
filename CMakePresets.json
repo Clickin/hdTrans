@@ -40,6 +40,24 @@
       "binaryDir": "${sourceDir}/build/windows-x64",
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     },
+    {
+      "name": "windows-x86-ninja",
+      "displayName": "Windows MSVC x86, Ninja Release (requires an x86 developer environment)",
+      "inherits": "windows-x86",
+      "generator": "Ninja",
+      "architecture": { "value": "x86", "strategy": "external" },
+      "binaryDir": "${sourceDir}/build/windows-x86-ninja",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "windows-x64-ninja",
+      "displayName": "Windows MSVC x64, Ninja Release (requires an x64 developer environment)",
+      "inherits": "windows-x64",
+      "generator": "Ninja",
+      "architecture": { "value": "x64", "strategy": "external" },
+      "binaryDir": "${sourceDir}/build/windows-x64-ninja",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
     { "name": "msvc-x86", "hidden": true, "inherits": "windows-x86" },
     { "name": "msvc-x64", "hidden": true, "inherits": "windows-x64" },
     {
@@ -56,6 +74,8 @@
     { "name": "linux", "configurePreset": "linux" },
     { "name": "windows-x86", "configurePreset": "windows-x86", "configuration": "Release" },
     { "name": "windows-x64", "configurePreset": "windows-x64", "configuration": "Release" },
+    { "name": "windows-x86-ninja", "configurePreset": "windows-x86-ninja" },
+    { "name": "windows-x64-ninja", "configurePreset": "windows-x64-ninja" },
     { "name": "msvc-x86", "hidden": true, "inherits": "windows-x86" },
     { "name": "msvc-x64", "hidden": true, "inherits": "windows-x64" },
     { "name": "wasm", "configurePreset": "wasm" }
@@ -66,6 +86,8 @@
     { "name": "linux", "configurePreset": "linux", "output": { "outputOnFailure": true } },
     { "name": "windows-x86", "configurePreset": "windows-x86", "configuration": "Release", "output": { "outputOnFailure": true } },
     { "name": "windows-x64", "configurePreset": "windows-x64", "configuration": "Release", "output": { "outputOnFailure": true } },
+    { "name": "windows-x86-ninja", "configurePreset": "windows-x86-ninja", "output": { "outputOnFailure": true } },
+    { "name": "windows-x64-ninja", "configurePreset": "windows-x64-ninja", "output": { "outputOnFailure": true } },
     { "name": "msvc-x86", "hidden": true, "inherits": "windows-x86" },
     { "name": "msvc-x64", "hidden": true, "inherits": "windows-x64" }
   ]
