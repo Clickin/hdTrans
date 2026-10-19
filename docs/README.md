@@ -17,6 +17,7 @@
 |---|---|
 | [fixing-translations.md](fixing-translations.md) | 오역 하나를 고치는 순서: `-why` 진단, 고칠 곳 고르기, 테스트, 생성 파일, 판정, 커밋, 실제 사례 |
 | [build.md](build.md) | 요구 사항, CMake 프리셋, Windows, WebAssembly 빌드, 빌드 옵션, CI |
+| [contributing.md](contributing.md) | 브랜치, 커밋과 PR 제목 규칙, 버전과 릴리스 자동화 |
 | [testing.md](testing.md) | 단위 테스트, 예제 문서, 단계 기록, 자체 기준선, 엔드투엔드 테스트, 변경 판정(e2e + 모델 판정), 환경 변수 |
 | [dictionary-files.md](dictionary-files.md) | `dicts/` 구성, 파일 머리줄과 계층, 열 파일, 사용자 사전 형식, 캐시 |
 | [pipeline-layers.md](pipeline-layers.md) | 번역 파이프라인의 실행 층과 순서, 층마다 읽는 파일, `-why`가 적는 층과 규칙 |

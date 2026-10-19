@@ -73,7 +73,8 @@ macOS, Linux 판에는 명령줄 프로그램만 있습니다([명령줄 사용�
 
 ## 기여
 
-풀 리퀘스트는 `develop` 브랜치로 보내 주세요. 사전과 규칙을 고치는 방법: [오역 고치기](docs/fixing-translations.md)
+풀 리퀘스트는 `develop` 브랜치로 보내 주세요. [커밋과 PR 제목 규칙](docs/contributing.md#커밋과-pr-제목)을 따릅니다.
+사전과 규칙을 고치는 방법: [오역 고치기](docs/fixing-translations.md)
 
 ## 라이선스
 
