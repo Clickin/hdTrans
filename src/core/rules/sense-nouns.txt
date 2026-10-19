@@ -1,7 +1,7 @@
-# 명사 뜻 선택: 머리 단어가 명사(1**)인 규칙(間→동안·사이, 中→중·안·속, 手→손·수…)과 명사·고유명사 후보를 고르는 전역 규칙(G20~G180 중 수량 규칙 밖). 형식: docs/rules.md, 실행 순서: docs/architecture.md.
-# 규칙은 그 번호를 가리키는 사전 단어(머리 단어)의 갈래로 파일을 정한다(docs/rules.md#주제-파일). 파일 안에서는 머리 단어별로 모아 두었다.
-# 다른 파일: 수사·조수사는 numbers-counters.txt, 대명사·의문사는 pronouns-demonstratives.txt, 경칭은 honorifics.txt.
-# 」とは 뒤에 발화·생각 의미 동사가 오면 닫는 따옴표와 이라고는을 고른다. (미발동: rare-context)
+# 명사 뜻 선택: 머리 단어가 명사(1**)인 규칙(間→동안, 사이, 中→중, 안, 속, 手→손, 수…)과 명사, 고유명사 후보를 고르는 전역 규칙(G20~G180 중 수량 규칙 밖). 형식: docs/rule-language.md, 실행 순서: docs/pipeline-layers.md.
+# 규칙은 그 번호를 가리키는 사전 단어(머리 단어)의 갈래로 파일을 정한다(docs/rule-language.md#주제-파일). 파일 안에서는 머리 단어별로 모아 두었다.
+# 다른 파일: 수사, 조수사는 numbers-counters.txt, 대명사, 의문사는 pronouns-demonstratives.txt, 경칭은 honorifics.txt.
+# 」とは 뒤에 발화, 생각 의미 동사가 오면 닫는 따옴표와 이라고는을 고른다. (미발동: rare-context)
 L 3317 ||1 &&2 P+1== "4**" ||2 A+1== "UTs" A+1== "UTh"
 # 뒤에 언어·사고·정신 의미의 동사가 오면 「」とは」를 ‘」(이)라고는’으로 고른다. (미발동: rare-context)
 L 3375 ||1 &&2 P+1== "4**" A+1== "UTsUThUSe"

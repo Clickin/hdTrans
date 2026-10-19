@@ -6,7 +6,7 @@ namespace hdTrans::rules::compiled {
 
 using namespace std::string_view_literals;
 
-// # 참조 없는 규칙: 사전(dicts/*.tsv)의 rule 열이 가리키지 않아 실행되지 않는 지역 규칙과, rule 열이 비었거나 0인 행이 가리키는 빈 규칙 L 0. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
+// # 참조 없는 규칙: 사전(dicts/*.tsv)의 rule 열이 가리키지 않아 실행되지 않는 지역 규칙과, rule 열이 비었거나 0인 행이 가리키는 빈 규칙 L 0. 형식: docs/rule-language.md, 실행 순서: docs/pipeline-layers.md.
 // # 사전 행이 이 번호를 가리키게 되면 그 머리 단어의 파일로 옮긴다.
 // # 규칙 번호가 비어 있거나 0인 모든 사전어에 적용되어 어떤 후보도 고르지 않는다. (미발동: impossible)
 // local 0

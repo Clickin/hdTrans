@@ -15,7 +15,7 @@
 //                         (a .hdsnap for -dicts), then exit
 //   -no-cache             read only the editable dictionaries
 //   -why                  write word choices and shadow scores to stderr; each WHY line ends with
-//                         the layer and rule of the candidate and of the ending (docs/architecture.md)
+//                         the layer and rule of the candidate and of the ending (docs/pipeline-layers.md)
 //   -stages DIR           write stage records (also HDTRANS_DRIVER_DUMP)
 //   -rule-counts FILE     write how often each selection rule ran and was true to FILE:
 //                         kind (L or G), index (G: PRIO), pumsa, number, ugan, runs, fires (TSV)
@@ -130,7 +130,7 @@ void WhyLine(void* context, int line) {
     std::fprintf(stderr, "WHY-LINE\t%zu\n", why.line);
 }
 
-// The execution layer (docs/architecture.md) and the rule that made a choice.
+// The execution layer (docs/pipeline-layers.md) and the rule that made a choice.
 std::string Decided(const hdTrans::word::Selection& s, bool ending) {
     using hdTrans::word::Provenance;
     switch (s.layer) {

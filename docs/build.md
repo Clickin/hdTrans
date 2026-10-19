@@ -66,7 +66,7 @@ Ninja로 빌드하려면 아키텍처에 맞는 MSVC 개발자 명령 프롬프�
 powershell -File tools\build.ps1 -arch all
 ```
 
-설치된 Visual Studio(2022 또는 2026)를 찾아 그 안의 CMake로 `windows-<arch>` 프리셋을 구성·빌드하고
+설치된 Visual Studio(2022 또는 2026)를 찾아 그 안의 CMake로 `windows-<arch>` 프리셋을 구성, 빌드하고
 `ctest`를 실행한 뒤, 각 DLL의 SHA-256과 크기를 출력합니다.
 
 | 인자 | 설명 |
@@ -92,7 +92,7 @@ cmake --build --preset wasm --parallel
 
 | 옵션 | 기본값 | 설명 |
 |---|---|---|
-| `HDTRANS_WERROR` | `ON` | 경고를 오류로 처리합니다 (MSVC `/WX`, clang·gcc `-Werror`). `third_party/`의 코드는 경고 없이 빌드합니다 |
+| `HDTRANS_WERROR` | `ON` | 경고를 오류로 처리합니다 (MSVC `/WX`, clang, gcc `-Werror`). `third_party/`의 코드는 경고 없이 빌드합니다 |
 | `HDTRANS_PCRE2_JIT` | `OFF` | PCRE2 JIT 컴파일러를 넣습니다. WebAssembly에서는 쓰지 않습니다 |
 
 `cmake --preset linux -DHDTRANS_WERROR=OFF`처럼 끌 수 있지만, 저장소의 코드는 경고 없이 빌드되어야

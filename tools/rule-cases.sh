@@ -5,7 +5,7 @@
 # own session (-each -why). `expected` is either the whole Korean output, or
 # `rule:L<n>=<target>`: some word of the line is chosen by local rule n with that target
 # (the dictionary translation as -why prints it). kind is fix, keep or current. layer is the
-# execution layer of the rule (docs/architecture.md).
+# execution layer of the rule (docs/pipeline-layers.md).
 # Failing rows are reported grouped by layer, each with its rule, input, expected and actual
 # value, so that a change in one layer that breaks another layer's rows shows as such.
 # --accept rewrites the expected value of every full-output row whose kind is current.

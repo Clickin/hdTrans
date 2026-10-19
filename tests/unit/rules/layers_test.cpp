@@ -1,4 +1,4 @@
-// The layer table of docs/architecture.md lists the execution layers in the order the code
+// The layer table of docs/pipeline-layers.md lists the execution layers in the order the code
 // runs them: in each function named by the code column, the calls of its rows come in the
 // order of the rows.
 #include <cctype>
@@ -76,7 +76,7 @@ std::vector<std::string> CodeCell(std::string_view row) {
 
 HD_TEST(rules_layers_order) {
     std::string doc;
-    HD_REQUIRE(Read(RepoDir() + "/docs/architecture.md", doc));
+    HD_REQUIRE(Read(RepoDir() + "/docs/pipeline-layers.md", doc));
     std::map<std::string, std::string> files;
     std::map<std::string, std::size_t> next;  // file|function -> search position in the body
     int rows = 0;
@@ -108,7 +108,7 @@ HD_TEST(rules_layers_order) {
         const std::size_t at = body.find(code[2], from);
         if (at == std::string_view::npos)
             hdtest::Fail(__FILE__, __LINE__, "layer " + layer + ": " + code[1] + " does not call " + code[2] +
-                                                 " after the layer before it; the code order differs from docs/architecture.md");
+                                                 " after the layer before it; the code order differs from docs/pipeline-layers.md");
         else
             from = at + code[2].size();
         rows++;

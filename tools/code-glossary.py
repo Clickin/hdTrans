@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the Korean code glossary from dictionaries, rules and edited meanings.
 
-Usage: tools/code-glossary.py [--root REPO] [--output docs/codes.md]
+Usage: tools/code-glossary.py [--root REPO] [--output docs/dictionary-codes.md]
 Edit tools/code-meanings.tsv, not the generated Markdown. Meaning patterns use
 fnmatch syntax; exact codes take precedence, then the first matching pattern.
 """
@@ -58,7 +58,7 @@ def markdown(text):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--output", type=Path, default=Path("docs/codes.md"))
+    parser.add_argument("--output", type=Path, default=Path("docs/dictionary-codes.md"))
     args = parser.parse_args()
     root = args.root.resolve()
     meanings = {}
@@ -118,29 +118,29 @@ def main():
     inferred = sum("추정" in meaning_for(meanings, kind, code)
                    for kind in ("pos", "sem", "gram") for code in counts[kind])
     lines = [
-        "# 품사·의미·문법 코드 일람", "",
+        "# 품사, 의미, 문법 코드 일람", "",
         "이 문서는 `tools/code-glossary.py`가 생성합니다. 뜻을 고칠 때는 `tools/code-meanings.tsv`를 편집하고 실행합니다.", "",
         "```sh", "python3 tools/code-glossary.py", "```", "",
         "의미 표의 열은 `kind code meaning`입니다. `kind`는 `class`, `pos`, `sem`, `gram`이며 "
-        "`code`는 정확한 코드 또는 `?`(한 글자)·`*`(여러 글자) 패턴입니다. 정확한 코드가 먼저이고, "
+        "`code`는 정확한 코드 또는 `?`(한 글자), `*`(여러 글자) 패턴입니다. 정확한 코드가 먼저이고, "
         "패턴끼리는 위에 적힌 행이 먼저입니다. 모호한 뜻은 `추정` 표시를 남깁니다.", "",
         f"사전 {rows_read:,}행에서 전체 품사 코드 {len(counts['pos'])}개, 의미 코드 {len(counts['sem'])}개, "
         f"문법 코드 {len(counts['gram'])}개를 정리했습니다(합계 {total}개, 뜻에 **추정** 표시 {inferred}개). "
         "사전에 없지만 실행 시 검사하는 문법 코드도 포함합니다. 품사 첫 숫자 부류 10개는 별도 표입니다.", "",
         "## 읽는 법", "",
         "- **행 수**는 `dicts/*.tsv`에서 그 코드가 적힌 행 수입니다. 같은 행에 같은 코드가 두 번 있어도 한 번 셉니다. "
-        "빈 열의 기본값·`flags=xxx`로 더하는 `XXX`·내장 표는 합산하지 않습니다. `kana.tsv`는 읽기 표라 제외합니다.",
-        "- **규칙 수**는 `src/core/rules/*.txt`의 서로 다른 L/G 줄 수입니다. 주석·예시를 빼고 P/M(품사), "
+        "빈 열의 기본값, `flags=xxx`로 더하는 `XXX`, 내장 표는 합산하지 않습니다. `kana.tsv`는 읽기 표라 제외합니다.",
+        "- **규칙 수**는 `src/core/rules/*.txt`의 서로 다른 L/G 줄 수입니다. 주석, 예시를 빼고 P/M(품사), "
         "A/T(의미), G/W(문법)의 따옴표 인자를 셉니다. 품사는 `1**` 같은 와일드카드를 포함하며, "
-        "의미·문법은 리터럴 참조만 셉니다(상위 의미 계열 확장은 제외). 실행 횟수나 발동 보장은 아닙니다.",
+        "의미, 문법은 리터럴 참조만 셉니다(상위 의미 계열 확장은 제외). 실행 횟수나 발동 보장은 아닙니다.",
         "- 예시는 키가 다른 최대 8개를 재현 가능한 순서로 뽑았습니다. 키가 적으면 전부이며, `—`는 사전 예시가 없음입니다. "
         "한국어의 `&AV@` 등은 원래 사전의 활용 표지입니다. 예시는 올바른 태그나 역어를 보장하지 않습니다.",
-        "- 뜻은 기존 문서·품사 대응 표·예시를 바탕으로 정리했습니다. **추정**은 세부 범위가 확정되지 않았다는 뜻입니다. "
+        "- 뜻은 기존 문서, 품사 대응 표, 예시를 바탕으로 정리했습니다. **추정**은 세부 범위가 확정되지 않았다는 뜻입니다. "
         "형태소 품사 대응은 `src/core/dict/pos_tags_gen.cpp`, 의미 계열은 `src/core/rules/attr_families_gen.cpp`를 봅니다.",
-        "- 의미는 영문 대문자로 시작하는 영문 3자, 문법은 영문자로 시작하는 영문·숫자 2자 단위를 찾아 셉니다. "
-        "공백·오타·다른 열의 값이 섞인 셀은 아래 **비정형 값**에도 원문 그대로 남깁니다. "
+        "- 의미는 영문 대문자로 시작하는 영문 3자, 문법은 영문자로 시작하는 영문, 숫자 2자 단위를 찾아 셉니다. "
+        "공백, 오타, 다른 열의 값이 섞인 셀은 아래 **비정형 값**에도 원문 그대로 남깁니다. "
         "엔진은 공백을 제거하지 않고 바이트를 검사하므로 이 일람의 코드 수와 실제 조건 일치가 다를 수 있습니다.",
-        "- 조건·대입의 뜻은 [rules.md](rules.md#코드-체계), 열과 계층은 [dictionaries.md](dictionaries.md)에 있습니다.", "",
+        "- 조건, 대입의 뜻은 [rule-language.md](rule-language.md#코드-체계), 열과 계층은 [dictionary-files.md](dictionary-files.md)에 있습니다.", "",
     ]
 
     def table(kind, codes):

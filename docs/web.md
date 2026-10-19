@@ -10,7 +10,7 @@ https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두
 | `web/index.html`, `web/style.css` | 페이지 |
 | `web/src/app.ts` | 엔진과 사전을 받아(Cache Storage에 보관) 워커에 넘기고, 입력이 바뀌면 번역을 요청 |
 | `web/src/worker.ts` | 워커. `hdTransEngine.js`를 불러 `/dicts.hdsnap`과 나머지 사전 파일(`/dicts`)을 쓰고 C API로 번역 |
-| `web/src/grid.ts` | 사용자 사전·이름 표 편집기 (탭 구분 표, 붙여 넣기·파일 열기·저장) |
+| `web/src/grid.ts` | 사용자 사전, 이름 표 편집기 (탭 구분 표, 붙여 넣기, 파일 열기, 저장) |
 | `web/src/names.ts` | 이름 표를 사용자 사전 줄로 바꿈 (품사가 없으면 `name`) |
 | `web/examples/`, `web/examples.tsv` | 예제 텍스트와 메뉴 이름 |
 | `web/build.mjs` | 네이티브 CLI로 `dicts.hdsnap`을 컴파일하고 사이트를 `build/web/dist`에 만듦 |
@@ -45,7 +45,7 @@ node web/build.mjs
 | `HDTRANS_WEB_EXAMPLES` | 저장소에 없는 예제 텍스트 폴더. `examples.tsv`에 적힌 파일 중 `web/examples/`에 없는 것을 여기서 찾음 |
 
 `build/web/dist`에는 `index.html`, `js/`, `examples/`, `manifest.json`과 내용 해시 폴더
-`assets/<sha256 앞 16자>/`(엔진, `dicts.hdsnap`, 열 파일이 아닌 사전 파일)가 생기고, 텍스트·wasm·`.hdsnap`
+`assets/<sha256 앞 16자>/`(엔진, `dicts.hdsnap`, 열 파일이 아닌 사전 파일)가 생기고, 텍스트, wasm, `.hdsnap`
 파일마다 `.br`, `.gz` 압축본이 붙습니다. 서버는 브라우저가 받는 인코딩의 압축본을 보내고, `assets/`는 오래 캐시하게 합니다.
 
 ## 확인
@@ -58,7 +58,7 @@ node web/check.mjs http://127.0.0.1:8000/ INPUT want.txt 20
 ```
 
 `check.mjs`는 두 번 방문해 준비 시간, 받은 바이트, 엔진 메모리를 적고, 입력 앞 20줄의 번역이 CLI 출력과
-같은지, 긴 입력의 진행 막대, 사용자 사전·이름 표 편집과 붙여 넣기가 번역을 바꾸는지, 버전 줄을
+같은지, 긴 입력의 진행 막대, 사용자 사전, 이름 표 편집과 붙여 넣기가 번역을 바꾸는지, 버전 줄을
 확인하고, 번역 API가 없는지(`POST /api/translate`가 404) 봅니다(`http.server`는 501로 답해 이 항목만
 실패합니다). `CHROME`으로 Chrome 경로를, `SHOT`으로 화면 저장 경로를 줍니다.
 
