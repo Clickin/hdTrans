@@ -129,11 +129,11 @@ L632	看板を壁に掲げる。	간판을 벽으로 내건다.	current	local
 L658	彼はいつも気をつけます。	그는 언제나 조심하겠습니다.	current	local
 L728	パンを焼いた。	빵을 구웠다.	current	local
 L729	子供が受けられる授業です。	아이를 받게 되는 수업입니다.	current	local
-L737	試合で勝った。	시합에서 우수했다.	current	local
+L737	試合で勝った。	시합에서 이겼다.	current	local
 L758	彼は人に安心を与えられる能力がある。	그는 사람에게 안심이 주어지는 능력이 있다.	current	local
 L777	孤児を引き取った。	고아를 인수했다.	current	local
 L809	この町で知られている。	이 마을로 알려져 있다.	current	local
-L817	振り返っても誰もいない。	되돌아 보고 아무도 없다.	current	local
+L817	振り返っても誰もいない。	돌아봐도 아무도 없다.	current	local
 L916	今日は三時で仕事が終わる。	오늘은 3시에 일이 끝난다.	current	local
 L925	駅前の店で靴を買った。	역 앞의 가게에서 구두를 샀다.	current	local
 L925	会議で来月の予定が決まった。	회의에서 내달의 예정이 정해졌다.	current	local
@@ -445,7 +445,7 @@ L2907	最近は朝晩が寒くなってきた。	최근에는 조석이 추워�
 L2907	薬を飲んだら少し眠くなってきた。	약을 먹으면 조금 졸려졌다.	current	local
 L2916	「おはよう」と言った。	「안녕」이라고 말했다.	current	local
 L2916	「もう帰ろう」と思った。	「이제 돌아가자」라고 생각했다.	current	local
-L2918	雨が降ったことに加え、雪も降った。	비가 왔던 것에 가세해 눈도 내렸다.	current	local
+L2918	雨が降ったことに加え、雪も降った。	비가 왔던 것에 더해 눈도 내렸다.	current	local
 L2930	毎日走れるようになりました。	매일 달릴 수 있게 되었습니다.	current	local
 L2930	朝早く起きられるようになりたい。	아침 일찍 일어날 수 있게 되고 싶다.	current	local
 L2943	そんなに急がないで。	그렇게 서두르지 마.	current	local-ending
@@ -618,7 +618,7 @@ L3972	わたしに手紙が届きました。	나에게 편지가 도착했습�
 L3972	これはわたしの新しい靴です。	이것은 나의 새로운 구두입니다.	current	local
 L3975	先生に宿題を出しました。	선생님에게 숙제를 냈습니다.	current	local
 L3975	母に誕生日の花を贈った。	어머니에게 생일의 꽃을 선물했다.	current	local
-L3999	その案が候補にあがった。	그 안이 후보에 갔다.	current	local
+L3999	その案が候補にあがった。	그 안이 후보에 올랐다.	current	local
 L4001	彼は話を聞かれた。	그는 이야기를 들렸다.	current	local
 L4033	先に宿題を済ませておこう。	먼저 숙제를 끝마쳐 두자.	current	local
 L4033	旅行の前に切符を買っておく。	여행앞에 표를 사 둔다.	current	local
@@ -643,7 +643,7 @@ L4209	はい、了解です。	네, 알겠습니다.	current	local
 L4209	その件、了解です。	그 건, 알겠습니다.	current	local
 L4210	彼女は疲れたって言った。	그녀는 지쳤다고 했다.	current	local
 L4210	先生に丁寧にお礼を言った。	선생님에게 정중하게 감사 인사를 했다.	current	local
-L4222	その話はちょっと分かる。	그 이야기는 잘 안다.	current	local
+L4222	その話はちょっと分かる。	그 이야기는 조금 안다.	current	local
 L4229	お金なんか要りません。	돈은 필요하지 않습니다.	current	local
 L4229	私は野菜なんか嫌いです。	나는 야채는 싫습니다.	current	local
 L4240	いただきます、後で返します。	잘 먹겠습니다, 나중에 돌려줍니다.	current	local
@@ -666,7 +666,7 @@ L4433	電話とかで話す。	전화등에서 이야기한다.	current	local
 L4470	ここに座ってはだめなの？	여기에 앉아서는 안돼?	current	local-ending
 L4470	本当にそれで大丈夫なの？	정말로 그래서 괜찮아?	current	local-ending
 L4470	だめなの？	안돼?	current	local-ending
-L4475	何もしてくれんかった。	아무것도 해 줘.	current	local
+L4475	何もしてくれんかった。	아무것도 해 주지 않았다.	current	local
 L4480	私は掃除をさせられた。	나는 청소를 하게 했다.	current	local
 L4541	やっと終わったって感じです。	드디어 끝났다 라는 느낌입니다.	current	local-ending
 L4554	勉強させられた。	공부 당했다.	current	local
