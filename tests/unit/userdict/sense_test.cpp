@@ -1,4 +1,4 @@
-#include "hdTrans/userdict/sense.h"
+#include "core/userdict/sense.h"
 
 #include <string>
 

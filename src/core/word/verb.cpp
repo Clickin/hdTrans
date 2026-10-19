@@ -1,0 +1,446 @@
+// Verb conjugation: the branch of a verb record and the acceptance of what follows it.
+#include <algorithm>
+
+#include "core/text/utf8.h"
+#include "core/word/conjugation.h"
+#include "core/word/strings.h"
+#include "core/word/worker.h"
+
+namespace hdTrans::word {
+
+namespace {
+
+constexpr int kKindDirect = 14;  // pattern kind matched without an ending
+
+int Byte(char c) { return static_cast<unsigned char>(c); }
+
+bool Starts(std::string_view s, std::string_view p) { return s.starts_with(p); }
+
+}  // namespace
+
+bool MatchConjugation(Detail& d, std::string_view text, int offset, Record* records, Record*& stop) {
+    stop = records;
+    if (offset > static_cast<int>(text.size())) return false;
+    const std::string_view recordText = records->source;
+    const std::string_view prefix = text.substr(0, static_cast<std::size_t>(offset));
+    if (recordText.size() + static_cast<std::size_t>(offset) > text.size()) return false;
+    const std::string_view tail = From(text, offset + static_cast<long>(recordText.size()));
+    if (WidthOf(prefix) > 2 && recordText == kJaOki && tail.starts_with(",") &&
+        (prefix.ends_with(kJaTe) || prefix.ends_with(kJaDe))) {
+        return false;
+    }
+    int previousKind = -1;
+    for (Record* record = records; record != nullptr; record = record->child) {
+        stop = record;
+        if (recordText.size() != record->source.size() || At(record->partCode, 1) != '4') return false;
+        d.patternKind = Byte(At(record->partCode, 3)) - '0';
+        if (d.patternKind != previousKind && MatchKind(d, tail, recordText, *record)) return true;
+        previousKind = d.patternKind;
+    }
+    stop = nullptr;
+    return false;
+}
+
+bool MatchKind(Detail& d, std::string_view tail, std::string_view recordText, const Record& record) {
+    const int kind = d.patternKind;
+    if (kind == kKindDirect) {
+        d.patternMatched = 1;
+        d.patternLength = static_cast<int>(recordText.size());
+        return true;
+    }
+    for (int branch = 0; branch < kConjugationBranches; branch++) {
+        if (branch == 13) continue;
+        const std::string_view entry = Conjugation(kind, branch);
+        if ((kind != 7 && entry.empty()) || !Starts(tail, entry)) continue;
+        if (branch == 4 || branch == 11) {
+            const std::size_t n = entry.size();
+            const std::string_view rest = tail.substr(n);
+            if (Starts(rest, kJaFullComma) || Starts(rest, kJaComma)) continue;
+            if (n < tail.size()) {
+                const char next = tail[n];
+                if ((branch == 4 && Byte(next) < 0x80 && IsPunct(next)) || (branch == 11 && next == ',')) continue;
+            } else if (n == tail.size() && branch == 4) {
+                continue;
+            }
+        }
+        d.kind = branch;
+        if (d.kind == 4 && Starts(tail, Conjugation(kind, 16))) d.kind = 16;
+        if (kind == 7 && d.kind == 1) d.kind = 4;
+        if (d.patternMatched == 0) {
+            if (kind == 7 && d.kind == 6) {
+                if (Starts(tail, kJaTai) || Starts(tail, kJaTakatta) || Starts(tail, kJaTaku) || Starts(tail, kJaTakereba) ||
+                    Starts(tail, kJaTaki)) {
+                    d.kind = 10;
+                }
+            } else if (kind == 3 && d.kind == 6) {
+                if (Starts(tail, kJaShitai) || Starts(tail, kJaShitakatta) || Starts(tail, kJaShitaku) ||
+                    Starts(tail, kJaShitakereba) || Starts(tail, kJaShitaki)) {
+                    d.kind = 10;
+                }
+            } else if (kind == 9 && d.kind == 6) {
+                if (Cut(tail, 2, 4) == kJaTai || Cut(tail, 2, 8) == kJaTakatta || Cut(tail, 2, 4) == kJaTaku ||
+                    Cut(tail, 2, 8) == kJaTakereba || Cut(tail, 2, 4) == kJaTaki) {
+                    d.kind = 10;
+                }
+            } else if (kind == 9 && (d.kind == 8 || d.kind == 10)) {
+                const auto lengthText = d.tailLengthCheck ? tail : recordText;
+                if (WidthOf(lengthText) >= 4 && Cut(tail, 0, 4) == Conjugation(kind, 11)) d.kind = 11;
+            }
+        }
+        if (d.kind == 0) {
+            if (Starts(tail, Conjugation(kind, 15))) d.kind = 15;
+            else if (Starts(tail, Conjugation(kind, 14))) d.kind = 14;
+        }
+        if (kind == 7 && (d.kind == 8 || d.kind == 10)) {
+            const int old = d.kind;
+            for (int next = old + 1; next <= 17; next++) {
+                if (next == 13) continue;
+                if (const std::string_view e = Conjugation(kind, next); !e.empty() && Starts(tail, e)) {
+                    d.kind = next;
+                    break;
+                }
+            }
+            if (old == d.kind && (Starts(tail, kJaKudasaKanji) || Starts(tail, kJaKudasa))) d.kind = 10;
+        }
+        if (d.kind == 10) {
+            if (Starts(tail, Conjugation(kind, 15))) d.kind = 15;
+            else if (Starts(tail, Conjugation(kind, 17))) d.kind = 17;
+        }
+        if (branch != 8) return true;
+        if (const std::size_t n = Conjugation(kind, 8).size(); n > 0) {
+            const std::string_view rest = tail.substr(n);
+            if (Starts(rest, kJaNa) || Starts(rest, kJaN) || Starts(rest, kJaZaru) || Starts(rest, kJaNna) ||
+                Starts(rest, kJaNeba) || Starts(rest, kJaNu) ||
+                (d.causativePassive && kind != 3 && Starts(rest, kJaSare))) {
+                return true;
+            }
+        } else {
+            if (!Starts(tail, kJaComma) && !Starts(tail, ",")) return true;
+            if (WidthOf(record.source) != 2) {
+                d.kind = 7;
+                return true;
+            }
+        }
+    }
+    if (kind == 7 && Starts(tail, kJaRe) && (Starts(recordText, kJaMiKanji) || Starts(recordText, kJaTabeKanji))) {
+        d.patternKind = 8;
+        d.kind = 4;
+        return true;
+    }
+    auto politeRequest = [&]() {
+        Window middle;
+        if (WidthOf(tail) >= 6) middle = Cut(tail, 2, 4);
+        return Starts(tail, kJaI) && (middle == kJaMasu || middle == kJaMase || middle == kJaMashi);
+    };
+    for (const std::string_view stem : kRequestStems) {
+        if (const std::size_t i = record.source.find(stem);
+            i != std::string_view::npos && i == record.source.size() - stem.size() && politeRequest()) {
+            d.patternKind = 8;
+            d.kind = 10;
+            return true;
+        }
+    }
+    if (Has(record.attr, "Hr") && politeRequest()) {
+        d.patternKind = 8;
+        d.kind = 10;
+        return true;
+    }
+    return false;
+}
+
+bool AnalyseVerbTail(std::string_view key, char kind, std::string_view tail, int& branch, int& length) {
+    Detail d;
+    d.patternKind = Byte(kind) - '0';
+    d.kind = -1;
+    d.selected = -1;
+    Record record;
+    record.source = key;
+    const char code[4] = {'M', '4', '2', kind};
+    record.partCode = std::string_view(code, 4);
+    if (!MatchKind(d, tail, key, record)) return false;
+    branch = d.kind;
+    length = static_cast<int>(Conjugation(d.patternKind, d.kind).size());
+    return true;
+}
+
+// Checks what follows a verb's conjugation and looks up the ending (the direct group).
+// following is the rest of the candidate list after the verb's group. The conjugation
+// pattern is measured in width units (patternWidth) on the text after the stem, which
+// need not start with the pattern.
+bool Item::AcceptVerbContinuation(Record* following) {
+    Detail& base = *detail;
+    const bool matched = base.patternMatched != 0;
+    std::string surface;
+    int sourceLength = group->length;
+    if (matched) {
+        const std::string_view matchedText = From(text, start);
+        surface = Left(text, WidthOf(matchedText.substr(0, std::min<std::size_t>(static_cast<std::size_t>(base.patternLength),
+                                                                                  matchedText.size()))))
+                      .Str();
+        sourceLength = base.patternLength;
+    } else {
+        surface = group->surface;
+    }
+    std::string_view tail;
+    if (sourceLength + start <= static_cast<int>(text.size())) tail = From(text, sourceLength + start);
+    int patternWidth = 0;
+    if (!matched) patternWidth = WidthOf(Conjugation(base.patternKind, base.kind));
+    // The byte length of the pattern in tail, and the text after it.
+    auto pattern = [&]() { return static_cast<int>(UnitOffset(tail, patternWidth).offset); };
+    auto after = [&]() { return tail.substr(static_cast<std::size_t>(pattern())); };
+    if (!w->MatchDictionary(tail, surface, '4', 'X')) return false;
+    Window two, four, six;
+    if (const std::string_view r = after(); WidthOf(r) >= 2) two = Left(r, 2);
+    if (const std::string_view r = after(); WidthOf(r) >= 4) four = Left(r, 4);
+    if (const std::string_view r = after(); WidthOf(r) >= 6) six = Left(r, 6);
+
+    if (!matched && base.kind == 10 &&
+        ((two == kJaGa && !(four == kJaGara) && !(four == kJaGata) && !(four == kJaGachi)) || after().starts_with(".") ||
+         (two == kJaNo && !(four == kJaNokataKanji) && !(six == kJaNokata)) || (two == kJaHa && !(four == kJaHaji)) ||
+         two == kJaDa || two == kJaTo || two == kJaDe || two == kJaHe || two == kJaMo ||
+         (two == kJaYa && !(four == kJaYasu) && !(w->settings.text && four == kJaYaga)) || two == kJaWo ||
+         (two == kJaKa && !(four == kJaKane) && !(four == kJaKake)) || two == kJaYo || four == kJaNado ||
+         four == kJaNazo || four == kJaShika || four == kJaMade || four == kJaSae)) {
+        return false;
+    }
+
+    bool adjusted = false;
+    const int oldKind = base.patternKind, oldState = base.kind;
+    const bool shortCausativePassive = w->settings.text && w->settings.improvements.causativePassive && !matched &&
+        oldState == 8 && oldKind != 3 && oldKind != 7 && after().starts_with(kJaSare);
+    if (shortCausativePassive && w->SuVerb(surface + std::string(Conjugation(oldKind, 8)))) return false;
+    if (!matched && (oldState == 1 || oldState == 2 || oldState == 4 || shortCausativePassive)) {
+        base.record = oldState;
+        adjusted = true;
+        sourceLength += pattern();
+        base.patternKind = 7;
+        tail = after();
+        if (shortCausativePassive || (w->settings.text && w->settings.improvements.causativePassive &&
+                                     oldState == 2 && tail.starts_with(kJaRare))) {
+            base.record = 5;
+            sourceLength += static_cast<int>(kJaRare.size());
+            tail.remove_prefix(kJaRare.size());
+        }
+        int branch = 0;
+        for (; branch < kConjugationBranches; branch++) {
+            if (tail.starts_with(Conjugation(7, branch))) {
+                base.kind = branch;
+                break;
+            }
+        }
+        if (branch == kConjugationBranches) return false;
+        if (branch == 8 && (two == kJaComma || two.StartsWith(","))) base.kind = 7;
+        patternWidth = WidthOf(Conjugation(7, base.kind));
+        two = Left(after(), 2);
+        four = Left(after(), 4);
+    }
+
+    bool state10 = base.kind == 10;
+    six = {};
+    if (const std::string_view r = after(); WidthOf(r) >= 6) six = Left(r, 6);
+    if (((!adjusted && !matched && base.patternKind == 7 && base.kind == 8) || (base.patternMatched == 1 && base.kind == 8)) &&
+        ((!(two == kJaNa) && !(four == kJaZaru) && !(four == kJaNna) && !(four == kJaNeba) && !(two == kJaNu)) ||
+         six == kJaNasai || six == kJaNagara || four == kJaNao)) {
+        state10 = true;
+        base.kind = 10;
+    }
+
+    Window eight;
+    if (w->settings.improvements.desireWindow && WidthOf(after()) >= 8) eight = Left(after(), 8);
+    if ((!matched && base.patternKind == 7 && base.kind == 10) ||
+        (surface == kJaOyo && Conjugation(base.patternKind, base.kind) == kJaBi)) {
+        if (!(base.ClassifyTrailingPunctuation(after()) == 1 || four == kJaNiku || four == kJaTsutsu || four == kJaKire ||
+              four == kJaKireKanji || four == kJaSou || after().starts_with("\"") || two == kJaMa || two == kJaHajiKanji ||
+              two == kJaNasai || two == kJaNi)) {
+            const std::pair<const Window*, std::string_view> compounds[] = {
+                {&six, kJaNagara},     {&six, kJaNasai},       {&six, kJaTsutsua},     {&six, kJaHaji},
+                {&four, kJaGata},      {&four, kJaGachi},      {&two, kJaGataKanji},   {&four, kJaYasu},
+                {&four, kJaKane},      {&four, kJaYasuKanji},  {&four, kJaYou},        {&four, kJaUru},
+                {&four, kJaTai},       {&eight, kJaTakatta},   {&four, kJaTaku},       {&eight, kJaTakereba},
+                {&four, kJaTaki},      {&four, kJaKudasaKanji}, {&six, kJaKudasa},     {&four, kJaTsudzu},
+                {&four, kJaSugi},      {&four, kJaNao},        {&two, kJaTsudzuKanji}, {&four, kJaSugiKanji},
+                {&six, kJaSokona},     {&four, kJaSokonaKanji}, {&four, kJaDzura},     {&two, kJaNaoKanji},
+                {&two, kJaAiKanji},    {&two, kJaA},           {&four, kJaKawaKanji},  {&four, kJaKawa},
+                {&four, kJaAsa},       {&two, kJaAsaKanji},    {&four, kJaChira},      {&four, kJaChiraKanji},
+                {&four, kJaTsuku},     {&four, kJaTsukuKanji},
+            };
+            bool compound = false;
+            for (const auto& [win, s] : compounds) {
+                if (*win == s) {
+                    compound = true;
+                    break;
+                }
+            }
+            if (!compound) {
+                if (!state10) return false;
+                base.kind = 8;
+            }
+        }
+    }
+
+    if (!matched && base.patternKind == 7 && base.kind == 6 && (six == kJaKerepa || four == kJaKat || two == kJaI)) {
+        patternWidth = 0;
+        base.kind = 10;
+    }
+
+    length = sourceLength + pattern();
+    base.ResetDirect(0);
+    base.punct = 0;
+
+    auto restore = [&]() {
+        if (adjusted && patternWidth == 0) {
+            base.patternKind = oldKind;
+            base.kind = oldState;
+            if (base.record == 4) base.record = 0;
+        }
+    };
+    auto fill = [&](const Group* g) {
+        base.ResetDirect(g->entries.size());
+        base.resultCount = static_cast<int>(g->entries.size());
+        base.punct = base.ClassifyTrailingPunctuation(From(after(), g->length));
+        for (std::size_t i = 0; i < g->entries.size(); i++) base.classes[i] = static_cast<uint8_t>(base.punct);
+    };
+
+    const std::string_view rest = after();
+    const bool punctuation = tail.starts_with(kJaComma) || tail.starts_with(",");
+    bool queryAllowed = !rest.empty() && !punctuation;
+    if (queryAllowed && base.kind == 10 &&
+        (four == kJaTai || eight == kJaTakatta || four == kJaTaku || eight == kJaTakereba || four == kJaTaki ||
+         four == kJaDzura || six == kJaSokona || four == kJaSokonaKanji)) {
+        queryAllowed = false;
+    }
+
+    // The ending group at rest, the text after the conjugation pattern.
+    auto endingGroup = [&](std::string_view rest) -> Group* {
+        Group* g = nullptr;
+        if (!queryAllowed || rest.empty()) return g;
+        const Lookup found = w->DoLookup(rest, kModeVerbEnding);
+        if (found.count == 0) return g;
+        g = w->NewGroup(found.records, ' ');
+        if (g->length <= 0) return g;
+        bool keepScanning = true;
+        for (;;) {
+            fill(g);
+            bool accepted = false;
+            if (base.patternKind == 7 && base.kind == 8 &&
+                (rest.starts_with(kJaMasu) || rest.starts_with(kJaMase) || rest.starts_with(kJaMashi) ||
+                 (w->settings.text && rest.starts_with(kJaYaga)))) {
+                base.kind = 10;
+            } else {
+                restore();
+            }
+            const std::string_view next = From(after(), g->length);
+            for (int index = 0; keepScanning && index < static_cast<int>(g->entries.size()); index++) {
+                const Entry& e = *g->entries[static_cast<std::size_t>(index)];
+                if ((Has(e.gattr, "Sh") && Classify(next) != 0) || Byte(At(e.code, 1)) != base.kind + '0' ||
+                    !w->EndingApplies(e, next, tokenIndex) ||
+                    w->CutsWord(rest.substr(0, std::min<std::size_t>(static_cast<std::size_t>(g->length), rest.size())), next)) {
+                    base.enabled[index] = false;
+                    continue;
+                }
+                base.group = g;
+                if (g->length <= 0 || w->MatchDictionary(next, g->surface, '5', '4')) accepted = true;
+                else keepScanning = false;
+            }
+            if (accepted) break;
+            Record* more = g->records;
+            g->records = nullptr;
+            g = nullptr;
+            if (more == nullptr) break;
+            g = w->NewGroup(more, ' ');
+            keepScanning = true;
+        }
+        return g;
+    };
+    Group* ending = endingGroup(rest);
+    // V連用形 + やがる without an ending of its own conjugates as the verb in the form
+    // of やがる (書きやがったので 썼으므로); its やがれ is always the imperative.
+    if (ending == nullptr && w->settings.text && rest.starts_with(kJaYaga)) {
+        int branch = 0, n = 0;
+        if (AnalyseVerbTail(kJaYaga, '8', rest.substr(kJaYaga.size()), branch, n)) {
+            if (branch == 4) branch = 11;
+            patternWidth = WidthOf(tail.substr(0, static_cast<std::size_t>(pattern()) + kJaYaga.size() + static_cast<std::size_t>(n)));
+            base.kind = branch;
+            length = sourceLength + pattern();
+            ending = endingGroup(after());
+        }
+    }
+
+    if (ending == nullptr) {
+        if (following != nullptr && base.patternKind == 7 && base.kind == 8) {
+            if (Has(GAttr(0), "Ke") && !(!two.Empty() && Classify(two) != 0)) return false;
+            for (const Record* r = following; r != nullptr; r = r->child) {
+                if (const char sel = At(r->partCode, 1); sel != '4' && sel != '5') {
+                    if (r->source.size() > group->surface.size() || (r->source.size() == group->surface.size() && two.Empty())) {
+                        return false;
+                    }
+                }
+            }
+        }
+        const Lookup found = w->DoLookup("", kModeVerbEnding);
+        if (found.count == 0) {
+            base.group = nullptr;
+            return false;
+        }
+        auto applies = [&](const Entry& e) {
+            return Byte(At(e.code, 1)) == base.kind + '0' && w->EndingApplies(e, after(), tokenIndex);
+        };
+        // A plain-dictionary group none of whose endings applies gives way to the groups
+        // after it.
+        for (ending = w->NewGroup(found.records, ' ');; ending = w->NewGroup(ending->records, ' ')) {
+            if ((group->surface == kJaKudasaKanji || group->surface == kJaKudasa) && base.patternKind == 8 && base.kind == 10) {
+                ending->surface = Left(tail, 2).Str();
+            } else {
+                ending->surface.assign(tail.substr(0, static_cast<std::size_t>(pattern())));
+            }
+            fill(ending);
+            restore();
+            if (!OwnedGroup(ending) || ending->records == nullptr ||
+                std::any_of(ending->entries.begin(), ending->entries.end(), [&](const Entry* e) { return applies(*e); })) {
+                break;
+            }
+        }
+        for (int index = 0; index < static_cast<int>(ending->entries.size()); index++) {
+            if (applies(*ending->entries[static_cast<std::size_t>(index)])) base.group = ending;
+            else base.enabled[index] = false;
+        }
+    }
+
+    base.group = ending;
+    base.resultCount = static_cast<int>(ending->entries.size());
+    length += ending->length;
+    const int end = length;
+    const bool specialEnd = four == kJaTai || eight == kJaTakatta || four == kJaTaku || eight == kJaTakereba ||
+                            four == kJaTaki || four == kJaSugi || four == kJaSugiKanji || six == kJaTsudzuke ||
+                            four == kJaTsudzukeKanji || four == kJaTsudzu || four == kJaDzura || six == kJaSokona ||
+                            four == kJaSokonaKanji;
+    if ((base.kind == 10 && specialEnd) || following == nullptr) return true;
+    const std::string_view consumed = From(text, start);
+    const int endWidth = WidthOf(consumed.substr(0, std::min<std::size_t>(static_cast<std::size_t>(end), consumed.size())));
+    for (const Record* r = following;;) {
+        if (const char sel = At(r->partCode, 1); sel != '4' && sel != '5' && end < static_cast<int>(r->source.size())) break;
+        if (endWidth == 2) break;
+        if ((r = r->child) == nullptr) return true;
+    }
+    base.group = nullptr;
+    return false;
+}
+
+// A verb of the す row with this stem or one of its suffixes, excluding Korean causatives.
+bool Worker::SuVerb(std::string_view stem) {
+    for (std::size_t i = 0; i < stem.size();) {
+        const std::string_view tail = stem.substr(i);
+        if (text::RuneCount(tail) < 2) break;
+        i += text::DecodeRune(tail).size;
+        const std::string_view query = arena.Keep(std::string(tail) + "す");
+        const Lookup found = DoLookup(query, kModeGeneral);
+        if (found.count == 0) continue;
+        for (const Record* record = found.records; record != nullptr; record = record->child) {
+            if (record->source == tail && At(record->partCode, 1) == '4' && At(record->partCode, 3) == '3' &&
+                !Has(record->target, "게 ")) return true;
+        }
+    }
+    return false;
+}
+
+}  // namespace hdTrans::word

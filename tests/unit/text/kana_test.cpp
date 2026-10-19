@@ -1,4 +1,4 @@
-#include "hdTrans/text/kana.h"
+#include "core/text/kana.h"
 
 #include "hdtest.h"
 

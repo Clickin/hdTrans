@@ -1,9 +1,9 @@
-#include "hdTrans/pipeline/restore.h"
+#include "core/pipeline/restore.h"
 
 #include <string>
 #include <vector>
 
-#include "hdTrans/text/utf8.h"
+#include "core/text/utf8.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

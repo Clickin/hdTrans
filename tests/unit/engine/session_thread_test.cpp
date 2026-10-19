@@ -18,11 +18,11 @@
 #include <windows.h>
 #endif
 
-#include "hdTrans/engine.h"
-#include "hdTrans/dict/snapshot_file.h"
-#include "hdTrans/engine/driver.h"
-#include "hdTrans/engine/raw.h"
-#include "hdTrans/text/lines.h"
+#include "core/engine.h"
+#include "core/dict/snapshot_file.h"
+#include "core/engine/driver.h"
+#include "core/engine/raw.h"
+#include "core/text/lines.h"
 #include "hdtest.h"
 
 #if defined(__has_feature)

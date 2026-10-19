@@ -1,10 +1,10 @@
-#include "hdTrans/output/inflect.h"
+#include "core/output/inflect.h"
 
 #include <array>
 #include <bit>
 #include <set>
 
-#include "hdTrans/output/markers.h"
+#include "core/output/markers.h"
 #include "hdtest.h"
 
 using namespace hdTrans::output::internal;

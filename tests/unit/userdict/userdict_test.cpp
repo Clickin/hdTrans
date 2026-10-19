@@ -1,9 +1,9 @@
-#include "hdTrans/userdict/userdict.h"
+#include "core/userdict/userdict.h"
 
 #include <string>
 #include <vector>
 
-#include "hdTrans/userdict/compile.h"
+#include "core/userdict/compile.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

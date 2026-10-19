@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-#include "hdTrans/text/utf8.h"
+#include "core/text/utf8.h"
 
 namespace stagetest {
 

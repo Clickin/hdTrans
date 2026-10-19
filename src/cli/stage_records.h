@@ -12,9 +12,9 @@
 #include <utility>
 #include <vector>
 
-#include "hdTrans/engine/driver.h"
-#include "hdTrans/engine/glue.h"
-#include "hdTrans/text/utf8.h"
+#include "core/engine/driver.h"
+#include "core/engine/glue.h"
+#include "core/text/utf8.h"
 
 namespace hdTrans::cli::stagerecords {
 

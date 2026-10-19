@@ -1,4 +1,4 @@
-#include "hdTrans/tokenizer/charsets.h"
+#include "core/tokenizer/charsets.h"
 
 #include "fnv.h"
 #include "hdtest.h"

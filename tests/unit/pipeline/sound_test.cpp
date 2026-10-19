@@ -1,8 +1,8 @@
-#include "hdTrans/pipeline/sound.h"
+#include "core/pipeline/sound.h"
 
 #include <string>
 
-#include "hdTrans/dict/snapshot.h"
+#include "core/dict/snapshot.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

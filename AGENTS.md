@@ -22,7 +22,7 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
   at the `J2K_*` boundary, converted by the OS; the engine has no code-page tables.
 - Types and functions `CamelCase`, local variables `lowerCamel`, private members with a
   trailing underscore, files `snake_case`, one pipeline stage per directory under
-  `src/hdTrans/`. Internal functions go in `hdTrans::internal` and in headers under
+  `src/core/`. Internal functions go in `hdTrans::internal` and in headers under
   `src/`, never in `include/`. Identifiers starting with an underscore are not used.
 - Plain functions and structs; no abstraction layer unless two implementations exist.
 - The library runs inside other people's processes: no global constructors with side

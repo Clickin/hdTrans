@@ -20,7 +20,7 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/rules/rules.h"
+#include "core/rules/rules.h"
 
 namespace rulestest {
 

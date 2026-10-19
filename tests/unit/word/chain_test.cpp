@@ -3,10 +3,10 @@
 #include <string>
 #include <vector>
 
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/tokenizer/token.h"
-#include "hdTrans/word/analyze.h"
-#include "hdTrans/word/worker.h"
+#include "core/dict/snapshot.h"
+#include "core/tokenizer/token.h"
+#include "core/word/analyze.h"
+#include "core/word/worker.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

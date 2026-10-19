@@ -1,4 +1,4 @@
-#include "hdTrans/word/kana_tables.h"
+#include "core/word/kana_tables.h"
 
 #include <string>
 

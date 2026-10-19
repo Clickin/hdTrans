@@ -1,5 +1,5 @@
-#include "hdTrans/text/utf8.h"
-#include "hdTrans/text/lines.h"
+#include "core/text/utf8.h"
+#include "core/text/lines.h"
 
 #include "hdtest.h"
 

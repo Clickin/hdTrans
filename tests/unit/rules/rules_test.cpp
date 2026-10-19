@@ -1,4 +1,4 @@
-#include "hdTrans/rules/rules.h"
+#include "core/rules/rules.h"
 
 #include <cstdio>
 #include <string>

@@ -3,10 +3,10 @@
 #include <string>
 #include <string_view>
 
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/word/flush.h"
-#include "hdTrans/word/document_senses.h"
-#include "hdTrans/word/select.h"
+#include "core/dict/snapshot.h"
+#include "core/word/flush.h"
+#include "core/word/document_senses.h"
+#include "core/word/select.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

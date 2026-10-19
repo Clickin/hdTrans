@@ -4,9 +4,9 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/engine/driver.h"
-#include "hdTrans/word/analyze.h"
-#include "hdTrans/word/flush.h"
+#include "core/engine/driver.h"
+#include "core/word/analyze.h"
+#include "core/word/flush.h"
 #include "hdtest.h"
 
 HD_TEST(word_improvements_defaults_and_reference) {

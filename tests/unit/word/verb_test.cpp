@@ -4,8 +4,8 @@
 #include <string_view>
 #include <utility>
 
-#include "hdTrans/word/worker.h"
-#include "hdTrans/word/flush.h"
+#include "core/word/worker.h"
+#include "core/word/flush.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

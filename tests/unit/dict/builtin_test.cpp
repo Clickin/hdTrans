@@ -1,4 +1,4 @@
-#include "hdTrans/dict/builtin.h"
+#include "core/dict/builtin.h"
 
 #include <string>
 

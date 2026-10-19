@@ -5,8 +5,8 @@
 #include <string_view>
 #include <vector>
 
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/names/registry.h"
+#include "core/dict/snapshot.h"
+#include "core/names/registry.h"
 #include "hdtest.h"
 
 using namespace hdTrans;

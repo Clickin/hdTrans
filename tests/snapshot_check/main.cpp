@@ -26,12 +26,12 @@
 #include <malloc/malloc.h>
 #endif
 
-#include "hdTrans/dict/builtin.h"
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/dict/tsv.h"
-#include "hdTrans/text/utf8.h"
-#include "hdTrans/userdict/sense.h"
-#include "hdTrans/userdict/userdict.h"
+#include "core/dict/builtin.h"
+#include "core/dict/snapshot.h"
+#include "core/dict/tsv.h"
+#include "core/text/utf8.h"
+#include "core/userdict/sense.h"
+#include "core/userdict/userdict.h"
 
 using namespace hdTrans::dict;
 

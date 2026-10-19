@@ -1,8 +1,8 @@
-#include "hdTrans/dict/snapshot.h"
-#include "hdTrans/tokenizer/token.h"
-#include "hdTrans/word/analyze.h"
-#include "hdTrans/word/validity_rules.h"
-#include "hdTrans/word/worker.h"
+#include "core/dict/snapshot.h"
+#include "core/tokenizer/token.h"
+#include "core/word/analyze.h"
+#include "core/word/validity_rules.h"
+#include "core/word/worker.h"
 
 #include <string>
 

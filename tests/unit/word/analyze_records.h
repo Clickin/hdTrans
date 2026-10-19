@@ -6,9 +6,9 @@
 #include <utility>
 #include <vector>
 
-#include "hdTrans/tokenizer/token.h"
-#include "hdTrans/word/analyze.h"
-#include "hdTrans/word/worker.h"
+#include "core/tokenizer/token.h"
+#include "core/word/analyze.h"
+#include "core/word/worker.h"
 #include "fnv.h"
 #include "tokenizer/stage_records.h"
 

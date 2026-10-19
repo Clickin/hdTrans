@@ -1,4 +1,4 @@
-#include "hdTrans/dict/snapshot_file.h"
+#include "core/dict/snapshot_file.h"
 
 #include <algorithm>
 #include <array>
@@ -20,11 +20,11 @@
 #include <windows.h>
 #endif
 
-#include "hdTrans/dict/mapped_file.h"
-#include "hdTrans/dict/integrity.h"
-#include "hdTrans/engine.h"
-#include "hdTrans/engine/driver.h"
-#include "hdTrans/names/document.h"
+#include "core/dict/mapped_file.h"
+#include "core/dict/integrity.h"
+#include "core/engine.h"
+#include "core/engine/driver.h"
+#include "core/names/document.h"
 #include "hdtest.h"
 
 namespace {

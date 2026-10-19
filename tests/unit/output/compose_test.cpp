@@ -1,9 +1,9 @@
 #include <chrono>
 #include <vector>
 
-#include "hdTrans/output/compose.h"
-#include "hdTrans/output/text.h"
-#include "hdTrans/tokenizer/token.h"
+#include "core/output/compose.h"
+#include "core/output/text.h"
+#include "core/tokenizer/token.h"
 #include "hdtest.h"
 
 using namespace hdTrans;
