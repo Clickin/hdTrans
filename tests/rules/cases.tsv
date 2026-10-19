@@ -125,7 +125,7 @@ L576	新しい企画を成功させたい。	새로운 기획을 성공시키고
 L576	犬を散歩させに公園へ行く。	개를 산책시키러 공원에 간다.	current	local
 L578	財布を落としてしまった。	지갑을 잃어버려 버렸다.	current	local
 L578	電車に乗り遅れてしまう。	전철에 놓쳐 버린다.	current	local
-L632	看板を壁に掲げる。	간판을 벽으로 내건다.	current	local
+L632	看板を壁に掲げる。	간판을 벽에 내건다.	current	local
 L658	彼はいつも気をつけます。	그는 언제나 조심하겠습니다.	current	local
 L728	パンを焼いた。	빵을 구웠다.	current	local
 L729	子供が受けられる授業です。	아이를 받게 되는 수업입니다.	current	local
@@ -364,8 +364,8 @@ L2380	母の作った料理はおいしい。	어머니가 만든 요리는 맛�
 L2380	弟の描いた絵が賞をもらった。	남동생이 그린 그림이 상을 받았다.	current	local
 L2403	この部屋は夏になると暑くなる。	이 방은 여름이 되면 더워진다.	current	local-ending
 L2403	春が来て、庭の花が赤くなった。	봄이 와, 뜰의 꽃이 붉어졌다.	current	local-ending
-L2425	理想にかなう。	이상에 필적한다.	current	local
-L2425	条件にかなう。	조건에 필적한다.	current	local
+L2425	理想にかなう。	이상에 부합한다.	current	local
+L2425	条件にかなう。	조건에 부합한다.	current	local
 L2429	こちらで確認いたします。	이쪽에서 확인하겠습니다.	current	local-ending
 L2429	明日の朝、お伺いいたします。	내일 아침, 질문하겠습니다.	current	local-ending
 L2430	来週からもっと頑張ります！	다음주부터도 와 노력하겠습니다!	current	local-ending
@@ -591,7 +591,7 @@ L3824	駅で三時間も待たされた。	역에서 3시간이나 기다리게 
 L3824	二週間も雨が続いている。	2주간이나 비가 계속되고 있다.	current	local
 L3830	まだ寝てる？	아직 자고 있어?	current	local-ending
 L3830	今、何してる？	지금, 뭐하고 있어?	current	local-ending
-L3833	彼は議論を深める。	그는 논의가 깊어진다.	current	local
+L3833	彼は議論を深める。	그는 논의를 깊게 한다.	current	local
 L3844	一緒に医者になろう。	함께 의사가 될 것이다.	current	local
 L3851	日経記者です。	일경 기자입니다.	current	local
 L3856	近く見える。	가까운 시일내에 보인다.	current	local
@@ -622,7 +622,7 @@ L3999	その案が候補にあがった。	그 안이 후보에 갔다.	current	
 L4001	彼は話を聞かれた。	그는 이야기를 들렸다.	current	local
 L4033	先に宿題を済ませておこう。	먼저 숙제를 끝마쳐 두자.	current	local
 L4033	旅行の前に切符を買っておく。	여행앞에 표를 사 둔다.	current	local
-L4051	無事でなによりです。	무사해 최상입니다.	current	local
+L4051	無事でなによりです。	무사해서 다행입니다.	current	local
 L4075	ケーキを四つに分けて食べた。	케이크를 4개로 나누어 먹었다.	current	local
 L4075	この問題には二つの答えがある。	이 문제에는 2개의 대답이 있다.	current	local
 L4083	娘のユイが庭で遊んでいる。	딸 유이가 뜰에서 놀고 있다.	current	local
