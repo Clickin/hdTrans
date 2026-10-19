@@ -68,6 +68,14 @@ if(NOT EMSCRIPTEN)
         add_test(NAME tools.selfbase COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/tests/selfbase.sh" "$<TARGET_FILE:hdtrans_cli>")
     endif()
 
+    # Translates examples/ with the dictionaries in HDTRANS_DICTS at test time; skipped when unset.
+    find_program(HDTRANS_SH sh)
+    if(HDTRANS_SH)
+        add_test(NAME examples COMMAND "${HDTRANS_SH}" -c "exec \"$0\" \"$1\" \"$2\" \"$HDTRANS_DICTS\""
+            "${HDTRANS_SH}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/examples.sh" $<TARGET_FILE:hdtrans_cli>)
+        set_tests_properties(examples PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+    endif()
+
     add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp)
     target_link_libraries(admin_priority PRIVATE hdtrans)
     add_test(NAME host.admin_priority COMMAND admin_priority "${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/dict/testdata/folder")

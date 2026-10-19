@@ -33,7 +33,25 @@ WebAssembly: `emcmake cmake --preset wasm && cmake --build --preset wasm`.
 | `src/j2kengine/` | `J2KEngine.dll`: `J2K_*` exports |
 | `src/wasm/` | WebAssembly entry points |
 | `tests/unit/` | unit tests (`hdtest.h` runner) |
-| `tools/` | `snapshot.sh`, `compare.sh`, `explain.sh` (self-baselines), `build.ps1` (Windows build) |
+| `examples/` | input/output example documents (below) |
+| `tools/` | `snapshot.sh`, `compare.sh`, `explain.sh` (self-baselines), `examples.sh` (examples), `build.ps1` (Windows build) |
+
+## Examples
+
+`examples/` holds short Japanese documents and their translations:
+
+- `<case>.ja.txt`: the input, translated as one document;
+- `<case>.ko.txt`: the engine's current output, reviewed;
+- `<case>.want.ko.txt`: the correct translation, present only while the engine gets lines wrong;
+- `list.txt`: one line per case (name, line count, want lines correct, what it tests).
+
+```sh
+tools/examples.sh build/mac/hdtrans DICTS            # fails on any change from *.ko.txt
+tools/examples.sh build/mac/hdtrans DICTS --accept   # takes the new output and refreshes list.txt
+```
+
+Outputs go to `build/examples/`. `ctest` runs the check when `HDTRANS_DICTS` is set and skips it
+otherwise.
 
 Dictionaries are UTF-8 TSV folders and are not part of this repository.
 Cache validation trusts source size, timestamps and file identity; after edits that preserve them,
@@ -62,3 +80,4 @@ folder (only top-level `.in` files are read). Lyrics from `lyrics/cases.tsv` are
 and `syosetu/*.ja.txt` files run as documents. `HDTRANS_BIN` selects the built CLI (default `build/mac/hdtrans`).
 Compare accepts run names or folder paths; compare/explain exit 0 for identical, 1 for differences, 2 for invalid inputs.
 Snapshot uses default translation settings and a disposable run-local cache; it refuses an existing run name.
+`tools/list.txt` catalogs the initial sets (name, input line count, recorded source); it does not constrain set discovery.
