@@ -464,13 +464,17 @@ bool PublishCacheTemp(const std::filesystem::path& from, const std::filesystem::
     const DWORD attributes = GetFileAttributesW(from.c_str());
     if (attributes == INVALID_FILE_ATTRIBUTES ||
         (attributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_DIRECTORY)) != 0) return false;
-    for (int attempt = 0; attempt < 4; attempt++) {
+    const ULONGLONG deadline = GetTickCount64() + 250;
+    DWORD delay = 1;
+    for (;;) {
         if (MoveFileExW(from.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) return true;
         const DWORD error = GetLastError();
         if (error != ERROR_SHARING_VIOLATION && error != ERROR_ACCESS_DENIED) return false;
-        Sleep(1);
+        const ULONGLONG now = GetTickCount64();
+        if (now >= deadline) return false;
+        Sleep(static_cast<DWORD>(std::min<ULONGLONG>(delay, deadline - now)));
+        delay = std::min<DWORD>(delay * 2, 64);
     }
-    return false;
 #else
     const auto parent = to.has_parent_path() ? to.parent_path() : std::filesystem::path(".");
     const int dir = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
