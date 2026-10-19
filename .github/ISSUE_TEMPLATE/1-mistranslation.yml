@@ -24,7 +24,7 @@ body:
     id: where
     attributes:
       label: 어디서 썼나요
-      options: [LunaTranslator, XUnity.AutoTranslator, 아랄트랜스, Textractor나 ITH + 아네모네, VNR, hdTransGUI 직접 실행, 웹 (trans.kuri.kr), 명령줄 (hdtrans), 기타]
+      options: [LunaTranslator, XUnity.AutoTranslator, 투컨트롤(TwoControl), 아랄트랜스, Textractor나 ITH + 아네모네, VNR, hdTransGUI 직접 실행, 웹 (trans.kuri.kr), 명령줄 (hdtrans), 기타]
   - type: input
     id: version
     attributes:
