@@ -152,7 +152,8 @@ gui::TranslationOptions Options(HWND window, bool document) {
 }
 
 void ReportError(App& app, HWND owner, const wchar_t* message) {
-    if (!app.selftest) MessageBoxW(owner, message, L"hdTrans", MB_OK | MB_ICONERROR);
+    if (app.selftest) std::fprintf(stderr, "GUI: %s\n", Utf8(message).c_str());
+    else MessageBoxW(owner, message, L"hdTrans", MB_OK | MB_ICONERROR);
 }
 
 bool LoadEngine(App& app) {
@@ -529,17 +530,22 @@ bool Check(bool condition, const char* message) {
     return condition;
 }
 
+void NotifyClick(HWND window, int id) {
+    SendMessageW(window, WM_COMMAND, MAKEWPARAM(id, BN_CLICKED),
+                 reinterpret_cast<LPARAM>(GetDlgItem(window, id)));
+}
+
 bool SelfTest(App& app) {
     bool ok = Check(!IsWindowVisible(app.main), "hidden short translation dialog");
     SetDlgItemTextW(app.main, IDC_SOURCE, L"日本語");
-    SendDlgItemMessageW(app.main, IDC_TRANSLATE, BM_CLICK, 0, 0);
+    NotifyClick(app.main, IDC_TRANSLATE);
     if (!Check(app.busy, "translate button starts worker") || !WaitForJob(app)) return false;
     ok = Check(app.error.empty() && ControlText(app.main, IDC_RESULT) == L"일본어", "short translation through dialog messages") && ok;
     CheckRadioButton(app.main, IDC_OUTPUT_TRANSLATION, IDC_OUTPUT_SPACED, IDC_OUTPUT_INTERLEAVED);
-    SendDlgItemMessageW(app.main, IDC_TRANSLATE, BM_CLICK, 0, 0);
+    NotifyClick(app.main, IDC_TRANSLATE);
     if (!WaitForJob(app)) return false;
     ok = Check(ControlText(app.main, IDC_RESULT) == L"日本語\r\n일본어", "source and translation output") && ok;
-    SendDlgItemMessageW(app.main, IDC_CLEAR, BM_CLICK, 0, 0);
+    NotifyClick(app.main, IDC_CLEAR);
     ok = Check(ControlText(app.main, IDC_SOURCE).empty() && ControlText(app.main, IDC_RESULT).empty(), "clear button") && ok;
 
     std::error_code error;
@@ -550,13 +556,13 @@ bool SelfTest(App& app) {
     app.inputFile = folder / L"원문.txt";
     app.outputFile = folder / L"번역문.txt";
     ok = Check(gui::WriteTextFile(app.inputFile, "日本語\n\n日本語\n"), "create input file") && ok;
-    SendDlgItemMessageW(app.main, IDC_FILE, BM_CLICK, 0, 0);
+    NotifyClick(app.main, IDC_FILE);
     if (!Check(app.file != nullptr, "create file dialog")) {
         fs::remove_all(folder, error);
         return false;
     }
     ok = Check(!IsWindowVisible(app.file) && ControlText(app.file, IDC_PREVIEW) == L"日本語\r\n\r\n日本語\r\n", "hidden file dialog and preview") && ok;
-    SendDlgItemMessageW(app.file, IDC_TRANSLATE, BM_CLICK, 0, 0);
+    NotifyClick(app.file, IDC_TRANSLATE);
     ok = Check(app.progress && !IsWindowVisible(app.progress), "hidden progress dialog") && ok;
     if (!WaitForJob(app)) return false;
     std::string output;
@@ -564,10 +570,12 @@ bool SelfTest(App& app) {
     ok = Check(app.error.empty() && gui::ReadTextFile(app.outputFile, output, encoding) &&
                encoding == gui::TextEncoding::Utf8Bom && output == "일본어\n\n일본어\n", "file translation and BOM output") && ok;
 
+    ok = Check(IsWindowEnabled(app.file) && IsWindowEnabled(GetDlgItem(app.file, IDC_TRANSLATE)),
+               "file dialog reenabled after completion") && ok;
     ok = Check(gui::WriteTextFile(app.outputFile, "unchanged"), "prepare cancellation output") && ok;
-    SendDlgItemMessageW(app.file, IDC_TRANSLATE, BM_CLICK, 0, 0);
+    NotifyClick(app.file, IDC_TRANSLATE);
     if (!Check(app.progress != nullptr, "create cancellation dialog")) return false;
-    SendDlgItemMessageW(app.progress, IDC_STOP, BM_CLICK, 0, 0);
+    NotifyClick(app.progress, IDC_STOP);
     if (!WaitForJob(app)) return false;
     ok = Check(app.wasCancelled && gui::ReadTextFile(app.outputFile, output, encoding) && output == "unchanged", "stop preserves existing output") && ok;
     SendMessageW(app.file, WM_CLOSE, 0, 0);
