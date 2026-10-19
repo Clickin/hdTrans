@@ -86,4 +86,10 @@ jobs:
         if: steps.base.outputs.run == 'true'
         env:
           HDTRANS_DICTS_A: ${{ runner.temp }}/base/dicts
-        run: tools/e2e.sh "$RUNNER_TEMP/base/build/linux/hdtrans" build/linux/hdtrans "$GITHUB_WORKSPACE/dicts" build/e2e
+        # Exit 1 means translations changed, which is reported, not a failure; 2 is an error.
+        run: |
+          set +e
+          tools/e2e.sh "$RUNNER_TEMP/base/build/linux/hdtrans" build/linux/hdtrans "$GITHUB_WORKSPACE/dicts" build/e2e | tee "$RUNNER_TEMP/e2e.log"
+          status=${PIPESTATUS[0]}
+          tail -n 1 "$RUNNER_TEMP/e2e.log" >> "$GITHUB_STEP_SUMMARY"
+          [ "$status" -le 1 ]
