@@ -208,22 +208,47 @@ CI의 `tools/wasm_smoke.mjs`가 같은 순서로 동작을 확인합니다.
 
 ## C++ API
 
-`include/core/engine.h`:
+헤더는 `include/core/engine.h`입니다. `Engine`이 사전을 들고, `Session`이 그 사전으로 번역합니다.
 
-- `hdTrans::Engine(bool reference = false, CacheWrite cacheWrite = CacheWrite::Sync, UserReload userReload = UserReload::Off)`:
-  불러온 사전. 여러 세션과 스레드가 함께 씁니다. `Open(dirs, verifyDicts, userFile)`, `Reload()`, `loaded()`,
-  `Dictionaries()`, `UserFileError()`, `DetachReload()`. `userFile`은 폴더 다음에 읽는 사용자 사전 파일(빈 값이나
-  없는 파일이면 없음)이며, 불러오지 못하면 빼고 열고 `UserFileError()`가 이유를 돌려줍니다.
-  `OpenUserDicts(dirs, verifyDicts, userPaths)`는 파일이나 폴더 목록을 받으며, 뒤 파일의 같은 항목이 우선합니다.
-  `CacheWrite::Off`는 캐시 세대를 저장하지 않고, `Sync`는 `Open`이 끝나기 전에 저장을 시도합니다.
-  `UserReload::Auto`는 번역을 시작할 때 `userFile`과 Ehnd 폴더를 1초에 한 번까지 확인해, 바뀌면 백그라운드에서 다시
-  불러와 바꿉니다. 엔진을 없애면 진행 중인 다시 읽기가 끝나기를 기다립니다. `DetachReload()` 뒤에는 기다리지
-  않고, 다시 읽기는 스스로 끝납니다(라이브러리를 내릴 때).
-  `OpenEhnd(dir)`은 Ehnd 폴더의 필터와 사용자 사전을 그 뒤에 만들거나 `Reset`한 세션에 씁니다(빈
-  경로는 뗌, 폴더를 못 읽으면 `false`, `Open` 전에는 폴더 이름만 정함). `Reload()`와 `UserReload::Auto`의
-  다시 읽기는 Ehnd 폴더도 함께 읽습니다. `FilterErrors()`는 필터 파일과 Ehnd 폴더에서 건너뛴 줄을
-  `파일:줄: 이유`로, `Filters()`는 현재 필터를 돌려줍니다 ([ehnd-compat.md](ehnd-compat.md)).
-- `hdTrans::Session(const Engine&, bool reference = false, bool cg = true, bool misread = false)`: 문맥을 기억하는 번역. 한 번에 한 스레드에서
-  씁니다. `Translate(text)`는 `\n`으로 구분한 한 줄 이상을 번역하고(`\r`은 유지), 64 KiB가 넘는 줄은
-  16 KiB 이하 조각으로 나눠 번역합니다. `Reset()`은 기억을 지우고 엔진의 현재 사전을 가져옵니다.
-  `UserReload::Auto` 엔진의 세션은 번역을 시작할 때 엔진에 새 사전이 있으면 기억을 지우고 그 사전을 씁니다.
+```cpp
+hdTrans::Engine engine;                      // 사전
+engine.Open({"dicts"});                      // 사용자 사전은 OpenUserDicts로
+hdTrans::Session session(engine);            // 문맥을 기억하는 번역
+std::string ko = session.Translate("今日はいい天気ですね。");
+```
+
+### Engine
+
+`Engine(bool reference = false, CacheWrite cacheWrite = CacheWrite::Sync, UserReload userReload = UserReload::Off)`.
+여러 세션과 스레드가 함께 씁니다.
+
+| 함수 | 하는 일 |
+|---|---|
+| `Open(dirs, verifyDicts = false, userFile = {})` | 사전 폴더(뒤 폴더가 앞을 덮음)와 사용자 사전 파일 하나를 불러옴. 사전을 하나도 못 불러오면 `false` |
+| `OpenUserDicts(dirs, verifyDicts, userPaths)` | 사용자 사전을 파일이나 폴더 목록으로 받음. 폴더는 그 안의 `userdict*.txt`, `userdict*.tsv`. 뒤 파일이 우선 |
+| `Reload()` | 폴더, 사용자 사전, Ehnd 폴더를 다시 불러와 바꿈. 진행 중인 세션은 하던 사전으로 계속 번역 |
+| `OpenEhnd(dir)` | Ehnd 폴더의 필터와 사용자 사전을 씀. 빈 경로는 뗌. `Open` 전이면 폴더 이름만 정함 |
+| `loaded()` | 사전을 불러왔는지 |
+| `UserFileError()` | 사용자 사전을 못 불러온 이유. 못 불러온 파일은 빼고 엶 |
+| `FilterErrors()` | 필터 파일과 Ehnd 폴더에서 건너뛴 줄(`파일:줄: 이유`) |
+| `Dictionaries()`, `Filters()` | 지금 쓰는 사전과 필터 |
+| `DetachReload()` | 라이브러리를 내릴 때. 엔진을 없애도 진행 중인 다시 읽기를 기다리지 않음 |
+
+| 옵션 | 값 |
+|---|---|
+| `CacheWrite` | `Sync`: `Open`이 끝나기 전에 사전 캐시를 저장. `Off`: 저장하지 않음 |
+| `UserReload` | `Auto`: 번역을 시작할 때 사용자 사전과 Ehnd 폴더를 1초에 한 번까지 보고, 바뀌면 백그라운드에서 다시 불러옴. `Off`: 하지 않음 |
+
+엔진을 없애면 진행 중인 다시 읽기가 끝나기를 기다립니다(`DetachReload` 뒤에는 기다리지 않음).
+
+### Session
+
+`Session(const Engine&, bool reference = false, bool cg = true, bool misread = false)`. 한 번에 한 스레드에서 씁니다.
+
+| 함수 | 하는 일 |
+|---|---|
+| `Translate(text)` | `\n`으로 나눈 줄을 번역(`\r`은 유지). 앞에서 번역한 문맥을 기억함. 64 KiB가 넘는 줄은 16 KiB 이하로 나눠 번역 |
+| `Reset()` | 기억을 지우고 엔진의 지금 사전을 가져옴 |
+
+`UserReload::Auto` 엔진의 세션은 엔진에 새 사전이 생기면 다음 번역에서 기억을 지우고 그 사전으로 바꿉니다.
+필터와 Ehnd 형식은 [ehnd-compat.md](ehnd-compat.md)에 있습니다.
