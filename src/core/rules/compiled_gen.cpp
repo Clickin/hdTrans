@@ -4507,18 +4507,18 @@ bool RuleL478([[maybe_unused]] Item* p) {
     return (SrcEq(p, -1, "に"sv) && PumsaEq(p, -1, "2**"sv) && DstSet(p, -1, "에"sv));
 }
 
-// # 一時는 분·오전·오후·반시각 문맥이나 です 앞에서 시각 의미의 '1시'를 고른다.
-// # [의심] です만으로 시각을 확정해 일시적이라는 뜻도 1시가 된다; 자작문 苦労は一時です。 → 고생은 1시입니다.; -why: 一時 LocalRule 479.
+// # 一時는 분·오전·오후·반시각 또는 현재 시각을 말하는 今は·時刻は 뒤의 です 앞에서 1시로 고른다.
 // local 479
 //     pos[+1] is 1** and gram[+1] has Nj|Nd and src[+2] == "分"
 //     (src[-1] == "午前" or src[-1] == "午後")
-//     src[+1] == "です"
+//     src[+1] == "です" and src[-1] == "は" and (src[-2] == "今" or src[-2] == "時刻")
 //     src[+1] == "半"
 bool RuleL479([[maybe_unused]] Item* p) {
     return (PumsaEq(p, 1, "1**"sv) && GramEq(p, 1, "NjNd"sv) && SrcEq(p, 2, "分"sv)) ||
            (SrcEq(p, -1, "午前"sv) ||
            SrcEq(p, -1, "午後"sv)) ||
-           SrcEq(p, 1, "です"sv) ||
+           (SrcEq(p, 1, "です"sv) && SrcEq(p, -1, "は"sv) && (SrcEq(p, -2, "今"sv) ||
+           SrcEq(p, -2, "時刻"sv))) ||
            SrcEq(p, 1, "半"sv);
 }
 
@@ -4529,12 +4529,11 @@ bool RuleL480([[maybe_unused]] Item* p) {
     return SrcEq(p, 1, "でも"sv);
 }
 
-// # 一体는 다음 말에 숫자 문법 코드 Nj·Nd가 있으면 ‘일체’를 고른다.
-// # [의심] 뒤의 숫자 코드만 보고 의문 강조 부사도 일체로 오독한다; 자작 一体何匹いるのか。 → 일체 몇 마리 있는 것인가.; -why 발췌: 一体 LocalRule 481 일체이며 여기서는 도대체가 맞다.
+// # 一体는 何를 제외한 수사 앞에서 일체로 고르고 의문 수량 강조에는 적용하지 않는다.
 // local 481
-//     gram[+1] has Nj|Nd
+//     gram[+1] has Nj|Nd and src[+1] != "何"
 bool RuleL481([[maybe_unused]] Item* p) {
-    return GramEq(p, 1, "NjNd"sv);
+    return (GramEq(p, 1, "NjNd"sv) && SrcNe(p, 1, "何"sv));
 }
 
 // # 日新 앞말이 숫자 문법 코드를 갖지 않으면 닛신을 고른다. (미발동: rare-word)
@@ -5439,9 +5438,9 @@ constexpr CompiledRule kLocal[] = {
     {RuleL476, 0x0d1cd18363d9210aull},
     {RuleL477, 0x971a31032300f9feull},
     {RuleL478, 0x8d2a1afb408f028eull},
-    {RuleL479, 0xebc6a53ec1da5a13ull},
+    {RuleL479, 0x15a8e9dcc5eef46cull},
     {RuleL480, 0x32524d6f56e8c0e7ull},
-    {RuleL481, 0xb038df1cddb97212ull},
+    {RuleL481, 0x72d6571d8cf8cd01ull},
     {RuleL482, 0xf0a70be002eb44a3ull},
     {RuleL483, 0x734ca090329b7fdbull},
     {RuleL484, 0x3ee8daff0dd97033ull},
