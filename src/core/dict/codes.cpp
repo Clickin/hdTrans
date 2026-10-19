@@ -1,5 +1,6 @@
 #include "core/dict/codes.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <cstring>
 

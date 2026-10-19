@@ -25,6 +25,11 @@ trap 'exit 1' HUP INT TERM
 export LC_ALL=C HDTRANS_CACHE_DIR=$run/.cache
 unset HDTRANS_SNAPSHOT HDTRANS_VERIFY_DICTS HDTRANS_DRIVER_DUMP
 started=$(date +%s)
+nanoseconds() {
+    value=$(date +%s%N 2>/dev/null) || value=
+    case $value in ''|*[!0-9]*) value="$(date +%s)000000000" ;; esac
+    printf '%s\n' "$value"
+}
 sha() { shasum -a 256 "$1" | awk '{print $1}'; }
 dictionary_hashes() {
     (cd "$dicts"
@@ -69,10 +74,12 @@ for input in "$run/inputs"/*.in; do
     mode=document
     set --
     case $setName in *.raw) mode=raw; set -- -raw ;; *.each) mode=each; set -- -each ;; esac
-    /usr/bin/time -p "$cli" -dicts "$dicts" "$@" -in "$input" \
+    sampleStart=$(nanoseconds)
+    "$cli" -dicts "$dicts" "$@" -in "$input" \
         > "$run/outputs/$setName.out" 2> "$run/timing/$setName.log"
-    seconds=$(awk '$1 == "real" {value = $2} END {print value}' "$run/timing/$setName.log")
-    [ -n "$seconds" ] || { echo "missing timing for $setName" >&2; exit 1; }
+    sampleEnd=$(nanoseconds)
+    seconds=$(awk -v ns="$((sampleEnd - sampleStart))" 'BEGIN {printf "%.3f", ns / 1000000000}')
+    printf 'real %s\n' "$seconds" >> "$run/timing/$setName.log"
     lines=$(awk 'END {print NR+0}' "$input")
     printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$setName" "$mode" "$lines" "$seconds" \
         "$(sha "$input")" "$(sha "$run/outputs/$setName.out")" >> "$run/sets.tsv"

@@ -1,5 +1,6 @@
 // Words without conjugation, adjectives and adjectival nouns: what follows them and
 // their endings.
+#include <cstdint>
 #include <algorithm>
 
 #include "core/word/strings.h"

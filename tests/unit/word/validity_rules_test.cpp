@@ -4,6 +4,7 @@
 #include "core/word/validity_rules.h"
 #include "core/word/worker.h"
 
+#include <cstdint>
 #include <string>
 
 #include "fnv.h"

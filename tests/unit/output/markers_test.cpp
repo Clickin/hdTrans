@@ -1,5 +1,6 @@
 #include "core/output/markers.h"
 
+#include <cstdint>
 #include <string>
 
 #include "fnv.h"

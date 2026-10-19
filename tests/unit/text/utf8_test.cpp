@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "core/text/utf8.h"
 #include "core/text/lines.h"
 
