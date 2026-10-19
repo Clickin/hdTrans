@@ -233,6 +233,10 @@ int main(int argc, char** argv) {
     bool noCache = false;
     for (int i = 1; i < argc; i++) {
         const char* a = argv[i];
+        if (!std::strcmp(a, "-version")) {
+            std::puts(HDTRANS_VERSION);
+            return 0;
+        }
         if (!std::strcmp(a, "-dicts") && i + 1 < argc) dictsArg = argv[++i];
         else if (!std::strcmp(a, "-config") && i + 1 < argc) configArg = argv[++i];
         else if (!std::strcmp(a, "-userdict") && i + 1 < argc) {
@@ -256,7 +260,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-no-cg")) noCg = true;
         else if (!std::strcmp(a, "-cg-learned")) cgLearned = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-config FILE] [-dicts DIR,...] [-userdict PATH]... [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-version] [-config FILE] [-dicts DIR,...] [-userdict PATH]... [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"

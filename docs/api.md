@@ -17,7 +17,7 @@ hdTrans는 하나의 정적 라이브러리(`hdTransCore`)와 그 위의 얇은 
 각 줄 뒤에 `\n`을 붙입니다.
 
 ```
-hdtrans [-config FILE] [-dicts DIR,...] [-userdict PATH]... [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]
+hdtrans [-version] [-config FILE] [-dicts DIR,...] [-userdict PATH]... [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]
 ```
 
 | 옵션 | 설명 |
@@ -26,6 +26,7 @@ hdtrans [-config FILE] [-dicts DIR,...] [-userdict PATH]... [-ehnd DIR] [-each |
 | `-dicts DIR[,DIR...]` | 불러올 사전 폴더 (순서대로, 뒤가 앞을 덮어씀). 기본값은 데이터 루트의 `dicts`, 없으면 현재 폴더의 `dicts`. 첫 항목이 `FILE.hdsnap`이면 폴더의 열 파일 대신 그 [컴파일한 사전](dictionary-files.md#컴파일한-사전-hdsnap)을 씀 |
 | `-userdict PATH` | 사용자 사전 파일이나 폴더. 여러 번 지정 가능. 기본값은 데이터 루트 `user/`의 `userdict*.txt`, `userdict*.tsv`. 빈 값이면 끔. 명시한 파일이 하나뿐이면 오류 때 실패 |
 | `-in FILE` | 표준 입력 대신 FILE을 읽음 |
+| `-version` | 빌드 버전을 출력하고 종료 |
 | `-ehnd DIR` | Ehnd 폴더 DIR의 필터, SkipLayer, 사용자 사전을 씀. 기본으로 쓰지 않으며 설정 파일로도 켤 수 있음. 건너뛴 줄은 표준 오류에 씀 ([ehnd-compat.md](ehnd-compat.md)) |
 | `-each` | 줄마다 새 세션 |
 | `-raw` | 줄마다 단어 파이프라인만으로 번역 |
