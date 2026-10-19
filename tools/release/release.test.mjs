@@ -288,9 +288,15 @@ async function harness(t, options = {}) {
   let published;
   let releaseFailed = false;
   const calls = [];
+  const logs = [];
+  const lookups = [];
   if (options.resume) applyCandidate(root, candidate);
   const missing = () => { throw Object.assign(new Error('Not found'), { status: 404 }); };
-  const github = { paginate: async () => options.promotions ?? [pr], rest: {
+  const github = { paginate: async (method, args) => {
+    assert.equal(method, github.rest.repos.listPullRequestsAssociatedWithCommit);
+    lookups.push(args);
+    return options.promotions ?? [pr];
+  }, rest: {
     actions: {
       getWorkflow: async () => ({ data: { id: 42 } }),
       getWorkflowRun: async () => ({ data: { ...goodRun, ...options.run } }),
@@ -352,9 +358,34 @@ async function harness(t, options = {}) {
       assert.equal(baseline, undefined);
       assert.equal(version, candidate.version.toString());
       return candidate;
-    }, log: () => {} });
-  return { run, calls, root };
+    }, log: message => logs.push(message) });
+  return { run, calls, logs, lookups, root };
 }
+
+for (const title of ['ci: recover main workflows', 'feat: add snapshots']) {
+  test(`a direct main push without a PR cannot release: ${title}`, async t => {
+    const h = await harness(t, { promotions: [], promotion: { title } });
+    const version = readVersion(h.root, false);
+    await h.run();
+    assert.deepEqual(h.calls, []);
+    assert.equal(readVersion(h.root, false), version);
+    assert.deepEqual(h.lookups, [{ ...repo, commit_sha: source, per_page: 100 }]);
+    assert.deepEqual(h.logs, ['A merged main PR is required for a release; skipping this direct push.']);
+  });
+}
+
+test('nonempty invalid PR associations still fail without release mutations', async t => {
+  for (const promotions of [
+    [{}], [{ ...promotion, merged_at: null }], [{ ...promotion, merge_commit_sha: previous }],
+    [{ ...promotion, base: { ref: 'develop', repo: promotion.base.repo } }],
+    [{ ...promotion, base: { ref: 'main', repo: { full_name: 'fork/hdTrans' } } }], [promotion, promotion],
+  ]) {
+    const h = await harness(t, { promotions });
+    await assert.rejects(h.run(), /exactly one merged main PR/);
+    assert.deepEqual(h.calls, []);
+    assert.equal(h.lookups.length, 1);
+  }
+});
 
 test('release uses only a normal main push, then tag, Release and explicit non-dry-run Build', async t => {
   const h = await harness(t);

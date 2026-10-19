@@ -136,9 +136,14 @@ export async function releaseMain({ github, repo, runId, token, root = process.c
   };
   if (!await isCurrent(head)) return;
   if (git('status', '--porcelain', '--untracked-files=no')) throw new Error('The checkout must be clean.');
-  const promotion = mergedPromotion(await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+  const associatedPRs = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
     ...repo, commit_sha: source, per_page: 100,
-  }), repo, source);
+  });
+  if (associatedPRs.length === 0) {
+    log('A merged main PR is required for a release; skipping this direct push.');
+    return;
+  }
+  const promotion = mergedPromotion(associatedPRs, repo, source);
 
   let version;
   let releaseSha = head;
