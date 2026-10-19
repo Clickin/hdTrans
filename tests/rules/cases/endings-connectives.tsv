@@ -42,3 +42,5 @@ L3238	短い時間だ。	짧은 시간이다.	fix	local-ending
 L3238	私は嘘をつかないことを誓う。	나는 거짓말하지 않을 것을 맹세한다.	keep	local-ending
 L1327	何を待つの。	무엇을 기다려.	fix	local-ending
 L1327	ここで待つの。	여기서 기다려.	keep	local-ending
+L220	確認してみるのみだ。	확인해 볼 뿐이다.	fix	local-ending
+L220	待つのみだ。	기다릴 뿐이다.	keep	local-ending

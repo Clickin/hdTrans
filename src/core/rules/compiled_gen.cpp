@@ -2275,12 +2275,11 @@ bool RuleL219([[maybe_unused]] Item* p) {
            (PumsaEq(p, -1, "4**"sv) && SrcEq(p, 1, "なれ"sv) && DstEq(p, 1, "될 수 &HN@"sv));
 }
 
-// # のみ 어미는 앞 단어가 동사이고 그 앞이 명사이면 관형형 뿐을 고르면서 그 명사의 번역을 가로 덮어쓴다. (미발동: rare-context)
-// # [의심] D-2는 조사나 어미가 아니라 앞 명사 자체이므로 번역을 가로 덮어쓰면 명사 뜻이 사라진다.
+// # 명사와 동사 뒤의 のみ는 앞 명사의 뜻을 유지하며 관형형 '-ㄹ 뿐'을 고른다.
 // local 220
-//     pos[-1] is 4** and pos[-2] is 1** and ko[-2] := "가"
+//     pos[-1] is 4** and pos[-2] is 1**
 bool RuleL220([[maybe_unused]] Item* p) {
-    return (PumsaEq(p, -1, "4**"sv) && PumsaEq(p, -2, "1**"sv) && DstSet(p, -2, "가"sv));
+    return (PumsaEq(p, -1, "4**"sv) && PumsaEq(p, -2, "1**"sv));
 }
 
 // # のみ는 명사 뒤에서 であ 동사에 이어지면 한정 표현 ‘뿐’으로 고른다.
@@ -5183,7 +5182,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL217, 0x50229149668c968full},
     {RuleL218, 0x4250444f16a1fb83ull},
     {RuleL219, 0xfebadb095446854dull},
-    {RuleL220, 0xd8316e544d2b7d37ull},
+    {RuleL220, 0xed54a8ee4bdc1d1eull},
     {RuleL221, 0xee826adae303cc75ull},
     {RuleL222, 0x09e11aaa2e238e1cull},
     {RuleL223, 0x33a7213cb1febec9ull},
