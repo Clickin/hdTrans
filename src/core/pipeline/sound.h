@@ -137,7 +137,8 @@ std::u32string ToKatakana(std::u32string_view rs);
 // Lengthen), or false. In a key of three or more characters a small vowel also matches
 // the plain one (ふわぁ, ふわあ). A key that ends in a doubled syllable, with or without
 // ッ, whose Korean ends in a doubled syllable, continues over more of that syllable
-// (あっはっは+っはっは, くっくっ+くっ). Elongation may follow the key, or come before its last
+// (あははは+はは, あっはっは+っはっ) with a unit 'r' for each, or 'h' when the syllable holds
+// ッ: such a match is written as heard, each syllable with its ㅅ (앗핫핫핫). Elongation may follow the key, or come before its last
 // character when that is ン or ッ; ッ may close it, with the ～ and ー after it, when no kana
 // but ト, テ, ～ or ー follows.
 bool MatchSound(const SoundRow& row, std::u32string_view f, size_t p, size_t& end, std::string& units);

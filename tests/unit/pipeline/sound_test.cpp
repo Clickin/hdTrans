@@ -52,7 +52,7 @@ HD_TEST(pipeline_lengthen) {
         {"정말", "vv", "정말~"},    {"쾅", "v", "콰앙"},       {"하아", "vvvvvvv", "하아아아아아"},
         {"정말", "!", "정말"},      {"ok", "vv", "ok"},        {"", "v", ""},
         // Repeats write the last syllable again and let ! close it.
-        {"아하하", "r", "아하하하"}, {"아하하", "rr!", "아하하하핫"}, {"큭큭", "r", "큭큭큭"},
+        {"아하하", "r", "아하하하"}, {"아하하", "rr!", "아하하하핫"}, {"후후", "r", "후후후"},
         {"아하하", "!", "아하하"},
     };
     for (const auto& c : cases) HD_CHECK_EQ(internal::Lengthen(c.korean, c.units), std::string(c.want));
@@ -123,13 +123,15 @@ HD_TEST(pipeline_sound) {
         {"冷て～！", "冷たい！"},
         {"歌おうぜぇ～。", "歌おうぜぇ～。"},
         {"届いてぇ！", "届いてぇ！"},
-        // A laugh repeats its last syllable past its row (あっはっは, はっはっは, くっくっ,
-        // うふふふ); the closing ッ gives it ㅅ. A unit of two syllables does not repeat.
-        {"あっはっはっはっ", "아하하핫"},
-        {"アッハッハッハッ！", "아하하핫！"},
-        {"あっはっはっは", "아하하하"},
+        // A laugh repeats its last syllable past its row (はははは, うふふふ), the closing ッ
+        // giving it ㅅ; past a row whose syllable holds ッ (あっはっは, くっくっ) it is written
+        // as heard, each syllable with its ㅅ. A unit of two syllables does not repeat.
+        {"あっはっはっはっ", "앗핫핫핫"},
+        {"アッハッハッハッ！", "앗핫핫핫！"},
+        {"あっはっはっは", "앗핫핫하"},
         {"はははははっ", "하하하하핫"},
-        {"くっくっくっくっ", "큭큭큭큭"},
+        {"くっくっくっくっ", "쿳쿳쿳쿳"},
+        {"くっくっくっ", "큭큭큭"},
         {"うふふふふっ", "우후후후훗"},
         {"うふふふふっ～", "우후후후훗"},
         {"えへへへへっ", "에헤헤헤헷"},

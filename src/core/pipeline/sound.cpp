@@ -328,7 +328,10 @@ bool SoundText::MatchAt(size_t p, SoundMatch& best) const {
             ok = false;  // a final と is the particle, not katakana ト
         }
         if (ok && (chosen == nullptr || end > best.end)) {
-            best = SoundMatch{p, end, s.key.size(), s.key, Lengthen(Reading(s, p, end), units), s.root, s.intj, s.lead};
+            std::string korean = units.find('h') != std::string::npos
+                                     ? text::FromKana(EncodeText(std::u32string_view(f_).substr(p, end - p)), text::Preset::Fan)
+                                     : Lengthen(Reading(s, p, end), units);
+            best = SoundMatch{p, end, s.key.size(), s.key, std::move(korean), s.root, s.intj, s.lead};
             chosen = &s;
         }
     }
@@ -708,12 +711,14 @@ std::u32string_view RepeatedUnit(const SoundRow& row) {
     return {};
 }
 
-// The characters after f[i:] that repeat unit, one 'r' unit for each.
+// The characters after f[i:] that repeat unit, one unit for each: 'h' when unit holds ッ,
+// 'r' otherwise.
 size_t Repeats(std::u32string_view unit, std::u32string_view f, size_t i, std::string& units) {
+    const char mark = unit.find(U'ッ') != std::u32string_view::npos ? 'h' : 'r';
     size_t n = 0;
     while (!unit.empty() && f.substr(i + n).starts_with(unit)) {
         n += unit.size();
-        units += 'r';
+        units += mark;
     }
     return n;
 }
