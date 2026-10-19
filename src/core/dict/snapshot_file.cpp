@@ -669,6 +669,7 @@ public:
     std::string path;
     FileStamp stamp;
     std::vector<std::string> folders;
+    std::string userFile;
     std::vector<Section> sections;
     std::vector<Segment> segments;
     std::unique_ptr<std::atomic<uint8_t>[]> checked;
@@ -747,7 +748,7 @@ public:
     }
     std::shared_ptr<const Snapshot> Fallback() {
         std::call_once(fallbackOnce, [&] {
-            auto loaded = LoadFoldersTsv(folders);
+            auto loaded = LoadFoldersTsv(folders, userFile);
             if (loaded.snapshot && loaded.snapshot->HasDictionary()) fallback = std::move(loaded.snapshot);
         });
         return fallback;
@@ -1099,23 +1100,28 @@ void RefreshManifest(const internal::SnapshotFile& file, const std::vector<Sourc
 
 }  // namespace
 
-LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify, bool cacheWrite) {
+LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify, bool cacheWrite,
+                       std::string_view userFile) {
     for (const auto& folder : folders) if (!SafePath(folder)) return {nullptr, {{folder, LoadErrorKind::Folder, 0, TsvErrorKind::Read, {}}}};
     const auto mode = EnvironmentPath("HDTRANS_SNAPSHOT");
-    if (mode && *mode == "off") return LoadFoldersTsv(folders);
+    if (mode && *mode == "off") return LoadFoldersTsv(folders, userFile);
+    if (bool column = false; !userFile.empty() && internal::ReadColumnHeader(userFile, column) && column) {
+        return LoadFoldersTsv(folders, userFile);
+    }
     const auto strict = EnvironmentPath("HDTRANS_VERIFY_DICTS");
     verify = verify || (strict && *strict == "1");
     const auto path = internal::SnapshotPath(folders, cacheDir);
-    if (path.empty()) return LoadFoldersTsv(folders);
+    if (path.empty()) return LoadFoldersTsv(folders, userFile);
     std::vector<Source> sources;
-    if (!ListSources(folders, sources, false)) return LoadFoldersTsv(folders);
+    if (!ListSources(folders, sources, false)) return LoadFoldersTsv(folders, userFile);
     const auto resource = internal::SnapshotResourcePath(path);
     if (auto cached = SnapshotStorage::Read(folders, resource, verify); cached.snapshot) {
         const auto file = SnapshotStorage::Backing(*cached.snapshot);
+        file->userFile = userFile;
         bool refresh = false;
         if (CheckSources(folders, CachedManifest(*file), sources, verify, refresh)) {
             if (refresh && cacheWrite) RefreshManifest(*file, sources);
-            auto loaded = LoadPlainFolders(std::move(cached.snapshot), folders, std::move(cached.errors));
+            auto loaded = LoadPlainFolders(std::move(cached.snapshot), folders, std::move(cached.errors), userFile);
             if (!file->bad.load(std::memory_order_relaxed)) {
                 if (!loaded.snapshot) return loaded;
                 std::vector<Source> after;
@@ -1124,16 +1130,16 @@ LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view
                     unchanged = after[i].folder == sources[i].folder && after[i].relative == sources[i].relative &&
                                 after[i].stamp == sources[i].stamp;
                 }
-                if (!unchanged) return LoadFoldersTsv(folders);
+                if (!unchanged) return LoadFoldersTsv(folders, userFile);
                 if (cacheWrite) internal::MaintainCache(PathOf(path), PathOf(resource));
                 return loaded;
             }
         }
     }
-    if (!cacheWrite) return LoadFoldersTsv(folders);
+    if (!cacheWrite) return LoadFoldersTsv(folders, userFile);
     sources.clear();
     bool write = ListSources(folders, sources, true);
-    auto loaded = LoadFoldersTsv(folders);
+    auto loaded = LoadFoldersTsv(folders, userFile);
     if (loaded.snapshot && loaded.snapshot->HasDictionary() && write) {
         std::vector<Source> after;
         write = ListSources(folders, after, false) && after.size() == sources.size();

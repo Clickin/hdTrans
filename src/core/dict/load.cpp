@@ -167,6 +167,30 @@ bool ReadFolderFiles(const std::vector<std::string>& folders, bool plainOnly, st
     return true;
 }
 
+// Reads the user dictionary file at path after the files of the folders; nothing for an
+// empty path or a missing file. With plainOnly, a column file is left out.
+bool ReadUserFile(std::string_view path, std::size_t folders, bool plainOnly, std::vector<File>& files,
+                  std::vector<LoadError>& errors) {
+    if (path.empty()) return true;
+    File file;
+    file.folder = static_cast<int>(folders);
+    file.name = std::string(path);
+    file.user = true;
+    if (path.find('\0') != std::string_view::npos || !internal::ValidUtf8(path)) {
+        errors.push_back({file.name, LoadErrorKind::Read, 0, TsvErrorKind::Read, {}});
+        return false;
+    }
+    std::error_code ec;
+    if (!std::filesystem::exists(PathOf(path), ec) && !ec) return true;
+    bool column = false;
+    if (!ReadFile(PathOf(path), file.text, plainOnly ? &column : nullptr)) {
+        errors.push_back({file.name, LoadErrorKind::Read, 0, TsvErrorKind::Read, {}});
+        return false;
+    }
+    if (!column) files.push_back(std::move(file));
+    return true;
+}
+
 // Interns the codes of the senses of a load, remembering the codes of each pos value.
 class CodeReader {
 public:
@@ -392,7 +416,14 @@ bool SnapshotLoader::Compile(const std::string& name, std::string_view text, int
 bool SnapshotLoader::ReadLayers() {
     for (File& f : files) {
         const char* message = nullptr;
-        if (!internal::ReadLayer(f.text, f.layer)) {
+        if (f.user) {
+            const bool column = ColumnFile(f.text);
+            if (!internal::ReadLayer(f.text, f.layer) ||
+                (f.layer != FileLayer::User && internal::WithoutHeader(f.text).size() != f.text.size())) {
+                message = "the first line of the user dictionary is not #! layer=user";
+            }
+            f.layer = column ? FileLayer::User : FileLayer::Base;
+        } else if (!internal::ReadLayer(f.text, f.layer)) {
             message = "the first line is not #! layer=base|words|names|user|kana|readings";
         } else if (f.layer != FileLayer::Base) {
             const bool plainLayer = f.layer == FileLayer::Kana || f.layer == FileLayer::Readings;
@@ -586,18 +617,24 @@ LoadResult Load(std::vector<File> files) {
     return loader.Run();
 }
 
-LoadResult LoadFoldersTsv(const std::vector<std::string>& folders) {
+LoadResult LoadFoldersTsv(const std::vector<std::string>& folders, std::string_view userFile) {
     std::vector<File> files;
     std::vector<LoadError> errors;
-    if (!ReadFolderFiles(folders, false, files, errors)) return {nullptr, std::move(errors)};
+    if (!ReadFolderFiles(folders, false, files, errors) ||
+        !ReadUserFile(userFile, folders.size(), false, files, errors)) {
+        return {nullptr, std::move(errors)};
+    }
     return Load(std::move(files));
 }
 
 LoadResult LoadPlainFolders(std::shared_ptr<Snapshot> snapshot, const std::vector<std::string>& folders,
-                           std::vector<LoadError> errors) {
+                           std::vector<LoadError> errors, std::string_view userFile) {
     SnapshotLoader loader(std::move(snapshot));
     std::vector<LoadError> readErrors;
-    if (!ReadFolderFiles(folders, true, loader.files, readErrors)) return {nullptr, std::move(readErrors)};
+    if (!ReadFolderFiles(folders, true, loader.files, readErrors) ||
+        !ReadUserFile(userFile, folders.size(), true, loader.files, readErrors)) {
+        return {nullptr, std::move(readErrors)};
+    }
     loader.errors = std::move(errors);
     if (!loader.ReadLayers()) return {nullptr, std::move(loader.errors)};
     std::vector<std::size_t> rest;
