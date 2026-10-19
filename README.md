@@ -14,7 +14,8 @@
 
 ## 내려받기
 
-[Releases](https://github.com/sokcuri/hdTrans/releases)에서 받습니다. Windows는 `windows.zip`을 받으세요.
+[Releases](https://github.com/sokcuri/hdTrans/releases)에서 받습니다. Windows는 `hdTrans-0.1.0-windows.zip`처럼
+버전과 `windows`가 붙은 파일을 받으세요.
 압축을 원하는 폴더에 풀면 끝입니다.
 
 macOS, Linux 판에는 명령줄 프로그램만 있습니다([명령줄 사용법](docs/api.md#명령줄-hdtrans)).
