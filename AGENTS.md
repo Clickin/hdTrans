@@ -6,8 +6,8 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
 ## Build and test
 - CMake presets (CMakePresets.json): `mac` / `linux` build the static/shared libraries,
   CLI and tests with clang or gcc; `windows-x86` / `windows-x64` build them and
-  J2KEngine.dll with Visual Studio 2022. `tools/build.ps1` also selects newer installed
-  Visual Studio versions. Windows Release binaries are under `build/<preset>/Release`.
+  J2KEngine.dll with Visual Studio 2026. `tools/build.ps1` selects the installed
+  Visual Studio version (2022 or 2026). Windows Release binaries are under `build/<preset>/Release`.
   `wasm` is run as `emcmake cmake --preset wasm`.
 - `cmake --preset mac && cmake --build --preset mac && ctest --preset mac` is the
   development loop; substitute any native platform's preset for `mac`.

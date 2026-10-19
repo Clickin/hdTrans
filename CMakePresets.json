@@ -27,7 +27,7 @@
     {
       "name": "windows-x86",
       "displayName": "Windows MSVC x86, Release (core, DLLs, CLI, tests)",
-      "generator": "Visual Studio 17 2022",
+      "generator": "Visual Studio 18 2026",
       "architecture": "Win32",
       "binaryDir": "${sourceDir}/build/windows-x86",
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
@@ -35,7 +35,7 @@
     {
       "name": "windows-x64",
       "displayName": "Windows MSVC x64, Release (core, DLLs, CLI, tests)",
-      "generator": "Visual Studio 17 2022",
+      "generator": "Visual Studio 18 2026",
       "architecture": "x64",
       "binaryDir": "${sourceDir}/build/windows-x64",
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
