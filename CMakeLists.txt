@@ -210,15 +210,21 @@ elseif(WIN32)
     add_test(NAME host.j2k COMMAND j2k_host $<TARGET_FILE:j2kengine>)
     set_tests_properties(host.j2k PROPERTIES ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/host-cache")
 
+    add_custom_command(TARGET j2kengine POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different $<TARGET_FILE:j2kengine>
+            $<TARGET_FILE_DIR:j2kengine>/J2KEngineH.dll VERBATIM)
     add_executable(tool_compat tests/host/tool_compat.cpp)
     add_dependencies(tool_compat j2kengine)
     set(toolCompatDir "${CMAKE_CURRENT_BINARY_DIR}/tool-compat-empty")
     file(MAKE_DIRECTORY "${toolCompatDir}")
-    foreach(tool luna luna-ansi anemone anemone-ansi eztransserver)
+    foreach(tool luna luna-ansi anemone anemone-ansi aral02 aral03 eztransserver)
         add_test(NAME host.${tool} COMMAND tool_compat ${tool} $<TARGET_FILE:j2kengine>)
         set_tests_properties(host.${tool} PROPERTIES WORKING_DIRECTORY "${toolCompatDir}"
             LABELS tool-compat TIMEOUT 120)
     endforeach()
+    add_test(NAME host.eztransweb COMMAND tool_compat eztransweb $<TARGET_FILE_DIR:j2kengine>/J2KEngineH.dll)
+    set_tests_properties(host.eztransweb PROPERTIES WORKING_DIRECTORY "${toolCompatDir}"
+        LABELS tool-compat TIMEOUT 120)
 
     find_program(HDTRANS_CSC NAMES csc.exe
         PATHS "$ENV{WINDIR}/Microsoft.NET/Framework/v4.0.30319" NO_DEFAULT_PATH REQUIRED)
