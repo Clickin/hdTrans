@@ -340,6 +340,25 @@ bool ReadStamp(std::string_view utf8, FileStamp& stamp) {
     return true;
 }
 
+std::FILE* OpenShared(const std::filesystem::path& path) {
+#if defined(_WIN32) && !defined(__EMSCRIPTEN__)
+    const HANDLE file = CreateFileW(path.c_str(), GENERIC_READ,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                    nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (file == INVALID_HANDLE_VALUE) return nullptr;
+    const int descriptor = _open_osfhandle(reinterpret_cast<intptr_t>(file), _O_RDONLY | _O_BINARY);
+    if (descriptor < 0) {
+        CloseHandle(file);
+        return nullptr;
+    }
+    std::FILE* f = _fdopen(descriptor, "rb");
+    if (!f) _close(descriptor);
+    return f;
+#else
+    return std::fopen(path.c_str(), "rb");
+#endif
+}
+
 bool ReadCacheSmall(const std::filesystem::path& path, std::string& out) {
     if (!CachePath(path)) return false;
     char bytes[511];

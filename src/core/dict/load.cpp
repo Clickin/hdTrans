@@ -8,6 +8,7 @@
 #include "core/dict/builtin.h"
 #include "core/dict/integrity.h"
 #include "core/dict/layer.h"
+#include "core/dict/mapped_file.h"
 #include "core/dict/names.h"
 #include "core/dict/snapshot.h"
 #include "core/dict/snapshot_file.h"
@@ -74,11 +75,7 @@ bool ReadColumnHeaderFromFile(std::FILE* f, bool& column, std::string* prefix) {
 }
 
 bool ReadFile(const std::filesystem::path& path, std::string& out, bool* column = nullptr) {
-#ifdef _WIN32
-    std::FILE* f = _wfopen(path.c_str(), L"rb");
-#else
-    std::FILE* f = std::fopen(path.c_str(), "rb");
-#endif
+    std::FILE* f = internal::OpenShared(path);
     if (!f) return false;
     if (column) {
         const bool ok = ReadColumnHeaderFromFile(f, *column, &out);
@@ -338,11 +335,7 @@ bool internal::ReadColumnHeader(std::string_view utf8Path, bool& column) {
     column = false;
     if (utf8Path.find('\0') != std::string_view::npos || !internal::ValidUtf8(utf8Path)) return false;
     const auto path = PathOf(utf8Path);
-#ifdef _WIN32
-    std::FILE* f = _wfopen(path.c_str(), L"rb");
-#else
-    std::FILE* f = std::fopen(path.c_str(), "rb");
-#endif
+    std::FILE* f = internal::OpenShared(path);
     if (!f) return false;
     const bool ok = ReadColumnHeaderFromFile(f, column, nullptr);
     std::fclose(f);

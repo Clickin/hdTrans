@@ -147,14 +147,6 @@ std::string DefaultCacheDirectory() {
     return home && !home->empty() && SafePath(*home) ? Utf8Of(PathOf(*home) / suffix) : std::string();
 }
 
-std::FILE* OpenFile(const std::filesystem::path& path, bool write) {
-#ifdef _WIN32
-    return _wfopen(path.c_str(), write ? L"wb" : L"rb");
-#else
-    return std::fopen(path.c_str(), write ? "wb" : "rb");
-#endif
-}
-
 
 Bytes ByteView(std::string_view s) { return std::as_bytes(std::span(s.data(), s.size())); }
 
@@ -236,7 +228,7 @@ struct Source {
 };
 
 bool HashFile(std::string_view name, Digest& out) {
-    std::FILE* f = OpenFile(PathOf(name), false);
+    std::FILE* f = internal::OpenShared(PathOf(name));
     if (!f) return false;
     internal::Sha256 hash;
     std::array<std::byte, 64 * 1024> buf;
