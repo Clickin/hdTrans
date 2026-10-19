@@ -24,6 +24,8 @@ enum class ConstraintContext : uint8_t {
     LineOpening,        // only spaces and opening brackets before the word in its line, 、 after it
     Elsewhere,          // not LineOpening
     BeforeNumeralAgo,   // a numeral follows, and 前 within eight characters after it, before any punctuation
+    AfterVerbEnding,    // right after a verb in た, だ or る (行った先, 見やる先), not after まだ
+    AfterDemonstrative, // right after この, その or あの
 };
 
 // The senses a rule rejects.
