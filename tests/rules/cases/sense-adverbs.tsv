@@ -10,3 +10,13 @@ L2142	これでずっと簡単だ。	이것으로 훨씬 간단하다.	fix	local
 L2142	これでずっと楽だ。	이것으로 훨씬 편하다.	fix	local
 L2142	ここでずっと静かに暮らす。	여기서 쭉 조용하게 산다.	keep	local
 L2142	これでずっと幸せだ。	이것으로 쭉 행복하다.	keep	local
+dict:とびっきり	とびっきり美しい。	대단히 아름답다.	fix	defaults
+dict:とびっきり	とびきりの美人だ。	특출의 미인이다.	keep	defaults
+dict:ボタッボタ	血がボタッボタと落ちた。	피가 뚝뚝 떨어졌다.	fix	defaults
+dict:ボタッボタ	血がぽたぽたと落ちた。	피가 똑똑 떨어졌다.	keep	defaults
+dict:生憎	生憎、雨だ。	공교롭게도, 비다.	fix	defaults
+dict:生憎	生憎と雨だった。	공교롭게도 비였다.	keep	defaults
+dict:有り様に	ひどい有り様になった。	심한 상태로 되었다.	fix	defaults
+dict:有り様に	有りのまま話す。	있는대로 이야기한다.	keep	defaults
+dict:げんなり	彼はげんなりと座った。	그는 맥없이 앉았다.	fix	defaults
+dict:げんなり	元気に口を開いた。	건강하게 입을 열었다.	keep	defaults

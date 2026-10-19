@@ -15769,7 +15769,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 げんどうりょく	원동력	N110			GN		jisjk:179486		-1
 げんどわく	한도 범위	N110			GN		jisjk:179488		-1
 げんなま	현금	N110	VMy		GN		jisjk:179492		-1
-げんなり	무기력	E300	SFlQHP		GN		jisjk:123060		
+げんなり	맥없이	E300	SFlQHP		GN		jisjk:123060		
 げんに	실제로	E311			GN		jisjk:116449		
 げんにん	현임	N110	VHn		GN		jisjk:179493		-1
 げんにん	겐닌	N110	UMe		GN		jisjk:179495		-1
@@ -62879,7 +62879,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 ジェブリル	제브릴	N130	QPN		GN		jisjk:366690		
 ジェブリーン	제브린	N130	QPN		GN		jisjk:371278		
 ジェマリ	제마리	N130	QPN		GN		jisjk:366837		
-ジェム	슬램덩크	N130			GN		jisjk:101849		
+ジェム	젬	N130			GN		jisjk:101849		
 ジェムコ	졔무코	N130	QIDVGt		GN		jisjk:48384		
 ジェムコ高崎	젬코 타카사키	N130	QIDVGt		GN		jisjk:48385		
 ジェムストーン	원석	N110	VSnVAc		GN		jisjk:129498		
@@ -149213,7 +149213,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 取っ付	매달&AA@	M421			GN		jisjk:145340		
 取っ付き	첫인상	N110			GN		jisjk:86797		
 取っ手	손잡이	I110			GN		jisjk:86798		
-取っ手部	핸들부분	I110			GN		jisjk:86799		
+取っ手部分	손잡이 부분	I110			GN		jisjk:86799		
 取っ掛かり	단서	N110			GN		jisjk:245976		
 取っ換え引っ換え	번갈아	E311			GN		jisjk:2013		
 取っ替え引っ替え	번갈아	E311			GN		jisjk:2012		
@@ -157926,7 +157926,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 喧嘩	싸움	N110	UTs	Hd	GN		jisjk:117287		
 喧嘩早	쉽게 싸우려 $AB@	H7N0			GN		jisjk:120615		
 喧嘩腰	싸우려는 기세	N110			GN		jisjk:373567		
-喧噪	훤조%A1@	G8U0			GN		jisjk:120928		
+喧噪	소란	N110			GN		jisjk:120928		
 喧屋	잔소리꾼	N110	VHnSFl		GN		jisjk:155780		
 喧騒	소란	N110	SFl	Dd	GN		jisjk:178485		
 喨々たる	낭낭한	E0H0			GN		jisjk:123712		
@@ -182423,7 +182423,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 寄せてゐ	모으고 &HN@	M447			GN		jisjk:147488		
 寄せに入	종반전에 들어&A1@	M468			GN		jisjk:147490		
 寄せられ	전해&AL@	M427			GN		jisjk:147491		
-寄せ付け	접근&AV@	M4U7			GN		jisjk:365630		
+寄せ付け	접근시&AQ@	M4U7			GN		jisjk:365630		
 寄せ倒し	들배지기	N110	UTt		GN		jisjk:206180		
 寄せ切れ	자투리 천	N110			GN		jisjk:267872		
 寄せ合	서로 기&C5@	M440			GN		jisjk:147482		
@@ -207517,8 +207517,8 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 思料	생각&AV@	M459			GN		jisjk:141974		
 思施	언시	N130	QCT		GN		jisjk:25097		
 思春期	사춘기	I110	UMe		GN		jisjk:71949		
-思案	사안	N110		Hd	GN		jisjk:25098		
-思案	염려&AV@	M449			GN		jisjk:267390		
+思案	궁리	N110		Hd	GN		jisjk:25098		
+思案	궁리&AV@	M449			GN		jisjk:267390		
 思案しあぐね	생각다 못&AV@	M427			GN		jisjk:121802		
 思案に余	좋은 생각이 안떠&E6@	M428			GN		jisjk:120898		
 思案に暮れ	생각에 잠&A2@	M427			GN		jisjk:120902		
@@ -210887,7 +210887,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 我が身	자기몸	I110	VHn		GN		jisjk:77250		
 我が輩	나	I120	VHn		GN		jisjk:77246		
 我が輩	내	I120	VHn		GN		jisjk:77247		
-我に返	제 정신을 차&AA@	M427			GN		jisjk:117101		
+我に返	제 정신을 차&AA@	M428			GN		jisjk:117101		
 我ら	우리들	N110	VHn		GN		jisjk:28311		
 我を張	고집을 부&AA@	M418			GN		jisjk:93928		
 我を忘れ	넋을 &HL@	M427			GN		jisjk:118284		
@@ -230487,7 +230487,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 有り明け行灯	장등	N110			GN		jisjk:227728		
 有り明け袋	장등 주머니	N110			GN		jisjk:227735		
 有り様	상태	I110			GN		jisjk:79468		
-有り様に	있는 그대로	E300			GN		jisjk:122764		
+有り様に	상태로	E300			GN		jisjk:122764		
 有り無し	유무	I110			GN		jisjk:79467		
 有り無し声	희미한 목소리	N110			GN		jisjk:227754		
 有り触れ	흔히 &HN@	M417			GN		jisjk:94318		
@@ -232351,7 +232351,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 木版刷り	목판 인쇄	N110			GN		jisjk:155674		
 木版本	목판본	N110	VBkVSw		GN		jisjk:155676		
 木版画	목판화	N110	UAr		GN		jisjk:155672		
-木犀	물푸레 나무	N110			GN		jisjk:21885		
+木犀	목서	N110	VPt		GN		jisjk:21885		
 木犀草	목서초	N110	VPt		GN		jisjk:253663		
 木理	나뭇결	N110			GN		jisjk:253685		
 木琴	목금	N110			GN		jisjk:21870		
@@ -251650,7 +251650,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 殿ノ浦	토노노우라	N130	QCTVPl		GN		jisjk:311831		
 殿上	토노우에	N130	QCTVPl		GN		jisjk:311777		
 殿上人	당상관	N110	VHn		GN		jisjk:244737		
-殿下	전하	N110			GN		jisjk:32839		
+殿下	전하	N110	VHn		GN		jisjk:32839		
 殿下町	텡가쵸	N130	QCTVPl		GN		jisjk:310461		
 殿中	저택의 안	N110			GN		jisjk:245164		
 殿原	존귀한 사람들	N110	VHn		GN		jisjk:246027		
@@ -284225,7 +284225,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 矯正術	교정술	I110	VSw		GN		jisjk:62603		
 矯激	과격%A1@	G8U0			GN		jisjk:120438		
 矯風会	교풍회	I110	VGt		GN		jisjk:62604		
-石	돌	N110	XXXVSnVMaVPl		GN		jisjk:115940		
+石	돌	N110	XXXVSnVMa		GN		jisjk:115940		
 石	석	N110	VSnVJw	Z7	GN		jisjk:115941		
 石	이시	N130	QCTVPl		GN		jisjk:258979		
 石	석	N110		On	GN		jisjk:271986		
@@ -322598,7 +322598,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 見なし法人	간주법인	N110			BZ		jisjk:354287		
 見なれな	낯$J1@	H7U0			GN		jisjk:265598		
 見なれない	낯선	K110			GN		jisjk:202151		
-見にく	보기 나$A5@	H7U0			GN		jisjk:5351		
+見にく	보기 어$G8@	H7U0			GN		jisjk:5351		
 見まね	눈썰미	N110	UTt		GN		jisjk:203441		
 見まわ	둘러 &AY@	M448			GN		jisjk:375044		
 見もの	볼거리	N110			GN		jisjk:267055		
@@ -342237,7 +342237,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 金木	카나기	N130	QCT		GN		jisjk:17511		
 金木屋商事	카네기야 상사	I130	QIDVGt		GN		jisjk:63497		
 金木戸	카나키도	N130	QCTVPl		GN		jisjk:282762		
-金木犀	박달목서	I110			GN		jisjk:63496		
+金木犀	금목서	I110	VPt		GN		jisjk:63496		
 金木町	카나키마치	I130	QCT		GN		jisjk:105571		
 金木町	카나기마치	N130	QCTVPl		GN		jisjk:282764		
 金末和雄	가네스에 가즈오	N130	VHn		GN		jisjk:224534		
@@ -357070,7 +357070,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 首尾一貫	시종 일관	N110			GN		jisjk:190266		
 首巻	첫째 권	N110	VBkVSw		GN		jisjk:189664		
 首巻き	목도리	I110			GN		jisjk:76087		
-首席	수석	N110	VPlURt		GN		jisjk:27492		
+首席	수석	N110	URt		GN		jisjk:27492		
 首席全権	수석전권	I110			GN		jisjk:110110		
 首府	수도	N110	VPl		GN		jisjk:27490		
 首座	상석	N110	VBl		GN		jisjk:189873		

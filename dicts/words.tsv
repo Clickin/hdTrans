@@ -8229,7 +8229,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 ブチルゴム	부틸 고무	N110			GN				ブチルゴム	w:8221
 ブチル・ゴム	부틸 고무	N110			GN				ブチル・ゴム	w:8222
 ブチ切れ	폭발	N110	UFl	Hd	GN		llm		ぶちぎれ	w:8223
-ブチ切れ	폭발&AV@	M429			GN		llm		ぶちぎれ	w:8224
+ブチ切れ	폭발&AV@	M427			GN		llm		ぶちぎれ	w:8224
 ブッカー	부커	N110	VHn		GN		llm		ブッカー	w:8225
 ブックメーカー	마권업자	N110			GN		xxx llm	1		w:8226
 ブッシュカン	불수감	N110			GN				ブッシュカン	w:8227
@@ -14851,7 +14851,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 妻黒	흑기흉상어	N110			GN				ツマグロ	w:14838
 姉妹群	자매군	N110	VHn		GN				しまいぐん	w:14839
 姉弟	남매	N110			GN		xxx llm	1		w:14840
-始めに	머리말	A9D0			GN				はじめに	w:14841
+始めに	처음에	A9D0			GN				はじめに	w:14841
 始末	뒤처리	N110			GN		xxx llm	1		w:14842
 始業式	개학식	N110			GN		xxx llm	1		w:14843
 姐さん	누님	N110			GN		xxx		ねえさん	w:14844
@@ -26639,3 +26639,29 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 ｅｔｃ．	등등	N110			GN		llm		エトセトラ	w:26615
 ｗｉｔｈコロナ	위드 코로나	N110			GN				ウィズコロナ	w:26616
 ﾀﾋ	다희	N110			GN				ﾀﾋ	w:26617
+握りかえ	마주 &FK@	M423			GN					w:26640
+とびっきり	대단히	E300			GN					w:26642
+とびっきりの	대단한	A9D0			GN					w:26643
+人となり	사람됨	N110			GN					w:26644
+ボタッボタ	뚝뚝	E301			GN					w:26645
+びしょ濡れの	흠뻑 젖은	A9D0			GN					w:26646
+立ち枯れの	말라 죽은	A9D0			GN					w:26647
+お腹のす	배가 고&Aa@	M421		Pn	GN					w:26648
+碌な	변변한	A9D0			GN					w:26649
+その口調	그 어조	N110			GN					w:26650
+マッサージ機能	마사지 기능	N110			GN					w:26651
+かさご	쏨뱅이	N110	QAA		GN					w:26652
+めばる	볼락	N110	QAA		GN					w:26653
+真っ黒の	새까만	A9D0			GN					w:26654
+絶句	말을 &HL@	M429			GN					w:26655
+観念	체념&AV@	M429			GN					w:26657
+生憎	공교롭게도	E300			GN					w:26658
+詫び	사과	N110			GN					w:26659
+王族付き	왕족 전속	N110	VHn		GN					w:26660
+誇り高	긍지 $D3@	H7U0			GN					w:26661
+顔を横に背け	얼굴을 옆으로 돌&AA@	M427			GN					w:26662
+お見えです	오셨습니다	A9H1			GN					w:26663
+お見えですか	오셨습니까	A9H1			GN					w:26664
+お待たせ致しました	기다리게 해서 죄송합니다	A9D0			GN					w:26665
+殿下たち	전하들	N110	VHn		GN					w:26666
+コレ	이것	N120			GN					w:26667

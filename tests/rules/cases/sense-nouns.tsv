@@ -13,3 +13,61 @@ L542	練習に持って来いの場所だ。	연습에 안성마춤의 장소다
 L542	練習に持って来いだ。	연습에 안성마춤이다.	keep	local
 G120	山田、田中、鈴木が来た。	야마다, 타나카, 스즈키가 왔다.	fix	global-stem
 G120	太郎が来た。	타로가 왔다.	keep	global-stem
+dict:木犀	木犀の花が咲いた。	목서가 꽃이 피었다.	fix	defaults
+dict:木犀	銀木犀の花が咲いた。	은목서가 꽃이 피었다.	keep	defaults
+dict:ジェム	ガーネットジェムがある。	가닛 젬이 있다.	fix	defaults
+dict:ジェム	ジェムストーンがある。	보석이 있다.	keep	defaults
+dict:喧噪	町は喧噪に包まれた。	마을은 소란에 싸였다.	fix	defaults
+dict:喧噪	町は喧騒に包まれた。	마을은 소란에 싸였다.	keep	defaults
+dict:コレ	……助からないだろコレ……。	……살아나지 않겠지 이것…….	fix	defaults
+dict:コレ	コレクションがある。	콜렉션이 있다.	keep	defaults
+dict:取っ手部分	取っ手部分は木製だ。	손잡이 부분은 목제다.	fix	defaults
+dict:取っ手部分	取っ手を握った。	손잡이를 잡았다.	keep	defaults
+dict:人となり	人となりを知る。	사람됨을 안다.	fix	defaults
+dict:人となり	人の隣に座る。	사람의 옆에 앉는다.	keep	defaults
+dict:その口調	その口調が柔らかい。	그 어조가 부드럽다.	fix	defaults
+dict:その口調	その口を閉じた。	그 입을 닫았다.	keep	defaults
+dict:マッサージ機能	マッサージ機能がある。	마사지 기능이 있다.	fix	defaults
+dict:マッサージ機能	マッサージ機を買う。	안마기를 산다.	keep	defaults
+dict:かさご	かさごを釣る。	쏨뱅이를 낚시한다.	fix	defaults
+dict:かさご	かさを買う。	우산을 산다.	keep	defaults
+dict:めばる	めばるを釣る。	볼락을 낚시한다.	fix	defaults
+dict:めばる	眼鏡を買う。	안경을 산다.	keep	defaults
+dict:金木犀	金木犀の花が咲いた。	금목서가 꽃이 피었다.	fix	defaults
+dict:金木犀	銀木犀の花が咲いた。	은목서가 꽃이 피었다.	keep	defaults
+dict:詫び	詫びとして金を置く。	사과로서 돈을 둔다.	fix	defaults
+dict:詫び	詫びて謝る。	사과해 사과한다.	keep	defaults
+dict:王族付き	王族付きのメイドだ。	왕족 전속의 메이드다.	fix	defaults
+dict:王族付き	写真付きの手紙だ。	사진 첨부의 편지다.	keep	defaults
+dict:殿下	殿下に話した。	전하에게 이야기했다.	fix	defaults
+dict:殿下	写真に写った。	사진에 찍혔다.	keep	defaults
+dict:首席	首席で卒業した。	수석으로 졸업했다.	fix	defaults
+dict:首席	首席合格者だ。	수석 합격자다.	keep	defaults
+dict:石	石で城を作った。	돌로 성을 만들었다.	fix	defaults
+dict:石	石を拾った。	돌을 주웠다.	keep	defaults
+dict:殿下たち	殿下たち、黙った。	전하들, 입을 다물었다.	fix	defaults
+dict:殿下たち	殿下が来た。	전하가 왔다.	keep	defaults
+sense:金	金と銀がある。	금과 은이 있다.	fix	senses
+sense:金	金を払う。	돈을 지불한다.	keep	senses
+sense:弁	友人の弁だ。	친구의 말이다.	fix	senses
+sense:弁	弁護士が来た。	변호사가 왔다.	keep	senses
+sense:受け身	受け身を取った。	낙법을 취했다.	fix	senses
+sense:受け身	受け身の文だ。	수동의 문장이다.	keep	senses
+sense:花形	花色花形が美しい。	꽃의 색깔 꽃 모양이 아름답다.	fix	senses
+sense:花形	花形の俳優だ。	인기의 배우다.	keep	senses
+sense:柄	刀の柄を握った。	칼의 자루를 잡았다.	fix	senses
+sense:柄	花柄の服だ。	꽃무늬의 옷이다.	keep	senses
+sense:旨み	結婚は旨みが大きい。	결혼은 이점이 크다.	fix	senses
+sense:旨み	肉の旨みがある。	고기의 감칠맛이 있다.	keep	senses
+sense:東部	東部に住む。	동부에 산다.	fix	senses
+sense:東部	東部市場前駅に行く。	도부시조마에역에 간다.	keep	senses
+sense:クワ	クワを持った。	괭이를 가졌다.	fix	senses
+sense:クワ	クワ・トイネ公国だ。	쿠와 트이네 공국이다.	keep	senses
+sense:クワ	一本のクワだ。	한 개의 괭이다.	fix	senses
+sense:クワ	クワ・トイネから来た。	쿠와 트이네로부터 왔다.	keep	senses
+sense:クワ	クワは良い農具だ。	괭이는 좋은 농구다.	fix	senses
+sense:クワ	クワ・トイネ公国がある。	쿠와 트이네 공국이 있다.	keep	senses
+sense:年代	幼稚園に通う年代だ。	유치원에 다니는 나이대다.	fix	senses
+sense:年代	古い年代の品だ。	오래된 연대의 물건이다.	keep	senses
+sense:才	経営の才がある。	경영의 재능이 있다.	fix	senses
+sense:才	十才だ。	열살이다.	keep	senses
