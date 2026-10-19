@@ -104,6 +104,7 @@ word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions&
         s.misreadModel = options.misreadModel;
     }
     s.sessionSenses = text ? sessionSenses : nullptr;
+    s.ruleTally = options.ruleTally;
     return s;
 }
 

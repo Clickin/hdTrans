@@ -1,4 +1,6 @@
+#include <cstddef>
 #include <cstdint>
+
 #include "core/rules/rules.h"
 
 namespace hdTrans::rules {
@@ -70,24 +72,35 @@ bool Run(const Program& program, uint32_t i, Item* pwi) {
 
 bool RunRule(const Program& program, uint32_t root, Item* pwi) { return Run(program, root, pwi); }
 
-bool RunLocal(const Program& program, Item* pwi, int ruleIndex) {
+bool RunLocal(const Program& program, Item* pwi, int ruleIndex, Tally* tally) {
     if (ruleIndex < 0 || static_cast<std::size_t>(ruleIndex) >= program.localRules.size()) return false;
+    const std::size_t index = static_cast<std::size_t>(ruleIndex);
     if (pwi) pwi->SetRuleContext(false, ruleIndex);
-    const bool result = Run(program, program.localRules[static_cast<std::size_t>(ruleIndex)], pwi);
+    const bool result = Run(program, program.localRules[index], pwi);
     if (pwi) pwi->SetRuleContext(false, -1);
+    if (tally && index < tally->localRuns.size()) {
+        tally->localRuns[index]++;
+        if (result) tally->localFires[index]++;
+    }
     return result;
 }
 
-bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char pumsa, bool last, int* fired) {
+bool RunGlobal(const Program& program, Item* pwi, bool uganRule, unsigned char pumsa, bool last, int* fired,
+               Tally* tally) {
     if (fired) *fired = -1;
     const int lo = last ? 0 : 1000;
     const int hi = last ? 1000 : 5000;
-    for (const GlobalRule& r : program.globalRules) {
+    for (std::size_t i = 0; i < program.globalRules.size(); i++) {
+        const GlobalRule& r = program.globalRules[i];
         if (r.uganRule != uganRule || r.pumsa != pumsa) continue;
         if (uganRule && (r.number <= lo || r.number >= hi)) continue;
         if (pwi) pwi->SetRuleContext(true, r.number);
         const bool result = Run(program, r.root, pwi);
         if (pwi) pwi->SetRuleContext(true, -1);
+        if (tally && i < tally->globalRuns.size()) {
+            tally->globalRuns[i]++;
+            if (result) tally->globalFires[i]++;
+        }
         if (result) {
             if (fired) *fired = r.number;
             return true;
