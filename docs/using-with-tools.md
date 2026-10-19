@@ -25,6 +25,26 @@ hdTrans는 초기화 인자의 `Dat` 경로, 현재 폴더, 레지스트리와 �
 패치하므로 export 호환만으로 그 조합을 보장할 수 없습니다([소스][ehnd]). hdTrans 자체가 Unicode API를 제공하며,
 Ehnd 데이터는 DLL 옆 `Ehnd/`에서 읽습니다. 지원 범위는 [Ehnd 호환 안내](ehnd-compat.md)를 보세요.
 
+## 설치 경로와 레지스트리
+
+자동 탐색용 `FilePath` 값에는 `C:\hdTrans` 같은 **설치 루트 폴더**를 `REG_SZ`로 기록합니다. `Dat`나 DLL 파일 경로가 아닙니다.
+이 표의 키는 실제 소스로 확인한 값만 적었습니다. 미확인 도구를 위해 같은 키를 쓸 것이라고 가정하지 않습니다.
+
+| 도구 | 확인된 레지스트리 키와 값 | 경로 선택 우선순위 |
+|---|---|---|
+| [LunaTranslator][luna-python] | 사용하지 않음 | 설정에서 선택한 DLL 파일의 부모 폴더 |
+| [XUnity ezTransXP][xunity-endpoint] | `HKCU\SOFTWARE\ChangShin\ezTrans` / `FilePath` | `[ezTrans] InstallationPath`, 없으면 레지스트리 기본값. 폴더의 H DLL을 일반 DLL보다 우선 |
+| [아네모네][anemone-path] | `HKCU\Software\ChangShin\ezTrans` / `FilePath` | `anemone.ini`의 `[CONFIG] EZTRANS_PATH`에 DLL이 있으면 사용, 아니면 레지스트리 |
+| Textractor + 아네모네 | 아네모네와 같음 | Textractor는 DLL 경로를 찾지 않음 |
+| [아랄트랜스 0.2/0.3][aral02] | `HKCU\Software\ChangShin\ezTrans` / `FilePath` | 레지스트리를 못 읽으면 폴더 선택 창. 명시 WOW64 플래그 없음 |
+| [VNR][vnr-registry] | `HKCU\Software\ChangShin\ezTrans` / `FilePath`, 명시 WOW64 플래그 없음 | [위치 설정][vnr-location]은 유효한 `ezTransLocation` → 유효한 레지스트리 경로. 실제 DLL 로드는 기존 검색 경로 뒤에 이 폴더들을 PATH로 추가하므로 설정 우선이 보장되지는 않음 |
+| [nanikit 서버][server-interop] | `HKCU\Software\ChangShin\ezTrans` / `FilePath`, 명시 `Registry32` | 명시 DLL 경로 → 레지스트리 → 기본 설치 경로 → 서버 폴더와 상위 폴더 |
+| [HelloKS 서버][eztransweb] | 사용하지 않음 | 소스에 하드코딩한 H DLL 전체 경로 |
+| 투컨트롤, 에그헤드, Translator++, MTool | 직접 확인 못 함 | 투컨트롤의 과거 폴더 선택 안내 외에는 확정하지 않음 |
+
+`HKCU\Software`의 이 키는 [32비트와 64비트가 공유][registry-view]합니다. `Wow6432Node`에 복제하거나 HKLM 키로 바꾸지 않습니다.
+등록용 `.reg` 견본은 아래 아랄트랜스 항목에 있습니다. 도구의 탐색 순서와 hdTrans DLL 자체의 사전 탐색은 별개입니다.
+
 ## 도구별 연결
 
 아래의 **CI 검증은 도구 소스의 DLL 호출을 별도 호스트로 재현한 것**입니다. 실제 프로그램을 실행한 수동 검증은 아닙니다.
@@ -43,7 +63,8 @@ Ehnd 데이터는 DLL 옆 `Ehnd/`에서 읽습니다. 지원 범위는 [Ehnd 호
 ### XUnity.AutoTranslator의 ezTransXP
 
 - 공통 준비 후 `Config.ini`에 `[Service] Endpoint=ezTransXP`, `[ezTrans] InstallationPath=C:\hdTrans`를 설정합니다.
-  기존 `J2KEngineH.dll`이 있으면 백업 후 다른 이름으로 옮기세요. 이 도구는 **H 파일을 우선** 읽습니다.
+  언어는 `[General] Language=ko`, `FromLanguage=ja`입니다. 기존 `J2KEngineH.dll`이 있으면 백업 후 다른 이름으로 옮기세요.
+  이 도구는 **H 파일을 우선** 읽습니다.
 - [설정 소스][xunity-endpoint]: InstallationPath 기본값은 `HKCU\SOFTWARE\ChangShin\ezTrans`의 `FilePath`입니다.
   경로를 명시하면 레지스트리를 만들 필요가 없습니다. 별도 `FullNET\ezTransXP.ExtProtocol.exe`가 엔진을 부릅니다.
 - [호출 소스][xunity-native]: Stop, TranslateW, InitializeEx 주소 조회 → 같은 키와 `Dat`로 초기화
@@ -101,6 +122,25 @@ Ehnd 데이터는 DLL 옆 `Ehnd/`에서 읽습니다. 지원 범위는 [Ehnd 호
   호출 측에서 로드와 export 조회, 작업 스레드에서 초기화와 번역, 다시 호출 측에서 Stop을 수행합니다.
   없는 `Dat`를 거치는 로드 경로도 검사합니다. 레지스트리 UI, 실제 게임 주입, 필터와 ATCode 적용은 수동 검증 대상입니다.
 
+### VNR, Visual Novel Reader
+
+- 공통 준비 후 `Preferences > Locations > Translators > ChangShin Soft - ezTrans XP > Browse`에서 폴더를 선택합니다.
+  [선택창][vnr-prefs]은 `ezTrans.exe` 폴더라고 표시하지만 실제로는 `J2KEngine.dll` 존재만 검사합니다. 설정 키는 `ezTransLocation`입니다.
+- `Preferences > Translation > Translators`의 **Enable built-in Ehnd translation script**를 끄고 **VNR을 재시작**합니다.
+  [기본값이 True인 `EhndEnabled` 설정][vnr-ehnd]을 그대로 두면 별도 `ehnd.dll`을 호출하므로 이번 검증 대상과 다릅니다.
+- [바인딩][vnr-native]은 실제 번역용 DLL을 `J2KEngine.dll` → `.dlx` 순서로 찾고, 초기화할 `Dat`의 기준 위치용 DLL은
+  `.dlx` → `.dll` 순서로 찾습니다. 모두 bare filename 로드입니다. 설정과 레지스트리 폴더를 기존 PATH 뒤에 추가하므로,
+  VNR 폴더나 앞선 PATH의 다른 엔진이 먼저 선택될 수 있습니다. 같은 폴더의 기존 `.dlx`도 별도로 확인해야 합니다.
+- 호출은 `InitializeEx("CSUSER123455", "<로드된 원본 DLL 폴더>\\Dat")`, 성공값은 정확히 1입니다.
+  내장 Ehnd를 끈 상태에서 W export가 있으면 `TranslateMMNTW(0, UTF-16)` → 복사 → `FreeMem(originalPointer)`입니다.
+  A fallback은 Python **`sjis`**, 출력 **`uhc`(CP949)**이며 변환 오류를 무시합니다. `sjis`는 CP932 확장 전체와 같지 않습니다.
+- **CI:** x86 전용 `host.vnr`, `host.vnr-ansi`. 원본처럼 WinDLL 기본 반환형인 **32비트 `c_int` 포인터**를 유지하고,
+  main 초기화 → main의 `あ` warmup → worker 번역 → 명시적 Loader.destroy의 Terminate를 재현합니다.
+  ANSI 경로는 W 미지원 조건을 강제로 선택합니다. Stop은 호출하지 않으며 정상 destroy에서는 unload도 하지 않습니다.
+  VNR 전체는 종료 시 프로세스를 강제 종료할 수 있으므로 Terminate가 항상 불린다는 뜻은 아닙니다.
+- 실제 Python 2 ctypes, Qt UI와 스레드풀, 기존 DLL 검색 충돌은 수동 확인 대상입니다. VNR의 [`QSettings` 저장][vnr-settings]은
+  NativeFormat/UserScope의 `sakuradite.org`, `reader`, 값 `ezTransLocation`이며, 설치 위치 조회용 ChangShin 키와 구분합니다.
+
 ### HTTP 중개: nanikit/eztrans-server
 
 - 공통 준비 후 terminal 버전에서 `EztransServer.exe --dll-path "C:\hdTrans\J2KEngine.dll"`로 지정합니다.
@@ -131,6 +171,14 @@ Ehnd 데이터는 DLL 옆 `Ehnd/`에서 읽습니다. 지원 범위는 [Ehnd 호
   다른 도구와 같은 레지스트리 키를 쓸 것이라고 추정하지 않습니다.
 - **CI 없음.** 공통 준비의 hdTrans 폴더를 이 경로 선택 창에서 지정하는 구성은 실제 Windows에서 검증해야 합니다.
   추가 파일 검사 여부도 알 수 없어 이지트랜스 없이 연결된다고 보장하지 않습니다.
+
+### 에그헤드, EggHead
+
+- [보존된 설명 자료][egghead-guide]는 원본 0.73new와 ezTrans, 후커의 필요성만 설명합니다. 비공식 0.73rev도 별도로 존재합니다.
+- 구현 소스를 찾지 못했고 위치 지정 메뉴, INI, 자동 탐색 방식과 레지스트리 키는 **직접 확인 못 함**입니다.
+  다른 도구의 `FilePath` 키를 에그헤드의 규약으로 등록하면 안 됩니다.
+- **CI 없음.** 실제 DLL 이름과 호출도 미검증이라 공통 파일을 어느 설정에서 지정할지까지 안내할 근거가 없습니다.
+  실제 Windows에서 로드 경로와 버전을 확인한 뒤 교체 검증이 필요합니다.
 
 ### 그 밖의 도구
 
@@ -228,3 +276,10 @@ x86 CI가 실제 엔진 ABI 검증이며 x64 실행은 같은 인터페이스의
 [aral03]: https://github.com/sokcuri/araltrans03/blob/6aa944d1829006a59d0f7e4cf2fef83e3f256481/Translator/ezTransXP/ezTransXP.cpp
 [aral-encoding]: https://github.com/sokcuri/araltrans02/blob/d5128e3c112e234f2bef532fbd2e51c4e3e73b6d/Algorithm/ATCode/HookPoint.cpp#L1558-L1593
 [registry-view]: https://learn.microsoft.com/en-us/windows/win32/winprog64/shared-registry-keys
+[egghead-guide]: https://github.com/forkwikiman/enha/blob/4742b600191923863638e57877136dcd7e799948/mirror/%EC%97%90%EA%B7%B8%ED%97%A4%EB%93%9C.md
+[vnr-native]: https://github.com/Artikash/VNR-Core/blob/6ed038bda9dcd35696040bd45d31afa6a30e8978/py/libs/eztrans/j2kengine.py
+[vnr-registry]: https://github.com/Artikash/VNR-Core/blob/6ed038bda9dcd35696040bd45d31afa6a30e8978/py/libs/eztrans/eztrans.py#L34-L59
+[vnr-location]: https://github.com/Artikash/VNR-Core/blob/6ed038bda9dcd35696040bd45d31afa6a30e8978/py/apps/reader/managers/libman.py#L174-L197
+[vnr-prefs]: https://github.com/Artikash/VNR-Core/blob/6ed038bda9dcd35696040bd45d31afa6a30e8978/py/apps/reader/dialogs/_prefs.py#L7453-L7515
+[vnr-ehnd]: https://github.com/Artikash/VNR-Core/blob/6ed038bda9dcd35696040bd45d31afa6a30e8978/py/apps/reader/dialogs/_prefs.py#L3780-L3791
+[vnr-settings]: https://github.com/Artikash/VNR-Core/blob/6ed038bda9dcd35696040bd45d31afa6a30e8978/py/apps/reader/settings.py
