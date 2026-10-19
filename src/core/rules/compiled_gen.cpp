@@ -211,10 +211,9 @@ bool RuleL22([[maybe_unused]] Item* p) {
 }
 
 // # 조사(で·に·と·は·が·を·の·も·から·まで…)의 번역 선택. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
-// # 사람이나 역할·중심을 나타내는 말 뒤의 'として'를 자격을 나타내는 '(으)로서'로 고른다.
-// # [의심] S+1== "当L"는 접두 비교가 아니라 当L이라는 문자열과의 완전 일치라서 의도한 当~ 검사가 작동하지 않는다. 자작 예 学生として当然だ。 → 학생으로서 당연하다.(-why: として LocalRule 23)는 별도의 사람 의미 대안이 성공한 것이므로 전체 규칙이 불발하는 것은 아니다.
+// # として는 지정된 사람 명사와 当로 시작하는 명사 사이 또는 사람·역할·中心 뒤에서 자격의 ‘(으)로서’를 고른다.
 // local 23
-//     (src[-1] == "学生" or src[-1] == "男" or src[-1] == "女" or src[-1] == "親" or src[-1] == "息子" or src[-1] == "娘") and pos[-1] is 1** and src[+1] == "当L" and pos[+1] is 1**
+//     (src[-1] == "学生" or src[-1] == "男" or src[-1] == "女" or src[-1] == "親" or src[-1] == "息子" or src[-1] == "娘") and pos[-1] is 1** and src[+1] starts "当" and pos[+1] is 1**
 //     sem[-1] has VHn|UQf
 //     src[-1] == "中心"
 bool RuleL23([[maybe_unused]] Item* p) {
@@ -223,7 +222,7 @@ bool RuleL23([[maybe_unused]] Item* p) {
            SrcEq(p, -1, "女"sv) ||
            SrcEq(p, -1, "親"sv) ||
            SrcEq(p, -1, "息子"sv) ||
-           SrcEq(p, -1, "娘"sv)) && PumsaEq(p, -1, "1**"sv) && SrcEq(p, 1, "当L"sv) && PumsaEq(p, 1, "1**"sv)) ||
+           SrcEq(p, -1, "娘"sv)) && PumsaEq(p, -1, "1**"sv) && SrcEq(p, 1, "L当"sv) && PumsaEq(p, 1, "1**"sv)) ||
            AttrEq(p, -1, "VHnUQf"sv) ||
            SrcEq(p, -1, "中心"sv);
 }
@@ -2231,13 +2230,12 @@ bool RuleL214([[maybe_unused]] Item* p) {
            (SrcEq(p, 1, "お願い"sv) && SrcEq(p, 2, "する"sv) && PumsaEq(p, 2, "4**"sv));
 }
 
-// # でも는 지정 의미코드를 가진 말이나 的으로 끝난 말 뒤에서 ‘(으)로도’를 고른다.
-// # [의심] 의미코드 값에 문법코드 Ct가 끼어 있어 3바이트 분할이 UCl/CtV/Pe가 된다; CtV는 없는 의미코드이고 의도한 VPe도 2바이트 부분문자열 비교로 바뀐다.
+// # でも는 운송·수단·재료·금전·도구 등의 의미 코드가 있는 말이나 的으로 끝나는 말 뒤에서 ‘(으)로도’를 고른다.
 // local 215
-//     sem[-1] has VTp|QAA|VPa|VCp|VTw|VMo|UCl|CtV|Pe
+//     sem[-1] has VTp|QAA|VPa|VCp|VTw|VMo|UCl|VPe
 //     src[-1] ends "的"
 bool RuleL215([[maybe_unused]] Item* p) {
-    return AttrEq(p, -1, "VTpQAAVPaVCpVTwVMoUClCtVPe"sv) ||
+    return AttrEq(p, -1, "VTpQAAVPaVCpVTwVMoUClVPe"sv) ||
            SrcEq(p, -1, "R的"sv);
 }
 
@@ -2954,12 +2952,11 @@ bool RuleL290([[maybe_unused]] Item* p) {
     return PumsaEq(p, 1, "4**7**8**"sv);
 }
 
-// # 「だって」가 문장 끝에 오면 전언 표현 ‘(이)래’를 고른다.
-// # [의심] 문장 끝의 강조·첨가 용법 私だって까지 전언으로 읽는다. 자작문 私だって！ → CLI: 나래!; -why: だって LocalRule 291 (이)래. 통상적인 나도라는 항의·강조 읽기가 사라진다.
+// # 문장 끝의 だって는 대명사 뒤의 첨가·강조를 제외하고 전언 표현 ‘(이)래’를 고른다.
 // local 291
-//     gram has Ow
+//     gram has Ow and pos[-1] is not 12*
 bool RuleL291([[maybe_unused]] Item* p) {
-    return GramEq(p, 0, "Ow"sv);
+    return (GramEq(p, 0, "Ow"sv) && PumsaNe(p, -1, "12*"sv));
 }
 
 // # だとは 발화·인식 등의 문맥에서 ‘(이)라고’를 고르되, 바로 뒤의 困る·助かる는 조건형으로 남긴다.
@@ -4985,7 +4982,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL20, 0xdfda05d292fd2d6aull},
     {RuleL21, 0xe9e31a206015f805ull},
     {RuleL22, 0x63fee27b17126605ull},
-    {RuleL23, 0x6ffe0676f8a46367ull},
+    {RuleL23, 0xc779e017097dad25ull},
     {RuleL24, 0x997bd6d403455375ull},
     {RuleL25, 0xac5367147057260cull},
     {RuleL26, 0x3585dfd78286f36full},
@@ -5177,7 +5174,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL212, 0x70d80a842cc00bacull},
     {RuleL213, 0xc6591e5bccd20c62ull},
     {RuleL214, 0xe5faf79bf356ba51ull},
-    {RuleL215, 0xae9bcadd1c5bc70cull},
+    {RuleL215, 0x5f3cc605b63c2841ull},
     {RuleL216, 0xe28018a00574c2f6ull},
     {RuleL217, 0x50229149668c968full},
     {RuleL218, 0x4250444f16a1fb83ull},
@@ -5253,7 +5250,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL288, 0x63a02f40fc6a2e5bull},
     {RuleL289, 0xe001ca47a1fc05e3ull},
     {RuleL290, 0x776fffbb4c9d28f4ull},
-    {RuleL291, 0xb747d68e1139e4eeull},
+    {RuleL291, 0x1a03d2b8464b908dull},
     {RuleL292, 0xf0693e0ae0c0e714ull},
     {RuleL293, 0x98cae8e9e12b4685ull},
     {RuleL294, 0x748132045f1d0a1cull},

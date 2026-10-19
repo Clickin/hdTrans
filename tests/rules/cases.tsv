@@ -88,7 +88,7 @@ L285	「だが、それは違うと思う」	「하지만, 그것은 다르다�
 L285	「だが今さら引き返せない」	「하지만 이제 와서 되돌아갈 수 없다」	current	local
 L289	彼は医者だったらしい。	그는 의사였던 것 같다.	current	local
 L289	学生だった頃の友達に会った。	학생이었던 무렵의 친구를 만났다.	current	local
-L291	私だって！	나래!	current	local
+L291	私だって！	나도!	current	local
 L291	雨だって。	비래.	current	local
 L292	それが正しいだと信じている。	그것이 올바른이라고 믿고 있다.	current	local
 L292	雨だと困る。	비라면 곤란하다.	current	local
@@ -331,9 +331,9 @@ L2213	私が悪い。	내가 나쁘다.	current	local
 L2213	最近は私が忙しい。	최근에는 내가 바쁘다.	current	local
 L2218	寿司を自分で握ったこともあるんだ。	스시를 스스로 만든 적도 있는 거야.	current	local-ending
 L2218	その映画なら、前に見たこともあるよ。	그 영화라면, 전에 본 적도 있어.	current	local-ending
-L2220	私だって知っているよ。	나라도 알고 있어.	current	local
+L2220	私だって知っているよ。	나도 알고 있어.	current	local
 L2220	子供だって泣くことはある。	아이라도 우는 것은 있다.	current	local
-L2220	私だって知っている。	나라도 알고 있다.	current	local
+L2220	私だって知っている。	나도 알고 있다.	current	local
 L2220	誰だって知っている。	누구라도 알고 있다.	current	local
 L2221	そんなことだって、やればできるさ。	그런 일도, 하면 할 수 있고 말이야.	current	local
 L2228	「ありがとう」って言った。	「고마워요」라고 말했다.	current	local
@@ -630,7 +630,7 @@ L4083	彼は疲れの状態が続いていた。	그는 피로 상태가 계속�
 L4084	ひと通り調べた。	대충 조사했다.	current	local
 L4109	一日だけで終わる。	하루에만 끝난다.	current	local
 L4116	猫も犬も走り回っている。	고양이나 개도 뛰어다니고 있다.	current	local
-L4131	三日前も寒かった。	3일전이나 추웠다.	current	local
+L4131	三日前も寒かった。	3일전에도 추웠다.	current	local
 L4131	三人も来た。	세 명도 왔다.	current	local
 L4141	分かったものの不安は残る。	안 것의 불안은 남는다.	current	local-ending
 L4150	妹は悲しそうな顔をしていた。	여동생은 슬픈 것 같은 얼굴을 하고 있었다.	current	local
