@@ -272,11 +272,18 @@ std::string RawLine(const dict::Snapshot& snap, Generated& generated, std::strin
     return result;
 }
 
+void FilterSnapshot(const StageObserver& observer, std::string_view stage, std::string_view line) {
+    if (!observer.filterLog) return;
+    const std::string message = "[" + std::string(stage) + "] " + std::string(line) + "\n\n";
+    observer.filterLog(observer.context, message);
+}
+
 // Runs a filter stage over line without its trailing "\r".
-void Filter(const filter::Filters& f, filter::Stage stage, std::string& line, filter::Filters::Toggles& toggles) {
+void Filter(const filter::Filters& f, filter::Stage stage, std::string& line, filter::Filters::Toggles& toggles,
+            const StageObserver& observer) {
     const bool cr = line.ends_with('\r');
     if (cr) line.pop_back();
-    f.Apply(stage, line, toggles);
+    f.Apply(stage, line, toggles, {observer.context, observer.filterLog});
     if (cr) line += '\r';
 }
 
@@ -285,27 +292,64 @@ void Filter(const filter::Filters& f, filter::Stage stage, std::string& line, fi
 std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
                                            std::span<const std::string> lines, Memory& memory,
                                            const StageObserver& observer, const TranslationOptions& options) {
-    if (!options.filters) return TranslateDocumentPieces(snap, generated, lines, memory, observer, options, lines);
+    if (!options.filters) {
+        if (observer.filterLog) {
+            for (const auto& line : lines) {
+                if (line.empty() || line == "\r") continue;
+                FilterSnapshot(observer, "REQUEST", line);
+                FilterSnapshot(observer, "PRE", line);
+            }
+        }
+        auto out = TranslateDocumentPieces(snap, generated, lines, memory, observer, options, lines);
+        if (observer.filterLog) {
+            for (std::size_t i = 0; i < out.size() && i < lines.size(); ++i) {
+                if (lines[i].empty() || lines[i] == "\r") continue;
+                FilterSnapshot(observer, "TRANS", out[i]);
+                FilterSnapshot(observer, "POST", out[i]);
+            }
+        }
+        return out;
+    }
     const filter::Filters& f = *options.filters;
     std::vector<std::string> filtered(lines.begin(), lines.end());
     std::vector<filter::Filters::Toggles> toggles(filtered.size(), f.Start());
-    for (std::size_t i = 0; i < filtered.size(); i++) Filter(f, filter::Stage::Pre, filtered[i], toggles[i]);
+    for (std::size_t i = 0; i < filtered.size(); i++) {
+        if (!lines[i].empty() && lines[i] != "\r") FilterSnapshot(observer, "REQUEST", lines[i]);
+        Filter(f, filter::Stage::Pre, filtered[i], toggles[i], observer);
+        if (!lines[i].empty() && lines[i] != "\r") FilterSnapshot(observer, "PRE", filtered[i]);
+    }
     std::vector<std::string> out = TranslateDocumentPieces(snap, generated, filtered, memory, observer, options, filtered);
     // An empty input line is not post-filtered either.
     for (std::size_t i = 0; i < out.size() && i < lines.size(); i++) {
-        if (!lines[i].empty() && lines[i] != "\r") Filter(f, filter::Stage::Post, out[i], toggles[i]);
+        if (!lines[i].empty() && lines[i] != "\r") {
+            FilterSnapshot(observer, "TRANS", out[i]);
+            Filter(f, filter::Stage::Post, out[i], toggles[i], observer);
+            FilterSnapshot(observer, "POST", out[i]);
+        }
     }
     return out;
 }
 
 std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
                              const StageObserver& observer, const TranslationOptions& options) {
-    if (!options.filters || line.empty()) return RawLine(snap, generated, line, observer, options);
+    if (line.empty()) return RawLine(snap, generated, line, observer, options);
+    FilterSnapshot(observer, "REQUEST", line);
+    if (!options.filters) {
+        FilterSnapshot(observer, "PRE", line);
+        std::string out = RawLine(snap, generated, line, observer, options);
+        FilterSnapshot(observer, "TRANS", out);
+        FilterSnapshot(observer, "POST", out);
+        return out;
+    }
     filter::Filters::Toggles toggles = options.filters->Start();
     std::string text(line);
-    options.filters->Apply(filter::Stage::Pre, text, toggles);
+    const filter::LogSink log{observer.context, observer.filterLog};
+    options.filters->Apply(filter::Stage::Pre, text, toggles, log);
+    FilterSnapshot(observer, "PRE", text);
     std::string out = RawLine(snap, generated, text, observer, options);
-    options.filters->Apply(filter::Stage::Post, out, toggles);
+    FilterSnapshot(observer, "TRANS", out);
+    options.filters->Apply(filter::Stage::Post, out, toggles, log);
+    FilterSnapshot(observer, "POST", out);
     return out;
 }
 

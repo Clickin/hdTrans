@@ -26,6 +26,8 @@ Ehnd 호환은 기능일 뿐입니다. 꿀도르 같은 Ehnd 사전은 `dicts/`�
 - CLI: `hdtrans -dicts dicts -ehnd "C:\ezTrans XP\Ehnd"`로 다른 폴더를 줍니다. 건너뛴 줄은 표준 오류로
   알립니다.
 - C API: `hdTrans_OpenEhnd(dir)`, `hdTrans_FilterErrors(...)` ([api.md](api.md#c-api-hdtransengine)).
+- TypeScript: `setEhnd(files)`로 파일 이름과 내용을 넘깁니다. 이전 묶음 전체를 교체하고 다음 번역부터 반영합니다.
+  `clearEhnd()`로 제거합니다([TypeScript API](typescript-api.md#ehnd-필터를-실행-중에-바꾸기)).
 - C++: `Engine::OpenEhnd(dir)`로 폴더를 정하면 그 뒤에 만들거나 `Reset`한 세션부터 씁니다.
   `Reload()`와 `UserReload::Auto`의 다시 읽기는 사전 폴더와 함께 Ehnd 폴더를 다시 읽고,
   `FilterErrors()`는 건너뛴 줄을 `파일:줄: 이유`로 돌려줍니다. 빈 경로는 Ehnd 폴더를 뗍니다. 정의:
@@ -291,7 +293,7 @@ Perl 문법, 기본 플래그)를 썼고 꿀도르는 그 문법으로 쓰였습
 - 텍스트와 패턴은 Windows의 `wchar_t`처럼 UTF-16 코드 단위입니다. `.`과 `{n}`은 코드 단위를 셉니다
   (PCRE2 비UTF 모드).
 - 옵션: 대소문자 구분, `PCRE2_UCP`(`\d`, `\w`, `\s`, `[[:alpha:]]`가 유니코드 분류를 따르므로 `\d`는
-  전각 숫자에도 맞음, Boost의 Windows 문자 분류와 같은 쪽), `PCRE2_MULTILINE`과 `PCRE2_DOTALL`(Boost
+  전각 숫자에도 맞음), `PCRE2_MULTILINE`과 `PCRE2_DOTALL`(Boost
   기본값처럼 `^ $`는 줄 경계, `.`은 줄바꿈에도 맞음; hdTrans는 줄마다 적용하므로 차이가 없음).
 - lookahead와 lookbehind `(?<=…)`, `(?<!…)`를 씁니다. lookbehind는 Boost처럼 고정 길이여야 하며, 가지마다
   길이가 같아야 하는 Boost와 달리 PCRE2는 가지마다 길이가 달라도 받습니다. 꿀도르의 lookbehind는
@@ -307,6 +309,38 @@ Perl 문법, 기본 플래그)를 썼고 꿀도르는 그 문법으로 쓰였습
   합니다(꿀도르는 `$0`~`$9`만 씁니다).
 - `HDTRANS_PCRE2_JIT`(기본 꺼짐)로 PCRE2 JIT를 넣을 수 있습니다. WebAssembly에서는 쓰지 않습니다.
 
+### Boost와 비교한 범위
+
+2026-10-19에 꿀도르의 전처리 19,198행과 후처리 6,815행을 같은 순서와 토글 조건으로 실행해 비교했습니다.
+참조는 macOS Boost.Regex 1.92, `en_US.UTF-8` 로캘입니다. 서로 다른 정규식 11,788개는 양쪽에서 모두 컴파일됐습니다.
+
+| 비교 | 전처리 | 후처리 |
+|---|---:|---:|
+| 입력의 비어 있지 않은 줄 | 7,336 | 19,967 |
+| 정규식 실행 횟수 | 7,721,573 | 5,943,667 |
+| 실제 맞은 서로 다른 정규식 행 | 2,104 | 169 |
+| 최종 결과 차이 | 0 | 0 |
+| 발동한 규칙과 각 단계의 중간 결과 차이 | 0 | 0 |
+
+이 결과는 모든 Boost 정규식과의 동등성을 보장하지 않습니다. 원본 Windows Boost 버전과 문자 분류는 검증하지 않았고,
+후처리는 대응하는 일본어 전처리의 토글 상태를 이어받지 않고 초기 토글 상태에서 비교했습니다.
+검사한 입력에 맞지 않은 규칙의 치환 결과도 보장하지 않습니다.
+
+별도로 만든 예에서는 차이도 확인했습니다. 대소문자 치환은 위에 적은 미지원 동작이며,
+`(?<=a|bc)x`는 PCRE2만 받습니다. 유니코드 `\\d`, `\\w`, `\\s`는 Boost의 `C` 로캘과 달랐고,
+시험한 경우에는 `en_US.UTF-8` 로캘과 같았습니다. 현재 꿀도르 비교에서는 이 차이로 인한 결과 차이를 발견하지 못해 PCRE2를 유지합니다.
+
+재현 도구는 `tools/filter_compat.cpp`입니다. 일반 빌드에는 Boost가 필요하지 않으며, 이 도구를 별도로 빌드할 때만 필요합니다.
+clang/GCC에서 `-std=c++20 -O2 -fno-access-control -DPCRE2_CODE_UNIT_WIDTH=16`과
+저장소의 `include`, `src`, PCRE2 헤더 경로, 빌드한 `hdTransCore`, `pcre2-16`, Boost.Regex 라이브러리를 사용합니다.
+
+```sh
+filter_compat --ehnd EHND_DIR --pre JP_DIR --post KO_DIR --report NEW_REPORT_DIR --max-lines 0 --locale en_US.UTF-8
+```
+
+기본값은 단계마다 500줄이며 `--max-lines 0`은 전체 입력입니다. 표준 출력은 집계 숫자만 담습니다.
+보고서에는 외부 규칙과 원문이 들어갈 수 있으므로 비공개 경로를 쓰고 공개 저장소에 올리지 않습니다.
+
 ### 속도
 
 꿀도르 전처리만 2만 행이 넘으므로 hdTrans는 행을 하나씩 찾지 않습니다.
@@ -316,6 +350,28 @@ Perl 문법, 기본 플래그)를 썼고 꿀도르는 그 문법으로 쓰였습
   있는지 표시합니다. 대소문자가 있을 수 있는 글자는 넣지 않습니다.
 - 리터럴 행은 SRC가 있을 때만 바꾸기를 하고, 정규식 행은 AUX와 그 글자들이 모두 있을 때만 PCRE2를
   부릅니다. 결과는 행을 하나씩 찾을 때와 같습니다.
+
+## 실행 로그
+
+CLI는 `--why`, TypeScript는 `translate(text, { json: true }).logs`로 받습니다.
+파일을 읽을 때의 `FilterErrors()`와는 별개입니다.
+
+```text
+PreFilter : [PreFilter_test.txt:0] | 검색식 | 치환식 | 차수 | 정규식 여부
+PostFIlter : [PostFilter_test.txt:0] | 검색식 | 치환식 | 차수 | 정규식 여부
+```
+
+행은 0부터 시작하고 주석과 빈 줄도 셉니다. `PostFIlter`는 원본 로그의 표기를 따릅니다.
+실제 발동한 규칙과 `_MATCH_CHECK`, 토글 ON/OFF 변경, `PreSkipLayer`와 `PostSkipLayer` 집계를 기록합니다.
+맞지 않은 규칙이나 꺼진 토글로 건너뛴 규칙마다 별도 로그를 만들지는 않습니다.
+각 메시지는 끝에 줄바꿈을 포함합니다.
+
+입력과 처리 결과는 `[REQUEST]`, `[PRE]`, `[TRANS]`, `[POST]` 메시지로 따로 기록합니다.
+hdTrans는 줄마다 필터를 적용하므로 이 기록도 줄 단위이며, 규칙 메시지의 검색식과 치환식은 문장 전문이 아닙니다.
+JSON에서는 `logs.join("")`으로 로그 스트림을 만들 수 있습니다. 기본 번역에서는 로그를 수집하지 않습니다.
+
+공개 Ehnd 3.20은 정규식 행에서 첫 구분자 하나를 생략하는 차이가 있고, hdTrans는 꿀도르 수정판의 통일된 형식을 사용합니다.
+원본의 파일 저장 타임스탬프나 `LOG_TIME` 실행 시간 로그까지 재현하는 기능은 아닙니다.
 
 ## 다시 읽기
 

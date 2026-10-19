@@ -6,6 +6,7 @@
     "lib": ["es2022", "dom", "webworker"],
     "types": [],
     "strict": true,
+    "declaration": true,
     "rootDir": "src",
     "outDir": "../build/web",
     "skipLibCheck": true

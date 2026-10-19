@@ -107,7 +107,7 @@ cmake --build --preset wasm --parallel
 
 ## CI
 
-`.github/workflows/`의 두 워크플로가 GitHub Actions에서 돌아갑니다.
+`.github/workflows/`의 워크플로가 GitHub Actions에서 돌아갑니다.
 
 - **build.yml**: `linux`, `windows-x64`, `windows-x86`, `mac`, `wasm` 프리셋을 각 OS 러너에서
   빌드합니다. 모든 플랫폼에서 Ninja를 쓰고, 컴파일 캐시는 네이티브 빌드가 sccache, `wasm`이 ccache입니다
@@ -116,7 +116,34 @@ cmake --build --preset wasm --parallel
   Node로 `tools/wasm_smoke.mjs`를 실행해 작은 사전으로 한 번 번역해 봅니다(셋째 인자로 그 사전을
   컴파일한 `.hdsnap`을 주면 그것으로도 불러 봅니다). 결과물은
   `hdtrans-<프리셋>` 아티팩트로 올라갑니다.
-- **e2e.yml**: 풀 리퀘스트와 `main` 푸시 때, 현재 커밋의 CLI로 비공개 테스트 데이터를 번역해 기대 출력과
+- **release.yml**: `build.yml`의 결과를 받아 Windows ZIP과 Linux, macOS tar.gz, `SHA256SUMS.txt`를
+  만듭니다. Windows는 x86 `J2KEngine.dll`, x64 CLI, GUI, C API와 별도의 x86 CLI, C API를 담습니다.
+  WASM 아티팩트에는 엔진, TypeScript용 JavaScript와 `.d.ts`를 포함합니다. npm용 `.tgz`도 빌드한 엔진과 기본 사전을 담아 릴리스에 첨부합니다.
+- **e2e.yml**: 풀 리퀘스트와 `main`, `develop` 푸시 때, 현재 커밋의 CLI로 비공개 테스트 데이터를 번역해 기대 출력과
   달라진 줄을 보고합니다. 자세한 내용은 [testing.md](testing.md#ci)에 있습니다.
 
 로컬 빌드에는 sccache와 ccache 모두 필요 없습니다.
+
+## 릴리스
+
+`develop`을 `main`에 병합하면 release-please가 여러 변경을 릴리스 PR 하나에 모읍니다.
+그 PR을 합칠 때만 버전, `CHANGELOG.md`, 태그와 GitHub Release를 만듭니다.
+`fix`는 patch, `feat`는 minor, `!`나 `BREAKING CHANGE:`는 major를 올립니다. 첫 버전은 `0.1.0`입니다.
+커밋과 PR 제목, 병합 방법은 [contributing.md](contributing.md)에 있습니다.
+
+release-please가 태그를 만든 뒤 **Build**를 명시적으로 실행합니다. 전체 플랫폼 빌드와 테스트가 통과하면
+패키지와 SHA-256 목록을 기존 GitHub Release에 첨부하며, release-please의 릴리스 노트는 유지합니다.
+`develop` 푸시는 `nightly` 태그를 옮기고 같은 이름의 사전 릴리스 하나와 첨부 파일을 갱신합니다.
+nightly 노트는 이전 정식 태그 이후의 커밋 제목입니다.
+
+Actions의 **Build → Run workflow**에서 `dry_run=true`로 실행하면 패키지를 `release-packages`
+아티팩트로만 올립니다. 정식 태그를 선택하고 `dry_run=false`로 실행하면 첨부 파일을 다시 올릴 수 있습니다.
+공개 배포는 `main`에 포함된 `vX.Y.Z` 태그에서만 허용하며, 브랜치에서 수동 실행하면 공개하지 않습니다.
+사용자 파일 견본의 스테이징 목록은 `build.yml`의 `HDTRANS_USER_FILES`에서 관리합니다.
+
+버전은 `git describe --tags`에서 가져오며 이동하는 `nightly` 태그는 제외하고 앞의 `v`를 뗍니다.
+태그가 없으면 `0.0.0-<짧은 SHA>`입니다. Git 정보가 없는 소스 압축본은 release-please가 관리하는
+`release-version.txt`를 쓰며, 그 파일도 없으면 `0.0.0-unknown`입니다.
+C API의 `hdTrans_Version`, TypeScript의 `version`, Windows EXE와 DLL의 버전 정보에 같은 엔진 버전 문자열을 씁니다.
+CLI의 `--version`은 선택한 사전도 로드해서 `hdTrans v<엔진> (native 또는 wasm) / dict <사전>`을 한 줄로 출력합니다.
+`J2KEngine.config.yaml`은 아직 읽지 않으므로 배포하지 않습니다. 설정은 `user/hdtrans.config.yaml`을 씁니다.

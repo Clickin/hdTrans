@@ -44,7 +44,7 @@ if (!existsSync(cli)) throw new Error(`${cli} is missing: build a native preset 
 execFileSync(join(here, 'node_modules/.bin/tsc'), ['-p', here], { cwd: here, stdio: 'inherit' });
 
 rmSync(dist, { recursive: true, force: true });
-const scripts = readdirSync(out).filter((n) => n.endsWith('.js')).sort();
+const scripts = readdirSync(out).filter((n) => n.endsWith('.js') || n.endsWith('.d.ts')).sort();
 const scriptHash = createHash('sha256');
 for (const n of scripts) scriptHash.update(n).update(readFileSync(join(out, n)));
 const style = readFileSync(join(here, 'style.css'));
@@ -113,11 +113,10 @@ execFileSync(cli, ['-dicts', dictDir, '-compile-snapshot', snapshot], { stdio: [
   e.FS.mkdir('/dicts');
   for (const n of plainNames) e.FS.writeFile('/dicts/' + n, readFileSync(join(dictDir, n)));
   const t0 = performance.now();
-  if (e.ccall('hdTrans_Initialize', 'number', ['string'], ['/dicts.hdsnap\0/dicts\0']) !== 0) {
-    throw new Error(`the engine in ${wasmDir} does not load ${snapshot}: build it from the sources of ${cli}`);
-  }
+  const { HdTrans } = await import(pathToFileURL(join(out, 'translator.js')).href);
+  const translator = await HdTrans.init({ module: e, directories: ['/dicts.hdsnap', '/dicts'] });
   console.log(`engine: loads in ${(performance.now() - t0).toFixed(0)} ms, ${(e.HEAPU8.length / 1e6).toFixed(1)} MB of wasm memory`);
-  e._hdTrans_Terminate();
+  translator.close();
 }
 
 const manifest = {

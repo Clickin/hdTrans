@@ -2,22 +2,30 @@ name: Build
 
 on:
   push:
-    branches: [main, 'ci/**', platforms]
+    branches: [main, develop, 'ci/**']
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Package artifacts without publishing a release
+        type: boolean
+        default: true
+        required: true
 
 permissions:
   contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || startsWith(github.ref, 'refs/heads/ci/') }}
 
 env:
   SCCACHE_DIR: ${{ github.workspace }}/.sccache
   SCCACHE_CACHE_SIZE: 1G
   CCACHE_DIR: ${{ github.workspace }}/build/ccache
   CCACHE_MAXSIZE: 1G
+  HDTRANS_USER_FILES: hdtrans.config.example.yaml user/userdict.example.txt
 
 jobs:
   build:
@@ -33,6 +41,16 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
+        run: |
+          if [[ ! "$GITHUB_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo 'Publishing requires a v<major>.<minor>.<patch> tag on main.' >&2
+            exit 1
+          fi
+          git merge-base --is-ancestor HEAD origin/main
       - name: Set up MSVC for Ninja
         if: runner.os == 'Windows'
         shell: pwsh
@@ -79,6 +97,9 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '22'
+      - name: Install TypeScript tools
+        if: matrix.preset == 'wasm'
+        run: npm --prefix web ci
       - name: Set up sccache
         if: matrix.preset != 'wasm'
         uses: mozilla-actions/sccache-action@v0.0.11
@@ -124,9 +145,16 @@ jobs:
         env:
           EM_COMPILER_WRAPPER: ${{ matrix.preset == 'wasm' && 'ccache' || '' }}
         run: cmake --build --preset "${{ matrix.preset }}" --parallel "$BUILD_JOBS"
+      - name: Build TypeScript API and check types
+        if: matrix.preset == 'wasm'
+        run: |
+          npm --prefix web run compile
+          npm --prefix web run test:types
+          cp build/web/translator.js build/web/translator.d.ts build/wasm/
       - name: Stage data, examples and licences
         run: |
           root="build/${{ matrix.preset }}"
+          printf '%s\n' "$RUNNER_ARCH" > "$root/ARCH"
           mkdir -p "$root/third_party/pcre2/deps/sljit" "$root/third_party/libyaml"
           cp THIRD-PARTY-NOTICES.txt "$root/"
           cp third_party/pcre2/LICENCE.md "$root/third_party/pcre2/"
@@ -137,13 +165,15 @@ jobs:
             if [[ "$RUNNER_OS" == Windows ]]; then data="$root/hdTrans"; fi
             mkdir -p "$data/dicts" "$data/user"
             cp -R dicts/. "$data/dicts/"
-            cp hdtrans.config.example.yaml user/userdict.example.txt "$data/user/"
+            read -r -a userFiles <<< "$HDTRANS_USER_FILES"
+            cp "${userFiles[@]}" "$data/user/"
           fi
       - name: Test without external fixtures
         run: |
           unset HDTRANS_REQUIRE_ALL HDTRANS_GOLDEN HDTRANS_DICTS HDTRANS_TEST_EXCLUDE
           if [[ "${{ matrix.preset }}" == wasm ]]; then
-            node --experimental-default-type=module tools/wasm_smoke.mjs \
+            HDTRANS_WASM_WRAPPER=build/wasm/translator.js \
+              node --experimental-default-type=module tools/wasm_smoke.mjs \
               build/wasm/hdTransEngine.js tests/unit/dict/testdata/folder/base.tsv \
               2>&1 | tee build/wasm/ctest.log
           else
@@ -180,12 +210,13 @@ jobs:
           overwrite: true
           if-no-files-found: error
           path: |
-            build/${{ matrix.preset }}/hdtrans
+            build/${{ matrix.preset }}/hdtrans-version.txt
+            build/${{ matrix.preset }}/ARCH
+            build/${{ matrix.preset }}/hdtrans${{ runner.os == 'Windows' && '.exe' || '' }}
             build/${{ matrix.preset }}/libhdTransCore.a
             build/${{ matrix.preset }}/libhdTransEngine.so
             build/${{ matrix.preset }}/libhdTransEngine.dylib
             build/${{ matrix.preset }}/hdTransGUI.exe
-            build/${{ matrix.preset }}/hdtrans.exe
             build/${{ matrix.preset }}/hdTransCore.lib
             build/${{ matrix.preset }}/hdTransEngine.dll
             build/${{ matrix.preset }}/hdTransEngine.lib
@@ -193,6 +224,8 @@ jobs:
             build/${{ matrix.preset }}/J2KEngine.lib
             build/${{ matrix.preset }}/hdTransEngine.js
             build/${{ matrix.preset }}/hdTransEngine.wasm
+            build/${{ matrix.preset }}/translator.js
+            build/${{ matrix.preset }}/translator.d.ts
             build/${{ matrix.preset }}/hdTrans/
             build/${{ matrix.preset }}/dicts/
             build/${{ matrix.preset }}/user/
@@ -209,3 +242,36 @@ jobs:
             build/${{ matrix.preset }}/ctest.log
             build/${{ matrix.preset }}/sccache.log
             build/${{ matrix.preset }}/ccache.log
+
+  release:
+    needs: build
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+       (github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/v')))
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+
+  publish-npm:
+    needs: release
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') &&
+      (github.event_name == 'push' ||
+       (github.event_name == 'workflow_dispatch' && !inputs.dry_run))
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Start npm publication
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo,
+              workflow_id: 'publish-npm.yml',
+              ref: context.ref.replace('refs/tags/', ''),
+              inputs: { build_run_id: String(context.runId) }
+            });

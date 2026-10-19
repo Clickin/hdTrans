@@ -36,6 +36,15 @@ README.md is for users; developer documentation is in docs/ (index: docs/README.
   values. Each DLL links the CRT statically and is a single file.
 - Warnings are errors; fix the code, not the flags.
 
+## Branches
+- `develop` is the default branch: work branches start from it and pull requests target it.
+- `main` receives release promotions from `develop` and release-please version PRs; release tags are cut on it.
+- Commit and PR titles use Conventional Commits: `fix(scope): summary`, `feat(scope): summary`,
+  or `docs`, `perf`, `refactor`, `style`, `test`, `build`, `ci`, `chore`, `revert`. Scope is optional.
+  Breaking changes use `!` or a `BREAKING CHANGE:` footer, not a `major:` type.
+- Squash ordinary PRs into `develop`; merge `develop` into `main` without squashing so release-please
+  can read each change. It accumulates one release PR; never auto-merge it (docs/contributing.md).
+
 ## Fixing a translation
 - docs/fixing-translations.md has the steps. Data (dictionary rows, codes) before rules, rules
   before engine code. Each fix gets a fix test and a keep test.

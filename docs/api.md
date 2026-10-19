@@ -7,54 +7,62 @@ hdTrans는 하나의 정적 라이브러리(`hdTransCore`)와 그 위의 얇은 
 | CLI `hdtrans` | `src/cli/` | 표준 입출력, UTF-8 |
 | `hdTransEngine` (dll/so/dylib) | `src/cshared/` | C API, UTF-8 (`include/core/hdtrans.h`) |
 | `J2KEngine.dll` | `src/j2kengine/` | 이지트랜스 호환 `J2K_*`, Shift-JIS/CP949 또는 UTF-16 |
-| WebAssembly | `src/wasm/` | C API + Emscripten 파일 시스템 |
+| WebAssembly, TypeScript | `src/wasm/`, `web/src/translator.ts` | Embind, `HdTrans` 클래스 ([TypeScript API](typescript-api.md)) |
 | C++ | `include/core/engine.h` | `hdTrans::Engine`, `hdTrans::Session` |
 
 ## 명령줄 (hdtrans)
 
-표준 입력(또는 `-in FILE`)의 UTF-8을 읽어 번역을 표준 출력에 씁니다. 기본으로 입력 전체가 한 세션,
-한 문서이며, 출력 줄은 `\n`으로 잇고 끝에 줄바꿈을 붙이지 않습니다. `-each`와 `-raw`는 줄마다 번역하고
+표준 입력(또는 `--in FILE`)의 UTF-8을 읽어 번역을 표준 출력에 씁니다. 기본으로 입력 전체가 한 세션,
+한 문서이며, 출력 줄은 `\n`으로 잇고 끝에 줄바꿈을 붙이지 않습니다. `--each`와 `--raw`는 줄마다 번역하고
 각 줄 뒤에 `\n`을 붙입니다.
 
 ```
-hdtrans [-config FILE] [-dicts DIR,...] [-userdict PATH]... [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]
+hdtrans [--json] [--version] [--config FILE] [--dicts DIR,...] [--userdict PATH]... [--ehnd DIR] [--each | --raw] [--reference] [--verify-dicts] [--compile-dicts | --compile-snapshot FILE | --no-cache] [--why] [--select-shadow] [--misread] [--no-cg] [--cg-learned] [--stages DIR] [--rule-counts FILE] [--in FILE | --file FILE] [--out FILE] [--] [text]
 ```
 
 | 옵션 | 설명 |
 |---|---|
-| `-config FILE` | 기본 `user/hdtrans.config.yaml` 대신 읽을 설정 파일 |
-| `-dicts DIR[,DIR...]` | 불러올 사전 폴더 (순서대로, 뒤가 앞을 덮어씀). 기본값은 데이터 루트의 `dicts`, 없으면 현재 폴더의 `dicts`. 첫 항목이 `FILE.hdsnap`이면 폴더의 열 파일 대신 그 [컴파일한 사전](dictionary-files.md#컴파일한-사전-hdsnap)을 씀 |
-| `-userdict PATH` | 사용자 사전 파일이나 폴더. 여러 번 지정 가능. 기본값은 데이터 루트 `user/`의 `userdict*.txt`, `userdict*.tsv`. 빈 값이면 끔. 명시한 파일이 하나뿐이면 오류 때 실패 |
-| `-in FILE` | 표준 입력 대신 FILE을 읽음 |
-| `-ehnd DIR` | Ehnd 폴더 DIR의 필터, SkipLayer, 사용자 사전을 씀. 기본으로 쓰지 않으며 설정 파일로도 켤 수 있음. 건너뛴 줄은 표준 오류에 씀 ([ehnd-compat.md](ehnd-compat.md)) |
-| `-each` | 줄마다 새 세션 |
-| `-raw` | 줄마다 단어 파이프라인만으로 번역 |
-| `-reference` | 번역 개선 규칙을 끈 기준 모드 |
-| `-verify-dicts` | 원본 해시와 모든 캐시 세그먼트를 검사 |
-| `-compile-dicts` | 사전 캐시를 컴파일, 검사하고 종료. 캐시 경로 또는 `up to date`를 출력 |
-| `-compile-snapshot FILE` | 폴더의 열 파일을 FILE(`.hdsnap`)에 컴파일하고 종료. FILE을 출력 |
-| `-no-cache` | 캐시 없이 TSV만 읽음 (`-compile-dicts`, `-compile-snapshot`과 함께 쓸 수 없음) |
-| `-why` | 단어 선택과 shadow 점수를 표준 오류에 씀 |
-| `-select-shadow` | 번역은 바꾸지 않고 가장 짧은 대상(`shortest-target`)으로 점수를 매김. `-why`에 나타남 |
-| `-misread` | 오독 필터(`misreadFilter`)를 켬: 모델이 오독으로 점수를 매긴 선택 후보를 대안으로 바꿈 ([misread-classifier.md](misread-classifier.md)) |
-| `-no-cg` | CG-lite 손 규칙(`cgRules`, 기본 켬)을 끔: 오독 결정의 후보를 지우거나 고르는 규칙표 |
-| `-cg-learned` | 학습 규칙(`cgLearned`, 기본 끔)도 켬 |
-| `-stages DIR` | 단계 기록을 DIR에 씀 ([testing.md](testing.md#한-입력-살펴보기-단계-기록--stages)) |
-| `-rule-counts FILE` | 선택 규칙마다 실행 횟수와 참이 된 횟수를 FILE에 TSV로 씀: `kind`(L, G), `index`(전역 규칙은 PRIO), `pumsa`, `number`, `ugan`, `runs`, `fires` ([rule-language.md](rule-language.md#사용-횟수)) |
+| `--config FILE` | 기본 `user/hdtrans.config.yaml` 대신 읽을 설정 파일 |
+| `--dicts DIR[,DIR...]` | 불러올 사전 폴더 (순서대로, 뒤가 앞을 덮어씀). 기본값은 데이터 루트의 `dicts`, 없으면 현재 폴더의 `dicts`. 첫 항목이 `FILE.hdsnap`이면 폴더의 열 파일 대신 그 [컴파일한 사전](dictionary-files.md#컴파일한-사전-hdsnap)을 씀 |
+| `--userdict PATH` | 사용자 사전 파일이나 폴더. 여러 번 지정 가능. 기본값은 데이터 루트 `user/`의 `userdict*.txt`, `userdict*.tsv`. 빈 값이면 끔. 명시한 파일이 하나뿐이면 오류 때 실패 |
+| `--in FILE`, `--file FILE` | 표준 입력 대신 UTF-8 파일을 읽음 |
+| `--out FILE` | 결과를 UTF-8 파일로 저장. 생략하면 표준 출력. `--json`과 함께 쓰면 JSON 저장 |
+| `--json` | `{ text, choices, logs }` 객체를 JSON으로 출력. WASM과 같은 선택 기록과 필터 로그 |
+| `--version` | 선택한 사전을 로드하고 엔진 버전, native/WASM 구분, 사전 버전을 한 줄로 출력 |
+| `--help` | 프로그램과 작성자 정보, 사용법 출력 |
+| `--ehnd DIR` | Ehnd 폴더 DIR의 필터, SkipLayer, 사용자 사전을 씀. 기본으로 쓰지 않으며 설정 파일로도 켤 수 있음. 건너뛴 줄은 표준 오류에 씀 ([ehnd-compat.md](ehnd-compat.md)) |
+| `--each` | 줄마다 새 세션 |
+| `--raw` | 줄마다 단어 파이프라인만으로 번역 |
+| `--reference` | 번역 개선 규칙을 끈 기준 모드 |
+| `--verify-dicts` | 원본 해시와 모든 캐시 세그먼트를 검사 |
+| `--compile-dicts` | 사전 캐시를 컴파일, 검사하고 종료. 캐시 경로 또는 `up to date`를 출력 |
+| `--compile-snapshot FILE` | 폴더의 열 파일을 FILE(`.hdsnap`)에 컴파일하고 종료. FILE을 출력 |
+| `--no-cache` | 캐시 없이 TSV만 읽음 (`--compile-dicts`, `--compile-snapshot`과 함께 쓸 수 없음) |
+| `--why` | 단어와 어미 선택, shadow 점수, 처리 단계와 Ehnd 필터 실행 로그를 표준 오류에 씀 |
+| `--select-shadow` | 번역은 바꾸지 않고 가장 짧은 대상(`shortest-target`)으로 점수를 매김. `--why`에 나타남 |
+| `--misread` | 오독 필터(`misreadFilter`)를 켬: 모델이 오독으로 점수를 매긴 선택 후보를 대안으로 바꿈 ([misread-classifier.md](misread-classifier.md)) |
+| `--no-cg` | CG-lite 손 규칙(`cgRules`, 기본 켬)을 끔: 오독 결정의 후보를 지우거나 고르는 규칙표 |
+| `--cg-learned` | 학습 규칙(`cgLearned`, 기본 끔)도 켬 |
+| `--stages DIR` | 단계 기록을 DIR에 씀 ([testing.md](testing.md#한-입력-살펴보기-단계-기록--stages)) |
+| `--rule-counts FILE` | 선택 규칙마다 실행 횟수와 참이 된 횟수를 FILE에 TSV로 씀: `kind`(L, G), `index`(전역 규칙은 PRIO), `pumsa`, `number`, `ugan`, `runs`, `fires` ([rule-language.md](rule-language.md#사용-횟수)) |
+
+기존 `-in`, `-why` 같은 단일 하이픈 옵션도 받습니다. 직접 문장을 인자로 넘길 수 있고, `--` 뒤는 옵션으로 해석하지 않습니다.
+`--in`과 직접 문장을 함께 지정하면 오류입니다. npm CLI와 공통 옵션의 이름과 의미가 같으며, npm판의 실행 엔진은 WASM입니다.
 
 종료 코드: 0 성공, 1 사전을 못 불러옴, 입력 읽기 실패, 캐시 오류, 명시한 설정 파일 없음, 2 알 수 없는 옵션(사용법 출력).
 
-`-why`의 표준 오류 출력은 탭으로 구분한 줄입니다. `WHY-LINE <줄>`이 입력 줄마다 나오고, 단어마다
+`--why`의 표준 오류 출력은 탭으로 구분한 줄입니다. `WHY-LINE <줄>`이 입력 줄마다 나오고, 단어마다
 `WHY <줄> <청크> <문장> <토큰>:<시작> <표면형> <선택> <출처> <id> <번역> <직접 선택> <출처> <id> <층> <규칙> <어미 층> <어미 규칙>`,
-그 아래에 `SHADOW` 줄이 붙습니다. 층과 규칙은 후보와 어미를 정한 실행 층과 규칙 파일:규칙(`local`
+그 아래에 `SHADOW` 줄이 붙습니다. Ehnd 필터 실행 로그도 함께 나오며, 번역문은 표준 출력에만 씁니다.
+층과 규칙은 후보와 어미를 정한 실행 층과 규칙 파일:규칙(`local`
 `particles.txt:L925`, 전역 규칙은 `파일:GPRIO`)입니다([pipeline-layers.md](pipeline-layers.md#누가-정했는지--why)). 탭, 줄바꿈, 백슬래시는 `\t`, `\n`, `\\`로 이스케이프합니다.
 
 | 환경 변수 | 설명 |
 |---|---|
 | `HDTRANS_CACHE_DIR` | 캐시 폴더 (절대 경로). 빈 값, 상대 경로(경고 출력), `off`(대소문자 무관)는 캐시를 끔 |
 | `HDTRANS_SNAPSHOT=off` | 캐시를 끔 |
-| `HDTRANS_VERIFY_DICTS=1` | `-verify-dicts`와 같음 |
-| `HDTRANS_DRIVER_DUMP=DIR` | `-stages DIR`과 같음 |
+| `HDTRANS_VERIFY_DICTS=1` | `--verify-dicts`와 같음 |
+| `HDTRANS_DRIVER_DUMP=DIR` | `--stages DIR`과 같음 |
 
 ### 설정 파일
 
@@ -70,19 +78,19 @@ CLI 플래그가 파일보다 우선합니다.
 
 | 키 | 값과 기존 옵션 |
 |---|---|
-| `dicts` | 경로 하나 또는 경로 목록, `-dicts`처럼 순서대로 읽음 |
+| `dicts` | 경로 하나 또는 경로 목록, `--dicts`처럼 순서대로 읽음 |
 | `userdict` | 사용자 사전 파일이나 폴더 경로 또는 경로 목록. 기본 탐색을 대신하며 목록 뒤쪽이 우선 |
-| `ehnd` | 경로 또는 `true`(실행 파일이나 DLL 옆 `Ehnd`), `false`나 생략은 꺼짐. `-ehnd`와 같은 필터와 사용자 사전을 함께 적용 |
-| `cache` | 경로 또는 `off`, `HDTRANS_CACHE_DIR`에 적용. `-no-cache`가 우선 |
-| `cg` | bool, 기본 `true`. `false`는 `-no-cg` |
-| `misread` | bool, 기본 `false`. `true`는 `-misread` |
-| `reference` | bool, 기본 `false`. `true`는 `-reference` |
+| `ehnd` | 경로 또는 `true`(실행 파일이나 DLL 옆 `Ehnd`), `false`나 생략은 꺼짐. `--ehnd`와 같은 필터와 사용자 사전을 함께 적용 |
+| `cache` | 경로 또는 `off`, `HDTRANS_CACHE_DIR`에 적용. `--no-cache`가 우선 |
+| `cg` | bool, 기본 `true`. `false`는 `--no-cg` |
+| `misread` | bool, 기본 `false`. `true`는 `--misread` |
+| `reference` | bool, 기본 `false`. `true`는 `--reference` |
 
 `cache`를 지우거나 DLL을 종료하면 적용 전 환경변수를 복원합니다. `HDTRANS_SNAPSHOT=off`는 그대로 유효합니다.
 알 수 없는 키와 잘못된 값은 건너뛰고, 문법 오류 앞의 정상 항목은 유지합니다. 진단은 CLI의 표준 오류,
 C API의 `hdTrans_UserDictError`, J2K의 디버거 출력으로 알립니다.
 C API의 비어 있지 않은 `dirs`와 명시적인 `hdTrans_OpenEhnd`는 파일보다 우선합니다.
-WebAssembly에도 같은 규칙을 적용하며 `/user/hdtrans.config.yaml`을 쓸 수 있습니다.
+WebAssembly의 `HdTrans` 클래스는 YAML 대신 초기화 옵션과 사용자 사전, Ehnd 설정 메서드를 받습니다([TypeScript API](typescript-api.md)).
 
 ## 번역 창 (hdTransGUI.exe, Windows)
 
@@ -171,40 +179,13 @@ Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비�
 
 ## WebAssembly
 
-`emcmake cmake --preset wasm`으로 빌드한 `hdTransEngine.js`(ES6 모듈, `MODULARIZE`)와
-`hdTransEngine.wasm`입니다. C API를 그대로 내보내며, 사전 파일은 Emscripten 파일 시스템(`FS`)에 써서
-`hdTrans_Initialize`에 그 폴더를 줍니다. TSV를 컴파일하는 동안의 메모리가 WebAssembly 메모리에 그대로 남으므로,
-열 사전은 네이티브 CLI로 [컴파일한 사전](dictionary-files.md#컴파일한-사전-hdsnap)으로 주는 편이 좋습니다:
-`hdTrans_Initialize("/dicts.hdsnap\0/dicts\0")`(나머지 파일은 `/dicts`에).
+`emcmake cmake --preset wasm`으로 `hdTransEngine.js`(ES6 모듈)와 `hdTransEngine.wasm`을 만듭니다.
+C++ 엔진은 Embind로 연결하고, TypeScript에서는 `HdTrans.init()`, `translate()`, 사용자 사전과
+Ehnd 설정 메서드를 씁니다. C API 포인터나 `ccall`, `FreeMem`을 직접 다루지 않습니다.
+네이티브 C API와 J2K 함수의 사용법은 바뀌지 않습니다.
 
-- 내보내는 함수: `hdTrans_Initialize`, `hdTrans_Terminate`, `hdTrans_Translate`, `hdTrans_Reset`,
-  `hdTrans_Reload`, `hdTrans_UserDictError`, `hdTrans_FreeMem`, `hdTrans_Version`, `hdTrans_Load`, `malloc`, `free`
-- 런타임 메서드: `FS`, `ccall`, `cwrap`, `UTF8ToString`, `stringToUTF8`, `lengthBytesUTF8`, `getValue`, `HEAPU8`
-- 사용자 사전은 `/user/`의 `userdict*.txt`, `userdict*.tsv`이며 옛 `/userdict.tsv`도 지원합니다. 스레드가 없어 자동으로 다시 읽지 않으므로, 파일을
-  쓴 뒤 `hdTrans_Reload`를 부르거나 `hdTrans_Terminate` 다음 `hdTrans_Initialize`로 다시 불러옵니다.
-- `hdTrans_Load(name, data, n)`(사전 파일을 버퍼로 넘기는 입구, `src/wasm/main.cpp`)는 아직 구현되지 않아
-  -1을 돌려줍니다.
-- 웹 데모(`web/`)가 이 모듈을 씁니다([web.md](web.md)).
-
-```js
-import createEngine from './hdTransEngine.js';
-
-const engine = await createEngine();
-engine.FS.mkdir('/dicts');
-engine.FS.writeFile('/dicts/base.tsv', baseTsvBytes);
-engine.ccall('hdTrans_Initialize', 'number', ['string'], ['/dicts\0']);
-
-const text = '学生です。';
-const out = engine._malloc(8);
-engine.ccall('hdTrans_Translate', 'number', ['string', 'number', 'number', 'number'],
-             [text, engine.lengthBytesUTF8(text), out, out + 4]);
-const ptr = engine.getValue(out, '*');
-const result = engine.UTF8ToString(ptr, engine.getValue(out + 4, 'i32'));
-engine._hdTrans_FreeMem(ptr);
-engine._free(out);
-```
-
-CI의 `tools/wasm_smoke.mjs`가 같은 순서로 동작을 확인합니다.
+초기화, 반환 타입, JSON/WHY, 실행 중 필터 교체 예제는 [TypeScript API](typescript-api.md)에 있습니다.
+웹 데모도 같은 인터페이스를 사용하며, `tools/wasm_smoke.mjs`가 실제 WASM 엔진으로 검사합니다.
 
 ## C++ API
 
