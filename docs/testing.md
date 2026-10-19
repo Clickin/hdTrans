@@ -165,6 +165,85 @@ tools/e2e.sh --expected "$HDTRANS_TESTDATA" build/mac/hdtrans dicts --accept
 받습니다. 비밀을 쓸 수 없는 실행(포크의 풀 리퀘스트)은 알림만 남기고 건너뜁니다. 작업 요약에는 개수만,
 로그에는 보고의 처음 몇 줄만 남깁니다. 종료 코드 1(바뀜)은 실패가 아니고 2만 실패입니다.
 
+## 변경 판정 (e2e + 모델 판정)
+
+챕터 본문은 위 [비공개 테스트 데이터 저장소](#테스트-데이터-비공개-저장소)에 있습니다. 본문·번역·판정 파일은
+이 저장소에 커밋하지 않습니다. 아래 도구는 Python 3 표준 라이브러리만 씁니다.
+
+1. 비교할 **커밋을 먼저 고정**하고 별도 git worktree에서 base를 빌드합니다. 움직이는 `main`과 비교하지 않습니다.
+   CLI뿐 아니라 사전도 그 커밋의 것을 씁니다. 아래 명령은 저장소 루트에서 시작합니다.
+
+   ```sh
+   BASE_REF=$(git rev-parse HEAD)  # 비교 기준 커밋 해시로 바꿔도 됨
+   BASE="$(dirname "$PWD")/hdtrans-base"  # 아직 없는 형제 폴더
+   git worktree add --detach "$BASE" "$BASE_REF"
+   (cd "$BASE" && export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer &&
+     cmake --preset mac && cmake --build build/mac)
+   export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+   cmake --preset mac
+   cmake --build build/mac
+   ```
+
+2. `e2e-pairs.py`에 base CLI·사전, head CLI·사전, 출력 파일, 입력 폴더들을 차례로 줍니다.
+   `RUN`은 저장소 밖의 결과 폴더, `DEV`와 `HELDOUT`은 서로 겹치지 않는 비공개 챕터 폴더로 지정합니다.
+
+   ```sh
+   mkdir -p "$RUN"
+   python3 tools/e2e-pairs.py "$BASE/build/mac/hdtrans" "$BASE/dicts" \
+     build/mac/hdtrans dicts "$RUN/dev.pairs.tsv" "$DEV"
+   python3 tools/e2e-pairs.py "$BASE/build/mac/hdtrans" "$BASE/dicts" \
+     build/mac/hdtrans dicts "$RUN/heldout.pairs.tsv" "$HELDOUT"
+   ```
+
+   - 각 폴더의 `.txt`를 재귀적으로 찾되 `.ko.txt`는 제외합니다. 첫 줄이 `#`로 시작하면 빼고 챕터 전체를
+     한 문서로 번역합니다. CLI를 부를 때마다 새 임시 `HOME`·캐시를 쓰므로 사용자 캐시나 base/head 캐시를 공유하지 않습니다.
+   - 출력은 머리줄 없는 `key ja old new` TSV입니다. `key`는 `입력폴더이름/상대파일명:원본줄번호`이며
+     줄 번호는 `#` 머리줄도 포함한 1부터 셉니다. 겹치지 않는 폴더 이름을 씁니다. 바뀐 줄만 기록합니다.
+   - 모든 도구의 TSV는 탭·따옴표가 든 필드를 CSV 방식으로 인용합니다. 직접 파싱할 때도 TSV용 CSV 리더를 씁니다.
+
+3. Sonnet(`claude-sonnet-5-5`)으로 **모든 변경 줄**을 판정합니다.
+4. Sonnet이 `worse` 또는 `same`으로 본 줄만 `gpt-6.1-sol`의 **high effort**로 다시 판정합니다.
+
+   ```sh
+   python3 tools/judge.py claude-sonnet-5-5 "$RUN/dev.sonnet.tsv" "$RUN/dev.pairs.tsv"
+   awk -F '\t' '$2 == "worse" || $2 == "same" {print $1}' \
+     "$RUN/dev.sonnet.tsv" > "$RUN/dev.rejudge.keys.txt"
+   python3 tools/judge.py gpt-6.1-sol "$RUN/dev.gpt.tsv" "$RUN/dev.pairs.tsv" \
+     --only "$RUN/dev.rejudge.keys.txt" --effort high
+   ```
+
+   - `judge.py MODEL OUT.tsv PAIRS.tsv [--only KEYS.txt] [--effort low|high]`.
+     `--only`는 키를 한 줄에 하나씩 적은 파일입니다. 출력은 머리줄 없는 `key verdict model`이며
+     `verdict`는 `improved`, `same`, `worse`입니다. X/Y 순서를 섞어 판정한 뒤 old/new 기준으로 돌립니다.
+   - 출력에 같은 모델로 판정한 키가 있으면 건너뛰고 이어 씁니다. 입력이나 판정 설정을 바꾸면 새 출력 파일을 씁니다.
+     effort는 `--effort` → `JUDGE_EFFORT` → `low` 순입니다.
+   - `ANTHROPIC_BASE_URL`(기본 `https://api.anthropic.com`)과 `ANTHROPIC_AUTH_TOKEN`(Bearer) 또는
+     `ANTHROPIC_API_KEY`(`x-api-key`)를 환경에서 읽습니다. 둘 다 있으면 Bearer를 씁니다. 키·토큰을 파일에 넣지 않습니다.
+     GPT 모델은 해당 모델을 제공하는 Anthropic Messages 호환 게이트웨이가 필요합니다.
+
+5. **같은 줄을 두 모델이 모두 `worse`로 판정하면 원인 변경을 되돌립니다.** 의견이 갈린 줄과 정상 줄의 변화도 직접 검토합니다.
+6. held-out에도 3~5를 별도로 실행하고, 개발 세트와 held-out의 변경 줄·개선·동률·악화 및 쌍방 악화 수를 **분리 보고**합니다.
+   held-out을 보고 규칙을 맞췄으면 더는 held-out이 아니므로 새 평가 세트가 필요합니다.
+
+### 나쁜 구간을 고른 층 찾기 (attribute.py)
+
+쌍 비교 판정은 구간을 주지 않습니다. 원인을 좁힐 줄을 골라 별도 구간 판정 TSV를 준비합니다.
+열은 `line ja out verdict cause span fix`이고 머리줄은 선택입니다(`line`으로 시작). `verdict=ok`가 아닌 행을
+분석합니다. `line`은 원본 파일의 줄 번호, `span`은 일본어의 잘못 해석한 구간입니다.
+
+```sh
+python3 tools/attribute.py --verdicts "$RUN/spans/sample.verdicts.tsv" \
+  --chapters "$DEV/sample.ja.txt" --cli build/mac/hdtrans --dicts dicts \
+  --output "$RUN/owners.tsv"
+```
+
+`--verdicts`와 `--chapters`는 여러 파일을 받으며, `sample.verdicts.tsv`와 `sample.ja.txt`처럼 이름으로 짝짓습니다.
+현재 CLI로 챕터 전체를 `-why` 번역하고, 판정 당시와 원문·번역이 같은 줄만 분석합니다. 출력은 머리줄 있는
+`chapter line cause span fix ja out owners`입니다. `owners`는 겹친 단어의 `층:규칙:표기:한국어`를 `|`로 이으며,
+어미 출처가 있으면 `+end=층:규칙`을 덧붙입니다. 같은 구간이 반복되면 모두 찾습니다. 표면형을 원문에서 순서대로
+맞추므로 정규화·합성된 단어는 빠질 수 있고, `-why`가 기록하지 않는 층은 [architecture.md](architecture.md#누가-정했는지--why)와
+단계 기록으로 확인합니다. 표준 오류에는 분석·출력 변화·구간 누락 개수가 나옵니다.
+
 ## 잘못된 출력 찾기 (detect-bad.sh)
 
 ```sh

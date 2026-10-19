@@ -1,0 +1,306 @@
+kind	code	meaning
+class	0	연체사·연결 표현
+class	1	명사
+class	2	조사
+class	3	부사·접속사·감탄사
+class	4	동사 어간
+class	5	어미
+class	6	기호
+class	7	い형용사
+class	8	형용동사
+class	9	구·관용 표현
+pos	N110	일반 명사
+pos	N111	명사형 연결 표현(추정: 分の 등)
+pos	N120	대명사
+pos	N130	고유 명사
+pos	I110	명사(세부 태그 추정)
+pos	I130	단체명 등 고유 명사(세부 태그 추정)
+pos	E0H0	연체사
+pos	E0H1	연체사(세부 부류 추정)
+pos	E300	부사
+pos	E320	감탄사
+pos	E331	접속사
+pos	P200	조사(세부 부류 추정)
+pos	P220	조사(세부 부류 추정)
+pos	M420	와행 5단 동사 어간
+pos	M421	카행 5단 동사 어간
+pos	M442	가행 5단 동사 어간
+pos	M443	사행 5단 동사 어간
+pos	M424	타행 5단 동사 어간
+pos	M425	마행 5단 동사 어간
+pos	M426	바행 5단 동사 어간
+pos	M427	1단 동사 어간
+pos	M428	라행 5단 동사 어간
+pos	M429	する 계열 동사 어간
+pos	M41;	来る 계열 변격 동사 어간
+pos	M41<	나행 5단 동사 어간
+pos	M43:	ずる 계열 변격 동사 어간
+pos	N600	기호
+pos	P600	기호(세부 태그 추정)
+pos	H7N0	い형용사 어간
+pos	H7U0	い형용사 어간(세부 부류 추정)
+pos	G8U0	형용동사 어간
+pos	G8L0	형용동사 어간(세부 부류 추정)
+pos	A9D0	구·관용 표현(세부 부류 추정)
+pos	N9H0	구·관용 표현(세부 부류 추정)
+pos	?110	일반 명사 계열(세부 태그 추정)
+pos	?120	대명사 계열(세부 태그 추정)
+pos	?130	고유 명사 계열(세부 태그 추정)
+pos	?4?0	와행 동사 어간(활용·세부 부류 추정)
+pos	?4?1	카행 동사 어간(활용·세부 부류 추정)
+pos	?4?2	가행 동사 어간(활용·세부 부류 추정)
+pos	?4?3	사행 동사 어간(활용·세부 부류 추정)
+pos	?4?4	타행 동사 어간(활용·세부 부류 추정)
+pos	?4?5	마행 동사 어간(활용·세부 부류 추정)
+pos	?4?6	바행 동사 어간(활용·세부 부류 추정)
+pos	?4?7	1단 동사 어간(활용·세부 부류 추정)
+pos	?4?8	라행 동사 어간(활용·세부 부류 추정)
+pos	?4?9	する 계열 동사 어간(활용·세부 부류 추정)
+pos	?4?:	ずる 계열 동사 어간(활용·세부 부류 추정)
+pos	?4?;	来る 계열 동사 어간(활용·세부 부류 추정)
+pos	?4?<	나행 동사 어간(활용·세부 부류 추정)
+pos	S5??	동사 접속 어미(접속·활용 부류 추정)
+pos	T5??	い형용사 접속 어미(접속·활용 부류 추정)
+pos	U5??	형용동사·판정사 접속 어미(접속·활용 부류 추정)
+pos	?0??	연체사·연결 표현(세부 부류 추정)
+pos	?1??	명사(세부 부류 추정)
+pos	?2??	조사(세부 부류 추정)
+pos	?3??	부사·접속사·감탄사(세부 부류 추정)
+pos	?4??	동사 어간(활용·세부 부류 추정)
+pos	?5??	어미(접속·활용 부류 추정)
+pos	?6??	기호(세부 부류 추정)
+pos	?7??	い형용사(활용·세부 부류 추정)
+pos	?8??	형용동사(활용·세부 부류 추정)
+pos	?9??	구·관용 표현(세부 부류 추정)
+sem	GCT	지명(추정: QCT 오기 가능)
+sem	HGu	범죄·위법·처벌·부정적 행위(추정)
+sem	KNa	기업명(추정)
+sem	KSt	계절(추정)
+sem	POs	우편·우송물(추정)
+sem	QAA	동물(포유류 등, 추정)
+sem	QAB	새·조류(추정)
+sem	QAC	어류·수산물(추정)
+sem	QAD	파충류(추정)
+sem	QAE	곤충(추정)
+sem	QAF	작은 동물(추정: 세부 범위 미상)
+sem	QAG	연체·극피동물 등(추정)
+sem	QAH	균·미생물·바이러스(추정)
+sem	QAL	식물 이름(추정)
+sem	QAM	과일(추정)
+sem	QAN	수목(추정)
+sem	QAO	농산물·작물(추정)
+sem	QCT	지명
+sem	QCt	지명(추정: QCT 대소문자 오기 가능)
+sem	QHP	몸·신체 부위·생리 현상(추정)
+sem	QHp	신체 상태·질병(추정: QHP 변형 가능)
+sem	QID	기업·단체의 이름(추정)
+sem	QLG	언어 이름(추정)
+sem	QMM	화폐 단위 이름(추정)
+sem	QMS	기관·조직의 이름(추정)
+sem	QMU	음악·소리 관련 이름(추정)
+sem	QMu	음악(추정: QMU 대소문자 오기 가능)
+sem	QNN	국가명
+sem	QNP	민족·국적·주민(추정)
+sem	QPH	인명(추정: QPN 오기 가능)
+sem	QPN	인명
+sem	QPn	인명(추정: QPN 대소문자 오기 가능)
+sem	QST	역 이름(추정)
+sem	QWK	작품명
+sem	SFl	사랑·감정 관련(추정)
+sem	SPt	스포츠·경기(추정)
+sem	UAq	직업·역할을 가진 사람(추정)
+sem	UAr	예술·공연·표현(추정)
+sem	UCl	문화·종교·풍속(추정)
+sem	UCr	색·빛깔(추정)
+sem	UDr	방향·가리키는 위치(추정)
+sem	UFl	감정·심리 상태(추정)
+sem	UGs	흡수·끌어당김(추정)
+sem	UGu	위법·권리 침해(추정)
+sem	UHr	호칭·발화·소리 표현(추정)
+sem	ULm	제한·통제(추정)
+sem	ULw	법률·제도·법적 행위(추정)
+sem	UMN	제도(추정: UMn 대소문자 오기 가능)
+sem	UMe	시간·때·기간(추정)
+sem	UMn	방법·방식·제도(추정)
+sem	UMv	이동·왕래(추정)
+sem	UPp	상벌·형벌·훈장(추정)
+sem	UQf	가족·친족·혼인 관계(추정)
+sem	URc	인지·지각(추정)
+sem	URt	권력·지위·통치(추정)
+sem	USe	말하기·서술·표현(추정)
+sem	USm	사상·학설·이론(추정)
+sem	USo	소리·음향(추정)
+sem	USu	학문·교육·학술 분야(추정)
+sem	USw	저작·그림 작품(추정)
+sem	UTh	생각·판단·주장(추정)
+sem	UTi	병·질환·이상 상태(추정)
+sem	UTp	운송 수단(추정: VTp 오기 가능)
+sem	UTs	발화·인사·언어 행위(추정)
+sem	UTt	기술·기법·기능(추정)
+sem	UXb	단위·정도(추정)
+sem	UXd	거리·범위(추정)
+sem	UXf	양·수량(추정)
+sem	UXg	위치·공간 관계(추정)
+sem	UXl	불·연소·발연(추정)
+sem	UXm	관계·연결(추정)
+sem	UXs	속도·운동(추정)
+sem	UXt	온도·추위·더위(추정)
+sem	UXw	무게(추정)
+sem	UYa	맛(추정)
+sem	UYh	행동·행위 성향(추정)
+sem	UYi	성격·인격·성향(추정)
+sem	UYk	두께·농도(추정: 예시가 적음)
+sem	UYl	길이·폭(추정)
+sem	UYm	냄새·후각(추정)
+sem	UYp	가격·가치(추정)
+sem	UYq	면적·넓이(추정)
+sem	UYr	비율·통계(추정)
+sem	UYs	강도·힘·정도(추정)
+sem	UYt	촉감·감촉(추정)
+sem	Ume	시간(추정: UMe 대소문자 오기 가능)
+sem	Uts	말하기(추정: UTs 대소문자 오기 가능)
+sem	Uya	맛(추정: UYa 대소문자 오기 가능)
+sem	VAc	성질·상태(추정)
+sem	VAm	동물 일반(추정)
+sem	VBk	책·문서·인쇄물(추정)
+sem	VBl	건물·시설(추정)
+sem	VBp	신체·신체 부위(추정)
+sem	VCk	조리·식기·주방(추정)
+sem	VCm	정보·소식·통신(추정)
+sem	VCp	의복·옷감·차림(추정)
+sem	VDt	세제·세정(추정)
+sem	VEI	전기·전자 기기(추정: VEl 변형 가능)
+sem	VEl	전기·전자 기기(추정)
+sem	VFd	음식·식품(추정)
+sem	VFg	도형·형상(추정)
+sem	VFn	가구·가재도구(추정)
+sem	VFr	날씨·기상(추정)
+sem	VGT	단체(추정: VGt 대소문자 오기 가능)
+sem	VGn	초자연적 존재·신앙 대상(추정)
+sem	VGr	지명(추정: 세부 범위 미상)
+sem	VGt	단체·조직(추정)
+sem	VHn	사람·인간
+sem	VIv	감염·질병 원인(추정)
+sem	VJw	보석·귀중품·장신구(추정)
+sem	VLq	액체(추정)
+sem	VLt	실·섬유·직물(추정)
+sem	VLu	분비물·생리적 물질(추정)
+sem	VLw	법률(추정: ULw 변형 가능)
+sem	VMa	물질·재료(추정)
+sem	VMd	약·약품(추정)
+sem	VMn	제도·방식(추정: UMn 변형 가능)
+sem	VMo	경제·금융·상거래(추정)
+sem	VMs	물질(추정: 세부 범위 미상)
+sem	VMy	돈·금전(추정)
+sem	VNN	국가(추정: VNn 대소문자 오기 가능)
+sem	VNn	국가·나라(추정)
+sem	VNo	금융 문서(추정: 세부 범위 미상)
+sem	VPI	장소(추정: VPl 오기 가능)
+sem	VPL	장소(추정: VPl 대소문자 오기 가능)
+sem	VPa	가루·분말(추정)
+sem	VPc	전지(추정: 세부 범위 미상)
+sem	VPe	도구·용구(추정)
+sem	VPl	장소
+sem	VPt	식물 일반(추정)
+sem	VQm	남성(추정)
+sem	VQw	여성(추정)
+sem	VRw	스포츠·경기·놀이(추정)
+sem	VRy	악기(추정)
+sem	VSn	광물·광석·암석(추정)
+sem	VSp	그림·회화·미술(추정)
+sem	VSs	하늘·천체·자연 현상(추정)
+sem	VSt	문구·종이 제품(추정)
+sem	VSw	문자·글·문서(추정)
+sem	VTp	교통·운송 수단(추정)
+sem	VTw	전쟁·군사·전투(추정)
+sem	Wab	수영 동작(추정: 예시가 적음)
+sem	Wry	핵치환(추정: 세부 범위 미상)
+sem	XXX	기본 후보 표시
+gram	Av	부정·금지 계열 용언(추정)
+gram	Bh	앞 문맥 연결 부사 등(추정: 범위 미상)
+gram	Bt	명사 연결(추정: 예시가 적음)
+gram	CT	조수사(추정: Ct 대소문자 오기 가능)
+gram	Ct	조수사
+gram	Da	존재·보조 용언(추정)
+gram	Db	겸양의 만나다(추정)
+gram	Dd	な형으로 연결하는 명사·형용동사
+gram	Do	행동·이동 용언(추정: 세부 범위 미상)
+gram	Ds	보조 용언(추정: て 뒤 동사 선택 등에 쓰임)
+gram	Du	보조 용언(추정: 세부 범위 미상)
+gram	Dx	연결 용언(추정: 세부 범위 미상)
+gram	Gk	상태 표현(추정: 예시가 적음)
+gram	Ha	연결·활용 보조 표시(추정: 범위 미상)
+gram	Hc	する 가능 명사 세부 부류(추정)
+gram	Hd	する를 붙일 수 있는 명사
+gram	He	형용동사 가능 부류(추정)
+gram	Hh	형용동사 가능 부류(추정)
+gram	Ho	준비·용의 명사(추정: 예시가 적음)
+gram	Hr	존경·공손 용언(추정)
+gram	Hw	상태·의태 표현(추정)
+gram	Hz	문장 첫머리 조건
+gram	J1	뒤 문장 부호에 따른 후보 선택 부류 1(추정)
+gram	J2	뒤 문장 부호에 따른 후보 선택 부류 2(추정)
+gram	J3	뒤 문장 부호에 따른 후보 선택 부류 3(추정)
+gram	J4	뒤 문장 부호에 따른 후보 선택 부류 4(추정)
+gram	J5	뒤 문장 부호에 따른 후보 선택 부류 5(추정)
+gram	J6	뒤 문장 부호에 따른 후보 선택 부류 6(추정)
+gram	J7	뒤 문장 부호에 따른 후보 선택 부류 7(추정)
+gram	Js	부정 계열 용언(추정)
+gram	Ke	가능·할 수 있다 계열 용언(추정)
+gram	Kj	어미·연결 표현의 세부 표시(추정)
+gram	Ma	용언 어간의 세부 표시(추정: 범위 미상)
+gram	Mi	의향·계획 명사(추정)
+gram	Mk	기호·문장 부호(추정)
+gram	Mo	한자 한 글자 등 명사 부류(추정)
+gram	NJ	숫자 표현(추정: Nj 대소문자 오기 가능)
+gram	Na	고정된 조사 연결 용언(추정)
+gram	Nb	이름의 세부 표시(추정)
+gram	Nd	아라비아 숫자·수량(추정)
+gram	Ng	형용동사·상태 명사 부류(추정)
+gram	Nj	한자 수사·수량(추정)
+gram	Ob	버튼·스위치·벨
+gram	Od	음료·먹물
+gram	Of	덮는 침구
+gram	Og	독기·영기
+gram	Om	끼니
+gram	On	한자 숫자·단위 명사(추정)
+gram	Op	사진·이미지
+gram	Oq	질문 내용
+gram	Or	돌아갈 상태
+gram	Os	인장·문장(紋章)
+gram	Ow	문장 오른쪽 경계 조건
+gram	Pe	부사로 보는 코드
+gram	Pj	조사로 보는 코드
+gram	Pn	명사로 보는 코드
+gram	QP	인명 관련(추정: QPN 조각 가능)
+gram	Qq	지명 접미 결합(추정)
+gram	Rc	수령·전달 동사
+gram	Rr	돌아오다·돌아가다
+gram	Sa	사역 용언(추정: 예시가 적음)
+gram	Sh	구어·발화 어미(추정)
+gram	Sk	する 계열 용언(추정)
+gram	Sp	と 조건 표현(추정: 예시가 적음)
+gram	St	상태 변화(추정)
+gram	Td	앞뒤 항목이 없는 단독 문장 조건
+gram	Tm	부사로 쓸 수 있는 명사
+gram	Tr	と·たる형 연결 가능(추정)
+gram	Tu	명사 연결·고정 표현 표시(추정)
+gram	UM	문법 부류 미상(추정: UMv 조각 가능)
+gram	Uu	비의지적 상태 용언(추정)
+gram	Va	용언 선택 부류(추정: 세부 범위 미상)
+gram	Wa	인명 중 성
+gram	Wb	인명 중 이름
+gram	XX	기본값 관련 표시(추정: XXX 조각 가능)
+gram	Xb	명사 세부 부류(추정: 예시가 적음)
+gram	Xj	용언 연결 부류(추정: 세부 범위 미상)
+gram	Xn	부정 용언 부류(추정)
+gram	Yn	공손한 부정 어미(추정)
+gram	Z0	접속 표현 세부 부류(추정)
+gram	Z2	단정 표현 세부 부류(추정)
+gram	Z6	접두사
+gram	Z7	접미사
+gram	Z8	고정 연결 표현(추정)
+gram	Zn	정도·부정 호응 부사(추정)
+gram	ke	문법 부류 미상(추정: Make의 뒷부분)
+gram	wa	인명 성(추정: Wa 대소문자 오기 가능)
+gram	wb	인명 이름(추정: Wb 대소문자 오기 가능)
