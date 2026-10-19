@@ -175,6 +175,11 @@
 
 // 〜そうに before a verb: in the manner of looking so (不思議そうに 이상한 듯이).
 静かそうに	조용한 듯이	pat
+// 〜ている真っ最中の before a noun: right in the middle of doing.
+書いている真っ最中の	쓰는 데 한창인	pat
+書いてる真っ最中の	쓰는 데 한창인	pat
+している真っ最中の	하는 데 한창인	phrase
+してる真っ最中の	하는 데 한창인	phrase
 // 〜そうになる: nearly.
 書きそうになる	쓸 뻔한다	pat
 書きそうになった	쓸 뻔했다	pat

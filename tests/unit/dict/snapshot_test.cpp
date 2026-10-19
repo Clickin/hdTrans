@@ -519,8 +519,8 @@ HD_TEST(SnapshotCompiledPlainDictionaries) {
     // The text path adds the kana spellings, the phrases but the 329 interjections in
     // kana, and the patterns.
     HD_CHECK_EQ(EntriesOf(s.TextPlain(), -2), "あい 사랑 N110 @3.0");
-    HD_CHECK_EQ(CountFile(s.TextPlain(), -1), size_t{1936});
-    HD_CHECK_EQ(s.TextPlain().Entries().size(), size_t{1940});
+    HD_CHECK_EQ(CountFile(s.TextPlain(), -1), size_t{1942});
+    HD_CHECK_EQ(s.TextPlain().Entries().size(), size_t{1946});
     HD_CHECK_EQ(s.Senses().size(), size_t{663});
     HD_CHECK_EQ(s.GeneratedFamilies().Size(), size_t{32});
 
