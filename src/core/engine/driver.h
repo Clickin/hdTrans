@@ -18,6 +18,10 @@
 #include "core/word/analyze.h"
 #include "core/word/document_senses.h"
 
+namespace hdTrans::filter {
+class Filters;
+}
+
 namespace hdTrans::internal {
 
 // Receives the outputs of the stages as they are made. A null member is not called. The
@@ -66,6 +70,9 @@ struct TranslationOptions {
     std::span<const word::Scorer> shadowScorers;
     bool selectShadow = false;
     bool selectRules = false;
+    // The pre-filter rewrites each line before translation and the post-filter its
+    // translation; their user dictionary joins the lookups. Null for none.
+    const filter::Filters* filters = nullptr;
 };
 
 // Translates the lines of one call as one document: the registry and the document context

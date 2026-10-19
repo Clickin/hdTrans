@@ -12,6 +12,10 @@ namespace dict {
 class Snapshot;
 }
 
+namespace filter {
+class Filters;
+}
+
 namespace internal {
 struct Access;
 struct Generated;
@@ -33,15 +37,28 @@ public:
     // no dictionary could be loaded; the dictionaries loaded before stay.
     bool Open(const std::vector<std::string>& dirs, bool verifyDicts = false);
 
-    // Reloads the folders given to Open and swaps the new dictionaries in. Sessions keep
-    // translating with the dictionaries they started with. Returns false when the load
-    // fails; the dictionaries loaded before stay.
+    // Reloads the folders given to Open, and the Ehnd folder, and swaps the new
+    // dictionaries in. Sessions keep translating with the dictionaries they started
+    // with. Returns false when the load fails; the dictionaries loaded before stay.
     bool Reload();
+
+    // Takes the filters and the user dictionary of the Ehnd folder dir (its
+    // PreFilter*.txt, PostFilter*.txt, SkipLayer*.txt and UserDict*.txt files, see
+    // docs/ehnd-compat.md) for the sessions created or reset after it, with the
+    // prefilter and postfilter files of the dictionary folders; an empty dir drops them.
+    // Returns false when dir cannot be read; the folder taken before stays.
+    bool OpenEhnd(std::string_view dir);
+
+    // The lines of the filter files and of the Ehnd folder that the last Open, Reload or
+    // OpenEhnd skipped, as "file:line: message".
+    std::vector<std::string> FilterErrors() const;
 
     bool loaded() const;
 
     // The current dictionaries; null before a successful Open.
     std::shared_ptr<const dict::Snapshot> Dictionaries() const;
+    // The current filters; null without filter files and Ehnd folder.
+    std::shared_ptr<const filter::Filters> Filters() const;
 
 private:
     friend class Session;
@@ -53,6 +70,9 @@ private:
     bool verifyDicts_ = false;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;  // the marker families made on snapshot_
+    std::string ehndDir_;
+    std::shared_ptr<const filter::Filters> filters_;
+    std::vector<std::string> filterErrors_;
 };
 
 // A translation with memory: names and other context found in earlier text of the
@@ -79,6 +99,7 @@ private:
     const bool reference_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;
+    std::shared_ptr<const filter::Filters> filters_;
     std::unique_ptr<internal::SessionState> state_;
 };
 

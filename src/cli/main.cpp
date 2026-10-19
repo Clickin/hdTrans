@@ -109,6 +109,7 @@ int main(int argc, char** argv) {
 #endif
     std::string dicts = "dicts/base";
     std::string inPath;
+    std::string ehnd;
     const char* dump = std::getenv("HDTRANS_DRIVER_DUMP");
     std::string stagesDir = dump ? dump : "";
     bool raw = false;
@@ -123,6 +124,7 @@ int main(int argc, char** argv) {
         const char* a = argv[i];
         if (!std::strcmp(a, "-dicts") && i + 1 < argc) dicts = argv[++i];
         else if (!std::strcmp(a, "-in") && i + 1 < argc) inPath = argv[++i];
+        else if (!std::strcmp(a, "-ehnd") && i + 1 < argc) ehnd = argv[++i];
         else if (!std::strcmp(a, "-stages") && i + 1 < argc) stagesDir = argv[++i];
         else if (!std::strcmp(a, "-raw")) raw = true;
         else if (!std::strcmp(a, "-each")) each = true;
@@ -133,7 +135,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-stages DIR] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-stages DIR] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
@@ -193,6 +195,11 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "hdtrans: no dictionary loaded from %s\n", dicts.c_str());
         return 1;
     }
+    if (!ehnd.empty() && !engine.OpenEhnd(ehnd)) {
+        std::fprintf(stderr, "hdtrans: cannot read the Ehnd folder %s\n", ehnd.c_str());
+        return 1;
+    }
+    for (const std::string& e : engine.FilterErrors()) std::fprintf(stderr, "hdtrans: %s\n", e.c_str());
 
     std::string input;
     if (inPath.empty()) {
@@ -209,8 +216,10 @@ int main(int argc, char** argv) {
     const auto snapshot = engine.Dictionaries();
     const auto generated = hdTrans::internal::NewGenerated(*snapshot);
     const hdTrans::word::Scorer diagnosticScorers[] = {{"shortest-target", hdTrans::word::ShortestTargetScore}};
+    const auto filters = engine.Filters();
     hdTrans::internal::TranslationOptions options;
     options.reference = reference;
+    options.filters = filters.get();
     if (selectShadow) {
         options.shadowScorers = diagnosticScorers;
         options.selectShadow = true;
