@@ -1,8 +1,11 @@
 // The terminal pass: a bare attributive verb or adjective becomes the terminal form of
-// the same tense when what follows it ends the sentence or a clause.
+// the same tense when what follows it ends the sentence or a clause, or when an ellipsis
+// or a dash separates it from the next clause.
+#include <cstddef>
 #include <string>
 #include <string_view>
 
+#include "core/tokenizer/token.h"
 #include "core/word/flush.h"
 #include "core/word/terminal.h"
 #include "core/word/strings.h"
@@ -61,6 +64,54 @@ bool EndsClause(const Item* it) {
     return IsOneOfCommas(next) && it->DirectIndex() >= 0 && it->DirectText(it->DirectIndex()).ends_with(kKoDa);
 }
 
+// Whether s is a run of ellipsis or dash characters as the tokenizer writes them.
+bool PauseMarks(std::string_view s) {
+    static constexpr std::string_view kMarks[] = {"…", "‥", "―", "—", "·", "・", "."};
+    if (s.empty()) return false;
+    while (!s.empty()) {
+        const std::size_t n = s.size();
+        for (const std::string_view m : kMarks) {
+            if (s.starts_with(m)) s.remove_prefix(m.size());
+        }
+        if (s.size() == n) return false;
+    }
+    return true;
+}
+
+// The nouns that an attributive before an ellipsis or a dash still modifies (行く……ことにした).
+constexpr std::string_view kDependentNouns[] = {"こと", "事", "もの", "物", "の", "ん", "はず", "筈", "ところ", "所",
+                                                "わけ", "訳", "よう", "様", "つもり", "ため", "為", "まま", "ほう",
+                                                "方", "とき", "時", "うち", "くらい", "ぐらい", "ほど"};
+
+// Text input: it ends its token and is not the quotative いう (とかいう……), only ellipsis
+// or dash tokens stand between it and the next item, and that item is a conjunction, or
+// an adverb, a predicate or a noun that does not start with one of kDependentNouns, the
+// noun not ending the sentence (知らない……本当に, 分からない……でも, 帰る――それでいい,
+// 熱すぎる・・・勘弁して, but 行く……ことにした, いた――んだけど, 消えた……直後。).
+bool PausedClause(const Flusher& f, const Item* it) {
+    const Item* next = it->next;
+    if (!f.w.settings.text || next == nullptr || next->tokenIndex <= it->tokenIndex + 1 ||
+        static_cast<std::size_t>(it->start + it->length) != it->text.size()) {
+        return false;
+    }
+    const std::string ja = it->group->surface + std::string(it->DirectSurface());
+    if (ja == "いう" || ja == "言う") return false;
+    for (int j = it->tokenIndex + 1; j < next->tokenIndex; j++) {
+        const tokenizer::TokenView t = f.w.Tok(j);
+        if (t.type != tokenizer::kTypeSymbol || !PauseMarks(t.text)) return false;
+    }
+    if (next->choice.layer == Provenance::Initial) return true;
+    const char cls = At(next->Code(next->selected), 0);
+    if (cls != '1' && cls != '3' && cls != '4' && cls != '7') return false;
+    for (const std::string_view n : kDependentNouns) {
+        if (next->group->surface.starts_with(n)) return false;
+    }
+    if (cls != '1') return true;
+    const Item* after = next->next;
+    while (IsOneOfClosing(after)) after = after->next;
+    return after != nullptr && !IsOneOfSentenceEnds(after) && after->group->surface != "。";
+}
+
 }  // namespace
 
 void PreferTerminal(Flusher& f) {
@@ -81,7 +132,7 @@ void PreferTerminal(Flusher& f) {
                 comma = comma || IsOneOfCommas(next);
                 next = next->next;
             }
-            if (next != nullptr && !IsOneOfSentenceEnds(next) &&
+            if (!PausedClause(f, it) && next != nullptr && !IsOneOfSentenceEnds(next) &&
                 (!EndsClause(next) || (cls == '7' && !comma && !it->group->surface.ends_with(kJaNa) &&
                                        At(next->Code(next->selected), 0) != '7'))) {
                 break;

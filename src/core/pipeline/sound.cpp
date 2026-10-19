@@ -9,6 +9,7 @@
 #include "core/pipeline/runes.h"
 #include "core/text/unicode.h"
 #include "core/text/utf8.h"
+#include "core/word/conjugation.h"
 
 namespace hdTrans::pipeline {
 
@@ -547,8 +548,9 @@ size_t SoundText::Adverbial(size_t i) const {
 // (with small ゃゅょ and ッ, but not a sound of sound.tsv such as あっ; phrases.tsv words
 // such as おっ stutter) at the start of a phrase, then a separator, repeated, before a
 // word that starts with the same kana (but not で、 or じゃ、) or with a kanji (after a
-// comma not for kNotStutters); or a syllable with ッ directly before a kanji, unless
-// kSoundsBeforeKanji holds it, with the separator 、.
+// comma not for kNotStutters, and with ッ not for kSoundsBeforeKanji: えっ……本当); or a
+// syllable with ッ directly before a kanji, unless kSoundsBeforeKanji holds it, with the
+// separator 、.
 size_t SoundText::Stutter(size_t p, std::vector<std::u32string_view>& seps) const {
     const std::u32string_view rs = rs_, f = f_;
     seps.clear();
@@ -580,7 +582,8 @@ size_t SoundText::Stutter(size_t p, std::vector<std::u32string_view>& seps) cons
     bool notStutter = false;
     for (const auto s : kNotStutters) notStutter = notStutter || s == bare;
     if (f[i] == f[p] && x != U"デ" && x != U"ジャ") return i;
-    if (IsKanjiRune(rs[i]) && !(comma && notStutter)) return i;
+    const bool sound = x.ends_with(U'ッ') && In(f[p], kSoundsBeforeKanji);
+    if (IsKanjiRune(rs[i]) && !(comma && notStutter) && !sound) return i;
     seps.clear();
     return 0;
 }
@@ -720,10 +723,61 @@ std::string WriteSounds(std::string_view text, const LineContext& ctx, const dic
     return t.Write();
 }
 
+namespace {
+
+// Whether a dash or an ellipsis starts at rs[i]: ― — … ‥, or a run of two ・ or ー.
+bool CutMarkAt(std::u32string_view rs, size_t i) {
+    if (i >= rs.size()) return false;
+    if (In(rs[i], U"―—…‥")) return true;
+    return In(rs[i], U"・ー") && i + 1 < rs.size() && rs[i + 1] == rs[i];
+}
+
+// The kana that complete the cut-off verb frag (kanji up to kanjiEnd, then hiragana),
+// or "".
+std::string Completion(std::u32string_view frag, size_t kanjiEnd, const LineContext& ctx, const dict::Snapshot& snap) {
+    for (size_t s = 0; s < kanjiEnd; s++) {
+        const std::string text = EncodeText(frag.substr(s));
+        const dict::Candidates rd = snap.GetWordInfo(text, dict::LookupMode::General, ctx.lookup);
+        for (const dict::Candidate& c : rd.list) {
+            if (c.codes == nullptr || c.codes->part.Tag() != 'M' || c.codes->part.ClassDigit() != '4') continue;
+            if (s + text::RuneCount(c.source) < kanjiEnd || !text.starts_with(c.source)) continue;
+            const std::string_view rest = std::string_view(text).substr(c.source.size());
+            const int kind = c.codes->part.VerbKind();
+            const std::string_view te = word::Conjugation(kind, 7), neg = word::Conjugation(kind, 8);
+            if (!rest.empty() && te.size() > rest.size() && te.starts_with(rest)) return std::string(te.substr(rest.size()));
+            if (!neg.empty() && rest.size() == neg.size() + 3 && rest.starts_with(neg) && rest.ends_with("な")) return "い";
+        }
+    }
+    return "";
+}
+
+}  // namespace
+
+std::string CompleteCutOffs(std::string_view text, const LineContext& ctx, const dict::Snapshot& snap) {
+    const std::u32string rs = DecodeText(text);
+    std::string out;
+    size_t done = 0;
+    for (size_t i = 1; i < rs.size(); i++) {
+        if (!CutMarkAt(rs, i)) continue;
+        size_t kana = i;
+        while (kana > 0 && i - kana < 4 && IsHiraganaRune(rs[kana - 1])) kana--;
+        if (kana == i || kana == 0 || !IsKanjiRune(rs[kana - 1])) continue;
+        size_t start = kana - 1;
+        while (start > 0 && IsKanjiRune(rs[start - 1])) start--;
+        const std::string add = Completion(std::u32string_view(rs).substr(start, i - start), kana - start, ctx, snap);
+        if (add.empty()) continue;
+        out += EncodeText(std::u32string_view(rs).substr(done, i - done)) + add;
+        done = i;
+    }
+    if (done == 0) return std::string(text);
+    return out + EncodeText(std::u32string_view(rs).substr(done));
+}
+
 }  // namespace internal
 
 std::string Sound(std::string_view normalized, const LineContext& ctx, const dict::Snapshot& snap) {
-    std::string sounded = internal::RewriteCasualAdjectives(internal::WriteSounds(normalized, ctx, snap), ctx, snap);
+    const std::string completed = internal::CompleteCutOffs(normalized, ctx, snap);
+    std::string sounded = internal::RewriteCasualAdjectives(internal::WriteSounds(completed, ctx, snap), ctx, snap);
     if (std::string plain = internal::RewriteEmphasis(sounded, ctx, snap); plain != sounded) {
         sounded = internal::WriteSounds(plain, ctx, snap);
     }

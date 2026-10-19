@@ -88,6 +88,8 @@ HD_TEST(pipeline_sound) {
         {"な、なにを", "\xEE\x80\x80" "、なにを"},
         {"だっ、だめ", "\xEE\x80\x80" "、だめ"},
         {"お…お兄ちゃん", "\xEE\x80\x80" "…お兄ちゃん"},
+        {"だっ……大丈夫", "\xEE\x80\x80" "……大丈夫"},
+        {"えっ……本当", "えっ……本当"},
         {"「わ、わ、私は……」", "「\xEE\x80\x80" "、\xEE\x80\x80" "、私は……」"},
         {"ドキドキしてきた", "두근두근してきた"},
         {"ぼーっとしてない？", "멍してない？"},
@@ -124,6 +126,36 @@ HD_TEST(pipeline_sound) {
         {"\xffドキドキ\xe3", "\xff두근두근\xe3"},
     };
     for (const auto& c : cases) HD_CHECK_EQ(Sound(c.in, ctx, *snap), std::string(c.want));
+}
+
+// A verb cut off before a dash or an ellipsis, completed when the dictionary has it.
+HD_TEST(pipeline_complete_cut_offs) {
+    const auto loaded = dict::Load({{
+        0, "base.tsv",
+        "key\tko\tpos\tid\n"
+        "待\t기다&AA@\tM434\t1\n"
+        "書\t쓰&AA@\tM421\t2\n"
+        "やめ\t그만두&AA@\tM437\t3\n"
+        "嘘\t거짓말\tN110\t4\n",
+    }});
+    HD_REQUIRE(loaded.errors.empty() && loaded.snapshot != nullptr);
+    LineContext ctx;
+    const Case cases[] = {
+        {"待っ――", "待って――"},
+        {"ちょっと待っ……", "ちょっと待って……"},
+        {"「待っ——」", "「待って——」"},
+        {"書い・・・", "書いて・・・"},
+        {"書かな……", "書かない……"},
+        {"書かなきゃ……", "書かなきゃ……"},
+        {"待っ。", "待っ。"},
+        {"待って――", "待って――"},
+        {"待つ……", "待つ……"},
+        {"嘘っ……", "嘘っ……"},
+        {"やめ――", "やめ――"},
+        {"やめな……", "やめな……"},
+        {"書い…待っ――", "書いて…待って――"},
+    };
+    for (const auto& c : cases) HD_CHECK_EQ(internal::CompleteCutOffs(c.in, ctx, *loaded.snapshot), std::string(c.want));
 }
 
 HD_TEST(pipeline_sound_markers) {
