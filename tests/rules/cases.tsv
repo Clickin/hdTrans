@@ -21,14 +21,14 @@ L107	彼は部屋から出て行った。	그는 방에서 나와 갔다.	curren
 L107	私は電車から降りて走った。	나는 전철에서 내려 달렸다.	current	local
 L108	私は犬が何より好きだ。	나는 개를 무엇보다 좋아한다.	current	local
 L108	休みの日は映画が見たい。	휴일은 영화를 보고 싶다.	current	local
-L118	友人と集まった。	친구씩 모였다.	current	local
-L118	友人と話さない。	친구도 이야기하지 않는다.	current	local
+L118	友人と集まった。	친구와 모였다.	current	local
+L118	友人と話さない。	친구와 이야기하지 않는다.	current	local
 L127	お金持ちというわけではない。	부자라고 하는 것은 아니다.	current	local
 L130	この問題は簡単ではない。	이 문제는 간단하지 않다.	current	local
 L131	彼が約束を破ったためしがない。	그가 약속을 어긴 적이 없다.	current	local
 L131	あんな失礼な話は、あり得ないよ。	저런 실례인 이야기는, 있을 수 없어.	current	local
 L134	彼はいつも早く来るね。	그는 언제나 빨리 오는군.	current	local-ending
-L138	どんなのが好きなの？	어떤 것이 좋아해?	current	local
+L138	どんなのが好きなの？	어떤 것을 좋아해?	current	local
 L138	そんなの私には無理だよ。	그런 것 나에게는 무리야.	current	local
 L139	天気の悪さに少し驚いた。	날씨의 나쁨에 조금 놀랐다.	current	local
 L139	今日の天気はとても良いです。	오늘의 날씨는 매우 좋습니다.	current	local
@@ -382,7 +382,7 @@ L2475	そんなことを言わないでください。	그런 일을 말하지 �
 L2476	おかしなことを言うね。	이상한 것을 말하는군.	current	local
 L2486	私の姉は看護師です。	나의 언니는 간호사입니다.	current	local
 L2486	あちらが駅の入口です。	저쪽이 역의 입구입니다.	current	local
-L2528	友人といる。	친구라고 있다.	current	local
+L2528	友人といる。	친구와 있다.	current	local
 L2568	先生に本を読んでいただいた。	선생님에게 책을 읽어 주었다.	current	local
 L2571	肉を薄く切った。	고기를 싱겁게 잘랐다.	current	local
 L2580	ちょっといいですか。	조금 괜찮습니까.	current	local
@@ -479,7 +479,7 @@ L3138	友達について来る。	친구에 대해 온다.	current	local
 L3151	私は何も知らないと答えた。	나는 아무것도 모른다고 대답했다.	current	local-ending
 L3151	もう痛くないと話していた。	이제 아프지 않다고 이야기하고 있었다.	current	local-ending
 L3152	彼は約束を守らないな。	그는 약속을 지키지 않는데.	current	local
-L3172	私とは、少し違う。	나란, 조금 다르다.	current	local
+L3172	私とは、少し違う。	나와는, 조금 다르다.	current	local
 L3180	明日は休みね。	내일은 휴일이군요.	current	local
 L3180	続きね。	계속이군요.	current	local
 L3182	はやく、寝なさい。	빠르고, 자세요.	current	local
@@ -680,7 +680,7 @@ L4577	彼はそういうのを食べる。	그는 그렇게 말하는 것을 먹
 L4587	として当然だ。	로서 당연하다.	current	local
 L4624	彼は毎日練習している。	그는 매일 연습하고 있다.	current	local
 L4624	私は結果に期待している。	나는 결과에 기대하고 있다.	current	local
-L4655	君のことは忘れない。	너의 일은 잊지 않는다.	current	local
+L4655	君のことは忘れない。	너는 잊지 않는다.	current	local
 L4664	もう帰らなければと思います。	이제 돌아가지 않으면이라고 생각합니다.	current	local
 L4741	今度友達と旅行に行きます。	이번에 친구와 여행하러 갑니다.	current	local
 L4741	今度家に遊びに来てください。	이번에 집에 놀러 와 주세요.	current	local

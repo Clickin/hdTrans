@@ -1101,14 +1101,15 @@ bool RuleL117([[maybe_unused]] Item* p) {
            AttrEq(p, 1, "USe"sv)));
 }
 
-// # と는 人으로 끝나는 앞말과 뒤의 동사·부정 표현을 보고 '도'를 고르거나 集ま・あつま 앞에서 '씩'으로 바꾼다.
-// # [의심] 人으로 끝나는 앞말만 보아 인원수와 友人·他人·人을 구별하지 못한다; 자작문 友人と集まった。 → 친구씩 모였다.; 友人と話さない。 → 친구도 이야기하지 않는다.; -why: 두 문장의 と LocalRule 118.
+// # と는 一人 또는 숫자·人 뒤의 부정문에서 ‘도’를 고르고, 그 인원수 뒤의 集ま·あつま 앞에서는 ‘씩’으로 바꾼다.
 // local 118
-//     src[-1] ends "人" and pos[+1] is 4** and pos[+2] is 7** and gram[+2] has Xn
-//     src[-1] ends "人" and (src[+1] == "集ま" or src[+1] == "あつま") and pos[+1] is 4** and ko := "씩"
+//     (src[-1] == "一人" or src[-1] == "人" and gram[-2] has Nj|Nd) and pos[+1] is 4** and pos[+2] is 7** and gram[+2] has Xn
+//     (src[-1] == "一人" or src[-1] == "人" and gram[-2] has Nj|Nd) and (src[+1] == "集ま" or src[+1] == "あつま") and pos[+1] is 4** and ko := "씩"
 bool RuleL118([[maybe_unused]] Item* p) {
-    return (SrcEq(p, -1, "R人"sv) && PumsaEq(p, 1, "4**"sv) && PumsaEq(p, 2, "7**"sv) && GramEq(p, 2, "Xn"sv)) ||
-           (SrcEq(p, -1, "R人"sv) && (SrcEq(p, 1, "集ま"sv) ||
+    return ((SrcEq(p, -1, "一人"sv) ||
+           (SrcEq(p, -1, "人"sv) && GramEq(p, -2, "NjNd"sv))) && PumsaEq(p, 1, "4**"sv) && PumsaEq(p, 2, "7**"sv) && GramEq(p, 2, "Xn"sv)) ||
+           ((SrcEq(p, -1, "一人"sv) ||
+           (SrcEq(p, -1, "人"sv) && GramEq(p, -2, "NjNd"sv))) && (SrcEq(p, 1, "集ま"sv) ||
            SrcEq(p, 1, "あつま"sv)) && PumsaEq(p, 1, "4**"sv) && DstSet(p, 0, "씩"sv));
 }
 
@@ -5077,7 +5078,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL115, 0xc7b6f756cf91dfcaull},
     {RuleL116, 0x1ffe95015a046a0dull},
     {RuleL117, 0x12f227f673957d67ull},
-    {RuleL118, 0x14843e28b23d44faull},
+    {RuleL118, 0x0ebd96643d3ba466ull},
     {RuleL119, 0x699720f146dd6623ull},
     {RuleL120, 0xa15c85d03a280c34ull},
     {RuleL121, 0x854b6d69763d402full},
