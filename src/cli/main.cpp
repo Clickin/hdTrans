@@ -1,7 +1,8 @@
 // hdtrans: reads UTF-8 from stdin (or -in FILE) and writes the translation to stdout. The
 // whole input is one session unless -each or -raw is given.
 //   -dicts DIR[,DIR...]   dictionary folders in load order (default: dicts next to the
-//                         executable, else dicts in the current directory)
+//                         executable, else dicts in the current directory); a first
+//                         FILE.hdsnap gives the column dictionaries of the folders
 //   -userdict FILE        user dictionary file, which must load (default: userdict.tsv
 //                         next to the executable, left out with a warning when it does not
 //                         load; empty for none)
@@ -10,6 +11,8 @@
 //   -reference            disable translation improvements
 //   -verify-dicts         verify source hashes and every cache segment
 //   -compile-dicts        compile and verify the dictionary cache, then exit
+//   -compile-snapshot FILE  compile the column dictionaries of the folders to FILE
+//                         (a .hdsnap for -dicts), then exit
 //   -no-cache             read only the editable dictionaries
 //   -why                  write word choices and shadow scores to stderr
 //   -stages DIR           write stage records (also HDTRANS_DRIVER_DUMP)
@@ -151,7 +154,7 @@ int main(int argc, char** argv) {
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stderr), _O_BINARY);
 #endif
-    std::optional<std::string> dictsArg, userFileArg;
+    std::optional<std::string> dictsArg, userFileArg, snapshotOut;
     std::optional<std::string> ehndArg;
     std::string inPath;
     const char* dump = std::getenv("HDTRANS_DRIVER_DUMP");
@@ -176,11 +179,12 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-reference")) reference = true;
         else if (!std::strcmp(a, "-verify-dicts")) verifyDicts = true;
         else if (!std::strcmp(a, "-compile-dicts")) compileDicts = true;
+        else if (!std::strcmp(a, "-compile-snapshot") && i + 1 < argc) snapshotOut = argv[++i];
         else if (!std::strcmp(a, "-no-cache")) noCache = true;
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-stages DIR] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-stages DIR] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
@@ -189,11 +193,11 @@ int main(int argc, char** argv) {
         }
     }
 
+    if (static_cast<int>(compileDicts) + static_cast<int>(snapshotOut.has_value()) + static_cast<int>(noCache) > 1) {
+        std::fprintf(stderr, "hdtrans: -compile-dicts, -compile-snapshot and -no-cache cannot be combined\n");
+        return 2;
+    }
     if (noCache) {
-        if (compileDicts) {
-            std::fprintf(stderr, "hdtrans: -compile-dicts and -no-cache cannot be combined\n");
-            return 2;
-        }
 #ifdef _WIN32
         const int error = _putenv_s("HDTRANS_CACHE_DIR", "off");
 #else
@@ -212,6 +216,14 @@ int main(int argc, char** argv) {
     const std::string dicts = dictsArg ? *dictsArg : hdTrans::dict::DefaultFolder(programDir);
     const std::string userFile = userFileArg ? *userFileArg : hdTrans::dict::UserFile(programDir);
     const auto folders = SplitComma(dicts);
+    if (snapshotOut) {
+        if (!hdTrans::dict::CompileSnapshot(folders, *snapshotOut)) {
+            std::fprintf(stderr, "hdtrans: cannot compile the dictionary snapshot; a column dictionary must load successfully\n");
+            return 1;
+        }
+        std::printf("%s\n", snapshotOut->c_str());
+        return 0;
+    }
     if (compileDicts) {
         const auto path = hdTrans::dict::internal::SnapshotPath(folders);
         if (path.empty()) {

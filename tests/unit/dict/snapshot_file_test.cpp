@@ -2140,3 +2140,70 @@ HD_TEST(SnapshotUserFileStaysEditable) {
     HD_CHECK(!ec);
     HD_CHECK_EQ(PlainTarget(*cached.snapshot, "犬"), "개");
 }
+
+HD_TEST(SnapshotCompiledFile) {
+    CacheTestEnvironment environment;
+    TempFolder temp;
+    const std::vector<std::string> folders = {FixtureFolder(), FixtureFolder() + "/over"};
+    const auto file = temp.File("dicts.hdsnap");
+    HD_REQUIRE(hdTrans::dict::CompileSnapshot(folders, file));
+    const auto editable = hdTrans::dict::LoadFoldersTsv(folders);
+    HD_REQUIRE(editable.snapshot != nullptr);
+    std::vector<std::string> entries{file};
+    entries.insert(entries.end(), folders.begin(), folders.end());
+
+    // The compiled layers stand for the column files; the folders give the plain files.
+    const auto compiled = hdTrans::dict::LoadFolders(entries, temp.File("cache"));
+    HD_REQUIRE(compiled.snapshot != nullptr && compiled.snapshot->Mapped() && compiled.snapshot->Healthy());
+    CheckLoadErrors(compiled.errors, editable.errors);
+    CheckPlainCompilation(*compiled.snapshot, *editable.snapshot);
+    CheckDictEncoding(compiled.snapshot->Base(), editable.snapshot->Base());
+    HD_REQUIRE(compiled.snapshot->User() && compiled.snapshot->Names());
+    CheckDictEncoding(*compiled.snapshot->User(), *editable.snapshot->User());
+    CheckDictEncoding(*compiled.snapshot->Names(), *editable.snapshot->Names());
+    HD_CHECK(!std::filesystem::exists(temp.path / "cache"));
+
+    // A plain user dictionary file loads on top; a column one does not.
+    HD_REQUIRE(WriteText(temp.path / "plain-user.tsv", "犬\t개\n"));
+    const auto plainUser = hdTrans::dict::LoadFolders(entries, {}, false, false, temp.File("plain-user.tsv"));
+    HD_REQUIRE(plainUser.snapshot != nullptr);
+    HD_CHECK_EQ(PlainTarget(*plainUser.snapshot, "犬"), "개");
+    HD_REQUIRE(WriteText(temp.path / "column-user.tsv", "key\tko\tpos\tid\n犬\t개\tN110\t1\n"));
+    const auto columnUser = hdTrans::dict::LoadFolders(entries, {}, false, false, temp.File("column-user.tsv"));
+    HD_CHECK(columnUser.snapshot == nullptr);
+    HD_REQUIRE(columnUser.errors.size() == 1);
+    HD_CHECK(columnUser.errors[0].kind == hdTrans::dict::LoadErrorKind::Header);
+
+    // A compiled file needs as many folders as it was compiled from, and must exist.
+    HD_CHECK(hdTrans::dict::LoadFolders({file, folders[0]}).snapshot == nullptr);
+    const auto missing = hdTrans::dict::LoadFolders({temp.File("absent.hdsnap"), folders[0], folders[1]});
+    HD_CHECK(missing.snapshot == nullptr);
+    HD_REQUIRE(missing.errors.size() == 1);
+    HD_CHECK(missing.errors[0].kind == hdTrans::dict::LoadErrorKind::Read && missing.errors[0].message.empty());
+
+    // Another pointer size or compiler reads it; other engine data does not.
+    const auto good = ReadBytes(file);
+    for (int variant = 0; variant < 3; variant++) {
+        auto bytes = good;
+        switch (variant) {
+        case 0: SetField(bytes, 204, sizeof(void*) == 8 ? 4 : 8, 4); break;
+        case 1: bytes[208] ^= std::byte{1}; break;
+        case 2: bytes[128] ^= std::byte{1}; break;
+        }
+        FixDirectories(bytes);
+        HD_REQUIRE(WriteBytes(file, bytes));
+        const auto loaded = hdTrans::dict::LoadFolders(entries);
+        HD_CHECK_EQ(loaded.snapshot != nullptr, variant < 2);
+        if (variant == 2) HD_CHECK(!loaded.errors.empty() && loaded.errors[0].file == file);
+    }
+
+    // A damaged compiled file fails the load and is left where it is.
+    auto bytes = good;
+    const size_t blob = FindSection(bytes, 17, 0);
+    bytes[static_cast<size_t>(Field(bytes, blob + 8, 8))] ^= std::byte{1};
+    HD_REQUIRE(WriteBytes(file, bytes));
+    const auto damaged = hdTrans::dict::LoadFolders(entries, {}, true);
+    HD_CHECK(damaged.snapshot == nullptr);
+    HD_CHECK(std::filesystem::exists(Utf8Path(file)));
+    HD_CHECK(!std::filesystem::exists(Utf8Path(file + ".bad")));
+}

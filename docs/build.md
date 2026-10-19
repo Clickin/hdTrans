@@ -109,7 +109,8 @@ cmake --build --preset wasm --parallel
   빌드합니다. 모든 플랫폼에서 Ninja를 쓰고, 컴파일 캐시는 네이티브 빌드가 sccache, `wasm`이 ccache입니다
   (sccache는 Emscripten의 `-Xclang` 인자를 캐시하지 못합니다). Windows는 프리셋에 `-G Ninja`를 덧붙이고
   `vcvarsall`로 MSVC 환경을 설정합니다. 네이티브 프리셋은 `HDTRANS_DICTS=dicts`로 `ctest`를 실행하고, `wasm`은
-  Node로 `tools/wasm_smoke.mjs`를 실행해 작은 사전으로 한 번 번역해 봅니다. 결과물은
+  Node로 `tools/wasm_smoke.mjs`를 실행해 작은 사전으로 한 번 번역해 봅니다(셋째 인자로 그 사전을
+  컴파일한 `.hdsnap`을 주면 그것으로도 불러 봅니다). 결과물은
   `hdtrans-<프리셋>` 아티팩트로 올라갑니다.
 - **e2e.yml**: 풀 리퀘스트와 `main` 푸시 때, 기준 커밋과 현재 커밋의 CLI로 소설가가 되자 챕터를 번역해
   달라진 줄을 보고합니다. 자세한 내용은 [testing.md](testing.md#엔드투엔드-테스트-syosetu)에 있습니다.
