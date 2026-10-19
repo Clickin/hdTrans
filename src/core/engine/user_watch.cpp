@@ -7,6 +7,7 @@
 #include <windows.h>
 #endif
 
+#include "core/dict/folders.h"
 #include "core/filter/ehnd.h"
 
 namespace hdTrans::internal {
@@ -70,6 +71,20 @@ bool FolderWatch::Due(std::string_view dir, std::chrono::steady_clock::time_poin
     if (now < next) return false;
     next = now + interval;
     found = FolderVersionOf(dir);
+    return found != loaded && !(hasFailed && found == failed);
+}
+
+UserVersion UserVersionOf(const std::vector<std::string>& paths) {
+    UserVersion version;
+    for (const std::string& file : dict::UserFiles(paths)) version.emplace_back(file, VersionOf(file));
+    return version;
+}
+
+bool UserFilesWatch::Due(const std::vector<std::string>& paths, std::chrono::steady_clock::time_point now,
+                         std::chrono::steady_clock::duration interval, UserVersion& found) {
+    if (now < next) return false;
+    next = now + interval;
+    found = UserVersionOf(paths);
     return found != loaded && !(hasFailed && found == failed);
 }
 

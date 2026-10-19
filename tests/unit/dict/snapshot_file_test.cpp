@@ -2110,6 +2110,37 @@ HD_TEST(SnapshotUserFile) {
     }
 }
 
+HD_TEST(SnapshotMultipleUserFiles) {
+    CacheTestEnvironment environment;
+    TempFolder temp;
+    std::error_code error;
+    std::filesystem::create_directory(temp.path / "dict", error);
+    HD_REQUIRE(!error);
+    HD_REQUIRE(WriteText(temp.path / "dict/base.tsv", "key\tko\tpos\tid\n猫\t고양이\tN110\t1\n"));
+    const std::vector<std::string> folders{temp.File("dict")};
+    const std::vector<std::string> users{temp.File("first.txt"), temp.File("second.tsv")};
+    HD_REQUIRE(WriteText(Utf8Path(users[0]), "犬\t개\tn\tprio=99\n"));
+    HD_REQUIRE(WriteText(Utf8Path(users[1]), "犬\t멍멍이\tn\tprio=1\n"));
+    for (int pass = 0; pass < 3; ++pass) {
+        const auto loaded = pass == 0 ? hdTrans::dict::LoadFoldersTsv(folders, users)
+                                      : hdTrans::dict::LoadFolders(folders, {}, false, true, users);
+        HD_REQUIRE(loaded.snapshot);
+        HD_CHECK(loaded.errors.empty());
+        if (pass == 2) HD_CHECK(loaded.snapshot->Mapped());
+        const auto entries = loaded.snapshot->Plain().Search("犬", hdTrans::dict::LookupMode::General);
+        HD_REQUIRE(entries.size() == 1);
+        HD_CHECK_EQ(entries.front()->target, "멍멍이");
+    }
+    const std::string header = "key\tko\tpos\tid\n";
+    HD_REQUIRE(WriteText(Utf8Path(users[0]), header + "犬\t개\tN110\t1\n"));
+    HD_REQUIRE(WriteText(Utf8Path(users[1]), header + "犬\t멍멍이\tN110\t1\n"));
+    const auto columns = hdTrans::dict::LoadFolders(folders, {}, false, true, users);
+    HD_REQUIRE(columns.snapshot && columns.snapshot->User());
+    const auto records = columns.snapshot->User()->Records("犬");
+    HD_REQUIRE(records.size() == 1);
+    HD_CHECK_EQ(std::string(records.front().target), "멍멍이");
+}
+
 // A load leaves no source file open: the user dictionary can be rewritten and renamed.
 HD_TEST(SnapshotUserFileStaysEditable) {
     CacheTestEnvironment environment;

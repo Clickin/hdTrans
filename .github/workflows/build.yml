@@ -137,7 +137,7 @@ jobs:
             if [[ "$RUNNER_OS" == Windows ]]; then data="$root/hdTrans"; fi
             mkdir -p "$data/dicts" "$data/user"
             cp -R dicts/. "$data/dicts/"
-            cp hdtrans.config.example.yaml userdict.example.tsv "$data/user/"
+            cp hdtrans.config.example.yaml user/userdict.example.txt "$data/user/"
           fi
       - name: Test without external fixtures
         run: |

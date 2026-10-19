@@ -109,10 +109,15 @@ void CheckJ2K(const std::filesystem::path& source, const std::filesystem::path& 
         std::filesystem::copy_file(folder / "fixtures/first/base.tsv", data / "DiCtS/base.tsv",
                                    std::filesystem::copy_options::overwrite_existing, error);
         Write(user / "HDTRANS.CONFIG.YAML", "cache: off\n");
-        Write(user / "USERDICT.TSV", "犬\t새사전\n");
+        Write(user / "USERDICT.TSV", "犬\t앞파일\n");
+        Write(user / "UserDict_z.TxT", "犬\t새사전\n");
         Check(initialize(nullptr) == 1, "J2K nested case-insensitive layout");
         checkTranslation(L"猫", L"고양이", "J2K nested default dictionary");
-        checkTranslation(L"犬", L"새사전", "J2K nested user dictionary");
+        checkTranslation(L"犬", L"새사전", "J2K nested user dictionaries in filename order");
+        Write(user / "userdict-bad.txt", "猫\n");
+        Write(user / "UserDict_z.TxT", "犬\t뒤파일\n");
+        reload();
+        checkTranslation(L"犬", L"뒤파일", "J2K reload skips bad file and loads other user files");
         Write(user / "HDTRANS.CONFIG.YAML", "ehnd: true\ncache: off\n");
         reload();
         checkTranslation(L"猫", L"검은고양이", "J2K nested config keeps outer Ehnd location");
@@ -155,6 +160,12 @@ int main(int argc, char** argv) {
     Check(Translate("犬") == "멍멍이", "configured user dictionary");
     Check(Translate("タマ") == "나비", "configured Ehnd dictionary");
     Check(Errors().empty(), "valid config diagnostics");
+    Write(fixtures / "second-user.txt", "犬\t뒤파일\n");
+    Write(fixtures / "bad-user.tsv", "猫\n");
+    Write(config, "dicts: fixtures/first\nuserdict: [fixtures/user.tsv, fixtures/bad-user.tsv, fixtures/second-user.txt]\ncache: off\n");
+    Check(hdTrans_Reload() == 0, "reload multiple user dictionaries with one bad file");
+    Check(Translate("犬") == "뒤파일", "later configured user file wins");
+    Check(Errors().find("bad-user.tsv:1: empty KR") != std::string::npos, "bad user file diagnostics");
     Write(config, "dicts: fixtures/second\nuserdict: ''\nehnd: ''\ncache: off\nunknown: value\n");
     Check(hdTrans_Reload() == 0, "reload config");
     Check(Translate("猫") == "야옹이", "reloaded dictionary");

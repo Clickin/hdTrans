@@ -28,10 +28,9 @@ struct UserWatch;
 // Off can write a .bad marker and rename a generation proven corrupt.
 enum class CacheWrite { Off, Sync };
 
-// Auto checks the user dictionary file when a translation starts, at most once a second.
-// A changed file is reloaded with the folders in the background; the new dictionaries
-// replace the old ones when ready. A version of the file that fails to load is not
-// retried until the file changes again, and the dictionaries before it stay.
+// Auto checks user dictionary sources at most once a second. Changes, additions and
+// removals are loaded in the background. Files that fail to load are skipped until
+// their versions change again.
 enum class UserReload { Off, Auto };
 
 // The loaded dictionaries. Shared by any number of sessions and threads.
@@ -50,6 +49,9 @@ public:
     // does not load is left out (UserFileError says why). Returns false when no
     // dictionary could be loaded; the dictionaries loaded before stay.
     bool Open(const std::vector<std::string>& dirs, bool verifyDicts = false, std::string_view userFile = {});
+    // User sources replace the single file: explicit files or folders of userdict*.txt/tsv.
+    bool OpenUserDicts(const std::vector<std::string>& dirs, bool verifyDicts,
+                       const std::vector<std::string>& userPaths);
 
     // Reloads the folders and user dictionary file given to Open, and the Ehnd folder,
     // and swaps the new dictionaries in. Sessions keep translating with the dictionaries
@@ -93,12 +95,12 @@ private:
     mutable std::mutex mu_;
     std::vector<std::string> dirs_;
     bool verifyDicts_ = false;
-    std::string userFile_;
+    std::vector<std::string> userPaths_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;  // the marker families made on snapshot_
     mutable std::uint64_t loads_ = 0;  // loads started
     std::uint64_t current_ = 0;        // the load that made snapshot_
-    std::unique_ptr<internal::UserWatch> watch_;  // the user dictionary file state
+    std::unique_ptr<internal::UserWatch> watch_;  // the user dictionary source state
     std::string ehndDir_;
     std::shared_ptr<const filter::Filters> filters_;
     std::vector<std::string> filterErrors_;

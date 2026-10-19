@@ -89,11 +89,11 @@ hdTrans::internal::ConfigResult ReadConfig(const std::string& dir) {
     return config;
 }
 
-// Writes why userdict.tsv did not load, if it did not, and the Ehnd lines skipped to the
+// Writes user dictionary errors and skipped Ehnd lines to the
 // debugger output.
 void LogLoadErrors(const hdTrans::Engine& e) {
     const std::string error = e.UserFileError();
-    if (!error.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: userdict.tsv not loaded:\n" + error + "\n").c_str());
+    if (!error.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: user dictionary not loaded:\n" + error + "\n").c_str());
     std::string skipped;
     for (const std::string& line : e.FilterErrors()) skipped += line + "\n";
     if (!skipped.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: Ehnd lines skipped:\n" + skipped).c_str());
@@ -131,7 +131,7 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
     const auto config = ReadConfig(dir);
     const auto& settings = config.settings;
     const auto dirs = settings.dicts.value_or(std::vector<std::string>{hdTrans::dict::ShippedFolder(dir)});
-    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    const auto userPaths = settings.userdict.value_or(hdTrans::dict::UserPaths(dir));
     {
         AdminLock lock;
         if (generation != g_generation) return 0;
@@ -142,7 +142,7 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
     }
     auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
     e->OpenEhnd(settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "");
-    if (!e->Open(dirs, false, userFile)) return 0;
+    if (!e->OpenUserDicts(dirs, false, userPaths)) return 0;
     LogLoadErrors(*e);
     AdminLock lock;
     if (generation != g_generation) return 0;
@@ -201,7 +201,7 @@ void __stdcall J2K_ReloadUserDict() {
     const auto config = ReadConfig(dir);
     const auto& settings = config.settings;
     const auto dirs = settings.dicts.value_or(std::vector<std::string>{hdTrans::dict::ShippedFolder(dir)});
-    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    const auto userPaths = settings.userdict.value_or(hdTrans::dict::UserPaths(dir));
     {
         AdminLock lock;
         if (generation != g_generation) return;
@@ -212,10 +212,9 @@ void __stdcall J2K_ReloadUserDict() {
     }
     auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
     e->OpenEhnd(settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "");
-    // A userdict.tsv that does not load keeps the dictionaries loaded before.
-    if (!e->Open(dirs, false, userFile)) return;
+    if (!e->OpenUserDicts(dirs, false, userPaths)) return;
     LogLoadErrors(*e);
-    if (!e->UserFileError().empty()) return;
+    if (!e->UserFileError().empty() && hdTrans::dict::UserFiles(userPaths).size() == 1) return;
     AdminLock lock;
     if (generation != g_generation) return;
     g_session.reset();

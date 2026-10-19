@@ -17,14 +17,14 @@ hdTrans는 하나의 정적 라이브러리(`hdTransCore`)와 그 위의 얇은 
 각 줄 뒤에 `\n`을 붙입니다.
 
 ```
-hdtrans [-config FILE] [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]
+hdtrans [-config FILE] [-dicts DIR,...] [-userdict PATH]... [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]
 ```
 
 | 옵션 | 설명 |
 |---|---|
 | `-config FILE` | 기본 `user/hdtrans.config.yaml` 대신 읽을 설정 파일 |
 | `-dicts DIR[,DIR...]` | 불러올 사전 폴더 (순서대로, 뒤가 앞을 덮어씀). 기본값은 데이터 루트의 `dicts`, 없으면 현재 폴더의 `dicts`. 첫 항목이 `FILE.hdsnap`이면 폴더의 열 파일 대신 그 [컴파일한 사전](dictionary-files.md#컴파일한-사전-hdsnap)을 씀 |
-| `-userdict FILE` | 사용자 사전 파일로, 불러오지 못하면 실패. 기본값은 데이터 루트의 `user/userdict.tsv`(없으면 쓰지 않고, 불러오지 못하면 경고 후 빼고 번역), 빈 값이면 쓰지 않음 |
+| `-userdict PATH` | 사용자 사전 파일이나 폴더. 여러 번 지정 가능. 기본값은 데이터 루트 `user/`의 `userdict*.txt`, `userdict*.tsv`. 빈 값이면 끔. 명시한 파일이 하나뿐이면 오류 때 실패 |
 | `-in FILE` | 표준 입력 대신 FILE을 읽음 |
 | `-ehnd DIR` | Ehnd 폴더 DIR의 필터, SkipLayer, 사용자 사전을 씀. 기본으로 쓰지 않으며 설정 파일로도 켤 수 있음. 건너뛴 줄은 표준 오류에 씀 ([ehnd-compat.md](ehnd-compat.md)) |
 | `-each` | 줄마다 새 세션 |
@@ -71,7 +71,7 @@ CLI 플래그가 파일보다 우선합니다.
 | 키 | 값과 기존 옵션 |
 |---|---|
 | `dicts` | 경로 하나 또는 경로 목록, `-dicts`처럼 순서대로 읽음 |
-| `userdict` | 사용자 사전 경로, `-userdict`와 같음 |
+| `userdict` | 사용자 사전 파일이나 폴더 경로 또는 경로 목록. 기본 탐색을 대신하며 목록 뒤쪽이 우선 |
 | `ehnd` | 경로 또는 `true`(실행 파일이나 DLL 옆 `Ehnd`), `false`나 생략은 꺼짐. `-ehnd`와 같은 필터와 사용자 사전을 함께 적용 |
 | `cache` | 경로 또는 `off`, `HDTRANS_CACHE_DIR`에 적용. `-no-cache`가 우선 |
 | `cg` | bool, 기본 `true`. `false`는 `-no-cg` |
@@ -99,8 +99,8 @@ UTF-8 BOM으로 저장합니다. 문서 전체를 한 번에 번역하므로 문
 - 프로세스에 엔진 하나, 세션 하나입니다. 앞선 호출에서 찾은 이름과 문맥이 이후 번역에 반영됩니다.
 - 호출은 스레드 안전하지만 재진입은 안 됩니다. 라이브러리를 내리기 전에 모든 호출을 끝내야 합니다.
 - 초기화, 다시 읽기, 종료는 대기 중인 번역보다 먼저 처리됩니다.
-- 데이터 루트의 `user/userdict.tsv`를 사전 폴더 다음에 읽고, 바뀌면 자동으로 다시 읽습니다
-  ([dictionary-files.md](dictionary-files.md#userdicttsv)). 불러오지 못하면 빼고 시작합니다(`hdTrans_UserDictError`).
+- 데이터 루트 `user/`의 `userdict*.txt`, `userdict*.tsv`를 사전 폴더 다음에 읽고, 추가, 변경, 삭제를 자동 반영합니다
+  ([dictionary-files.md](dictionary-files.md#사용자-사전-파일)). 불러오지 못하면 빼고 시작합니다(`hdTrans_UserDictError`).
 - Ehnd는 설정 파일의 `ehnd`나 `hdTrans_OpenEhnd`로 켭니다. 켠 폴더가 바뀌면 함께 다시 읽습니다
   ([ehnd-compat.md](ehnd-compat.md)).
 - Windows에서 프로세스 종료 시에는 엔진을 정리하지 않고 OS에 맡기며, `FreeLibrary`로 내릴 때는 진행 중인
@@ -112,9 +112,9 @@ UTF-8 BOM으로 저장합니다. 문서 전체를 한 번에 번역하므로 문
 | `void hdTrans_Terminate(void)` | 세션과 사전 해제. 여러 번 불러도 되고, 다시 Initialize할 수 있음 |
 | `int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn)` | `text[0..n)`(`\n`으로 구분한 한 줄 이상)을 프로세스 세션에서 번역. `*out`에 NUL로 끝나는 버퍼, `*outn`에 길이(NUL 제외). 0 성공, -1 초기화 전, 종료 후 |
 | `int hdTrans_Reset(void)` | 세션이 앞선 텍스트에서 배운 이름과 문맥을 잊어 다음 번역이 처음처럼 시작함. 0 성공, -1 초기화 전, 종료 후 |
-| `int hdTrans_Reload(void)` | 설정 파일과 사전 폴더, 사용자 사전, 켜 둔 Ehnd 폴더를 다시 불러옴. 0 성공, -1 초기화 전, 종료 후, 실패(`userdict.tsv`를 불러오지 못한 경우 포함, 이전 사전 유지) |
+| `int hdTrans_Reload(void)` | 설정 파일과 사전 폴더, 사용자 사전, 켜 둔 Ehnd 폴더를 다시 불러옴. 0 성공, -1 초기화 전, 종료 후, 실패(이전 사전 유지, 여러 사용자 파일 중 오류 파일은 빼고 나머지를 읽음) |
 | `int hdTrans_UserDictError(char** out, size_t* outn)` | 설정 파일 진단과 마지막 사용자 사전 읽기 오류(오류마다 한 줄, 없으면 빈 문자열)를 `hdTrans_Translate`처럼 버퍼로 돌려줌. 0 성공, -1 초기화 전, 종료 후 |
-| `int hdTrans_OpenEhnd(const char* dir)` | Ehnd 폴더 `dir`의 필터와 사용자 사전을 이후 번역에 씀(NULL이나 빈 값은 뗌). `userdict.tsv`처럼 자동으로 다시 읽음. 0 성공, -1 초기화 전, 종료 후, 폴더를 못 읽음 |
+| `int hdTrans_OpenEhnd(const char* dir)` | Ehnd 폴더 `dir`의 필터와 사용자 사전을 이후 번역에 씀(NULL이나 빈 값은 뗌). 사용자 사전처럼 자동으로 다시 읽음. 0 성공, -1 초기화 전, 종료 후, 폴더를 못 읽음 |
 | `int hdTrans_FilterErrors(char** out, size_t* outn)` | 필터 파일과 Ehnd 폴더에서 건너뛴 줄(`파일:줄: 이유`, 줄마다 하나)을 버퍼로 돌려줌. 0 성공, -1 초기화 전, 종료 후 |
 | `void hdTrans_FreeMem(void* p)` | `hdTrans_Translate`가 돌려준 버퍼 해제 |
 | `const char* hdTrans_Version(void)` | 라이브러리 버전 문자열 |
@@ -140,8 +140,8 @@ C API는 사전 캐시를 읽기만 하고 새로 저장하지 않습니다([dic
 이지트랜스의 `J2KEngine.dll`과 같은 이름의 함수를 `__stdcall`로 내보냅니다(`src/j2kengine/j2kengine.def`).
 Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비트이므로 x86 빌드를 씁니다.
 
-- 사전은 데이터 루트의 `dicts/` 폴더와 `user/userdict.tsv`에서 읽습니다. 호스트가 넘기는 사전 경로는 무시합니다.
-  `userdict.tsv`는 바뀌면 자동으로 다시 읽습니다([dictionary-files.md](dictionary-files.md#userdicttsv)). 불러오지 못하면
+- 사전은 데이터 루트의 `dicts/`와 `user/`의 `userdict*.txt`, `userdict*.tsv`에서 읽습니다. 호스트가 넘기는 사전 경로는 무시합니다.
+  사용자 사전의 추가, 변경, 삭제는 자동 반영됩니다([dictionary-files.md](dictionary-files.md#사용자-사전-파일)). 불러오지 못하면
   빼고 시작하며 이유를 디버거 출력(`OutputDebugString`)에 씁니다.
 - Ehnd는 설정 파일의 `ehnd`로 켭니다. 켠 폴더가 바뀌면 함께 다시 읽으며 건너뛴 줄은
   디버거 출력에 씁니다 ([ehnd-compat.md](ehnd-compat.md)).
@@ -180,7 +180,7 @@ Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비�
 - 내보내는 함수: `hdTrans_Initialize`, `hdTrans_Terminate`, `hdTrans_Translate`, `hdTrans_Reset`,
   `hdTrans_Reload`, `hdTrans_UserDictError`, `hdTrans_FreeMem`, `hdTrans_Version`, `hdTrans_Load`, `malloc`, `free`
 - 런타임 메서드: `FS`, `ccall`, `cwrap`, `UTF8ToString`, `stringToUTF8`, `lengthBytesUTF8`, `getValue`, `HEAPU8`
-- 사용자 사전은 `/user/userdict.tsv`이며 옛 `/userdict.tsv`도 지원합니다. 스레드가 없어 자동으로 다시 읽지 않으므로, 파일을
+- 사용자 사전은 `/user/`의 `userdict*.txt`, `userdict*.tsv`이며 옛 `/userdict.tsv`도 지원합니다. 스레드가 없어 자동으로 다시 읽지 않으므로, 파일을
   쓴 뒤 `hdTrans_Reload`를 부르거나 `hdTrans_Terminate` 다음 `hdTrans_Initialize`로 다시 불러옵니다.
 - `hdTrans_Load(name, data, n)`(사전 파일을 버퍼로 넘기는 입구, `src/wasm/main.cpp`)는 아직 구현되지 않아
   -1을 돌려줍니다.
@@ -214,6 +214,7 @@ CI의 `tools/wasm_smoke.mjs`가 같은 순서로 동작을 확인합니다.
   불러온 사전. 여러 세션과 스레드가 함께 씁니다. `Open(dirs, verifyDicts, userFile)`, `Reload()`, `loaded()`,
   `Dictionaries()`, `UserFileError()`, `DetachReload()`. `userFile`은 폴더 다음에 읽는 사용자 사전 파일(빈 값이나
   없는 파일이면 없음)이며, 불러오지 못하면 빼고 열고 `UserFileError()`가 이유를 돌려줍니다.
+  `OpenUserDicts(dirs, verifyDicts, userPaths)`는 파일이나 폴더 목록을 받으며, 뒤 파일의 같은 항목이 우선합니다.
   `CacheWrite::Off`는 캐시 세대를 저장하지 않고, `Sync`는 `Open`이 끝나기 전에 저장을 시도합니다.
   `UserReload::Auto`는 번역을 시작할 때 `userFile`과 Ehnd 폴더를 1초에 한 번까지 확인해, 바뀌면 백그라운드에서 다시
   불러와 바꿉니다. 엔진을 없애면 진행 중인 다시 읽기가 끝나기를 기다립니다. `DetachReload()` 뒤에는 기다리지

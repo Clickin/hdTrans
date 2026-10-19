@@ -97,10 +97,28 @@ printf 'cache: off\n' > "$tmp/bin/user/hdtrans.config.yaml"
 "$cli" -in "$tmp/dog" > "$tmp/out"
 [ "$(cat "$tmp/out")" = 새사전 ]
 rm "$tmp/bin/user/userdict.tsv" "$tmp/bin/user/hdtrans.config.yaml"
-printf '犬\t견본사전\n' > "$tmp/bin/user/userdict.example.tsv"
+printf '# comments only\n# 犬\t견본사전\n' > "$tmp/bin/user/userdict.txt"
 printf 'dicts: missing\n' > "$tmp/bin/user/hdtrans.config.example.yaml"
 "$cli" -in "$tmp/dog" > "$tmp/out"
 [ "$(cat "$tmp/out")" = 옛사전 ]
 "$cli" -in "$tmp/input" > "$tmp/out"
 [ "$(cat "$tmp/out")" = 야옹이 ]
+printf '犬\t첫파일\n' > "$tmp/settings/first-user.txt"
+printf '犬\t뒤파일\n' > "$tmp/settings/second-user.tsv"
+"$cli" -userdict "$tmp/settings/first-user.txt" -userdict "$tmp/settings/second-user.tsv" -in "$tmp/dog" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 뒤파일 ]
+"$cli" -userdict "$tmp/settings/second-user.tsv" -userdict "$tmp/settings/first-user.txt" -in "$tmp/dog" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 첫파일 ]
+printf 'dicts: first\nuserdict: [first-user.txt, second-user.tsv]\ncache: off\n' > "$tmp/settings/custom.yaml"
+"$cli" -config "$tmp/settings/custom.yaml" -in "$tmp/dog" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 뒤파일 ]
+"$cli" -config "$tmp/settings/custom.yaml" -userdict "$tmp/settings/first-user.txt" -in "$tmp/dog" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 첫파일 ]
+mkdir -p "$tmp/settings/users"
+printf '犬\t폴더파일\n' > "$tmp/settings/users/USERDICT_Z.TXT"
+printf '猫\n' > "$tmp/settings/users/userdict-bad.tsv"
+printf 'dicts: first\nuserdict: [first-user.txt, users]\ncache: off\n' > "$tmp/settings/custom.yaml"
+"$cli" -config "$tmp/settings/custom.yaml" -in "$tmp/dog" > "$tmp/out" 2> "$tmp/errors"
+[ "$(cat "$tmp/out")" = 폴더파일 ]
+grep -F 'userdict-bad.tsv:1: empty KR' "$tmp/errors" > /dev/null
 echo 'CLI config: PASS'

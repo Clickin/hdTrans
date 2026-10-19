@@ -7,6 +7,7 @@
 #include <system_error>
 #include <thread>
 
+#include "core/dict/folders.h"
 #include "core/engine.h"
 #include "core/engine/user_watch.h"
 #include "hdtest.h"
@@ -206,4 +207,81 @@ HD_TEST(UserFileReloadOutlivesEngine) {
     HD_CHECK(destroyTime < loadTime / 4);
     for (int i = 0; i < 3000 && internal::RunningReloads() > 0; i++) std::this_thread::sleep_for(10ms);
     HD_CHECK_EQ(internal::RunningReloads(), 0);
+}
+
+HD_TEST(UserDictionaryFilesReload) {
+    TempFolder temp;
+    const auto first = temp.path / "userdict-a.txt";
+    const auto later = temp.path / "USERDICT_Z.TSV";
+    const auto broken = temp.path / "userdict-bad.txt";
+    const std::vector<std::string> sources{temp.path.string()};
+    Engine engine(false, CacheWrite::Off, UserReload::Auto);
+    HD_REQUIRE(Write(first, "猫\t고양이\tn\tprio=99\n"));
+    HD_REQUIRE(engine.OpenUserDicts({Fixture()}, false, sources));
+    Session session(engine);
+    HD_CHECK_EQ(session.Translate("猫"), "고양이");
+    HD_CHECK(!internal::CheckUserFile(engine));
+
+    HD_REQUIRE(Write(later, "猫\t냥이\tn\tprio=1\n"));
+    HD_CHECK(internal::CheckUserFile(engine));
+    HD_CHECK_EQ(session.Translate("猫"), "냥이");
+    HD_REQUIRE(Write(later, "猫\t야옹이\n"));
+    HD_CHECK(internal::CheckUserFile(engine));
+    HD_CHECK_EQ(session.Translate("猫"), "야옹이");
+
+    HD_REQUIRE(Write(broken, "# comment\n猫\n犬\n"));
+    HD_REQUIRE(Write(first, "猫\t흰고양이\n犬\t멍멍이\n"));
+    HD_CHECK(internal::CheckUserFile(engine));
+    HD_CHECK_EQ(session.Translate("猫"), "야옹이");
+    HD_CHECK_EQ(session.Translate("犬"), "멍멍이");
+    HD_CHECK(engine.UserFileError().find(broken.string() + ":2: empty KR") != std::string::npos);
+    HD_CHECK(engine.UserFileError().find(broken.string() + ":3: empty KR") != std::string::npos);
+    HD_CHECK(!internal::CheckUserFile(engine));
+
+    std::error_code error;
+    HD_REQUIRE(std::filesystem::remove(later, error));
+    HD_CHECK(internal::CheckUserFile(engine));
+    HD_CHECK_EQ(session.Translate("猫"), "흰고양이");
+    HD_REQUIRE(std::filesystem::remove(broken, error));
+    HD_CHECK(internal::CheckUserFile(engine));
+    HD_CHECK(engine.UserFileError().empty());
+    HD_REQUIRE(std::filesystem::remove(first, error));
+    HD_CHECK(internal::CheckUserFile(engine));
+    HD_CHECK(session.Translate("猫") != "흰고양이");
+}
+
+HD_TEST(UserDictionaryBadFilesAreIsolated) {
+    TempFolder temp;
+    const auto first = temp.path / "userdict-a.txt";
+    const auto broken = temp.path / "userdict-b.txt";
+    const auto later = temp.path / "userdict-z.tsv";
+    const std::vector<std::string> sources{temp.path.string()};
+    HD_REQUIRE(Write(first, "猫\t고양이\n"));
+    HD_REQUIRE(Write(later, "犬\t멍멍이\n"));
+    for (const char* invalid : {"猫\t버려질항목\n犬\n", "#! layer=words\n猫\t고양이\n",
+                                "key\tko\tpos\tid\n犬\t개\tN110\t1\textra\n"}) {
+        HD_REQUIRE(Write(broken, invalid));
+        Engine engine(false, CacheWrite::Off);
+        HD_REQUIRE(engine.OpenUserDicts({Fixture()}, false, sources));
+        Session session(engine);
+        HD_CHECK_EQ(session.Translate("猫"), "고양이");
+        HD_CHECK_EQ(session.Translate("犬"), "멍멍이");
+        HD_CHECK(engine.UserFileError().find(broken.string() + ":") == 0);
+    }
+}
+
+HD_TEST(UserDictionaryWatchInterval) {
+    TempFolder temp;
+    const std::vector<std::string> sources{temp.path.string()};
+    internal::UserFilesWatch watch;
+    internal::UserVersion found;
+    const auto start = std::chrono::steady_clock::now();
+    HD_CHECK(!watch.Due(sources, start, 1s, found));
+    HD_REQUIRE(Write(temp.path / "userdict.txt", "猫\t고양이\n"));
+    HD_CHECK(!watch.Due(sources, start + 500ms, 1s, found));
+    HD_CHECK(watch.Due(sources, start + 1s, 1s, found));
+    watch.loaded = found;
+    HD_CHECK(!watch.Due(sources, start + 2s, 1s, found));
+    HD_REQUIRE(Write(temp.path / "userdict-z.tsv", "猫\t냥이\n"));
+    HD_CHECK(watch.Due(sources, start + 3s, 1s, found));
 }

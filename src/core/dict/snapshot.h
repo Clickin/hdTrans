@@ -181,12 +181,16 @@ struct LoadResult {
 // which are not read, and no cache is used. A column userFile fails such a load.
 LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir = {}, bool verify = false,
                        bool cacheWrite = true, std::string_view userFile = {});
+// Loads explicit user files in order.
+LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir, bool verify,
+                       bool cacheWrite, const std::vector<std::string>& userFiles);
 // Loads the editable files without reading or writing a cache.
 LoadResult LoadFoldersTsv(const std::vector<std::string>& folders, std::string_view userFile = {});
+LoadResult LoadFoldersTsv(const std::vector<std::string>& folders, const std::vector<std::string>& userFiles);
 // Finishes a new column-only snapshot with the folders' current noncolumn files and a
 // plain userFile.
 LoadResult LoadPlainFolders(std::shared_ptr<Snapshot> snapshot, const std::vector<std::string>& folders,
-                           std::vector<LoadError> errors, std::string_view userFile = {});
+                           std::vector<LoadError> errors, const std::vector<std::string>& userFiles);
 // Compiles the column files of the folders to an immutable resource; publishes only a
 // fully validated file. Any build of the same engine data reads it (LoadFolders).
 bool CompileSnapshot(const std::vector<std::string>& folders, std::string_view outPath);

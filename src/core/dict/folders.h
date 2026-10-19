@@ -2,6 +2,7 @@
 // Program data locations. Paths are UTF-8; names are matched without ASCII case.
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace hdTrans::dict {
 
@@ -14,8 +15,11 @@ std::string UserFolder(std::string_view programDir);
 std::string ShippedFolder(std::string_view programDir);
 // ShippedFolder(programDir) when it is a folder, else dicts in the current directory.
 std::string DefaultFolder(std::string_view programDir);
-// Files in UserFolder(programDir). UserFile is empty for an unknown programDir.
-std::string UserFile(std::string_view programDir);
+// Default user sources; the legacy file precedes the user folder in a flat layout.
+std::vector<std::string> UserPaths(std::string_view programDir);
+// Expands folders to userdict*.txt/tsv files in lowercase filename byte order.
+// Explicit files keep their positions; empty paths are ignored.
+std::vector<std::string> UserFiles(const std::vector<std::string>& paths);
 std::string ConfigFile(std::string_view programDir);
 // programDir/Ehnd when present, outside the hdTrans data folder.
 std::string EhndFolder(std::string_view programDir);

@@ -1,10 +1,12 @@
 #include "core/engine.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <memory>
 #include <string>
 
+#include "core/dict/folders.h"
 #include "core/dict/snapshot.h"
 #include "core/engine/driver.h"
 #include "core/engine/raw.h"
@@ -75,32 +77,30 @@ std::shared_ptr<Generated> NewGenerated(const dict::Snapshot& snap) {
 struct Access {
     static bool Reference(const Engine& e) { return e.reference_; }
 
-    // Makes r, the load number ticket that read version of the user dictionary file,
-    // current unless a later load already is. With bare, r was loaded without the user
-    // dictionary file after userErrors kept it from loading; a failed r leaves the
-    // dictionaries as they are. e.mu_ is held.
-    static bool Finish(Engine& e, std::uint64_t ticket, const FileVersion& version, dict::LoadResult r, bool bare,
-                       std::vector<dict::LoadError> userErrors, FilterLoad filters) {
+    // e.mu_ is held. A later successful load supersedes this ticket.
+    static bool Finish(Engine& e, std::uint64_t ticket, const UserVersion& version, dict::LoadResult r,
+                       std::vector<dict::LoadError> userErrors, FilterLoad filters, bool keepFailed) {
         if (ticket < e.current_) return Loaded(r);
         UserWatch& w = *e.watch_;
-        if (!Loaded(r)) {
+        const bool allFailed = !userErrors.empty() && std::all_of(version.begin(), version.end(),
+            [&userErrors](const auto& source) {
+                return std::any_of(userErrors.begin(), userErrors.end(), [&source](const dict::LoadError& error) {
+                    return error.file == source.first;
+                });
+            });
+        w.errors = std::move(userErrors);
+        if (!Loaded(r) || (keepFailed && allFailed)) {
             w.ehnd.failed = std::move(filters.version);
             w.ehnd.hasFailed = true;
-        }
-        if (!Loaded(r) || bare) {
             w.watch.failed = version;
             w.watch.hasFailed = true;
-            w.errors.clear();
-            for (dict::LoadError& error : bare ? userErrors : r.errors) {
+            for (dict::LoadError& error : r.errors) {
                 if (error.kind != dict::LoadErrorKind::UnknownPos) w.errors.push_back(std::move(error));
             }
-            if (!Loaded(r)) return false;
-            w.watch.loaded = {};
-        } else {
-            w.watch.loaded = version;
-            w.watch.hasFailed = false;
-            w.errors.clear();
+            return false;
         }
+        w.watch.loaded = version;
+        w.watch.hasFailed = false;
         e.current_ = ticket;
         e.snapshot_ = std::move(r.snapshot);
         e.generated_ = NewGenerated(*e.snapshot_);
@@ -109,6 +109,32 @@ struct Access {
         w.ehnd.loaded = std::move(filters.version);
         w.ehnd.hasFailed = false;
         return true;
+    }
+
+    // Retry without failed user files. Dictionary-folder errors still fail the load.
+    static dict::LoadResult LoadUsers(const std::vector<std::string>& dirs, bool verify, bool cacheWrite,
+                                      const std::vector<std::string>& paths,
+                                      std::vector<dict::LoadError>& userErrors) {
+        auto files = dict::UserFiles(paths);
+        for (;;) {
+            auto result = dict::LoadFolders(dirs, {}, verify, cacheWrite, files);
+            if (Loaded(result)) return result;
+            const auto attempted = files;
+            const auto count = files.size();
+            std::erase_if(files, [&result](const std::string& path) {
+                return std::any_of(result.errors.begin(), result.errors.end(), [&path](const dict::LoadError& error) {
+                    return error.file == path && error.kind != dict::LoadErrorKind::UnknownPos;
+                });
+            });
+            if (files.size() == count) return result;
+            for (auto& error : result.errors) {
+                if (error.kind != dict::LoadErrorKind::UnknownPos &&
+                    std::find(attempted.begin(), attempted.end(), error.file) != attempted.end() &&
+                    std::find(files.begin(), files.end(), error.file) == files.end()) {
+                    userErrors.push_back(std::move(error));
+                }
+            }
+        }
     }
 
     // The filters of r, the outcome of a load with the Ehnd folder dir.
@@ -121,11 +147,8 @@ struct Access {
         return LoadFilters(r.snapshot.get(), dir);
     }
 
-    // Loads dirs and userFile and makes them current unless a load started later already
-    // did. With open, a user dictionary file that keeps the folders from loading is left
-    // out, and on success dirs and userFile become the engine's.
-    static bool Load(Engine& e, const std::vector<std::string>& dirs, bool verify, const std::string& userFile,
-                     bool open) {
+    static bool Load(Engine& e, const std::vector<std::string>& dirs, bool verify,
+                     const std::vector<std::string>& userPaths, bool open) {
         std::uint64_t ticket;
         std::string ehnd;
         {
@@ -134,25 +157,16 @@ struct Access {
             ehnd = e.ehndDir_;
         }
         const bool cacheWrite = e.cacheWrite_ == CacheWrite::Sync;
-        const FileVersion version = VersionOf(userFile);
-        dict::LoadResult r = dict::LoadFolders(dirs, {}, verify, cacheWrite, userFile);
+        const UserVersion version = UserVersionOf(userPaths);
         std::vector<dict::LoadError> userErrors;
-        bool bare = false;
-        if (!Loaded(r) && open && !userFile.empty()) {
-            dict::LoadResult folders = dict::LoadFolders(dirs, {}, verify, cacheWrite);
-            if (Loaded(folders)) {
-                userErrors = std::move(r.errors);
-                r = std::move(folders);
-                bare = true;
-            }
-        }
+        dict::LoadResult r = LoadUsers(dirs, verify, cacheWrite, userPaths, userErrors);
         FilterLoad filters = FiltersOf(r, ehnd);
         std::lock_guard<std::mutex> lock(e.mu_);
-        if (!Finish(e, ticket, version, std::move(r), bare, std::move(userErrors), std::move(filters))) return false;
+        if (!Finish(e, ticket, version, std::move(r), std::move(userErrors), std::move(filters), !open)) return false;
         if (open) {
             e.dirs_ = dirs;
             e.verifyDicts_ = verify;
-            e.userFile_ = userFile;
+            e.userPaths_ = userPaths;
         }
         return true;
     }
@@ -163,9 +177,9 @@ struct Access {
                             std::chrono::steady_clock::duration interval) {
         UserWatch& w = *e.watch_;
         if (!w.automatic || w.detached || w.running || !e.snapshot_) return false;
-        FileVersion found;
+        UserVersion found;
         FolderVersion foundEhnd;
-        const bool user = !e.userFile_.empty() && w.watch.Due(e.userFile_, now, interval, found);
+        const bool user = !e.userPaths_.empty() && w.watch.Due(e.userPaths_, now, interval, found);
         const bool ehnd = !e.ehndDir_.empty() && w.ehnd.Due(e.ehndDir_, now, interval, foundEhnd);
         if (!user && !ehnd) return false;
         w.worker.Join();
@@ -173,16 +187,17 @@ struct Access {
         // The thread reaches the engine only through target, which the engine clears
         // before it goes; it never needs the engine to wait for it.
         w.running = w.worker.Start([target = w.target, ticket, dirs = e.dirs_, verify = e.verifyDicts_,
-                                    file = e.userFile_, ehndDir = e.ehndDir_,
+                                    paths = e.userPaths_, ehndDir = e.ehndDir_,
                                     cacheWrite = e.cacheWrite_ == CacheWrite::Sync] {
-            const FileVersion version = VersionOf(file);
-            dict::LoadResult r = dict::LoadFolders(dirs, {}, verify, cacheWrite, file);
+            const UserVersion version = UserVersionOf(paths);
+            std::vector<dict::LoadError> userErrors;
+            dict::LoadResult r = LoadUsers(dirs, verify, cacheWrite, paths, userErrors);
             FilterLoad filters = FiltersOf(r, ehndDir);
             std::lock_guard<std::mutex> owner(target->mu);
             if (!target->engine) return;
             Engine& engine = *target->engine;
             std::lock_guard<std::mutex> lock(engine.mu_);
-            Finish(engine, ticket, version, std::move(r), false, {}, std::move(filters));
+            Finish(engine, ticket, version, std::move(r), std::move(userErrors), std::move(filters), true);
             engine.watch_->running = false;
             engine.watch_->done.notify_all();
         });
@@ -304,27 +319,31 @@ std::string Engine::UserFileError() const {
     std::lock_guard<std::mutex> lock(mu_);
     std::string s;
     for (const dict::LoadError& e : watch_->errors) s += (s.empty() ? "" : "\n") + internal::ErrorText(e);
-    if (s.empty() && watch_->watch.hasFailed) s = userFile_ + ": does not load";
     return s;
 }
 
 bool Engine::Open(const std::vector<std::string>& dirs, bool verifyDicts, std::string_view userFile) {
+    return OpenUserDicts(dirs, verifyDicts, {std::string(userFile)});
+}
+
+bool Engine::OpenUserDicts(const std::vector<std::string>& dirs, bool verifyDicts,
+                           const std::vector<std::string>& userPaths) {
     if (!internal::RulesLoaded()) return false;
-    return internal::Access::Load(*this, dirs, verifyDicts, std::string(userFile), true);
+    return internal::Access::Load(*this, dirs, verifyDicts, userPaths, true);
 }
 
 bool Engine::Reload() {
     std::vector<std::string> dirs;
     bool verify;
-    std::string userFile;
+    std::vector<std::string> userPaths;
     {
         std::lock_guard<std::mutex> lock(mu_);
         if (!snapshot_) return false;
         dirs = dirs_;
         verify = verifyDicts_;
-        userFile = userFile_;
+        userPaths = userPaths_;
     }
-    return internal::Access::Load(*this, dirs, verify, userFile, false);
+    return internal::Access::Load(*this, dirs, verify, userPaths, false);
 }
 
 bool Engine::OpenEhnd(std::string_view dir) { return internal::Access::OpenEhnd(*this, std::string(dir)); }

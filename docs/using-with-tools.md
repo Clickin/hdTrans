@@ -14,9 +14,13 @@ C:\hdTrans\
   hdTrans\
     dicts\             ← 저장소 dicts/ 전체
     user\
-      userdict.tsv     ← 선택, 사용자 사전
+      userdict.example.txt  ← 주석뿐인 배포 견본, 업데이트 때 덮어씀
+      userdict.txt     ← 직접 작성할 사용자 사전
       hdtrans.config.yaml  ← 선택, 설정
 ```
+
+사용자 사전 파일 이름은 대소문자를 구별하지 않습니다. 소문자 이름의 바이트 순서로 읽고 같은 항목은 뒤 파일이 우선합니다.
+설정의 `userdict: [first.tsv, second.txt, folder]`로 기본 탐색을 대신할 수도 있습니다.
 
 hdTrans는 초기화 인자의 `Dat` 경로, 현재 폴더, 레지스트리와 무관하게 **DLL 옆의 `hdTrans\`** 폴더를 읽습니다(없으면 DLL 옆의 `dicts\`).
 아래에서 확인한 로더는 `Dat` 폴더나 이지트랜스 실행 파일의 존재를 필수 검사하지 않으므로 빈 `Dat`나 원본 엔진을 넣을 필요가 없습니다.
@@ -90,7 +94,7 @@ Ehnd 데이터는 DLL 옆 `Ehnd/`에서 읽습니다. 지원 범위는 [Ehnd 호
   W 우선 및 CP932/CP949 fallback, 결과 복사 후 `FreeMem`입니다. 번역과 reload는 공통 잠금으로 직렬화하며 Terminate와 unload는 하지 않습니다.
   Win32 전용입니다. `Dat` 경로는 문자열을 바이트로 단순 축소하므로 비ASCII 경로를 보장하지 않습니다.
 - **CI:** `host.anemone`, `host.anemone-ansi`. 실제 W 경로에서는 `AneDic.txt`를 `Dat\UserDict.jk`에 적용하는 구형 기능을 쓰지 않습니다.
-  사용자 사전은 공통 준비의 `userdict.tsv`로 둡니다. 클립보드 감시, 창 출력과 실제 사용자 사전 편집은 수동 확인이 필요합니다.
+  사용자 사전은 공통 준비의 `user/`에 `userdict*.txt`나 `userdict*.tsv`로 둡니다. 클립보드 감시, 창 출력과 실제 사용자 사전 편집은 수동 확인이 필요합니다.
 
 ### Textractor + 아네모네
 

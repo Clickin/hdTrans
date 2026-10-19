@@ -57,7 +57,7 @@ std::vector<std::string> SplitNul(const char* dirs) {
     return out;
 }
 
-// WebAssembly has no threads to reload userdict.tsv in the background.
+// WebAssembly has no threads to reload user dictionaries in the background.
 #if defined(__EMSCRIPTEN__)
 constexpr hdTrans::UserReload kUserReload = hdTrans::UserReload::Off;
 #else
@@ -109,7 +109,7 @@ int hdTrans_Initialize(const char* dirs) {
     const auto& settings = config.settings;
     const auto requestedPaths = paths;
     if (paths.empty() && settings.dicts) paths = *settings.dicts;
-    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    const auto userPaths = settings.userdict.value_or(hdTrans::dict::UserPaths(dir));
     const std::string ehnd = settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "";
     {
         AdminLock lock;
@@ -117,7 +117,7 @@ int hdTrans_Initialize(const char* dirs) {
     }
     auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, kUserReload);
     e->OpenEhnd(ehnd);
-    if (!e->Open(paths, false, userFile)) return -1;
+    if (!e->OpenUserDicts(paths, false, userPaths)) return -1;
     AdminLock lock;
     if (generation != g_generation) return -1;
     g_session.reset();
@@ -172,7 +172,7 @@ int hdTrans_Reload(void) {
     const auto config = hdTrans::internal::LoadConfig(configPath);
     const auto& settings = config.settings;
     if (dirs.empty() && settings.dicts) dirs = *settings.dicts;
-    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    const auto userPaths = settings.userdict.value_or(hdTrans::dict::UserPaths(dir));
     const std::string configuredEhnd = settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "";
     const std::string ehnd = ehndOverride.value_or(configuredEhnd);
     {
@@ -181,8 +181,8 @@ int hdTrans_Reload(void) {
     }
     auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, kUserReload);
     e->OpenEhnd(ehnd);
-    // A userdict.tsv that does not load keeps the dictionaries loaded before.
-    if (!e->Open(dirs, false, userFile) || !e->UserFileError().empty()) return -1;
+    if (!e->OpenUserDicts(dirs, false, userPaths)) return -1;
+    if (!e->UserFileError().empty() && hdTrans::dict::UserFiles(userPaths).size() == 1) return -1;
     AdminLock lock;
     if (generation != g_generation) return -1;
     g_session.reset();
