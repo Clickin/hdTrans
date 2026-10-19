@@ -68,12 +68,12 @@ jobs:
         run: |
           if [[ "${{ matrix.preset }}" == wasm ]]; then
             # Emscripten wraps its underlying Clang rather than the em++ driver.
-            EM_COMPILER_WRAPPER=sccache emcmake cmake --preset wasm
+            EM_COMPILER_WRAPPER=sccache emcmake cmake --preset wasm -G Ninja
           elif [[ "$RUNNER_OS" == Windows ]]; then
             cmake --preset "${{ matrix.preset }}" -G Ninja -A "" -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_C_COMPILER_LAUNCHER=sccache
           else
-            cmake --preset "${{ matrix.preset }}" -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+            cmake --preset "${{ matrix.preset }}" -G Ninja -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           fi
       - name: Build CLI, libraries and tests
         env:
@@ -87,6 +87,7 @@ jobs:
               build/wasm/hdTransEngine.js tests/unit/dict/testdata/folder/base.tsv \
               2>&1 | tee build/wasm/ctest.log
           else
+            export HDTRANS_DICTS="$GITHUB_WORKSPACE/dicts"
             ctest --preset "${{ matrix.preset }}" --parallel "$BUILD_JOBS" --verbose \
               2>&1 | tee "build/${{ matrix.preset }}/ctest.log"
           fi
