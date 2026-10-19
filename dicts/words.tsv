@@ -26665,3 +26665,5 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 お待たせ致しました	기다리게 해서 죄송합니다	A9D0			GN					w:26665
 殿下たち	전하들	N110	VHn		GN					w:26666
 コレ	이것	N120			GN					w:26667
+お仕置き	벌	N110	HGu	Hd	GN					w:26668
+御仕置き	벌	N110	HGu	Hd	GN					w:26669

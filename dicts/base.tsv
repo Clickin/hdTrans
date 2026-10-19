@@ -6117,7 +6117,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 おしえてくれ	가르쳐 &CJ@	M447			GN		jisjk:260133		
 おしえてはじめて	가르치고 나서야	N110			GN		jisjk:150685		
 おしえられずに	교육받지 못하고	E300			GN		jisjk:149039		
-おしおき	사형	N110	ULw		GN		jisjk:165326		-1
+おしおき	벌	N110	HGu	Hd	GN		jisjk:165326		-1
 おしかけ	몰려&L4@	M427			GN		jisjk:367842		
 おしかけ	몰려 &L4@	M427			GN		jisjk:367843		
 おしかり	꾸중	N110			GN		jisjk:165328		-1
@@ -7250,7 +7250,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 お仕事中	업무 중	E300			GN		jisjk:341934		
 お仕着せ	형식적인 일	N110			GN		jisjk:165333		
 お仕着せの	관례적인	E0H0			GN		jisjk:123428		
-お仕置	징계	I110	HGu		GN		jisjk:40599		
+お仕置	벌	N110	HGu	Hd	GN		jisjk:40599		
 お仕舞	끝	I110			GN		jisjk:40596		
 お仕舞い	끝	I110			GN		jisjk:40597		
 お付き	수행원	I110	UAq		GN		jisjk:40587		
