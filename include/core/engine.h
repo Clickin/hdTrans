@@ -1,5 +1,6 @@
 #pragma once
 // C++ API of the engine. All strings are UTF-8.
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -16,26 +17,39 @@ namespace internal {
 struct Access;
 struct Generated;
 struct SessionState;
+struct UserWatch;
 }
 
 // Off never publishes a cache generation; Sync attempts publication before Open returns.
 // Off can write a .bad marker and rename a generation proven corrupt.
 enum class CacheWrite { Off, Sync };
 
+// Auto checks the user dictionary file when a translation starts, at most once a second.
+// A changed file is reloaded with the folders in the background; the new dictionaries
+// replace the old ones when ready. A version of the file that fails to load is not
+// retried until the file changes again, and the dictionaries before it stay.
+enum class UserReload { Off, Auto };
+
 // The loaded dictionaries. Shared by any number of sessions and threads.
 class Engine {
 public:
     // Reference mode disables translation improvements. Sessions inherit it.
-    explicit Engine(bool reference = false, CacheWrite cacheWrite = CacheWrite::Sync)
-        : reference_(reference), cacheWrite_(cacheWrite) {}
+    explicit Engine(bool reference = false, CacheWrite cacheWrite = CacheWrite::Sync,
+                    UserReload userReload = UserReload::Off);
+    // Waits for a background reload.
+    ~Engine();
+    Engine(const Engine&) = delete;
+    Engine& operator=(const Engine&) = delete;
 
-    // Loads the folders in order; later folders override earlier ones. Returns false when
-    // no dictionary could be loaded; the dictionaries loaded before stay.
-    bool Open(const std::vector<std::string>& dirs, bool verifyDicts = false);
+    // Loads the folders in order, later folders overriding earlier ones, then the user
+    // dictionary file userFile (none when empty or missing). Returns false when no
+    // dictionary could be loaded; the dictionaries loaded before stay.
+    bool Open(const std::vector<std::string>& dirs, bool verifyDicts = false, std::string_view userFile = {});
 
-    // Reloads the folders given to Open and swaps the new dictionaries in. Sessions keep
-    // translating with the dictionaries they started with. Returns false when the load
-    // fails; the dictionaries loaded before stay.
+    // Reloads the folders and user dictionary file given to Open and swaps the new
+    // dictionaries in. Sessions keep translating with the dictionaries they started with
+    // (see UserReload). Returns false when the load fails; the dictionaries loaded
+    // before stay.
     bool Reload();
 
     bool loaded() const;
@@ -51,15 +65,20 @@ private:
     mutable std::mutex mu_;
     std::vector<std::string> dirs_;
     bool verifyDicts_ = false;
+    std::string userFile_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;  // the marker families made on snapshot_
+    std::uint64_t loads_ = 0;    // loads started
+    std::uint64_t current_ = 0;  // the load that made snapshot_
+    std::unique_ptr<internal::UserWatch> watch_;  // with UserReload::Auto
 };
 
 // A translation with memory: names and other context found in earlier text of the
 // session shape the translation of later text. Text may hold one or more
 // "\n"-separated lines ("\r" is kept). One session is used from one thread at a time.
 // A session translates with the dictionaries of the engine when it was created or last
-// reset.
+// reset; with UserReload::Auto, a translation that finds new dictionaries in the engine
+// takes them and first forgets what the session learned, as Reset does.
 class Session {
 public:
     explicit Session(const Engine& engine, bool reference = false);
