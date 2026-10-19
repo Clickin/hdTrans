@@ -1,5 +1,6 @@
 #include "core/dict/snapshot_file.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <array>
 #include <barrier>
@@ -111,6 +112,28 @@ struct TempFolder {
     std::string File(std::string_view name) const {
         const auto text = (path / std::filesystem::path(name)).u8string();
         return {reinterpret_cast<const char*>(text.data()), text.size()};
+    }
+};
+
+struct ScopedCurrentPath {
+    std::filesystem::path previous;
+    bool changed = false;
+
+    explicit ScopedCurrentPath(const std::filesystem::path& path) {
+        std::error_code ec;
+        previous = std::filesystem::current_path(ec);
+        if (!ec) {
+            std::filesystem::current_path(path, ec);
+            changed = !ec;
+        }
+        HD_CHECK(changed);
+    }
+
+    ~ScopedCurrentPath() {
+        if (!changed) return;
+        std::error_code ec;
+        std::filesystem::current_path(previous, ec);
+        HD_CHECK(!ec);
     }
 };
 
@@ -342,6 +365,8 @@ HD_TEST(SnapshotCachePathNormalization) {
 HD_TEST(SnapshotCacheFolderAliases) {
     CacheTestEnvironment environment;
     TempFolder temp;
+    ScopedCurrentPath current(temp.path);
+    HD_REQUIRE(current.changed);
     const auto dict = temp.path / "DictAlias";
     std::error_code ec;
     HD_REQUIRE(std::filesystem::create_directory(dict, ec) && !ec);
@@ -489,6 +514,8 @@ HD_TEST(SnapshotCacheEnvironmentOverride) {
 HD_TEST(SnapshotRelativeCacheOverrideDisablesCaching) {
     CacheTestEnvironment environment;
     TempFolder temp;
+    ScopedCurrentPath current(temp.path);
+    HD_REQUIRE(current.changed);
     const auto cache = temp.path / "relative-cache";
     std::error_code ec;
     const auto relative = cache.lexically_relative(std::filesystem::current_path(ec));
