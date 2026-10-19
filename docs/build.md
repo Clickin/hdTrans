@@ -112,7 +112,7 @@ cmake --build --preset wasm --parallel
   Node로 `tools/wasm_smoke.mjs`를 실행해 작은 사전으로 한 번 번역해 봅니다(셋째 인자로 그 사전을
   컴파일한 `.hdsnap`을 주면 그것으로도 불러 봅니다). 결과물은
   `hdtrans-<프리셋>` 아티팩트로 올라갑니다.
-- **e2e.yml**: 풀 리퀘스트와 `main` 푸시 때, 기준 커밋과 현재 커밋의 CLI로 소설가가 되자 챕터를 번역해
-  달라진 줄을 보고합니다. 자세한 내용은 [testing.md](testing.md#엔드투엔드-테스트-syosetu)에 있습니다.
+- **e2e.yml**: 풀 리퀘스트와 `main` 푸시 때, 현재 커밋의 CLI로 비공개 테스트 데이터를 번역해 기대 출력과
+  달라진 줄을 보고합니다. 자세한 내용은 [testing.md](testing.md#ci)에 있습니다.
 
 로컬 빌드에는 sccache와 ccache 모두 필요 없습니다.

@@ -1,34 +1,65 @@
 #!/bin/sh
-# Translates the chapters fetched by tools/fetch-syosetu.sh with two builds and reports the lines
-# that differ.
-#   tools/e2e.sh A B DICTS [CACHE]      (default CACHE: build/e2e)
-# A and B are CLI binaries; A may instead be a tools/snapshot.sh run folder, from which the
-# document set with the same input is taken. For each stub tests/e2e/<name>.ja.txt, the chapter
-# <CACHE>/<name>.ja.txt is translated without its first line as one document with default
-# settings; <CACHE>/<name>.ko.txt (B) and <CACHE>/base/<name>.ko.txt (A) repeat that line, then
-# hold the output. The report gives each changed chapter's count and its changed lines (file
-# line number, A, B), at most 20 per chapter and 200 in all. A chapter that is not cached, or not
-# in the snapshot run, is listed as missing. HDTRANS_DICTS_A gives A its own dictionaries.
-# Exit: 0 identical, 1 changed, 2 invalid arguments, failed CLI or no chapter compared.
+# Translates the test-data documents and reports the lines that differ, either from the expected
+# outputs in the data or between two builds.
+#   tools/e2e.sh --expected DATA CLI DICTS [--accept]
+#   tools/e2e.sh A B DICTS [DATA]
+# DATA is the test-data folder; empty or omitted, HDTRANS_TESTDATA is used, and without either the
+# run is skipped (77). Each DATA/<source>/<name>.ja.txt starts with a `#` line naming the document;
+# the rest is translated as one document with default settings. Outputs repeat that line, then
+# hold the translation: build/e2e/<source>/<name>.ko.txt for CLI or B, and
+# build/e2e/base/<source>/<name>.ko.txt for A.
+# --expected compares CLI against DATA/<source>/<name>.ko.txt (A in the report); --accept then
+# overwrites those files with the outputs. Otherwise A and B are CLI binaries; A may instead be a
+# tools/snapshot.sh run folder, from which the document set with the same input is taken, and a
+# document not in the run is listed as missing. HDTRANS_DICTS_A gives A its own dictionaries.
+# The report gives each changed document's count and its changed lines (file line number, A, B),
+# at most 20 per document and 200 in all.
+# Exit: 0 identical or accepted, 1 changed, 2 invalid arguments or data, failed CLI or nothing
+# compared, 77 no test data.
 set -eu
-[ $# -eq 3 ] || [ $# -eq 4 ] || { echo 'usage: tools/e2e.sh <cliA|runA> <cliB> <dicts> [cache]' >&2; exit 2; }
+usage() {
+    echo 'usage: tools/e2e.sh --expected <data> <cli> <dicts> [--accept]' >&2
+    echo '       tools/e2e.sh <cliA|runA> <cliB> <dicts> [data]' >&2
+    exit 2
+}
+mode=pair accept=0 data=
+n=$# i=0
+while [ "$i" -lt "$n" ]; do
+    arg=$1; shift; i=$((i + 1))
+    case $arg in
+        --accept) accept=1 ;;
+        --expected)
+            [ "$i" -lt "$n" ] || usage
+            mode=expected data=$1; shift; i=$((i + 1)) ;;
+        *) set -- "$@" "$arg" ;;
+    esac
+done
+if [ "$mode" = expected ]; then
+    [ $# -eq 2 ] || usage
+    a= b=$1 dictsArg=$2
+else
+    [ "$accept" -eq 0 ] && { [ $# -eq 3 ] || [ $# -eq 4 ]; } || usage
+    a=$1 b=$2 dictsArg=$3 data=${4-}
+fi
+data=${data:-${HDTRANS_TESTDATA-}}
+[ -n "$data" ] || { echo 'no test data (HDTRANS_TESTDATA is not set); skipping'; exit 77; }
+[ -d "$data" ] || { echo "no test data at $data" >&2; exit 2; }
+data=$(cd "$data" && pwd)
 here=$(cd "$(dirname "$0")/.." && pwd)
-stubs=$here/tests/e2e
-cache=${4:-$here/build/e2e}
-a=$1 b=$2
-for dir in "$3" "${HDTRANS_DICTS_A:-$3}"; do
+out=$here/build/e2e
+for dir in "$dictsArg" "${HDTRANS_DICTS_A:-$dictsArg}"; do
     [ -d "$dir" ] || { echo "no dictionaries at $dir" >&2; exit 2; }
 done
-dictsB=$(cd "$3" && pwd)
-dictsA=$(cd "${HDTRANS_DICTS_A:-$3}" && pwd)
+dictsB=$(cd "$dictsArg" && pwd)
+dictsA=$(cd "${HDTRANS_DICTS_A:-$dictsArg}" && pwd)
 [ -x "$b" ] && [ -f "$b" ] || { echo "no CLI at $b" >&2; exit 2; }
-if [ -d "$a" ]; then
+if [ "$mode" = expected ]; then
+    :
+elif [ -d "$a" ]; then
     [ -f "$a/sets.tsv" ] || { echo "not a snapshot run: $a" >&2; exit 2; }
 elif [ ! -x "$a" ]; then
     echo "no CLI or snapshot run at $a" >&2; exit 2
 fi
-[ -d "$cache" ] || { echo "no chapter cache at $cache" >&2; exit 2; }
-mkdir -p "$cache/base"
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/hdtrans-e2e.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 trap 'exit 2' HUP INT TERM
@@ -44,30 +75,36 @@ translate() {
     { printf '%s\n' "$4"; HDTRANS_CACHE_DIR=$3 "$1" -dicts "$2" -in "$tmp/body.txt"; } > "$5" ||
         { echo "$name: $1 failed" >&2; exit 2; }
 }
-chapters=0 changedSets=0 changedLines=0 printed=0 missing=
-for stub in "$stubs"/*.ja.txt; do
-    [ -f "$stub" ] || { echo "no stubs in $stubs" >&2; exit 2; }
-    name=${stub##*/}; name=${name%.ja.txt}
-    header=$(head -n 1 "$stub")
-    ja=$cache/$name.ja.txt
-    if [ ! -f "$ja" ] || [ "$(head -n 1 "$ja")" != "$header" ]; then
-        missing="$missing $name"; continue
-    fi
+docs=0 changedSets=0 changedLines=0 printed=0 accepted=0 missing=
+for ja in "$data"/*/*.ja.txt; do
+    [ -f "$ja" ] || continue
+    name=${ja##*/}; name=${name%.ja.txt}
+    folder=${ja%/*}; folder=${folder##*/}
+    header=$(head -n 1 "$ja")
+    case $header in '#'*) ;; *) echo "$folder/$name.ja.txt: first line is not a # line" >&2; exit 2 ;; esac
     tail -n +2 "$ja" > "$tmp/body.txt"
-    if [ -d "$a" ]; then
+    mkdir -p "$out/$folder"
+    if [ "$mode" = expected ]; then
+        expected=${ja%.ja.txt}.ko.txt
+        [ -f "$expected" ] || expected=/dev/null
+    elif [ -d "$a" ]; then
         setName=$(awk -F '\t' -v sum="$(sha "$tmp/body.txt")" '
             NR > 1 && $2 == "document" && $5 == sum {print $1; exit}' "$a/sets.tsv")
         if [ -z "$setName" ] || [ ! -f "$a/outputs/$setName.out" ]; then
             missing="$missing $name"; continue
         fi
-        { printf '%s\n' "$header"; cat "$a/outputs/$setName.out"; } > "$cache/base/$name.ko.txt"
+        mkdir -p "$out/base/$folder"
+        expected=$out/base/$folder/$name.ko.txt
+        { printf '%s\n' "$header"; cat "$a/outputs/$setName.out"; } > "$expected"
     else
-        translate "$a" "$dictsA" "$tmp/cacheA" "$header" "$cache/base/$name.ko.txt"
+        mkdir -p "$out/base/$folder"
+        expected=$out/base/$folder/$name.ko.txt
+        translate "$a" "$dictsA" "$tmp/cacheA" "$header" "$expected"
     fi
-    translate "$b" "$dictsB" "$tmp/cacheB" "$header" "$cache/$name.ko.txt"
-    chapters=$((chapters + 1))
+    translate "$b" "$dictsB" "$tmp/cacheB" "$header" "$out/$folder/$name.ko.txt"
+    docs=$((docs + 1))
     awk -v name="$name" -v budget=$((200 - printed)) -v counts="$tmp/counts" '
-        FNR == NR {a[FNR] = $0; if (FNR > n) n = FNR; next}
+        FILENAME == ARGV[1] {a[FNR] = $0; if (FNR > n) n = FNR; next}
         {b[FNR] = $0; if (FNR > n) n = FNR}
         END {
             for (i = 1; i <= n; ++i)
@@ -83,13 +120,23 @@ for stub in "$stubs"/*.ja.txt; do
             if (shown < changed) printf "  ... %d more\n", changed - shown
             print changed + 0, shown > counts
         }
-    ' "$cache/base/$name.ko.txt" "$cache/$name.ko.txt"
+    ' "$expected" "$out/$folder/$name.ko.txt"
     read -r count shown < "$tmp/counts"
-    [ "$count" -eq 0 ] || changedSets=$((changedSets + 1))
+    if [ "$count" -ne 0 ]; then
+        changedSets=$((changedSets + 1))
+        if [ "$accept" -eq 1 ]; then
+            cp "$out/$folder/$name.ko.txt" "${ja%.ja.txt}.ko.txt"
+            accepted=$((accepted + 1))
+        fi
+    fi
     changedLines=$((changedLines + count)) printed=$((printed + shown))
 done
 [ -z "$missing" ] || echo "missing:$missing"
-printf 'e2e: %d chapters compared, %d changed lines in %d chapters\n' \
-    "$chapters" "$changedLines" "$changedSets"
-[ "$chapters" -gt 0 ] || { echo 'no chapter compared; run tools/fetch-syosetu.sh' >&2; exit 2; }
+printf 'e2e: %d documents compared, %d changed lines in %d documents\n' \
+    "$docs" "$changedLines" "$changedSets"
+[ "$docs" -gt 0 ] || { echo "no document compared from $data" >&2; exit 2; }
+if [ "$accept" -eq 1 ]; then
+    echo "e2e: accepted $accepted documents into $data"
+    exit 0
+fi
 [ "$changedLines" -eq 0 ]

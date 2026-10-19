@@ -1,18 +1,14 @@
 #!/bin/sh
-# Downloads the chapters named by the stubs tests/e2e/<name>.ja.txt into <cache>/<name>.ja.txt.
-#   tools/fetch-syosetu.sh [STUBS [CACHE]]      (defaults: tests/e2e, build/e2e)
-# A stub is one line, `# <title> <episode> <URL>`. The cached file is that line followed by the
-# chapter: its title, then one line per paragraph of the body (preface and afterword included),
-# with ruby readings removed. A cached file whose first line matches its stub is not fetched
-# again. A failed chapter is reported and left missing; the exit status is 0 unless the
-# arguments are invalid.
+# Downloads the 小説家になろう chapters that a test-data folder names but does not yet hold.
+#   tools/fetch-syosetu.sh [DIR]      (default: $HDTRANS_TESTDATA/syosetu)
+# Each DIR/<name>.ja.txt that holds only its first line, `# <title> <episode> ... <URL>`, gets the
+# chapter after that line: its title, then one line per paragraph of the body (preface and
+# afterword included), with ruby readings removed. Files with more lines are left alone. A failed
+# chapter is reported and left as it was; the exit status is 0 unless the arguments are invalid.
 set -eu
-here=$(cd "$(dirname "$0")/.." && pwd)
-stubs=${1:-$here/tests/e2e}
-cache=${2:-$here/build/e2e}
-[ $# -le 2 ] && [ -d "$stubs" ] || { echo 'usage: tools/fetch-syosetu.sh [STUBS [CACHE]]' >&2; exit 2; }
+dir=${1:-${HDTRANS_TESTDATA:+$HDTRANS_TESTDATA/syosetu}}
+[ $# -le 1 ] && [ -n "$dir" ] && [ -d "$dir" ] || { echo 'usage: tools/fetch-syosetu.sh [DIR]' >&2; exit 2; }
 agent="hdtrans-e2e/1 (regression test of a translation engine${GITHUB_REPOSITORY:+; +https://github.com/$GITHUB_REPOSITORY})"
-mkdir -p "$cache"
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/hdtrans-fetch.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 trap 'exit 2' HUP INT TERM
@@ -108,23 +104,21 @@ extract() {
 }
 
 fetched=0 kept=0 missing=0 requests=0
-for stub in "$stubs"/*.ja.txt; do
-    [ -f "$stub" ] || { echo "no stubs in $stubs" >&2; exit 2; }
-    name=${stub##*/}; name=${name%.ja.txt}
-    header=$(head -n 1 "$stub")
+for out in "$dir"/*.ja.txt; do
+    [ -f "$out" ] || { echo "no .ja.txt in $dir" >&2; exit 2; }
+    name=${out##*/}; name=${name%.ja.txt}
+    if [ "$(wc -l < "$out")" -gt 1 ]; then
+        kept=$((kept + 1)); continue
+    fi
+    header=$(head -n 1 "$out")
     url=${header##* }
-    out=$cache/$name.ja.txt
     case $header in '# '*) ;; *) url= ;; esac
     if ! printf '%s\n' "$url" | grep -Eq '^https://ncode\.syosetu\.com/n[0-9a-z]+/([0-9]+/)?$'; then
-        echo "warning: $name: no chapter URL in the stub; missing" >&2
+        echo "warning: $name: no chapter URL at the end of the first line; missing" >&2
         missing=$((missing + 1)); continue
-    fi
-    if [ -f "$out" ] && [ "$(head -n 1 "$out")" = "$header" ]; then
-        kept=$((kept + 1)); continue
     fi
     [ "$requests" -eq 0 ] || sleep 1
     requests=$((requests + 1))
-    rm -f "$out"
     if ! curl -fsS --max-time 60 -A "$agent" -H 'Accept-Language: ja' -o "$tmp/page.html" "$url"; then
         echo "warning: $name: download of $url failed; missing" >&2
         missing=$((missing + 1)); continue
@@ -138,4 +132,4 @@ for stub in "$stubs"/*.ja.txt; do
     fetched=$((fetched + 1))
     echo "$name: $(($(wc -l < "$out") - 1)) lines from $url"
 done
-echo "fetch: $fetched downloaded, $kept already cached, $missing missing"
+echo "fetch: $fetched downloaded, $kept already present, $missing missing"
