@@ -21,6 +21,8 @@ enum class ConstraintContext : uint8_t {
     AfterKatakana,      // the word follows katakana in its token
     AfterExclamation,   // the word follows ！ or ？ (past spaces) and is not drawn out (とっ, とぉ)
     AfterPause,         // the same with 、 and … as well, before 奴, こと, 話 and like nouns
+    LineOpening,        // only spaces and opening brackets before the word in its line, 、 after it
+    Elsewhere,          // not LineOpening
 };
 
 // The senses a rule rejects.
@@ -40,6 +42,10 @@ enum class ConstraintReject : uint8_t {
     // The senses that do not quote (whose Korean has no 라고, 다고, 라는 or 다는), when
     // one quotes.
     NonQuote,
+    // The senses that are not adverbs (E), when one is.
+    NonAdverb,
+    // The adverb senses (E), when another sense remains.
+    Adverb,
 };
 
 struct ConstraintRule {

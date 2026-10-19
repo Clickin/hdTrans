@@ -43,7 +43,9 @@ const dict::Snapshot* Dictionary() {
          "が\t(이)가\tP200\t\t\tGN\t23\n"
          "ドン\t쾅\tN110\t\t\tGN\t24\n"
          "音\t소리\tN110\t\t\tGN\t25\n"
-         "猫\t고양이\tN110\tQAA\t\tGN\t26\n"},
+         "猫\t고양이\tN110\tQAA\t\tGN\t26\n"
+         "曰く\t왈\tN110\t\t\tGN\t27\n"
+         "曰く\t듣자 하니\tE300\t\t\tGN\t28\n"},
         {0, "names.tsv",
          "#! layer=names\n"
          "key\tko\tpos\tsem\tgram\tdict\tid\n"
@@ -89,7 +91,7 @@ void CheckCases(std::initializer_list<Case> cases, std::string_view before = {})
 }  // namespace
 
 HD_TEST(constraint_rules_table) {
-    HD_CHECK_EQ(word::ConstraintRules().size(), size_t{6});
+    HD_CHECK_EQ(word::ConstraintRules().size(), size_t{8});
     for (const word::ConstraintRule& r : word::ConstraintRules()) {
         HD_CHECK(!r.id.empty());
         HD_CHECK(!r.note.empty());
@@ -152,4 +154,18 @@ HD_TEST(constraint_quote_after_exclamation) {
     });
     CheckCases({{"と音が", "と音が", "と", "(이)라고"}}, "！");
     CheckCases({{"と音が", "と音が", "と", "(와)과 (이)라고"}}, "、");
+}
+
+// 曰く that opens its line before 、 (past spaces and an opening bracket) is the adverb that
+// introduces hearsay; after a word, without 、 or after other text it keeps its noun sense.
+HD_TEST(constraint_iwaku_line_opening) {
+    CheckCases({
+        {"曰く、彼は", "曰く、彼は", "曰く", "듣자 하니"},
+        {"　曰く、彼は", "曰く、彼は", "曰く", "듣자 하니"},
+        {"「曰く、彼は", "曰く、彼は", "曰く", "듣자 하니"},
+        {"先生曰く、彼は", "曰く、彼は", "曰く", "왈"},
+        {"曰くによれば", "曰くによれば", "曰く", "왈"},
+        {"国、曰く“騎士”", "曰く“騎士”", "曰く", "왈"},
+    });
+    CheckCases({{"曰く、彼は", "曰く、彼は", "曰く", "왈"}}, "。");
 }

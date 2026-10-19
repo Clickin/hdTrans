@@ -17882,6 +17882,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 曇り空	흐린 하늘	N110	VFr		GN		llm		くもりぞら	w:17879
 曰	말씀하&AE@	M420			GN		llm		のたまう	w:17880
 曰く	왈	N110			GN		xxx llm	1		w:17881
+曰く	듣자 하니	E300			GN					w:26618
 曰わく	이르기를	E300			GN		llm		のたまわく	w:17882
 曲がり角	모퉁이	I110	VPl		GN		xxx llm	1		w:17883
 曲り角	모퉁이	N110			GN		xxx		まがりかど	w:17884
