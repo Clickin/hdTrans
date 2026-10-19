@@ -23,8 +23,9 @@ extern "C" {
  * later folders overriding earlier ones, then userdict.tsv next to the library when
  * present; a userdict.tsv that does not load is left out (hdTrans_UserDictError).
  * Translations check userdict.tsv at most once a second and reload it in the background
- * when it changes. Returns 0, or -1 when no dictionary loads or a concurrent Terminate,
- * successful Initialize or successful Reload cancels this load. */
+ * when it changes; WebAssembly reads /userdict.tsv of its file system and does not watch
+ * it. Returns 0, or -1 when no dictionary loads or a concurrent Terminate, successful
+ * Initialize or successful Reload cancels this load. */
 HDTRANS_API int hdTrans_Initialize(const char* dirs);
 
 /* Releases the session and dictionaries. Repeated calls are harmless; Initialize may be called again. */
@@ -34,6 +35,10 @@ HDTRANS_API void hdTrans_Terminate(void);
  * Writes a NUL-terminated UTF-8 buffer to *out and its length (without the NUL) to
  * *outn. Returns 0, or -1 when uninitialized or terminated. */
 HDTRANS_API int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn);
+
+/* Forgets the names and context the session learned from earlier text, so that the next
+ * translation starts like the first. Returns 0, or -1 when uninitialized or terminated. */
+HDTRANS_API int hdTrans_Reset(void);
 
 /* Reloads the dictionary folders and userdict.tsv. Returns 0, or -1 when
  * uninitialized, terminated, or the reload fails; a userdict.tsv that does not load

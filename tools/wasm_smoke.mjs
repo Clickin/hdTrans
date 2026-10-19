@@ -24,6 +24,7 @@ try {
     assert(translated && length > 0, 'translation must be non-empty');
     const result = engine.UTF8ToString(translated, length);
     assert(result.length > 0);
+    assert.equal(engine._hdTrans_Reset(), 0);
     console.log(`PASS wasm smoke: ${text} -> ${result}`);
 } finally {
     if (translated) engine._hdTrans_FreeMem(translated);

@@ -66,6 +66,7 @@ hdtrans [-dicts DIR,...] [-userdict FILE] [-each | -raw] [-reference] [-verify-d
 | `int hdTrans_Initialize(const char* dirs)` | 사전 폴더를 불러옴. `dirs`는 NUL로 구분하고 NUL 두 개로 끝나는 목록이며 뒤 폴더가 앞을 덮어씀. 0 성공, -1은 사전을 하나도 못 불러왔거나 동시에 진행된 Terminate·Initialize·Reload가 이 불러오기를 취소함 |
 | `void hdTrans_Terminate(void)` | 세션과 사전 해제. 여러 번 불러도 되고, 다시 Initialize할 수 있음 |
 | `int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn)` | `text[0..n)`(`\n`으로 구분한 한 줄 이상)을 프로세스 세션에서 번역. `*out`에 NUL로 끝나는 버퍼, `*outn`에 길이(NUL 제외). 0 성공, -1 초기화 전·종료 후 |
+| `int hdTrans_Reset(void)` | 세션이 앞선 텍스트에서 배운 이름과 문맥을 잊어 다음 번역이 처음처럼 시작함. 0 성공, -1 초기화 전·종료 후 |
 | `int hdTrans_Reload(void)` | 같은 폴더와 `userdict.tsv`를 바로 다시 불러옴. 0 성공, -1 초기화 전·종료 후·실패(`userdict.tsv`를 불러오지 못한 경우 포함, 이전 사전 유지) |
 | `int hdTrans_UserDictError(char** out, size_t* outn)` | 마지막으로 읽은 `userdict.tsv`를 불러오지 못한 이유(오류마다 한 줄, 불러왔거나 없으면 빈 문자열)를 `hdTrans_Translate`처럼 버퍼로 돌려줌. 0 성공, -1 초기화 전·종료 후 |
 | `void hdTrans_FreeMem(void* p)` | `hdTrans_Translate`가 돌려준 버퍼 해제 |
@@ -125,9 +126,11 @@ Windows 전용이며, 이지트랜스를 불러오는 도구는 대부분 32비�
 `hdTransEngine.wasm`입니다. C API를 그대로 내보내며, 사전 파일은 Emscripten 파일 시스템(`FS`)에 써서
 `hdTrans_Initialize`에 그 폴더를 줍니다.
 
-- 내보내는 함수: `hdTrans_Initialize`, `hdTrans_Terminate`, `hdTrans_Translate`, `hdTrans_Reload`,
-  `hdTrans_FreeMem`, `hdTrans_Version`, `hdTrans_Load`, `malloc`, `free`
-- 런타임 메서드: `FS`, `ccall`, `cwrap`, `UTF8ToString`, `stringToUTF8`, `lengthBytesUTF8`, `getValue`
+- 내보내는 함수: `hdTrans_Initialize`, `hdTrans_Terminate`, `hdTrans_Translate`, `hdTrans_Reset`,
+  `hdTrans_Reload`, `hdTrans_UserDictError`, `hdTrans_FreeMem`, `hdTrans_Version`, `hdTrans_Load`, `malloc`, `free`
+- 런타임 메서드: `FS`, `ccall`, `cwrap`, `UTF8ToString`, `stringToUTF8`, `lengthBytesUTF8`, `getValue`, `HEAPU8`
+- 사용자 사전은 파일 시스템 루트의 `/userdict.tsv`입니다. 스레드가 없어 자동으로 다시 읽지 않으므로, 파일을
+  쓴 뒤 `hdTrans_Reload`를 부르거나 `hdTrans_Terminate` 다음 `hdTrans_Initialize`로 다시 불러옵니다.
 - `hdTrans_Load(name, data, n)`(사전 파일을 버퍼로 넘기는 입구, `src/wasm/main.cpp`)는 아직 구현되지 않아
   -1을 돌려줍니다.
 

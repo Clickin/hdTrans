@@ -55,10 +55,11 @@ std::vector<std::string> SplitNul(const char* dirs) {
     return out;
 }
 
-// The folder of the module holding this library in UTF-8; empty when unknown.
+// The folder of the module holding this library in UTF-8; empty when unknown. The root of
+// the Emscripten file system for WebAssembly.
 std::string ModuleDir() {
 #if defined(__EMSCRIPTEN__)
-    return {};
+    return "/";
 #else
 #if defined(_WIN32)
     HMODULE self = nullptr;
@@ -88,6 +89,13 @@ std::string ModuleDir() {
     return std::string(reinterpret_cast<const char*>(dir.data()), dir.size());
 #endif
 }
+
+// WebAssembly has no threads to reload userdict.tsv in the background.
+#if defined(__EMSCRIPTEN__)
+constexpr hdTrans::UserReload kUserReload = hdTrans::UserReload::Off;
+#else
+constexpr hdTrans::UserReload kUserReload = hdTrans::UserReload::Auto;
+#endif
 
 int Copy(const std::string& s, char** out, size_t* outn) {
     auto* buf = static_cast<char*>(std::malloc(s.size() + 1));
@@ -129,7 +137,7 @@ int hdTrans_Initialize(const char* dirs) {
     }
     auto paths = SplitNul(dirs);
     std::string userFile = hdTrans::dict::UserFile(ModuleDir());
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, kUserReload);
     if (!e->Open(paths, false, userFile)) return -1;
     AdminLock lock;
     if (generation != g_generation) return -1;
@@ -158,6 +166,14 @@ int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
     return Copy(g_session->Translate(std::string_view(text, n)), out, outn);
 }
 
+int hdTrans_Reset(void) {
+    std::unique_lock<std::mutex> lock(g_mutex);
+    g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
+    if (!g_session) return -1;
+    g_session->Reset();
+    return 0;
+}
+
 int hdTrans_Reload(void) {
     std::uint64_t generation;
     std::vector<std::string> dirs;
@@ -169,7 +185,7 @@ int hdTrans_Reload(void) {
         dirs = g_dirs;
         userFile = g_userFile;
     }
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, kUserReload);
     // A userdict.tsv that does not load keeps the dictionaries loaded before.
     if (!e->Open(dirs, false, userFile) || !e->UserFileError().empty()) return -1;
     AdminLock lock;
