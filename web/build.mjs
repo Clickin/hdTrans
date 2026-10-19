@@ -5,7 +5,8 @@
 // and the dictionary folder dicts/:
 //   index.html   its version line filled with the date and short hash of the
 //                commit the tree is at (Asia/Seoul)
-//   js/          the page scripts (tsc)
+//   js/<hash>/   the page scripts (tsc), in a folder named by their content hash
+//                so a cached page never pairs old scripts with a new engine
 //   examples/    the example texts listed in examples.tsv, read from
 //                web/examples/ or HDTRANS_WEB_EXAMPLES; list.json names those
 //                found, in the order of examples.tsv
@@ -37,10 +38,16 @@ for (const f of ['hdTransEngine.js', 'hdTransEngine.wasm']) {
 execFileSync(join(here, 'node_modules/.bin/tsc'), ['-p', here], { cwd: here, stdio: 'inherit' });
 
 rmSync(dist, { recursive: true, force: true });
-mkdirSync(join(dist, 'js'), { recursive: true });
+const scripts = readdirSync(out).filter((n) => n.endsWith('.js')).sort();
+const scriptHash = createHash('sha256');
+for (const n of scripts) scriptHash.update(n).update(readFileSync(join(out, n)));
+const style = readFileSync(join(here, 'style.css'));
+scriptHash.update(style);
+const jsDir = `js/${scriptHash.digest('hex').slice(0, 16)}`;
+mkdirSync(join(dist, jsDir), { recursive: true });
 mkdirSync(join(dist, 'examples'));
-copyFileSync(join(here, 'style.css'), join(dist, 'style.css'));
-for (const n of readdirSync(out)) if (n.endsWith('.js')) copyFileSync(join(out, n), join(dist, 'js', n));
+writeFileSync(join(dist, 'style.css'), style);
+for (const n of scripts) copyFileSync(join(out, n), join(dist, jsDir, n));
 
 const list = [];
 for (const line of readFileSync(join(here, 'examples.tsv'), 'utf8').split('\n')) {
@@ -59,7 +66,11 @@ const date = new Date(Number(git('log', '-1', '--format=%ct')) * 1000).toLocaleS
 const page = readFileSync(join(here, 'index.html'), 'utf8');
 const stamp = `<p class="contact" id="version">업데이트 ${date} · ${commit}</p>`;
 if (!page.includes('<p class="contact" id="version">dev</p>')) throw new Error('index.html has no version line');
-writeFileSync(join(dist, 'index.html'), page.replace('<p class="contact" id="version">dev</p>', stamp));
+if (!page.includes('src="js/app.js"') || !page.includes('href="style.css"')) throw new Error('index.html script or style link moved');
+writeFileSync(join(dist, 'index.html'), page
+  .replace('<p class="contact" id="version">dev</p>', stamp)
+  .replace('src="js/app.js"', `src="${jsDir}/app.js"`)
+  .replace('href="style.css"', `href="style.css?${jsDir.slice(3)}"`));
 
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 function asset(file, name) {
