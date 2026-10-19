@@ -103,7 +103,7 @@ public:
         return true;
     }
     bool Entry(const std::string& key, const std::filesystem::path& base) {
-        if (key == "dicts") {
+        if (key == "dicts" || key == "userdict") {
             std::vector<std::string> paths;
             std::string path;
             bool valid = true;
@@ -111,13 +111,16 @@ public:
                 if (!Next()) return false;
                 while (Type() != YAML_SEQUENCE_END_EVENT) {
                     if (Path(path, base)) paths.push_back(path);
-                    else { Error("dicts: expected a path"); valid = false; }
+                    else { Error(key + ": expected a path"); valid = false; }
                     if (!Skip() || !Next()) return false;
                 }
             } else if (Path(path, base)) paths.push_back(path);
-            else { Error("dicts: expected a path or list of paths"); valid = false; }
-            if (valid) result_.settings.dicts = std::move(paths);
-        } else if (key == "userdict" || key == "ehnd" || key == "cache") {
+            else { Error(key + ": expected a path or list of paths"); valid = false; }
+            if (valid) {
+                if (key == "dicts") result_.settings.dicts = std::move(paths);
+                else result_.settings.userdict = std::move(paths);
+            }
+        } else if (key == "ehnd" || key == "cache") {
             if (key == "ehnd" && Type() == YAML_SCALAR_EVENT && ScalarKind(event_) == Kind::Bool) {
                 const std::string enabled = Lower(Scalar(event_));
                 if (enabled != "true" && enabled != "false") {
@@ -135,8 +138,7 @@ public:
                 Error(key + ": expected a path" + (key == "cache" ? " or off" : key == "ehnd" ? " or boolean" : ""));
                 return Skip();
             }
-            if (key == "userdict") result_.settings.userdict = std::move(path);
-            else if (key == "ehnd") {
+            if (key == "ehnd") {
                 result_.settings.ehnd = std::move(path);
                 result_.settings.useEhnd = !result_.settings.ehnd->empty();
             }

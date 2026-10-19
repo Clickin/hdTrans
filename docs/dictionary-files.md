@@ -93,7 +93,7 @@ TSV만 고칩니다. 내장 표의 행은 모두 같은 파일 번호로 컴파�
   Windows 배포는 `hdTrans/` 아래, macOS와 Linux CLI 배포는 최상위에 이 폴더들을 둡니다.
 - CLI는 `-dicts DIR,DIR`(기본값: 데이터 루트의 `dicts`, 없으면 현재 폴더의 `dicts`), C API는
   `hdTrans_Initialize`에 폴더 목록을 줍니다. `J2KEngine.dll`은 데이터 루트의 `dicts/`를 씁니다.
-- 폴더 다음에 [사용자 사전 파일](#userdicttsv) `userdict.tsv`를 불러옵니다.
+- 폴더 다음에 [사용자 사전 파일](#사용자-사전-파일)를 불러옵니다.
 - 목록의 첫 항목이 `.hdsnap` 파일이면 [컴파일한 사전](#컴파일한-사전-hdsnap)입니다.
 
 ## 파일 머리줄
@@ -143,7 +143,7 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 
 ## 사용자 사전
 
-사용자 사전은 데이터 루트의 `user/userdict.tsv`([아래](#userdicttsv))이거나, 사전 폴더에 둔 머리줄 없는
+사용자 사전은 데이터 루트의 `user/userdict*.txt`, `user/userdict*.tsv`([아래](#사용자-사전-파일))이거나, 사전 폴더에 둔 머리줄 없는
 `.tsv` 파일입니다. UTF-8(BOM 허용), 한 줄에 한 항목:
 
 ```
@@ -202,39 +202,33 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 
 정의: `src/core/userdict/userdict.h`.
 
-### userdict.tsv
+### 사용자 사전 파일
 
-- 위치: 데이터 루트의 `user/userdict.tsv`. 같은 폴더의 `userdict.example.tsv`를 복사해 만듭니다.
-  설정은 `user/hdtrans.config.yaml`입니다. 배포본에는 두 파일의 견본만 넣으며 견본은 읽지 않습니다.
-  옛 프로그램 옆 `userdict.tsv`도 지원합니다. CLI는 `-userdict FILE`로 다른 파일을 주거나 빈 값으로 끕니다.
-  파일이 없으면 사용자 사전 없이 불러옵니다.
-- 사전 폴더 다음에 불러오며, 이름과 위치 때문에 `user` 계층입니다. 머리줄은 없어도 되고, 있으면
-  `#! layer=user`여야 합니다. 다른 머리줄은 이 파일 이름을 담은 오류로 불러오기를 실패시킵니다.
-- 일반 파일이면 마지막 사용자 사전(같은 키, 품사의 앞 항목을 대신함)이고, 열 파일이면 `user` 계층 열
-  사전입니다. 열 형식은 캐시 없이 읽습니다.
-- 불러오지 못하면(컴파일되지 않는 줄, 잘못된 머리줄) 이 파일만 빼고 사전 폴더로 시작하며, 이유를
-  기억합니다. `hdTrans_Initialize`, `J2K_Initialize`는 이 때문에 실패하지 않습니다. 이유는 CLI가 표준
-  오류에 경고로, C API는 `hdTrans_UserDictError`로, `J2KEngine.dll`은 디버거 출력(`OutputDebugString`)으로
-  알립니다. CLI에 `-userdict FILE`로 직접 준 파일은 불러오지 못하면 실패합니다.
-- 불러온 뒤에는 파일을 열어 두지 않습니다(Windows에서도 읽는 동안 쓰기, 이름 바꾸기, 삭제를 허용).
-  프로그램이 실행 중일 때 편집기로 저장해도 됩니다.
+- 데이터 루트의 `user/`에서 이름이 `userdict`로 시작하고 `.txt`나 `.tsv`로 끝나는 파일을 모두 읽습니다.
+  대소문자는 구별하지 않고 하위 폴더는 읽지 않습니다. 소문자 파일 이름의 바이트 순서로 읽으며 같은 항목은 뒤 파일이 우선합니다.
+  배포본의 `userdict.example.txt`도 읽지만 주석만 있습니다. 새 항목은 `userdict.txt` 같은 별도 파일에 적으세요.
+  옛 배치에서는 프로그램 옆 `userdict.tsv`를 먼저 읽습니다.
+- `user/hdtrans.config.yaml`의 `userdict: path` 또는 `userdict: [first.tsv, second.txt, folder]`는 기본 탐색을 대신합니다.
+  폴더에서는 같은 파일 이름 규칙으로 찾고, 목록 순서대로 읽습니다. 상대 경로는 설정 파일 기준입니다. 빈 문자열이나 빈 목록은 끕니다.
+  CLI의 `-userdict PATH`도 파일이나 폴더를 받으며 여러 번 줄 수 있습니다. CLI 인자가 설정을 대신합니다.
+- 사전 폴더 다음에 읽습니다. 머리줄은 없어도 되고, 있으면 `#! layer=user`여야 합니다.
+  일반 파일은 같은 키와 품사의 앞 항목을 대신하며, 열 파일은 `user` 계층으로 캐시 없이 읽습니다.
+- 잘못된 파일만 빼고 다른 파일은 읽습니다. 오류는 `파일:줄: 이유`로 CLI의 표준 오류, C API의
+  `hdTrans_UserDictError`, J2KEngine.dll과 GUI의 디버거 출력에 나옵니다. 명시한 파일이 하나뿐인 CLI 호출은 그 파일 오류 때 실패합니다.
+- 불러온 뒤 파일을 열어 두지 않으므로 실행 중에도 편집, 이름 바꾸기, 삭제가 가능합니다.
 
-자동 다시 읽기(`UserReload::Auto`, 두 DLL에서 켜짐, CLI에서 꺼짐):
+자동 다시 읽기(`UserReload::Auto`, 두 DLL과 GUI에서 켜짐, CLI에서 꺼짐):
 
-- 번역을 시작할 때 파일의 크기와 수정 시각을 1초에 한 번까지 확인합니다.
-- 바뀌었으면 사전 폴더와 함께 백그라운드에서 다시 불러오고, 준비되면 한 번에 바꿉니다. 그동안의
-  번역은 이전 사전을 씁니다. 바뀐 사전을 처음 쓰는 세션은 그때까지의 문맥 기억을 지웁니다.
-- 새 파일을 불러오지 못하면 이전 사전을 그대로 쓰고, 파일이 다시 바뀔 때까지 그 판을 다시 시도하지
-  않습니다. 시작할 때 읽지 못한 파일도 고쳐 저장하면 이렇게 반영됩니다.
-- `J2K_ReloadUserDict`와 `hdTrans_Reload`는 바로 다시 불러옵니다. 이때 `userdict.tsv`를 불러오지 못하면
-  이전 사전을 그대로 씁니다.
+- 번역을 시작할 때 1초에 한 번까지 파일 목록과 크기, 수정 시각을 확인해 추가, 변경, 삭제를 반영합니다.
+- 사전 폴더와 함께 백그라운드에서 읽고 준비되면 한 번에 바꿉니다. 그동안은 이전 사전을 쓰며,
+  새 사전을 받는 세션은 문맥 기억을 지웁니다. 오류 파일은 다시 바뀔 때까지 재시도하지 않습니다.
+- 사용자 사전이 전부 잘못된 판이면 이전 사전을 유지합니다. 시작할 때 잘못된 파일은 빼고 열며, 고쳐 저장하면 반영됩니다.
+- `J2K_ReloadUserDict`와 `hdTrans_Reload`는 설정까지 바로 다시 읽습니다.
 
 ### 사용자 사전 쓰기
 
-- CLI: `user/userdict.tsv` 또는 `-userdict FILE`. 폴더로 줄 수도 있습니다: `hdtrans -dicts dicts,user`
-- C API: `user/userdict.tsv`(자동 반영, 바로 반영은 `hdTrans_Reload()`), 또는
-  `hdTrans_Initialize("dicts\0user\0")`의 폴더(고친 뒤 `hdTrans_Reload()`)
-- `J2KEngine.dll`: `user/userdict.tsv`(자동 반영, 바로 반영은 호스트의 사용자 사전 다시 읽기 `J2K_ReloadUserDict`)
+- CLI: `user/userdict.txt` 등에 적거나 `-userdict first.tsv -userdict second.txt`로 지정합니다.
+- C API, J2KEngine.dll, GUI: `user/`의 파일을 자동 반영합니다. 다른 경로는 공통 설정의 `userdict`로 지정합니다.
 
 ## 필터와 Ehnd 사전
 
@@ -286,7 +280,7 @@ hdtrans -dicts dicts -compile-snapshot "$PWD/build/dicts.hdsnap"
 hdtrans -dicts "$PWD/build/dicts.hdsnap",dicts -in in.txt
 ```
 
-- `-compile-snapshot FILE`은 폴더의 열 파일을 FILE에 컴파일하고 종료합니다. `userdict.tsv`는 넣지 않습니다.
+- `-compile-snapshot FILE`은 폴더의 열 파일을 FILE에 컴파일하고 종료합니다. 별도 사용자 사전 파일은 넣지 않습니다.
   FILE이 있는 폴더는 심볼릭 링크가 아니어야 합니다.
 - 폴더 목록(`-dicts`, `hdTrans_Initialize`)의 첫 항목이 `.hdsnap`으로 끝나면 그 파일의 열 사전이 나머지
   폴더의 열 파일을 대신합니다. 나머지 폴더의 열 파일은 읽지 않고, 열 파일이 아닌 파일(`kana.tsv` 등)과

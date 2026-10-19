@@ -1,7 +1,10 @@
 #include "core/dict/folders.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <system_error>
+
+#include "core/dict/runes.h"
 
 namespace hdTrans::dict {
 namespace {
@@ -78,8 +81,48 @@ std::string UserPath(std::string_view programDir, std::string_view name) {
 
 }  // namespace
 
-std::string UserFile(std::string_view programDir) {
-    return programDir.empty() ? std::string() : UserPath(programDir, "userdict.tsv");
+std::vector<std::string> UserFiles(const std::vector<std::string>& paths) {
+    std::vector<std::string> files;
+    for (const std::string& path : paths) {
+        if (path.empty()) continue;
+        if (path.find('\0') != std::string::npos || !internal::ValidUtf8(path)) {
+            files.push_back(path);
+            continue;
+        }
+        std::error_code error;
+        if (!std::filesystem::is_directory(PathOf(path), error)) {
+            error.clear();
+            if (std::filesystem::exists(PathOf(path), error) || error) files.push_back(path);
+            continue;
+        }
+        std::vector<std::string> names;
+        std::filesystem::directory_iterator entries(PathOf(path), error), end;
+        while (!error && entries != end) {
+            const auto filename = Utf8(entries->path().filename());
+            const auto lower = Lower(filename);
+            std::error_code kindError;
+            if (lower.starts_with("userdict") && (lower.ends_with(".txt") || lower.ends_with(".tsv")) &&
+                entries->is_regular_file(kindError) && !kindError) names.push_back(filename);
+            entries.increment(error);
+        }
+        std::sort(names.begin(), names.end(), [](const std::string& left, const std::string& right) {
+            const auto lowerLeft = Lower(left), lowerRight = Lower(right);
+            return lowerLeft == lowerRight ? left < right : lowerLeft < lowerRight;
+        });
+        for (const std::string& name : names) files.push_back(Utf8(PathOf(path) / PathOf(name)));
+    }
+    return files;
+}
+
+std::vector<std::string> UserPaths(std::string_view programDir) {
+    if (programDir.empty()) return {};
+    std::vector<std::string> paths{UserFolder(programDir)};
+    if (DataFolder(programDir) == programDir) {
+        const auto legacy = FindChild(programDir, "userdict.tsv");
+        std::error_code error;
+        if (std::filesystem::is_regular_file(PathOf(legacy), error)) paths.insert(paths.begin(), legacy);
+    }
+    return paths;
 }
 
 std::string ConfigFile(std::string_view programDir) { return UserPath(programDir, "hdtrans.config.yaml"); }

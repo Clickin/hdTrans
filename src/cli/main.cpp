@@ -4,9 +4,8 @@
 //   -dicts DIR[,DIR...]   dictionary folders in load order (default: data root/dicts,
 //                         else dicts in the current directory); a first
 //                         FILE.hdsnap gives the column dictionaries of the folders
-//   -userdict FILE        user dictionary file, which must load (default: userdict.tsv
-//                         in data root/user, left out with a warning when it does not
-//                         load; empty for none)
+//   -userdict PATH        user dictionary file or folder; repeat for several sources
+//                         (default: userdict*.txt/tsv in data root/user; empty for none)
 //   -each                 a new session for every line
 //   -raw                  translate each line with the word pipeline only
 //   -reference            disable translation improvements
@@ -214,7 +213,8 @@ int main(int argc, char** argv) {
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stderr), _O_BINARY);
 #endif
-    std::optional<std::string> dictsArg, userFileArg, snapshotOut;
+    std::optional<std::string> dictsArg, snapshotOut;
+    std::optional<std::vector<std::string>> userPathsArg;
     std::optional<std::string> ehndArg, configArg;
     std::string inPath;
     std::string ruleCountsPath;
@@ -235,7 +235,10 @@ int main(int argc, char** argv) {
         const char* a = argv[i];
         if (!std::strcmp(a, "-dicts") && i + 1 < argc) dictsArg = argv[++i];
         else if (!std::strcmp(a, "-config") && i + 1 < argc) configArg = argv[++i];
-        else if (!std::strcmp(a, "-userdict") && i + 1 < argc) userFileArg = argv[++i];
+        else if (!std::strcmp(a, "-userdict") && i + 1 < argc) {
+            if (!userPathsArg) userPathsArg.emplace();
+            userPathsArg->emplace_back(argv[++i]);
+        }
         else if (!std::strcmp(a, "-in") && i + 1 < argc) inPath = argv[++i];
         else if (!std::strcmp(a, "-ehnd") && i + 1 < argc) ehndArg = argv[++i];
         else if (!std::strcmp(a, "-stages") && i + 1 < argc) stagesDir = argv[++i];
@@ -253,7 +256,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-no-cg")) noCg = true;
         else if (!std::strcmp(a, "-cg-learned")) cgLearned = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-config FILE] [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-config FILE] [-dicts DIR,...] [-userdict PATH]... [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-rule-counts FILE] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
@@ -272,7 +275,7 @@ int main(int argc, char** argv) {
     for (const auto& diagnostic : config.diagnostics) {
         std::fprintf(stderr, "hdtrans: %s:%zu: %s\n", configPath.c_str(), diagnostic.line, diagnostic.message.c_str());
     }
-    if (!userFileArg && config.settings.userdict) userFileArg = config.settings.userdict;
+    if (!userPathsArg && config.settings.userdict) userPathsArg = config.settings.userdict;
     if (!ehndArg && config.settings.ehnd) ehndArg = config.settings.ehnd;
     reference = reference || config.settings.reference;
     misread = misread || config.settings.misread;
@@ -303,7 +306,7 @@ int main(int argc, char** argv) {
         if (compileDicts) return 1;
     }
     std::string dicts = dictsArg ? *dictsArg : hdTrans::dict::DefaultFolder(programDir);
-    const std::string userFile = userFileArg ? *userFileArg : hdTrans::dict::UserFile(programDir);
+    const auto userPaths = userPathsArg.value_or(hdTrans::dict::UserPaths(programDir));
     const auto folders = !dictsArg && config.settings.dicts ? *config.settings.dicts : SplitComma(dicts);
     if (!dictsArg && config.settings.dicts) {
         dicts.clear();
@@ -344,15 +347,15 @@ int main(int argc, char** argv) {
     if (why) std::setvbuf(stderr, nullptr, _IOFBF, 1 << 16);
 
     hdTrans::Engine engine(reference);
-    if (!engine.Open(folders, verifyDicts, userFile)) {
+    if (!engine.OpenUserDicts(folders, verifyDicts, userPaths)) {
         std::fprintf(stderr, "hdtrans: no dictionary loaded from %s\n", dicts.c_str());
         return 1;
     }
     if (const std::string error = engine.UserFileError(); !error.empty()) {
-        // A user dictionary named with -userdict must load; the default one is optional.
-        std::fprintf(stderr, "hdtrans: %suser dictionary not loaded:\n%s\n", userFileArg ? "" : "warning: ",
+        const bool single = userPathsArg && hdTrans::dict::UserFiles(userPaths).size() == 1;
+        std::fprintf(stderr, "hdtrans: %suser dictionary not loaded:\n%s\n", single ? "" : "warning: ",
                      error.c_str());
-        if (userFileArg) return 1;
+        if (single) return 1;
     }
     const std::string ehnd = ehndArg ? *ehndArg : config.settings.useEhnd ? hdTrans::dict::EhndFolder(programDir) : "";
     if (!ehnd.empty() && !engine.OpenEhnd(ehnd)) {

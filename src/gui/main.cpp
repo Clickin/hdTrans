@@ -191,9 +191,9 @@ bool LoadEngine(App& app, std::string dir = {}) {
     }
     app.engine = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
     const auto dirs = settings.dicts.value_or(std::vector<std::string>{hdTrans::dict::ShippedFolder(dir)});
-    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    const auto userPaths = settings.userdict.value_or(hdTrans::dict::UserPaths(dir));
     app.engine->OpenEhnd(settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "");
-    if (!app.engine->Open(dirs, false, userFile)) {
+    if (!app.engine->OpenUserDicts(dirs, false, userPaths)) {
         app.error = L"사전을 읽지 못했습니다. 데이터 폴더의 dicts와 user/hdtrans.config.yaml 설정을 확인해 주세요.";
         return false;
     }
@@ -596,8 +596,9 @@ bool SelfTestConfig(App& app, const fs::path& folder) {
     if (!Check(WriteFixture(data / L"DiCtS/base.tsv", header + "猫\t기본사전\tN110\t\t\tGN\t\t\t\t\t1\n") &&
                WriteFixture(data / L"別辞書/base.tsv", header + "猫\t설정사전\tN110\t\t\tGN\t\t\t\t\t1\n") &&
                WriteFixture(user / L"USERDICT.TSV", "犬\t기본사용자\n") &&
-               WriteFixture(user / L"custom.tsv", "犬\t사용자설정\n") &&
-               WriteFixture(config, "dicts: ../別辞書\nuserdict: custom.tsv\ncache: off\n"
+               WriteFixture(user / L"custom.tsv", "犬\t앞파일\n") &&
+               WriteFixture(user / L"custom.txt", "犬\t사용자설정\n") &&
+               WriteFixture(config, "dicts: ../別辞書\nuserdict: [custom.tsv, custom.txt]\ncache: off\n"
                                     "cg: false\nmisread: true\nreference: true\n"), "write config fixtures")) return false;
     const wchar_t* initialCache = _wgetenv(L"HDTRANS_CACHE_DIR");
     const std::optional<std::wstring> previousCache = initialCache ? std::optional<std::wstring>(initialCache) : std::nullopt;

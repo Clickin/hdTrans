@@ -21,7 +21,7 @@ extern "C" {
 
 /* Loads dirs (NUL-separated, double NUL at the end), later folders overriding earlier
  * ones. Empty dirs uses the config's dicts. The data root is hdTrans/ next to the library
- * when present, otherwise the library folder; user/ holds config and userdict.tsv.
+ * when present, otherwise the library folder; user/ holds config and userdict*.txt/tsv.
  * Legacy files next to the library remain supported. Ehnd is opt-in through config
  * or hdTrans_OpenEhnd. User dictionary errors are available through hdTrans_UserDictError.
  * Changed user files reload in the background, except on WebAssembly.
@@ -42,8 +42,8 @@ HDTRANS_API int hdTrans_Translate(const char* text, size_t n, char** out, size_t
 HDTRANS_API int hdTrans_Reset(void);
 
 /* Rereads config, dictionary folders and the user dictionary. Returns 0, or -1 when
- * uninitialized, terminated, or the reload fails; a userdict.tsv that does not load
- * fails it and keeps the dictionaries loaded before. */
+ * uninitialized, terminated, or the reload fails. Bad user files are skipped when
+ * other user files load; a sole failed file keeps the dictionaries loaded before. */
 HDTRANS_API int hdTrans_Reload(void);
 
 /* Writes config diagnostics and user dictionary errors, one line per error, as
@@ -53,7 +53,7 @@ HDTRANS_API int hdTrans_UserDictError(char** out, size_t* outn);
 
 /* Takes the filters and user dictionary of the Ehnd folder dir (UTF-8; NULL or empty
  * drops them) for the following translations; dir is watched and reloaded like
- * userdict.tsv. Returns 0, or -1 when uninitialized, terminated, or dir cannot be read. */
+ * the user dictionary files. Returns 0, or -1 when uninitialized, terminated, or dir cannot be read. */
 HDTRANS_API int hdTrans_OpenEhnd(const char* dir);
 
 /* Writes the lines of the filter files and of the Ehnd folder that were skipped, as

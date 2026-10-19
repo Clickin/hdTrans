@@ -114,6 +114,15 @@ if(NOT EMSCRIPTEN)
     target_include_directories(hdtrans_cli PRIVATE src)
     target_link_libraries(hdtrans_cli PRIVATE hdtrans)
     set_target_properties(hdtrans_cli PROPERTIES OUTPUT_NAME hdtrans PDB_NAME hdtrans_cli)
+    set(HDTRANS_USER_STAGE "$<TARGET_FILE_DIR:hdtrans_cli>/user")
+    if(WIN32)
+        set(HDTRANS_USER_STAGE "$<TARGET_FILE_DIR:hdtrans_cli>/hdTrans/user")
+    endif()
+    add_custom_command(TARGET hdtrans_cli POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${HDTRANS_USER_STAGE}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/user/userdict.example.txt"
+            "${HDTRANS_USER_STAGE}/userdict.example.txt" VERBATIM)
+
 
     file(GLOB_RECURSE HDTRANS_TEST_SOURCES CONFIGURE_DEPENDS tests/unit/*.cpp)
     add_library(hdtrans_gui_support STATIC src/gui/text_file.cpp src/gui/translation.cpp)

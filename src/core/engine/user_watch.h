@@ -1,5 +1,5 @@
 #pragma once
-// The user dictionary file of an engine and its automatic reload (UserReload::Auto).
+// User dictionary sources and their automatic reload (UserReload::Auto).
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -41,6 +41,19 @@ struct FileWatch {
     // finds a version other than loaded and failed, stored in found.
     bool Due(std::string_view path, std::chrono::steady_clock::time_point now,
              std::chrono::steady_clock::duration interval, FileVersion& found);
+};
+
+using UserVersion = std::vector<std::pair<std::string, FileVersion>>;
+UserVersion UserVersionOf(const std::vector<std::string>& paths);
+
+struct UserFilesWatch {
+    UserVersion loaded;
+    UserVersion failed;
+    bool hasFailed = false;
+    std::chrono::steady_clock::time_point next{};
+
+    bool Due(const std::vector<std::string>& paths, std::chrono::steady_clock::time_point now,
+             std::chrono::steady_clock::duration interval, UserVersion& found);
 };
 
 // The files of an Ehnd folder that a load reads, with their stamps, in load order.
@@ -95,7 +108,7 @@ struct ReloadTarget {
 struct UserWatch {
     bool automatic = false;  // UserReload::Auto
     bool detached = false;   // no more reloads: the engine is being abandoned
-    FileWatch watch;
+    UserFilesWatch watch;
     FolderWatch ehnd;  // the Ehnd folder
     std::vector<dict::LoadError> errors;  // why the failed version did not load
     std::shared_ptr<ReloadTarget> target = std::make_shared<ReloadTarget>();

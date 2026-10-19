@@ -56,7 +56,8 @@ HD_TEST(ConfigAllKeys) {
     HD_CHECK_EQ((*settings.dicts)[0], file.Resolve("dicts"));
     HD_CHECK_EQ((*settings.dicts)[1], file.Resolve("../extra"));
     HD_REQUIRE(settings.userdict && settings.ehnd && settings.cache);
-    HD_CHECK_EQ(*settings.userdict, file.Resolve("user.tsv"));
+    HD_REQUIRE(settings.userdict->size() == 1);
+    HD_CHECK_EQ(settings.userdict->front(), file.Resolve("user.tsv"));
     HD_CHECK_EQ(*settings.ehnd, file.Resolve("Ehnd"));
     HD_CHECK_EQ(*settings.cache, file.Resolve("cache"));
     HD_CHECK(!settings.cg);
@@ -82,7 +83,8 @@ HD_TEST(ConfigPaths) {
     const auto result = file.Load("userdict: '" + absolute + "'\nehnd: ''\ncache: OFF\n");
     HD_REQUIRE(result.diagnostics.empty());
     HD_REQUIRE(result.settings.userdict && result.settings.ehnd && result.settings.cache);
-    HD_CHECK_EQ(*result.settings.userdict, absolute);
+    HD_REQUIRE(result.settings.userdict->size() == 1);
+    HD_CHECK_EQ(result.settings.userdict->front(), absolute);
     HD_CHECK(result.settings.ehnd->empty());
     HD_CHECK_EQ(*result.settings.cache, "off");
 }
@@ -178,4 +180,24 @@ HD_TEST(ConfigEhndSwitch) {
             HD_CHECK_EQ(*result.settings.ehnd, file.Resolve(test.path));
         } else HD_CHECK(!result.settings.ehnd);
     }
+}
+
+HD_TEST(ConfigUserDictionaryList) {
+    TempConfig file;
+    const auto result = file.Load("userdict: [first.tsv, '사용자 폴더', second.txt]\n");
+    HD_REQUIRE(result.diagnostics.empty());
+    HD_REQUIRE(result.settings.userdict && result.settings.userdict->size() == 3);
+    HD_CHECK_EQ((*result.settings.userdict)[0], file.Resolve("first.tsv"));
+    HD_CHECK_EQ((*result.settings.userdict)[1], file.Resolve("사용자 폴더"));
+    HD_CHECK_EQ((*result.settings.userdict)[2], file.Resolve("second.txt"));
+    for (const char* text : {"userdict: []\n", "userdict: ''\n"}) {
+        const auto empty = file.Load(text);
+        HD_REQUIRE(empty.settings.userdict);
+        HD_CHECK(empty.diagnostics.empty());
+        HD_CHECK(empty.settings.userdict->empty() || empty.settings.userdict->front().empty());
+    }
+    const auto invalid = file.Load("userdict: first.tsv\nuserdict: [second.tsv, 42]\ncg: false\n");
+    HD_REQUIRE(invalid.diagnostics.size() == 1 && invalid.settings.userdict);
+    HD_CHECK_EQ(invalid.settings.userdict->front(), file.Resolve("first.tsv"));
+    HD_CHECK(!invalid.settings.cg);
 }

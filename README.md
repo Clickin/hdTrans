@@ -43,7 +43,7 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 | 옵션 | 설명 |
 |---|---|
 | `-dicts DIR[,DIR...]` | 사전 폴더. 쉼표로 여러 개를 주면 뒤 폴더가 앞 폴더를 덮어씁니다 (기본값: 데이터 루트의 `dicts`, 없으면 현재 폴더의 `dicts`) |
-| `-userdict FILE` | 사용자 사전 파일 (기본값: 데이터 루트의 `user/userdict.tsv`, 빈 값이면 쓰지 않음) |
+| `-userdict PATH` | 사용자 사전 파일이나 폴더. 여러 번 지정 가능 (기본값: 데이터 루트 `user/`의 `userdict*.txt`, `userdict*.tsv`, 빈 값이면 쓰지 않음) |
 | `-in FILE` | 표준 입력 대신 파일에서 읽기 |
 | `-each` | 줄마다 새 세션으로 번역 (줄끼리 문맥을 나누지 않음) |
 | `-compile-dicts` | 사전 캐시를 미리 만들고 종료 |
@@ -55,7 +55,7 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 ### Windows 창: `hdTransGUI.exe`
 
 `hdTransGUI.exe`에서 단문을 번역하거나, **문서 번역**으로 텍스트 파일을 번역할 수 있습니다.
-실행 파일 옆에 `hdTrans/dicts/`를 두세요. 사용자 사전은 `hdTrans/user/userdict.tsv`,
+실행 파일 옆에 `hdTrans/dicts/`를 두세요. 사용자 사전은 `hdTrans/user/userdict*.txt`와 `userdict*.tsv`,
 설정은 `hdTrans/user/hdtrans.config.yaml`에서 엔진을 처음 불러올 때 읽습니다. `hdTrans/`가 없으면
 실행 파일이 있는 폴더를 데이터 루트로 씁니다. 별도 엔진 DLL이나 Visual C++ 런타임 설치는 필요 없습니다.
 
@@ -70,7 +70,7 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 
 1. 이지트랜스 폴더의 원래 `J2KEngine.dll`을 백업하고 hdTrans의 `J2KEngine.dll`로 바꿉니다.
 2. 같은 폴더에 `hdTrans/dicts/`를 만들고 저장소 `dicts/`의 `*.tsv` 파일을 복사합니다.
-3. 사용자 사전을 쓰려면 `hdTrans/user/userdict.example.tsv`를 `userdict.tsv`로 복사해 고칩니다. 도구가 실행 중일 때 고쳐 저장해도
+3. 사용자 사전은 `hdTrans/user/userdict.txt` 같은 새 파일에 적습니다. 배포본의 `userdict.example.txt`는 주석뿐이며 업데이트 때 덮어씁니다. 실행 중에 고쳐 저장해도
    다음 번역부터 자동으로 반영됩니다. 도구의 사용자 사전 다시 읽기(`J2K_ReloadUserDict`)는 바로
    반영합니다.
 
@@ -98,7 +98,8 @@ hdTrans_Terminate();
 
 ### 사용자 사전
 
-데이터 루트의 `user/userdict.tsv`에 한 줄에 한 항목씩 탭으로 구분해 적습니다. `#`이나 `//`로 시작하는 줄은 주석입니다.
+데이터 루트의 `user/`에 `userdict*.txt`나 `userdict*.tsv`로 저장합니다. 이름은 대소문자를 구별하지 않고,
+소문자 이름의 바이트 순서로 읽어 같은 항목은 뒤 파일이 우선합니다. 한 줄에 한 항목씩 탭으로 구분하며 `#`이나 `//`로 시작하는 줄은 주석입니다.
 
 ```
 # 일본어	한국어	품사
@@ -108,8 +109,8 @@ hdTrans_Terminate();
 ```
 
 품사를 생략하면 명사입니다. 두 DLL은 파일이 바뀌면 알아서 다시 읽으므로, 번역 도구를 켜 둔 채
-편집기로 고쳐 저장하면 됩니다. 잘못된 줄이 있으면 사용자 사전만 빼고 번역하며, 고쳐 저장하면 다시
-반영됩니다. CLI는 시작할 때 읽으며(문제가 있으면 경고), 다른 파일은 `-userdict FILE`로 줍니다.
+편집기로 고쳐 저장하면 됩니다. 잘못된 파일만 빼고 나머지를 읽으며, 고쳐 저장하면 다시
+반영됩니다. CLI는 시작할 때 읽으며(문제가 있으면 경고), 다른 경로는 `-userdict PATH`를 반복하거나 설정에 `userdict: [first.tsv, second.txt, folder]`로 줍니다.
 품사 목록과 옵션은 [docs/dictionary-files.md](docs/dictionary-files.md#사용자-사전)를 참고하세요.
 
 Ehnd(꿀도르 등)는 기본으로 꺼져 있습니다. 쓰려면 설정 파일에 `ehnd: true`나 폴더 경로를 적거나

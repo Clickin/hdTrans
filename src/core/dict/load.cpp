@@ -564,6 +564,8 @@ bool SnapshotLoader::BuildBase(const std::vector<std::size_t>& baseFiles) {
             const std::size_t start = user.Rows().size();
             if (!ReadColumns(i, user, nullptr)) return false;
             user.ByPrio(start);
+            user.Shadow(start, nullptr, s.codes_);
+            user.Compact();
         } else {
             const std::size_t start = base.Rows().size();
             std::vector<uint32_t> replacing;
@@ -656,23 +658,31 @@ LoadResult Load(std::vector<File> files) {
 }
 
 LoadResult LoadFoldersTsv(const std::vector<std::string>& folders, std::string_view userFile) {
+    return LoadFoldersTsv(folders, std::vector<std::string>{std::string(userFile)});
+}
+
+LoadResult LoadFoldersTsv(const std::vector<std::string>& folders, const std::vector<std::string>& userFiles) {
     std::vector<File> files;
     std::vector<LoadError> errors;
-    if (!ReadFolderFiles(folders, false, files, errors) ||
-        !ReadUserFile(userFile, folders.size(), false, files, errors)) {
-        return {nullptr, std::move(errors)};
+    if (!ReadFolderFiles(folders, false, files, errors)) return {nullptr, std::move(errors)};
+    bool read = true;
+    for (const std::string& userFile : userFiles) {
+        read = ReadUserFile(userFile, folders.size(), false, files, errors) && read;
     }
+    if (!read) return {nullptr, std::move(errors)};
     return Load(std::move(files));
 }
 
 LoadResult LoadPlainFolders(std::shared_ptr<Snapshot> snapshot, const std::vector<std::string>& folders,
-                           std::vector<LoadError> errors, std::string_view userFile) {
+                           std::vector<LoadError> errors, const std::vector<std::string>& userFiles) {
     SnapshotLoader loader(std::move(snapshot));
     std::vector<LoadError> readErrors;
-    if (!ReadFolderFiles(folders, true, loader.files, readErrors) ||
-        !ReadUserFile(userFile, folders.size(), true, loader.files, readErrors)) {
-        return {nullptr, std::move(readErrors)};
+    if (!ReadFolderFiles(folders, true, loader.files, readErrors)) return {nullptr, std::move(readErrors)};
+    bool read = true;
+    for (const std::string& userFile : userFiles) {
+        read = ReadUserFile(userFile, folders.size(), true, loader.files, readErrors) && read;
     }
+    if (!read) return {nullptr, std::move(readErrors)};
     loader.errors = std::move(errors);
     if (!loader.ReadLayers()) return {nullptr, std::move(loader.errors)};
     std::vector<std::size_t> rest;
