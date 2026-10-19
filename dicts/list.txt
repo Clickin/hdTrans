@@ -1,0 +1,10 @@
+base.tsv            base   364304  기본 사전: 일반 어휘·어미·조사·조동사, 품사·의미 코드 포함
+kana.tsv            kana     8797  한자 단어의 히라가나 표기 (읽기 → 한자 키, 활용 부류)
+names-places.tsv    names   25415  일본 지명: 역·노선·도도부현·시정촌·명소 (Wikidata)
+names.00.tsv        names  297755  인명·캐릭터·지명·단체·작품 이름 (Wikidata·JMnedict·pixiv백과·나무위키, 키 순 1/3)
+names.01.tsv        names  328569  인명·캐릭터·지명·단체·작품 이름 (Wikidata·JMnedict·pixiv백과·나무위키, 키 순 2/3)
+names.02.tsv        names  141007  인명·캐릭터·지명·단체·작품 이름 (Wikidata·JMnedict·pixiv백과·나무위키, 키 순 3/3)
+words-idioms.tsv    words    7764  관용구·숙어·사자성어 (JMdict 표현 항목)
+words-slang.tsv     words    9433  속어·구어·인터넷 용어 (JMdict, pixiv백과 용어)
+words-variants.tsv  words   20593  기존 단어의 다른 표기: 이표기·가나 표기·반복 부호
+words.tsv           words   26617  어휘 보충: 명사·동사·형용사·부사·복합어
