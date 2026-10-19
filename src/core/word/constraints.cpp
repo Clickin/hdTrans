@@ -41,6 +41,8 @@ constexpr ConstraintRule kRules[] = {
      "동사 た·だ·る 바로 뒤의 先은 곳 (嫁いだ先 시집간 앞 → 시집간 곳). まだ先, この先는 그대로", "곳"},
     {"sakini-after-verb", ConstraintWord::Source, "先に", ConstraintContext::AfterVerbEnding,
      ConstraintReject::OtherTargets, "동사 た·だ·る 바로 뒤의 先に는 곳에 (戻した先に 되돌린 먼저 → 되돌린 곳에)", "곳에"},
+    {"kou-naru", ConstraintWord::Source, "こう", ConstraintContext::BeforeNaru, ConstraintReject::OtherTargets,
+     "なる 앞의 こう는 부사 이렇게 (こうなるんだ 이러한 이다 → 이렇게 되는 거야). こうなのだ는 그대로", "이렇게"},
     {"sakini-after-demonstrative", ConstraintWord::Source, "先に", ConstraintContext::AfterDemonstrative,
      ConstraintReject::OtherTargets, "この·その·あの 뒤의 先に는 앞에 (この先に 이 먼저 → 이 앞에). 先に行く는 그대로 먼저", "앞에"},
 };
@@ -170,6 +172,8 @@ bool ContextFits(const ConstraintRule& rule, const std::vector<dict::Candidate>&
                !preceding.ends_with("まだ");
     case ConstraintContext::AfterDemonstrative:
         return preceding.ends_with("この") || preceding.ends_with("その") || preceding.ends_with("あの");
+    case ConstraintContext::BeforeNaru:
+        return after.starts_with("なる") && !after.starts_with("なるべく") && !after.starts_with("なるほど");
     case ConstraintContext::LineOpening:
     case ConstraintContext::Elsewhere:
         return ((previous.empty() || StartsWithAny(previous, kOpeningBrackets)) &&

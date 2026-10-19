@@ -964,7 +964,10 @@ bool RuleL106([[maybe_unused]] Item* p) {
 }
 
 // # から는 앞뒤의 장소·숫자 명사, 장소·시간 명사 뒤의 降り·おり·出 동사, QNN 또는 VFn 의미 명사 뒤의 동사 등 출발점 조건에서 ‘에서’를 고른다.
+// # 사람이 아닌 명사에서 무언가가 날아·뿜어·새어·넘쳐 나오는 문맥(石から火線が飛び, 傷から血が溢れ)도 ‘에서’다.
 // local 107
+//     pos[-1] is 1** and sem[-1] lacks VHn and pos[+1] is 4** and (src[+1] starts "飛" or src[+1] starts "噴" or src[+1] starts "漏" or src[+1] starts "溢" or src[+1] starts "湧" or src[+1] starts "零")
+//     pos[-1] is 1** and sem[-1] lacks VHn and pos[+1] is 1** and src[+2] == "が" and pos[+3] is 4** and (src[+3] starts "飛" or src[+3] starts "噴" or src[+3] starts "漏" or src[+3] starts "溢" or src[+3] starts "湧" or src[+3] starts "零" or src[+3] == "出")
 //     pos[-1] is 1** and sem[-1] has VPl and pos[+1] is 1** and sem[+1] has VPl
 //     pos[-1] is 1** and gram[-1] has Nj|Nd and pos[+1] is 1** and gram[+1] has Nj|Nd
 //     pos[-1] is 1** and sem[-1] under VPl|VTp and (src[+1] == "降り" or src[+1] == "おり" or src[+1] == "出") and pos[+1] is 4**
@@ -972,7 +975,20 @@ bool RuleL106([[maybe_unused]] Item* p) {
 //     sem[-1] has VFn
 //     pos[-1] is 1** and gram[-2] has Nj|Nd and gram[+1] has Nj|Nd and pos[+2] is 1**
 bool RuleL107([[maybe_unused]] Item* p) {
-    return (PumsaEq(p, -1, "1**"sv) && AttrEq(p, -1, "VPl"sv) && PumsaEq(p, 1, "1**"sv) && AttrEq(p, 1, "VPl"sv)) ||
+    return (PumsaEq(p, -1, "1**"sv) && AttrNe(p, -1, "VHn"sv) && PumsaEq(p, 1, "4**"sv) && (SrcEq(p, 1, "L飛"sv) ||
+           SrcEq(p, 1, "L噴"sv) ||
+           SrcEq(p, 1, "L漏"sv) ||
+           SrcEq(p, 1, "L溢"sv) ||
+           SrcEq(p, 1, "L湧"sv) ||
+           SrcEq(p, 1, "L零"sv))) ||
+           (PumsaEq(p, -1, "1**"sv) && AttrNe(p, -1, "VHn"sv) && PumsaEq(p, 1, "1**"sv) && SrcEq(p, 2, "が"sv) && PumsaEq(p, 3, "4**"sv) && (SrcEq(p, 3, "L飛"sv) ||
+           SrcEq(p, 3, "L噴"sv) ||
+           SrcEq(p, 3, "L漏"sv) ||
+           SrcEq(p, 3, "L溢"sv) ||
+           SrcEq(p, 3, "L湧"sv) ||
+           SrcEq(p, 3, "L零"sv) ||
+           SrcEq(p, 3, "出"sv))) ||
+           (PumsaEq(p, -1, "1**"sv) && AttrEq(p, -1, "VPl"sv) && PumsaEq(p, 1, "1**"sv) && AttrEq(p, 1, "VPl"sv)) ||
            (PumsaEq(p, -1, "1**"sv) && GramEq(p, -1, "NjNd"sv) && PumsaEq(p, 1, "1**"sv) && GramEq(p, 1, "NjNd"sv)) ||
            (PumsaEq(p, -1, "1**"sv) && AttrMinusEq(p, -1, "VPlVTp"sv) && (SrcEq(p, 1, "降り"sv) ||
            SrcEq(p, 1, "おり"sv) ||
@@ -5043,7 +5059,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL104, 0x28d244ebae38bc42ull},
     {RuleL105, 0xd5c6c48a088228b6ull},
     {RuleL106, 0xc73941e62e38e6c0ull},
-    {RuleL107, 0x61235054dad9f22bull},
+    {RuleL107, 0xd2853acdc53a271aull},
     {RuleL108, 0xc3e03b1a6a87d717ull},
     {RuleL109, 0xb59da349669dcd59ull},
     {RuleL110, 0x445496945cbda23eull},

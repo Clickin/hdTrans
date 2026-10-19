@@ -52,7 +52,9 @@ const dict::Snapshot* Dictionary() {
          "先\t곳\tN110\tVPl\t\tGN\t32\n"
          "先に\t먼저\tM300\tUMe\t\tGN\t33\n"
          "先に\t곳에\tM300\t\t\tGN\t34\n"
-         "先に\t앞에\tM300\t\t\tGN\t35\n"},
+         "先に\t앞에\tM300\t\t\tGN\t35\n"
+         "こう\t이렇게\tN311\t\t\tGN\t36\n"
+         "こう\t이러%A1@\tG8U0\t\t\tGN\t37\n"},
         {0, "names.tsv",
          "#! layer=names\n"
          "key\tko\tpos\tsem\tgram\tdict\tid\n"
@@ -98,7 +100,7 @@ void CheckCases(std::initializer_list<Case> cases, std::string_view before = {})
 }  // namespace
 
 HD_TEST(constraint_rules_table) {
-    HD_CHECK_EQ(word::ConstraintRules().size(), size_t{12});
+    HD_CHECK_EQ(word::ConstraintRules().size(), size_t{13});
     for (const word::ConstraintRule& r : word::ConstraintRules()) {
         HD_CHECK(!r.id.empty());
         HD_CHECK(!r.note.empty());
@@ -202,5 +204,14 @@ HD_TEST(constraint_saki_after_verb) {
         {"戻した先に", "先に", "先に", "곳에"},
         {"この先に", "先に", "先に", "앞에"},
         {"先に行く", "先に行く", "先に", "먼저 곳에 앞에"},
+    });
+}
+
+// こう before なる is the adverb 이렇게 (こうなるんだ 이렇게 되는 거야); こうなのだ and こうなるほど keep both.
+HD_TEST(constraint_kou_naru) {
+    CheckCases({
+        {"こうなるんだ", "こうなるんだ", "こう", "이렇게"},
+        {"こうなのだ", "こうなのだ", "こう", "이러%A1@ 이렇게"},
+        {"こうなるほど", "こうなるほど", "こう", "이러%A1@ 이렇게"},
     });
 }

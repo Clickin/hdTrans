@@ -26,6 +26,7 @@ enum class ConstraintContext : uint8_t {
     BeforeNumeralAgo,   // a numeral follows, and 前 within eight characters after it, before any punctuation
     AfterVerbEnding,    // right after a verb in た, だ or る (行った先, 見やる先), not after まだ
     AfterDemonstrative, // right after この, その or あの
+    BeforeNaru,         // なる follows (こうなる), not the old attributive of an adjective (こうなるべく)
 };
 
 // The senses a rule rejects.
