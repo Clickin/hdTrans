@@ -117,10 +117,15 @@ Ehnd(꿀도르 등)는 기본으로 꺼져 있습니다. 쓰려면 설정 파일
 
 ## 지원 플랫폼
 
-- Windows x86 / x64 (`hdtrans.exe`, `hdTransEngine.dll`, `J2KEngine.dll`)
+- Windows x86 / x64 (`hdtrans.exe`, `hdTransGUI.exe`, `hdTransEngine.dll`, `J2KEngine.dll`은 x86만)
 - Linux
 - macOS
 - WebAssembly
+
+## 라이선스
+
+[GNU Affero General Public License v3.0 이상](LICENSE)(AGPL-3.0-or-later). 고쳐서 배포하거나 네트워크 서비스로
+제공하면 고친 소스를 공개해야 합니다. 함께 들어 있는 외부 라이브러리는 [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt)에 있습니다.
 
 ## 개발 문서
 
