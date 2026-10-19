@@ -11,7 +11,9 @@ file(WRITE "${root}/dicts/dicts.txt" "test-dictionary-1\n")
 function(run_cli)
     execute_process(COMMAND "${CMAKE_COMMAND}" -E env "HOME=${root}/home" "HDTRANS_CACHE_DIR=off"
         "${CLI}" --dicts "${root}/dicts" --userdict "" ${ARGN}
-        RESULT_VARIABLE status OUTPUT_VARIABLE output ERROR_VARIABLE error)
+        RESULT_VARIABLE status OUTPUT_FILE "${root}/stdout" ERROR_VARIABLE error)
+    # Keep CRLF bytes that execute_process normalizes in OUTPUT_VARIABLE.
+    file(READ "${root}/stdout" output)
     set(status "${status}" PARENT_SCOPE)
     set(output "${output}" PARENT_SCOPE)
     set(error "${error}" PARENT_SCOPE)
