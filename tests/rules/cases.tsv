@@ -458,7 +458,7 @@ L2963	運転手さんにお礼を言った。	운전기사에 감사 인사를 �
 L2975	あれはうちの猫よ。	저것은 우리 고양이야.	current	local
 L2975	今日は私の誕生日よ。	오늘은 나의 생일이야.	current	local
 L2989	梨がへった。	배가 고파졌다.	current	local
-L3007	どうもすみませんが、教えてください。	아무래도 죄송합니다만, 가르쳐 주세요.	current	local
+L3007	どうもすみませんが、教えてください。	정말로 죄송합니다만, 가르쳐 주세요.	fix	local
 L3044	ホテルはネットで予約出来ます。	호텔은 넷에서 예약 할 수 있습니다.	current	local
 L3044	この部屋で自由に料理が出来る。	이 방에서 자유롭게 요리를 할 수 있다.	current	local
 L3046	田中さんね、昨日引っ越したんだって。	타나카씨, 어제 이사했다고.	current	local
@@ -468,7 +468,7 @@ L3093	なんか寒いね。	어쩐지 춥네.	current	local
 L3093	今日は、なんか眠い。	오늘은, 어쩐지 졸리다.	current	local
 L3093	なんか食べたい。	어쩐지 먹고 싶다.	current	local
 L3093	なんか変だ。	어쩐지 이상하다.	current	local
-L3094	パンを、どうぞ運んでください。	빵을, 드세요 옮겨 주세요.	current	local
+L3094	パンを、どうぞ運んでください。	빵을, 어서 옮겨 주세요.	fix	local
 L3131	値段より品質で選びます。	가격보다 품질로 선택합니다.	current	local
 L3131	昼より夜は静かで落ち着く。	낮보다 밤은 조용해 침착한다.	current	local
 L3132	私は今食べていない。	나는 지금 먹지 않았다.	current	local-ending
@@ -482,7 +482,7 @@ L3152	彼は約束を守らないな。	그는 약속을 지키지 않는데.	cu
 L3172	私とは、少し違う。	나란, 조금 다르다.	current	local
 L3180	明日は休みね。	내일은 휴일이군요.	current	local
 L3180	続きね。	계속이군요.	current	local
-L3182	はやく、寝なさい。	빠르고, 자세요.	current	local
+L3182	はやく、寝なさい。	빠르게, 자세요.	fix	local
 L3190	彼は犯人じゃないよ。	그는 범인이 아니야.	current	local-ending
 L3190	ここは学校じゃないよ。	여기는 학교가 아니야.	current	local-ending
 L3205	今日はとても寒い。	오늘은 매우 춥다.	current	local-ending
@@ -646,7 +646,7 @@ L4210	先生に丁寧にお礼を言った。	선생님에게 정중하게 감�
 L4222	その話はちょっと分かる。	그 이야기는 잘 안다.	current	local
 L4229	お金なんか要りません。	돈은 필요하지 않습니다.	current	local
 L4229	私は野菜なんか嫌いです。	나는 야채는 싫습니다.	current	local
-L4240	いただきます、後で返します。	잘 먹겠습니다, 나중에 돌려줍니다.	current	local
+L4240	いただきます、後で返します。	받습니다, 나중에 돌려줍니다.	fix	local
 L4280	一目彼女の顔を見たい。	일목 그녀의 얼굴을 보고 싶다.	current	local
 L4281	今日は友達と一緒に買い物へ行く。	오늘은 친구와 함께 쇼핑하러 간다.	current	local
 L4305	方針に従って申し込む。	방침에 따르고 신청한다.	current	local
@@ -704,7 +704,7 @@ L4934	別に構わないけど。	별로 상관없는데.	current	local-ending
 L4934	ちょっと眠いけど。	조금 졸린데.	current	local-ending
 L4938	もう１個ください。	1개 주세요.	current	local
 L4941	パンをどうぞ。	빵을 부탁합니다.	current	local
-L4951	右へどうぞ進んでください。	오른쪽으로 오세요 진행해 주세요.	current	local
+L4951	右へどうぞ進んでください。	오른쪽으로 부디 진행해 주세요.	fix	local
 L4979	犯人は彼とのことです。	범인은 그와의 일입니다.	current	local
 L4988	汚れ防止の布です。	더러운 방지의 옷감입니다.	current	local
 L4988	汚れ対策を考える。	더러운 대책을 생각한다.	current	local
