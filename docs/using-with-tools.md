@@ -2,9 +2,9 @@
 
 ## 공통 준비
 
-Releases 배포는 아직 준비 중입니다. 지금은 [Build의 성공한 실행](https://github.com/sokcuri/hdTrans/actions/workflows/build.yml?query=branch%3Aci%2Ftool-compat)에서
-**`hdtrans-windows-x86` artifact zip**을 받거나 [직접 빌드](build.md)합니다. J2K 연결에는 x64가 아닌 x86 파일을 씁니다.
-현재 artifact에는 사전이 없으므로 저장소의 `dicts/`도 따로 복사해야 합니다.
+[Releases](https://github.com/sokcuri/hdTrans/releases)에서 Windows ZIP을 받아 압축을 풉니다.
+사전도 함께 들어 있습니다. J2K 연결에는 배포본의 x86 `J2KEngine.dll`을 씁니다.
+소스에서 만드는 방법은 [빌드 안내](build.md)를 참고하세요.
 
 엔진 폴더를 하나 정합니다. 기존 이지트랜스 폴더를 쓰면 원래 DLL부터 백업하세요.
 
@@ -194,7 +194,8 @@ Ehnd 데이터는 DLL 옆 `Ehnd/`에서 읽습니다. 지원 범위는 [Ehnd 호
 
 ## CLI로 텍스트 파일 번역
 
-플랫폼에 맞는 `hdtrans`와 `dicts/`를 함께 둡니다. 입력과 출력은 UTF-8입니다.
+압축을 푼 폴더에서 실행합니다. 사전은 Windows에서 `hdTrans/dicts/`, Linux와 macOS에서 `dicts/`입니다.
+입력과 출력은 UTF-8입니다.
 
 ```sh
 hdtrans -in script.ja.txt > script.ko.txt
@@ -205,10 +206,11 @@ hdtrans -each -in lines.ja.txt > lines.ko.txt
 
 ## C API와 Python ctypes
 
-직접 연결할 때는 `J2KEngine.dll`이 아닌 **`hdTransEngine.dll`**을 씁니다. Python과 같은 비트수의 Windows zip을 고릅니다.
+직접 연결할 때는 `J2KEngine.dll`이 아닌 C API DLL을 씁니다. Windows Python이 64비트면
+**`hdTransEngine.dll`**, 32비트면 **`hdTransEngine_x86.dll`**을 고릅니다.
 macOS는 `libhdTransEngine.dylib`, Linux는 `libhdTransEngine.so`이며 문자열은 모두 UTF-8, 호출 규약은 Cdecl입니다.
 
-아래를 `translate.py`로 저장하고 `python translate.py C:\hdTrans\hdTransEngine.dll C:\hdTrans\dicts`로 실행합니다.
+아래를 `translate.py`로 저장하고 `python translate.py C:\hdTrans\hdTransEngine.dll C:\hdTrans\hdTrans\dicts`로 실행합니다.
 macOS dylib로 실행하여 `안녕하세요` 출력을 확인한 예제입니다. Windows Python 자체의 실행은 아직 수동 확인 대상입니다.
 
 ```python
