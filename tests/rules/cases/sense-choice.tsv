@@ -1,0 +1,3 @@
+rule	input	expected	kind	layer
+G120	山田、田中、鈴木が来た。	야마다, 타나카, 스즈키가 왔다.	fix	global-stem
+G120	太郎が来た。	타로가 왔다.	keep	global-stem

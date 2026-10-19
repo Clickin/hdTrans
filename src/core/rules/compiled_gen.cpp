@@ -234,12 +234,19 @@ bool RuleL24([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "501561"sv));
 }
 
-// # 두 단어 뒤의 표기가 まで로 시작하면 とても를 부정 강조 부사 '도저히'로 고른다. (미발동: rare-context)
-// # [의심] 부정 조건 없이 두 단어 뒤의 まで만 보고 '도저히'를 고른다; 자체 예문 とても遠くまで歩いた가 실제로 '도저히 먼 곳까지 걸었다'가 되었다.
+// # まで 앞의 とても는 뒤 동사가 긍정 과거형이면 매우로 옮기고, 그 밖에는 도저히로 고른다.
 // local 25
+//     src[+2] starts "まで" and (end.src[+3] == "た" or end.src[+3] == "だ" or end.src[+3] == "いた" or end.src[+3] == "いだ" or end.src[+3] == "った" or end.src[+3] == "んだ" or end.src[+3] == "ました") and ko := "매우"
 //     src[+2] starts "まで"
 bool RuleL25([[maybe_unused]] Item* p) {
-    return SrcEq(p, 2, "Lまで"sv);
+    return (SrcEq(p, 2, "Lまで"sv) && (GobiSrcEq(p, 3, "た"sv) ||
+           GobiSrcEq(p, 3, "だ"sv) ||
+           GobiSrcEq(p, 3, "いた"sv) ||
+           GobiSrcEq(p, 3, "いだ"sv) ||
+           GobiSrcEq(p, 3, "った"sv) ||
+           GobiSrcEq(p, 3, "んだ"sv) ||
+           GobiSrcEq(p, 3, "ました"sv)) && DstSet(p, 0, "매우"sv)) ||
+           SrcEq(p, 2, "Lまで"sv);
 }
 
 // # とても는 뒤에 楽し 형용사가 오면 정말로 고른다.
@@ -813,12 +820,13 @@ bool RuleL94([[maybe_unused]] Item* p) {
     return (GobiPumsaEq(p, 0, "56*"sv) && PumsaEq(p, 1, "1**"sv) && DstSet(p, 0, "철저한    "sv) && GobiDstSet(p, 0, ""sv));
 }
 
-// # 명사와 の 뒤의 通り를 대로로 고르고 앞의 の를 지운다.
-// # [의심] 명사＋の만으로 준거의 대로를 강제해 도로라는 뜻도 오역한다. 자작문 裏の通りを歩く。 → 뒤대로를 걷는다.; -why: 通り LocalRule 95 대로, の도 LocalRule 95로 삭제된다. 뒷길을 걷는다는 의미다.
+// # 장소 명사와 の 뒤의 通り는 거리로, 그 밖의 명사와 の 뒤에서는 대로로 고르고 の를 지운다.
 // local 95
+//     src[-1] == "の" and sem[-2] has VPl and ko := "거리"
 //     src[-1] == "の" and pos[-2] is 1** and ko[-1] := ""
 bool RuleL95([[maybe_unused]] Item* p) {
-    return (SrcEq(p, -1, "の"sv) && PumsaEq(p, -2, "1**"sv) && DstSet(p, -1, ""sv));
+    return (SrcEq(p, -1, "の"sv) && AttrEq(p, -2, "VPl"sv) && DstSet(p, 0, "거리"sv)) ||
+           (SrcEq(p, -1, "の"sv) && PumsaEq(p, -2, "1**"sv) && DstSet(p, -1, ""sv));
 }
 
 // # 平気는 현재 어미가 で이면 뒤에 형용사류가 있을 때 ‘-고’, 그 밖에는 ‘-게’로 어미를 바꾸고 ‘아무렇지도 않다’를 고른다.
@@ -3587,13 +3595,13 @@ bool RuleL369([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "501"sv));
 }
 
-// # 切り下げ의 두 단어 앞이 レベル이거나 格로 끝나면 평가절하라는 번역을 고른다. (미발동: rare-context)
-// # [의심] レベル의 일반적인 수준 인하까지 통화 가치의 평가절하로 한정한다는 문제가 있으며 レベルの切り下げ에서 실제로 평가절하가 선택됨.
+// # 通貨·円·ドル의 切り下げ를 평가절하로 고른다.
 // local 370
-//     (src[-2] == "レベル" or src[-2] ends "格")
+//     (src[-2] == "通貨" or src[-2] == "円" or src[-2] == "ドル")
 bool RuleL370([[maybe_unused]] Item* p) {
-    return (SrcEq(p, -2, "レベル"sv) ||
-           SrcEq(p, -2, "R格"sv));
+    return (SrcEq(p, -2, "通貨"sv) ||
+           SrcEq(p, -2, "円"sv) ||
+           SrcEq(p, -2, "ドル"sv));
 }
 
 // # 助け는 다음 말이 조사이고 그다음 말이 부정 형용사 な·無이면 명사 ‘도움’을 고른다.
@@ -3998,14 +4006,13 @@ bool RuleL417([[maybe_unused]] Item* p) {
     return (PumsaEq(p, 1, "2**"sv) && SrcEq(p, 2, "打"sv) && PumsaEq(p, 2, "4**"sv));
 }
 
-// # 주격 'が' 앞이나 'に'와 동사 연결형·수혜 동사가 이어지는 문맥의 'だれ'를 '누'로 고른다.
-// # [의심] に 뒤의 동사가 수혜형이라는 것만으로 누를 고르지만 に가 최종적으로 에게로 선택되는 말하기 문맥에서는 누구가 필요하다. 자작 예 だれに話してもらう。 → 누에게 이야기해 준다.; -why: だれ LocalRule 418 누, に Sense 1353 에게.
+// # が 앞의 だれ는 누로 고른다. に＋동사＋수혜 구문도 누로 고르되 話す의 상대는 누구 후보를 남긴다.
 // local 418
 //     src[+1] == "が" and pos[+1] is 2**
-//     src[+1] == "に" and pos[+2] is 4** and end.pos[+2] is 57* and (src[+3] == "もら" or src[+3] == "いただ")
+//     src[+1] == "に" and pos[+2] is 4** and src[+2] != "話" and end.pos[+2] is 57* and (src[+3] == "もら" or src[+3] == "いただ")
 bool RuleL418([[maybe_unused]] Item* p) {
     return (SrcEq(p, 1, "が"sv) && PumsaEq(p, 1, "2**"sv)) ||
-           (SrcEq(p, 1, "に"sv) && PumsaEq(p, 2, "4**"sv) && GobiPumsaEq(p, 2, "57*"sv) && (SrcEq(p, 3, "もら"sv) ||
+           (SrcEq(p, 1, "に"sv) && PumsaEq(p, 2, "4**"sv) && SrcNe(p, 2, "話"sv) && GobiPumsaEq(p, 2, "57*"sv) && (SrcEq(p, 3, "もら"sv) ||
            SrcEq(p, 3, "いただ"sv)));
 }
 
@@ -4475,12 +4482,11 @@ bool RuleL476([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "500"sv) && GobiDstSet(p, -1, "8"sv));
 }
 
-// # 原野는 두 단어 뒤 동사가 발화·사고·지각 계열 조건이나 UMv 계열 검사에 맞으면 고유명사 하라노로 고른다. (미발동: rare-word)
-// # [오류] A-=의 UMv는 사전 의미 코드로는 쓰이지만 계열표에 없어 이동 대안이 항상 거짓이며 나머지 계열만 작동한다.
+// # 原野는 두 단어 뒤 동사가 발화·사고·지각 계열이면 하라노로 고른다.
 // local 477
-//     pos[+2] is 4** and sem[+2] under UTs|UTh|URc|UMv
+//     pos[+2] is 4** and sem[+2] under UTs|UTh|URc
 bool RuleL477([[maybe_unused]] Item* p) {
-    return (PumsaEq(p, 2, "4**"sv) && AttrMinusEq(p, 2, "UTsUThURcUMv"sv));
+    return (PumsaEq(p, 2, "4**"sv) && AttrMinusEq(p, 2, "UTsUThURc"sv));
 }
 
 // # 조사 に 바로 뒤에서 応募를 응모로 고르고 に를 에로 바꾼다. (미발동: rare-context)
@@ -4738,14 +4744,12 @@ bool RuleG110([[maybe_unused]] Item* p) {
     return (PumsaEq(p, 0, "1**"sv) && GramMinusEq(p, 0, "Z7"sv) && GramMinusEq(p, -1, "NdNj"sv));
 }
 
-// # 쉼표로 나열된 이름 목록에서 이웃 이름과 쉼표의 배치를 확인하여 이름용 명사 후보를 고른다.
+// # 쉼표로 나열된 이름 목록에서 앞뒤 이름과 쉼표를 확인하여 이름용 명사 후보를 고른다.
 // global 1030 stem pos 1 prio 120
 //     gram has On and ko[-1] == "," and gram[-2] has On and ko[-3] == ","
 //     gram has On and ko[+1] == "," and gram[+2] has On and ko[+3] == ","
-//     gram has On and ko[+1] == "," and gram[+2] has On and ko[+3] == ","
 bool RuleG120([[maybe_unused]] Item* p) {
     return (GramEq(p, 0, "On"sv) && DstEq(p, -1, ","sv) && GramEq(p, -2, "On"sv) && DstEq(p, -3, ","sv)) ||
-           (GramEq(p, 0, "On"sv) && DstEq(p, 1, ","sv) && GramEq(p, 2, "On"sv) && DstEq(p, 3, ","sv)) ||
            (GramEq(p, 0, "On"sv) && DstEq(p, 1, ","sv) && GramEq(p, 2, "On"sv) && DstEq(p, 3, ","sv));
 }
 
@@ -4966,7 +4970,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL22, 0x63fee27b17126605ull},
     {RuleL23, 0xc779e017097dad25ull},
     {RuleL24, 0x997bd6d403455375ull},
-    {RuleL25, 0xac5367147057260cull},
+    {RuleL25, 0x7487fb2bd36b6d41ull},
     {RuleL26, 0x3585dfd78286f36full},
     {RuleL27, 0x4bec2880dc8f978bull},
     {RuleL28, 0x76d0ff42f7b2666aull},
@@ -5036,7 +5040,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL92, 0x52ee40b64e40fc99ull},
     {RuleL93, 0xf1469da37011441aull},
     {RuleL94, 0xf2bd933a4c5e2df2ull},
-    {RuleL95, 0xead3b2ae71bc1389ull},
+    {RuleL95, 0x958e4b0425de092eull},
     {RuleL96, 0x948ed32288ec23f3ull},
     {RuleL97, 0x0a5bcc1cf72c0d0dull},
     {RuleL98, 0x7d85fc8c08ac4ef5ull},
@@ -5311,7 +5315,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL367, 0x3a0fd4cdcaf80ab9ull},
     {RuleL368, 0xd5c1b355e0068f97ull},
     {RuleL369, 0x6d9fac2d0a6b9e9dull},
-    {RuleL370, 0x91fa9fa249e33242ull},
+    {RuleL370, 0x1da78b11655f4fbdull},
     {RuleL371, 0x503f390c8bfe72caull},
     {RuleL372, 0x2da672a7ea1d5e70ull},
     {RuleL373, 0xa9b0dde68a672bf2ull},
@@ -5359,7 +5363,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL415, 0x2ed5a4e8f80ac045ull},
     {RuleL416, 0x2a1603358ac2dfa0ull},
     {RuleL417, 0xa4b4ef4da6745a3aull},
-    {RuleL418, 0xe34bea6ad92d2e00ull},
+    {RuleL418, 0x6dc4321637757b4dull},
     {RuleL419, 0x1a54fc1c3c85beedull},
     {RuleL420, 0xc53a9a2cb615c8d1ull},
     {RuleL421, 0x53277a94087e6c3cull},
@@ -5418,7 +5422,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL474, 0x4b9514b4d32b32c7ull},
     {RuleL475, 0xfacf015950f3962bull},
     {RuleL476, 0x0d1cd18363d9210aull},
-    {RuleL477, 0x971a31032300f9feull},
+    {RuleL477, 0xa695b6095e0f722eull},
     {RuleL478, 0x8d2a1afb408f028eull},
     {RuleL479, 0x15a8e9dcc5eef46cull},
     {RuleL480, 0x32524d6f56e8c0e7ull},
@@ -5455,7 +5459,7 @@ constexpr CompiledRule kGlobal[] = {
     {RuleG90, 0xf785d9c5b40f546dull},
     {RuleG100, 0x3069c872ac4b68a8ull},
     {RuleG110, 0xb07ac6a5914ffa49ull},
-    {RuleG120, 0x35a4d8366150cc24ull},
+    {RuleG120, 0xbc2cb445fafca77dull},
     {RuleG130, 0x60209eb785257c06ull},
     {RuleG140, 0xef64f925c202219dull},
     {RuleG150, 0x2405743392f641fcull},
