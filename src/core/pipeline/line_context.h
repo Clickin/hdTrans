@@ -18,10 +18,10 @@ struct LineContext {
     bool exclamationNa = false;
     bool dialectForms = false;
     // Host markers: text that is protected wherever it occurs, the longest first.
-    std::span<const std::string> markers;
+    std::span<const std::string> markers{};
     // The lookups of the line: its plain entries (the plain dictionaries with the names
     // of the document), the name keys confirmed for it and its person places.
-    dict::LookupContext lookup;
+    dict::LookupContext lookup{};
     // The surfaces the document shows to be names: its accepted names and every
     // surface written where a name stands (a speaker label, before an honorific,
     // under ruby, a part of a ・ chain). Null without a document.

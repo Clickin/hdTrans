@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "core/text/hangul.h"
 
 #include "hdtest.h"

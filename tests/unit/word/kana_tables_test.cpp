@@ -1,5 +1,6 @@
 #include "core/word/kana_tables.h"
 
+#include <cstdint>
 #include <string>
 
 #include "fnv.h"

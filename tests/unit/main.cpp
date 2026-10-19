@@ -205,11 +205,16 @@ int main(int argc, char** argv) {
     }
     const char* filter = argc > 1 ? argv[1] : nullptr;
     const bool requireAll = hdtest::RequireAll();
+    const char* exclude = std::getenv("HDTRANS_TEST_EXCLUDE");
+    const std::string excluded = "," + std::string(exclude ? exclude : "") + ",";
     int run = 0, failed = 0, skipped = 0;
     for (const auto& t : hdtest::Registry()) {
         if (filter && !std::strstr(t.name, filter)) continue;
         hdtest::Cur() = {};
-        t.fn();
+        if (excluded.find("," + std::string(t.name) + ",") != std::string::npos)
+            hdtest::Skip("excluded by HDTRANS_TEST_EXCLUDE");
+        else
+            t.fn();
         run++;
         if (hdtest::Cur().skipped) {
             skipped++;

@@ -25,7 +25,10 @@ namespace {
 
 namespace fs = std::filesystem;
 using namespace hdTrans::dict::internal;
-using FilePtr = std::unique_ptr<std::FILE, decltype(&std::fclose)>;
+struct FileCloser {
+    void operator()(std::FILE* file) const { std::fclose(file); }
+};
+using FilePtr = std::unique_ptr<std::FILE, FileCloser>;
 
 struct CacheFolder {
     fs::path path;
@@ -108,8 +111,8 @@ HD_TEST(CacheTempExclusivePublish) {
     const auto target = folder.File(Key('a') + ".latest");
     HD_REQUIRE(Write(target, "old"));
     fs::path firstPath, secondPath;
-    FilePtr first(OpenCacheTemp(target, firstPath), &std::fclose);
-    FilePtr second(OpenCacheTemp(target, secondPath), &std::fclose);
+    FilePtr first(OpenCacheTemp(target, firstPath));
+    FilePtr second(OpenCacheTemp(target, secondPath));
     HD_REQUIRE(first && second);
     HD_CHECK(firstPath != secondPath);
     HD_CHECK(firstPath.parent_path() == target.parent_path());
@@ -173,7 +176,7 @@ HD_TEST(CacheTempSymlinks) {
     HD_CHECK(fs::last_write_time(victim) == oldTime);
     HD_CHECK(fs::is_symlink(fs::symlink_status(planted)));
     fs::path temp;
-    FilePtr file(OpenCacheTemp(target, temp), &std::fclose);
+    FilePtr file(OpenCacheTemp(target, temp));
     HD_REQUIRE(file != nullptr);
     HD_REQUIRE(std::fwrite("new", 1, 3, file.get()) == 3);
     HD_CHECK(CloseCacheTemp(file.release()));

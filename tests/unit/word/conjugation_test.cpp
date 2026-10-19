@@ -1,5 +1,6 @@
 #include "core/word/conjugation.h"
 
+#include <cstdint>
 #include <string>
 
 #include "fnv.h"

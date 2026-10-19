@@ -1,5 +1,6 @@
 #include "core/rules/match.h"
 
+#include <cstdint>
 #include <cstring>
 #include <string>
 
