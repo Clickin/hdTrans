@@ -2181,8 +2181,12 @@ HD_TEST(SnapshotCompiledFile) {
     HD_REQUIRE(missing.errors.size() == 1);
     HD_CHECK(missing.errors[0].kind == hdTrans::dict::LoadErrorKind::Read && missing.errors[0].message.empty());
 
-    // Another pointer size or compiler reads it; other engine data does not.
+    // Another pointer size or compiler reads it; other engine data does not. The changed bytes go
+    // to a copy: Windows does not let a file be rewritten while the snapshots above map it.
     const auto good = ReadBytes(file);
+    const auto copy = temp.File("copy.hdsnap");
+    std::vector<std::string> copyEntries{copy};
+    copyEntries.insert(copyEntries.end(), folders.begin(), folders.end());
     for (int variant = 0; variant < 3; variant++) {
         auto bytes = good;
         switch (variant) {
@@ -2191,19 +2195,19 @@ HD_TEST(SnapshotCompiledFile) {
         case 2: bytes[128] ^= std::byte{1}; break;
         }
         FixDirectories(bytes);
-        HD_REQUIRE(WriteBytes(file, bytes));
-        const auto loaded = hdTrans::dict::LoadFolders(entries);
+        HD_REQUIRE(WriteBytes(copy, bytes));
+        const auto loaded = hdTrans::dict::LoadFolders(copyEntries);
         HD_CHECK_EQ(loaded.snapshot != nullptr, variant < 2);
-        if (variant == 2) HD_CHECK(!loaded.errors.empty() && loaded.errors[0].file == file);
+        if (variant == 2) HD_CHECK(!loaded.errors.empty() && loaded.errors[0].file == copy);
     }
 
     // A damaged compiled file fails the load and is left where it is.
     auto bytes = good;
     const size_t blob = FindSection(bytes, 17, 0);
     bytes[static_cast<size_t>(Field(bytes, blob + 8, 8))] ^= std::byte{1};
-    HD_REQUIRE(WriteBytes(file, bytes));
-    const auto damaged = hdTrans::dict::LoadFolders(entries, {}, true);
+    HD_REQUIRE(WriteBytes(copy, bytes));
+    const auto damaged = hdTrans::dict::LoadFolders(copyEntries, {}, true);
     HD_CHECK(damaged.snapshot == nullptr);
-    HD_CHECK(std::filesystem::exists(Utf8Path(file)));
-    HD_CHECK(!std::filesystem::exists(Utf8Path(file + ".bad")));
+    HD_CHECK(std::filesystem::exists(Utf8Path(copy)));
+    HD_CHECK(!std::filesystem::exists(Utf8Path(copy + ".bad")));
 }

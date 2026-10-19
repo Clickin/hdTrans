@@ -1,1 +1,5 @@
-examples/*.txt text eol=lf
+# Sources, rules and dictionaries keep LF on every platform: the rules compiler, the layer test and
+# the generated-code check read them byte for byte.
+* text=auto eol=lf
+# Test fixtures are checked out exactly as committed (some hold CRLF or a BOM on purpose).
+tests/unit/dict/testdata/** -text
