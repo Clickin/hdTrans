@@ -4,3 +4,25 @@ L2571	味が薄い。	싱겁다.	keep	local
 L2571	薄いスープを飲む。	싱거운 스프를 먹는다.	keep	local
 L267	仕事を辛くしないで。	일을 괴롭게 하지 말아줘.	fix	local
 L267	カレーを辛くしないで。	카레를 맵게 하지 말아줘.	keep	local
+dict:見にく	文字が見にくかった。	문자가 보기 어려웠다.	fix	defaults
+dict:見にく	文字が見えた。	문자가 보였다.	keep	defaults
+dict:始めに	春の始めに客が来た。	봄의 처음에 손님이 왔다.	fix	defaults
+dict:始めに	手始めに歩く。	시작으로 걷는다.	keep	defaults
+dict:びしょ濡れの	びしょ濡れの服だ。	흠뻑 젖은 옷이다.	fix	defaults
+dict:びしょ濡れの	びしょ濡れになった。	흠뻑 젖게 되었다.	keep	defaults
+dict:立ち枯れの	立ち枯れの木だ。	말라 죽은 나무다.	fix	defaults
+dict:立ち枯れの	木が立ち枯れた。	나무가 말라 죽었다.	keep	defaults
+dict:碌な	碌な物がない。	변변한 물건이 없다.	fix	defaults
+dict:碌な	碌に眠れない。	변변히 잘 수 없다.	keep	defaults
+dict:真っ黒の	真っ黒の服だ。	새까만 옷이다.	fix	defaults
+dict:真っ黒の	真っ黒な服だ。	새까만 옷이다.	keep	defaults
+dict:とびっきりの	とびっきりの美人だ。	대단한 미인이다.	fix	defaults
+dict:とびっきりの	とびきりの美人だ。	특출의 미인이다.	keep	defaults
+dict:誇り高	誇り高い人だ。	긍지 높은 사람이다.	fix	defaults
+dict:誇り高	山は高い。	산은 높다.	keep	defaults
+dict:お見えです	お客様がお見えです。	손님이 오셨습니다.	fix	defaults
+dict:お見えです	景色が見えます。	경치가 보입니다.	keep	defaults
+dict:お見えですか	お客様がお見えですか。	손님이 오셨습니까.	fix	defaults
+dict:お見えですか	景色が見えますか。	경치가 보입니까.	keep	defaults
+dict:お待たせ致しました	お待たせ致しました。	기다리게 해서 죄송합니다.	fix	defaults
+dict:お待たせ致しました	お待たせしました。	기다리게 해서 죄송합니다.	keep	defaults
