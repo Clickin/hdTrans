@@ -92293,7 +92293,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 レーシング	레이싱	N110			GN		jisjk:116951		
 レーシングカー	레이싱 카	N110			GN		jisjk:107461		
 レーシングフォーム	경마 신문	N110	VCm		GN		jisjk:135844		
-レース	레이스	N110			GN		jisjk:59465		
+レース	레이스	N110	VRw		GN		jisjk:59465		
 レースウェー	raceway	N110			GN		jisjk:59466		
 レースクィーン	레이스 퀸	N110	VHn		GN		jisjk:135846		
 レースクイーン	레이스 퀸	N110	VHn		GN		jisjk:59467		
@@ -293237,7 +293237,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 競蛙	케이와	N130	QPN		GN		jisjk:96619		
 競買	경매	N110		Hd	GN		jisjk:6815		
 競買い	경쟁구매	N110			GN		jisjk:6816		
-競走	경주	N110		Hd	GN		jisjk:15467		
+競走	경주	N110	VRw	Hd	GN		jisjk:15467		
 競走馬	경주마	N110	VAmVRw		GN		jisjk:173725		
 競輪	경륜	N110	VRw	Hd	GN		jisjk:15460		
 競馬	경마	N110	VRw	Hd	GN		jisjk:15461		
