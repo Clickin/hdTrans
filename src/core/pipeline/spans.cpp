@@ -159,12 +159,12 @@ Match HangulSpan(std::string_view s) {
     return {n, output::SpanWord};
 }
 
-// A run of foreign characters other than white space; a ゔ in it takes the small vowel
-// after it (ゔぁ, ゔぉ).
+// A run of foreign characters other than white space, or of ◯, which has no Korean form
+// of its own; a ゔ in it takes the small vowel after it (ゔぁ, ゔぉ).
 Match ForeignSpan(std::string_view s) {
     size_t n = 0;
     for (;;) {
-        const size_t k = RunOf(s.substr(n), [](char32_t r) { return !text::IsSpace(r) && IsForeign(r); });
+        const size_t k = RunOf(s.substr(n), [](char32_t r) { return r == U'◯' || (!text::IsSpace(r) && IsForeign(r)); });
         if (k == 0) break;
         n += k;
         if (!s.substr(0, n).ends_with("ゔ")) break;

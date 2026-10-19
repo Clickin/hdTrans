@@ -76,6 +76,9 @@ HD_TEST(pipeline_cut_spans) {
         {"오○니 자○", "〖1오○니 자○〗"},
         {"○○さん", "○○さん"},
         {"○김", "○〖1김〗"},
+        // ◯ has no Korean form of its own and is kept as written; ○ is a dictionary word.
+        {"◯◯さん", "〖1◯◯〗さん"},
+        {"○○さん", "○○さん"},
     };
     for (const auto& c : cases) HD_CHECK_EQ(Show(internal::CutSpans(c.in, {})), std::string(c.want));
 
