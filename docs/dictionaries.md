@@ -50,9 +50,11 @@
 | `user` | 열 파일 | 열 형식 사용자 사전. 기본 사전보다 먼저 맞춰 보며 기본 사전을 가리지 않습니다 |
 | `kana` | 일반 파일 | `가나<TAB>한자 키<TAB>부류` 줄. 기본 사전 단어의 가나 표기 |
 | `readings` | 일반 파일 | `일본어<TAB>읽기` 줄. 이름 읽기 표 (가나 또는 한글) |
+| `prefilter`, `postfilter` | 일반 파일 | 번역 전 일본어와 번역 후 한국어를 고치는 필터 행. Ehnd 필터 형식([필터와 Ehnd 사전](#필터와-ehnd-사전)) |
 
 열 파일인지는 내용으로 정합니다. 빈 줄과 `#` 주석이 아닌 첫 줄이 `key`로 시작하는 머리글이면 열
-파일입니다. `kana`와 `readings`는 일반 파일만, `base`가 아닌 나머지는 열 파일만 가능합니다.
+파일입니다. `kana`, `readings`, `prefilter`, `postfilter`는 일반 파일만, `base`가 아닌 나머지는 열
+파일만 가능합니다.
 정의: `src/core/dict/snapshot.h`.
 
 ### 열 파일
@@ -161,6 +163,29 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 - C API: 라이브러리 옆 `userdict.tsv`(자동 반영, 바로 반영은 `hdTrans_Reload()`), 또는
   `hdTrans_Initialize("dicts\0user\0")`의 폴더(고친 뒤 `hdTrans_Reload()`)
 - `J2KEngine.dll`: DLL 옆 `userdict.tsv`(자동 반영, 바로 반영은 호스트의 사용자 사전 다시 읽기 `J2K_ReloadUserDict`)
+
+## 필터와 Ehnd 사전
+
+Ehnd(이지트랜스 확장)의 전처리·후처리 필터, SkipLayer, 사용자 사전을 그대로 쓸 수 있습니다. 형식과
+적용 순서는 [ehnd-compat.md](ehnd-compat.md)에 있습니다.
+
+- 기존 Ehnd 폴더: 프로그램(`hdtrans`, `hdTransEngine`, `J2KEngine.dll`) 옆에 `Ehnd` 폴더를 두면 씁니다.
+  다른 폴더는 CLI `-ehnd DIR`, C API `hdTrans_OpenEhnd`, C++ `Engine::OpenEhnd`로 줍니다.
+  `PreFilter*.txt`, `PostFilter*.txt`, `SkipLayer*.txt`, `UserDict*.txt`를 Ehnd와 같은 순서로 읽습니다.
+  꿀도르 같은 Ehnd 사전은 `dicts/`에 들어 있지 않고 기본으로 켜지지 않습니다.
+- 새 필터: 사전 폴더에 첫 줄이 `#! layer=prefilter` 또는 `#! layer=postfilter`인 파일을 둡니다. 행은
+  Ehnd 필터 행과 같습니다.
+
+```
+#! layer=postfilter
+# 말투 고치기
+하였다	했다	20000000	0
+ +([.,!?])	$1	20000000	1
+```
+
+- 열은 `원문<TAB>바꿀 글<TAB>차수[<TAB>정규식 여부]`입니다. 차수가 작은 행부터, 같은 차수는 읽은 순서로
+  적용합니다. 정규식은 Ehnd처럼 Perl 문법(PCRE2)이며 고정 길이 lookbehind `(?<=…)`도 씁니다.
+- 정규식이 안 되는 줄 같은 잘못된 줄은 건너뛰고, CLI는 표준 오류로 알립니다.
 
 ## 캐시
 

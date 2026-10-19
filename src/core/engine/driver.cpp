@@ -10,6 +10,7 @@
 #include "core/engine/glue.h"
 #include "core/engine/resolve.h"
 #include "core/engine/rules.h"
+#include "core/filter/filter.h"
 #include "core/names/document.h"
 #include "core/output/cleanup.h"
 #include "core/output/compose.h"
@@ -150,6 +151,7 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
     if (facts.wholeLine) return *facts.wholeLine;
     const pipeline::LineLookup lookup = pipeline::LookupOf(doc, facts);
     pipeline::LineContext ctx = pipeline::ContextOf(doc, lookup);
+    if (options.filters) ctx.lookup.user = options.filters->User();
     ctx.exclamationNa = !options.reference && options.wordImprovements.exclamationNa;
     ctx.dialectForms = !options.reference && options.wordImprovements.dialectForms;
 
@@ -237,25 +239,19 @@ std::vector<std::string> TranslateDocumentPieces(const dict::Snapshot& snap, Gen
     return out;
 }
 
-}  // namespace
-
-std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
-                                           std::span<const std::string> lines, Memory& memory,
-                                           const StageObserver& observer, const TranslationOptions& options) {
-    return TranslateDocumentPieces(snap, generated, lines, memory, observer, options, lines);
-}
-
-std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
-                             const StageObserver& observer, const TranslationOptions& options) {
+// The raw path of TranslateRawLine, without the filters.
+std::string RawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
+                    const StageObserver& observer, const TranslationOptions& options) {
     if (!snap.Healthy()) {
         const auto [fallback, replacement] = FallbackOf(snap);
         if (!fallback) return std::string(line);
-        return TranslateRawLine(*fallback, *replacement, line, observer, options);
+        return RawLine(*fallback, *replacement, line, observer, options);
     }
     Scratch s;
     if (observer.line) observer.line(observer.context, 0);
     dict::LookupContext lookup;
     lookup.plain = &snap.Plain(!options.reference && options.wordImprovements.extraBuiltin);
+    if (options.filters) lookup.user = options.filters->User();
     std::string result;
     for (std::string_view piece : text::TranslationPieces(line)) {
         output::Pieces chunk;
@@ -269,9 +265,46 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
     if (!snap.Healthy()) {
         const auto [fallback, replacement] = FallbackOf(snap);
         if (!fallback) return std::string(line);
-        return TranslateRawLine(*fallback, *replacement, line, observer, options);
+        return RawLine(*fallback, *replacement, line, observer, options);
     }
     return result;
+}
+
+// Runs a filter stage over line without its trailing "\r".
+void Filter(const filter::Filters& f, filter::Stage stage, std::string& line, filter::Filters::Toggles& toggles) {
+    const bool cr = line.ends_with('\r');
+    if (cr) line.pop_back();
+    f.Apply(stage, line, toggles);
+    if (cr) line += '\r';
+}
+
+}  // namespace
+
+std::vector<std::string> TranslateDocument(const dict::Snapshot& snap, Generated& generated,
+                                           std::span<const std::string> lines, Memory& memory,
+                                           const StageObserver& observer, const TranslationOptions& options) {
+    if (!options.filters) return TranslateDocumentPieces(snap, generated, lines, memory, observer, options, lines);
+    const filter::Filters& f = *options.filters;
+    std::vector<std::string> filtered(lines.begin(), lines.end());
+    std::vector<filter::Filters::Toggles> toggles(filtered.size(), f.Start());
+    for (std::size_t i = 0; i < filtered.size(); i++) Filter(f, filter::Stage::Pre, filtered[i], toggles[i]);
+    std::vector<std::string> out = TranslateDocumentPieces(snap, generated, filtered, memory, observer, options, filtered);
+    // An empty input line is not post-filtered either.
+    for (std::size_t i = 0; i < out.size() && i < lines.size(); i++) {
+        if (!lines[i].empty() && lines[i] != "\r") Filter(f, filter::Stage::Post, out[i], toggles[i]);
+    }
+    return out;
+}
+
+std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, std::string_view line,
+                             const StageObserver& observer, const TranslationOptions& options) {
+    if (!options.filters || line.empty()) return RawLine(snap, generated, line, observer, options);
+    filter::Filters::Toggles toggles = options.filters->Start();
+    std::string text(line);
+    options.filters->Apply(filter::Stage::Pre, text, toggles);
+    std::string out = RawLine(snap, generated, text, observer, options);
+    options.filters->Apply(filter::Stage::Post, out, toggles);
+    return out;
 }
 
 }  // namespace hdTrans::internal

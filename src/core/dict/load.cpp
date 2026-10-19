@@ -340,7 +340,7 @@ bool internal::ReadLayer(std::string_view text, FileLayer& layer) {
     while (!line.empty() && (line.front() == ' ' || line.front() == '\t')) line.remove_prefix(1);
     if (!line.starts_with("layer=")) return false;
     line.remove_prefix(6);
-    constexpr std::string_view kNames[] = {"base", "words", "names", "user", "kana", "readings"};
+    constexpr std::string_view kNames[] = {"base", "words", "names", "user", "kana", "readings", "prefilter", "postfilter"};
     for (std::size_t i = 0; i < std::size(kNames); i++) {
         if (line == kNames[i]) {
             layer = static_cast<FileLayer>(i);
@@ -426,11 +426,12 @@ bool SnapshotLoader::ReadLayers() {
             }
             f.layer = column ? FileLayer::User : FileLayer::Base;
         } else if (!internal::ReadLayer(f.text, f.layer)) {
-            message = "the first line is not #! layer=base|words|names|user|kana|readings";
+            message = "the first line is not #! layer=base|words|names|user|kana|readings|prefilter|postfilter";
         } else if (f.layer != FileLayer::Base) {
-            const bool plainLayer = f.layer == FileLayer::Kana || f.layer == FileLayer::Readings;
+            const bool plainLayer = f.layer == FileLayer::Kana || f.layer == FileLayer::Readings ||
+                                    f.layer == FileLayer::PreFilter || f.layer == FileLayer::PostFilter;
             const bool column = ColumnFile(f.text);
-            if (column && plainLayer) message = "a column file cannot be of the layer kana or readings";
+            if (column && plainLayer) message = "a column file cannot be of the layer kana, readings, prefilter or postfilter";
             if (!column && !plainLayer) message = "a plain file cannot be of the layer words, names or user";
         }
         if (message) {
@@ -460,7 +461,10 @@ bool SnapshotLoader::CompilePlain(const std::vector<std::size_t>& rest) {
     int file = 0;
     for (const std::size_t i : rest) {
         const std::string_view text = internal::WithoutHeader(files[i].text);
-        if (files[i].layer == FileLayer::Readings) continue;
+        if (files[i].layer == FileLayer::Readings || files[i].layer == FileLayer::PreFilter ||
+            files[i].layer == FileLayer::PostFilter) {
+            continue;
+        }
         if (files[i].layer == FileLayer::Kana) {
             std::vector<UserEntry> k = userdict::KanaSpellings(text, s.base_, s.codes_);
             std::move(k.begin(), k.end(), std::back_inserter(kana));

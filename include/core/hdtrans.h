@@ -21,7 +21,8 @@ extern "C" {
 
 /* Loads the dictionary folders listed in dirs (NUL-separated, double NUL at the end),
  * later folders overriding earlier ones, then userdict.tsv next to the library when
- * present; a userdict.tsv that does not load is left out (hdTrans_UserDictError).
+ * present, and the filters and user dictionary of the Ehnd folder next to the library
+ * when there is one (hdTrans_OpenEhnd); a userdict.tsv that does not load is left out (hdTrans_UserDictError).
  * Translations check userdict.tsv at most once a second and reload it in the background
  * when it changes; WebAssembly reads /userdict.tsv of its file system and does not watch
  * it. Returns 0, or -1 when no dictionary loads or a concurrent Terminate, successful
@@ -49,6 +50,16 @@ HDTRANS_API int hdTrans_Reload(void);
  * a buffer like hdTrans_Translate does; empty when it loaded or there is none. Returns 0,
  * or -1 when uninitialized or terminated. */
 HDTRANS_API int hdTrans_UserDictError(char** out, size_t* outn);
+
+/* Takes the filters and user dictionary of the Ehnd folder dir (UTF-8; NULL or empty
+ * drops them) for the following translations; dir is watched and reloaded like
+ * userdict.tsv. Returns 0, or -1 when uninitialized, terminated, or dir cannot be read. */
+HDTRANS_API int hdTrans_OpenEhnd(const char* dir);
+
+/* Writes the lines of the filter files and of the Ehnd folder that were skipped, as
+ * "file:line: message" lines, as a buffer like hdTrans_Translate does. Returns 0, or -1
+ * when uninitialized or terminated. */
+HDTRANS_API int hdTrans_FilterErrors(char** out, size_t* outn);
 
 HDTRANS_API void hdTrans_FreeMem(void* p);
 

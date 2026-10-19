@@ -90,10 +90,14 @@ std::string ModuleDir() {
     return Utf8FromWide(slash == std::wstring::npos ? L"." : dir.substr(0, slash));
 }
 
-// Writes why userdict.tsv did not load, if it did not, to the debugger output.
-void LogUserFileError(const hdTrans::Engine& e) {
+// Writes why userdict.tsv did not load, if it did not, and the Ehnd lines skipped to the
+// debugger output.
+void LogLoadErrors(const hdTrans::Engine& e) {
     const std::string error = e.UserFileError();
     if (!error.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: userdict.tsv not loaded:\n" + error + "\n").c_str());
+    std::string skipped;
+    for (const std::string& line : e.FilterErrors()) skipped += line + "\n";
+    if (!skipped.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: Ehnd lines skipped:\n" + skipped).c_str());
 }
 
 }  // namespace
@@ -128,8 +132,9 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
     std::vector<std::string> dirs{hdTrans::dict::ShippedFolder(dir)};
     std::string userFile = hdTrans::dict::UserFile(dir);
     auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    e->OpenEhnd(hdTrans::dict::EhndFolder(dir));
     if (!e->Open(dirs, false, userFile)) return 0;
-    LogUserFileError(*e);
+    LogLoadErrors(*e);
     AdminLock lock;
     if (generation != g_generation) return 0;
     g_engine = std::move(e);
@@ -191,9 +196,10 @@ void __stdcall J2K_ReloadUserDict() {
         userFile = g_userFile;
     }
     auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    e->OpenEhnd(hdTrans::dict::EhndFolder(ModuleDir()));
     // A userdict.tsv that does not load keeps the dictionaries loaded before.
     if (!e->Open(dirs, false, userFile)) return;
-    LogUserFileError(*e);
+    LogLoadErrors(*e);
     if (!e->UserFileError().empty()) return;
     AdminLock lock;
     if (generation != g_generation) return;

@@ -7,6 +7,8 @@
 #include <windows.h>
 #endif
 
+#include "core/filter/ehnd.h"
+
 namespace hdTrans::internal {
 
 namespace {
@@ -48,6 +50,26 @@ bool FileWatch::Due(std::string_view path, std::chrono::steady_clock::time_point
     if (now < next) return false;
     next = now + interval;
     found = VersionOf(path);
+    return found != loaded && !(hasFailed && found == failed);
+}
+
+FolderVersion FolderVersionOf(std::string_view dir) {
+    FolderVersion v;
+    std::vector<filter::EhndFile> files;
+    if (dir.empty() || !filter::EhndFiles(dir, files)) return v;
+    for (const filter::EhndFile& f : files) {
+        dict::internal::FileStamp stamp;
+        dict::internal::ReadStamp(f.path, stamp);
+        v.emplace_back(f.path, stamp);
+    }
+    return v;
+}
+
+bool FolderWatch::Due(std::string_view dir, std::chrono::steady_clock::time_point now,
+                      std::chrono::steady_clock::duration interval, FolderVersion& found) {
+    if (now < next) return false;
+    next = now + interval;
+    found = FolderVersionOf(dir);
     return found != loaded && !(hasFailed && found == failed);
 }
 

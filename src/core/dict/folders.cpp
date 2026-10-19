@@ -31,4 +31,11 @@ std::string UserFile(std::string_view programDir) {
     return programDir.empty() ? std::string() : Join(programDir, "userdict.tsv");
 }
 
+std::string EhndFolder(std::string_view programDir) {
+    if (programDir.empty()) return {};
+    const std::string dir = Join(programDir, "Ehnd");
+    std::error_code ec;
+    return std::filesystem::is_directory(PathOf(dir), ec) ? dir : std::string();
+}
+
 }  // namespace hdTrans::dict

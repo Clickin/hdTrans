@@ -12,5 +12,8 @@ std::string DefaultFolder(std::string_view programDir);
 // The user dictionary file of a program in programDir: programDir/userdict.tsv; empty
 // for an empty programDir.
 std::string UserFile(std::string_view programDir);
+// The Ehnd folder of a program in programDir, programDir/Ehnd, when it is a folder; empty
+// otherwise.
+std::string EhndFolder(std::string_view programDir);
 
 }  // namespace hdTrans::dict

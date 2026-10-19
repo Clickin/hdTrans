@@ -5,5 +5,7 @@ EXPORTS
     hdTrans_Reset
     hdTrans_Reload
     hdTrans_UserDictError
+    hdTrans_OpenEhnd
+    hdTrans_FilterErrors
     hdTrans_FreeMem
     hdTrans_Version

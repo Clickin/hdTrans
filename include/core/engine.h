@@ -13,6 +13,10 @@ namespace dict {
 class Snapshot;
 }
 
+namespace filter {
+class Filters;
+}
+
 namespace internal {
 struct Access;
 struct Generated;
@@ -47,11 +51,24 @@ public:
     // dictionary could be loaded; the dictionaries loaded before stay.
     bool Open(const std::vector<std::string>& dirs, bool verifyDicts = false, std::string_view userFile = {});
 
-    // Reloads the folders and user dictionary file given to Open and swaps the new
-    // dictionaries in. Sessions keep translating with the dictionaries they started with
-    // (see UserReload). Returns false when the load fails; the dictionaries loaded
-    // before stay.
+    // Reloads the folders and user dictionary file given to Open, and the Ehnd folder,
+    // and swaps the new dictionaries in. Sessions keep translating with the dictionaries
+    // they started with (see UserReload). Returns false when the load fails; the
+    // dictionaries loaded before stay.
     bool Reload();
+
+    // Takes the filters and the user dictionary of the Ehnd folder dir (its
+    // PreFilter*.txt, PostFilter*.txt, SkipLayer*.txt and UserDict*.txt files, see
+    // docs/ehnd-compat.md) for the sessions created or reset after it, with the
+    // prefilter and postfilter files of the dictionary folders; an empty dir drops them.
+    // Before Open it only names the folder that Open reads. With UserReload::Auto the
+    // folder is watched like the user dictionary file. Returns false when dir cannot be
+    // read; the folder taken before stays.
+    bool OpenEhnd(std::string_view dir);
+
+    // The lines of the filter files and of the Ehnd folder that the last Open, Reload or
+    // OpenEhnd skipped, as "file:line: message".
+    std::vector<std::string> FilterErrors() const;
 
     bool loaded() const;
 
@@ -65,6 +82,8 @@ public:
 
     // The current dictionaries; null before a successful Open.
     std::shared_ptr<const dict::Snapshot> Dictionaries() const;
+    // The current filters; null without filter files and Ehnd folder.
+    std::shared_ptr<const filter::Filters> Filters() const;
 
 private:
     friend class Session;
@@ -80,6 +99,9 @@ private:
     mutable std::uint64_t loads_ = 0;  // loads started
     std::uint64_t current_ = 0;        // the load that made snapshot_
     std::unique_ptr<internal::UserWatch> watch_;  // the user dictionary file state
+    std::string ehndDir_;
+    std::shared_ptr<const filter::Filters> filters_;
+    std::vector<std::string> filterErrors_;
 };
 
 // A translation with memory: names and other context found in earlier text of the
@@ -107,6 +129,7 @@ private:
     const bool reference_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;
+    std::shared_ptr<const filter::Filters> filters_;
     std::unique_ptr<internal::SessionState> state_;
 };
 

@@ -1,7 +1,9 @@
 # hdtrans — rule-based Japanese→Korean translation engine in C++
 
 One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEngine.dll`
-(J2K_* exports for hosts that load that DLL), WebAssembly. No dependencies.
+(J2K_* exports for hosts that load that DLL), WebAssembly. No dependencies but one: PCRE2,
+vendored as sources in third_party/pcre2 (built by CMake, no network), for the regex rows
+of the filter stage (src/core/filter).
 README.md is for users; developer documentation is in docs/ (index: docs/README.md).
 
 ## Build and test
@@ -30,7 +32,7 @@ README.md is for users; developer documentation is in docs/ (index: docs/README.
 - Warnings are errors; fix the code, not the flags.
 
 ## Source rules
-- Standard library only. UTF-8 `std::string` internally. Shift-JIS and CP949 exist only
+- Standard library only, and PCRE2 in src/core/filter only. UTF-8 `std::string` internally. Shift-JIS and CP949 exist only
   at the `J2K_*` boundary, converted by the OS; the engine has no code-page tables.
 - Types and functions `CamelCase`, local variables `lowerCamel`, private members with a
   trailing underscore, files `snake_case`, one pipeline stage per directory under

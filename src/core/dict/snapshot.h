@@ -28,9 +28,10 @@
 //     dropped unless they respell it too or name a person.
 //   - The other files are kept with their text, in order (PlainFiles). Files of the
 //     layer readings are names readings tables, of the layer kana kana spellings of
-//     base words (userdict::KanaSpellings), and the base files plain dictionaries
-//     (userdict::Parse), numbered in order from 0; a plain line that does not compile
-//     fails the load. The layers kana and readings are for plain files only, the
+//     base words (userdict::KanaSpellings), of the layers prefilter and postfilter
+//     filter rows (filter.h), and the base files plain dictionaries (userdict::Parse),
+//     numbered in order from 0; a plain line that does not compile fails the load. The
+//     layers kana, readings, prefilter and postfilter are for plain files only, the
 //     others but base for column files only.
 //   - The user dictionary file, when given and present, loads after the folders.
 //     Its header, if any, must be "#! layer=user": as a column file it joins the
@@ -69,7 +70,7 @@ namespace internal {
 class SnapshotFile;
 }
 
-enum class FileLayer : uint8_t { Base, Words, Names, User, Kana, Readings };
+enum class FileLayer : uint8_t { Base, Words, Names, User, Kana, Readings, PreFilter, PostFilter };
 
 // A *.tsv file of a dictionary folder.
 struct File {
@@ -119,6 +120,8 @@ struct SkipFunc {
 // What a lookup depends on besides the snapshot.
 struct LookupContext {
     const UserText* plain = nullptr;  // plain-dictionary entries; null for none
+    // More user-dictionary records, matched after the snapshot's own; null for none.
+    const Dict* user = nullptr;
     Strategy strategy = Strategy::LongestMatch;
     // Base and user records with this dict code are preferred; empty for none.
     std::string_view priorDict;

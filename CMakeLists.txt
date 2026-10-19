@@ -1,10 +1,7 @@
 # Static/shared engine libraries, CLI and unit tests on any C++20 compiler;
 # J2KEngine.dll (J2K_* exports) on Windows; WebAssembly with Emscripten. Presets: CMakePresets.json.
 cmake_minimum_required(VERSION 3.25)
-project(hdtrans LANGUAGES CXX)
-if(WIN32)
-    enable_language(C)
-endif()
+project(hdtrans LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -40,8 +37,11 @@ else()
     endif()
 endif()
 
+add_subdirectory(third_party/pcre2)
+
 file(GLOB_RECURSE HDTRANS_SOURCES CONFIGURE_DEPENDS src/core/*.cpp)
 add_library(hdtrans STATIC ${HDTRANS_SOURCES})
+target_link_libraries(hdtrans PRIVATE pcre2-16)
 file(GLOB_RECURSE HDTRANS_DATA_SOURCES CONFIGURE_DEPENDS src/core/*.cpp src/core/*.h)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${HDTRANS_DATA_SOURCES})
 set(HDTRANS_DATA_HASHES "")
@@ -110,7 +110,7 @@ if(EMSCRIPTEN)
     target_link_options(hdtrans_wasm PRIVATE
         --no-entry -sMODULARIZE=1 -sEXPORT_ES6=1 -sALLOW_MEMORY_GROWTH=1 -sFORCE_FILESYSTEM=1
         -sEXPORTED_RUNTIME_METHODS=FS,ccall,cwrap,UTF8ToString,stringToUTF8,lengthBytesUTF8,getValue,HEAPU8
-        -sEXPORTED_FUNCTIONS=_hdTrans_Load,_hdTrans_Initialize,_hdTrans_Terminate,_hdTrans_Translate,_hdTrans_Reset,_hdTrans_Reload,_hdTrans_UserDictError,_hdTrans_FreeMem,_hdTrans_Version,_malloc,_free)
+        -sEXPORTED_FUNCTIONS=_hdTrans_Load,_hdTrans_Initialize,_hdTrans_Terminate,_hdTrans_Translate,_hdTrans_Reset,_hdTrans_Reload,_hdTrans_UserDictError,_hdTrans_OpenEhnd,_hdTrans_FilterErrors,_hdTrans_FreeMem,_hdTrans_Version,_malloc,_free)
 elseif(WIN32)
     add_library(hdtrans_dll SHARED src/cshared/hdtrans_c.cpp src/cshared/hdtrans.def)
     set_target_properties(hdtrans_dll PROPERTIES OUTPUT_NAME hdTransEngine PREFIX "")

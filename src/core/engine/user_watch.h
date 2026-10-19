@@ -8,6 +8,7 @@
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #if !defined(_WIN32)
@@ -40,6 +41,22 @@ struct FileWatch {
     // finds a version other than loaded and failed, stored in found.
     bool Due(std::string_view path, std::chrono::steady_clock::time_point now,
              std::chrono::steady_clock::duration interval, FileVersion& found);
+};
+
+// The files of an Ehnd folder that a load reads, with their stamps, in load order.
+using FolderVersion = std::vector<std::pair<std::string, dict::internal::FileStamp>>;
+
+FolderVersion FolderVersionOf(std::string_view dir);
+
+// When to reload a watched Ehnd folder; as FileWatch.
+struct FolderWatch {
+    FolderVersion loaded;
+    FolderVersion failed;
+    bool hasFailed = false;
+    std::chrono::steady_clock::time_point next{};
+
+    bool Due(std::string_view dir, std::chrono::steady_clock::time_point now,
+             std::chrono::steady_clock::duration interval, FolderVersion& found);
 };
 
 // A background thread. On Windows it holds a reference to the module containing the
@@ -79,6 +96,7 @@ struct UserWatch {
     bool automatic = false;  // UserReload::Auto
     bool detached = false;   // no more reloads: the engine is being abandoned
     FileWatch watch;
+    FolderWatch ehnd;  // the Ehnd folder
     std::vector<dict::LoadError> errors;  // why the failed version did not load
     std::shared_ptr<ReloadTarget> target = std::make_shared<ReloadTarget>();
     ReloadThread worker;
@@ -89,8 +107,8 @@ struct UserWatch {
 // Reload threads running in the process.
 int RunningReloads();
 
-// Checks the user dictionary file of e now, whatever the interval, and waits for the
-// reload it starts; false when it starts none.
+// Checks the user dictionary file and the Ehnd folder of e now, whatever the interval,
+// and waits for the reload it starts; false when it starts none.
 bool CheckUserFile(const Engine& e);
 // Like CheckUserFile, without waiting for the reload.
 bool StartUserFileCheck(const Engine& e);

@@ -10,6 +10,8 @@
 #include "core/engine/raw.h"
 #include "core/engine/rules.h"
 #include "core/engine/user_watch.h"
+#include "core/filter/ehnd.h"
+#include "core/filter/filter.h"
 #include "core/output/families.h"
 #include "core/userdict/conjugating.h"
 #include "core/text/lines.h"
@@ -21,6 +23,34 @@ namespace {
 constexpr std::chrono::seconds kCheckInterval{1};
 
 bool Loaded(const dict::LoadResult& r) { return r.snapshot && r.snapshot->HasDictionary(); }
+
+const std::vector<dict::File> kNoFiles;
+
+// The filters of the prefilter and postfilter files of a snapshot and of an Ehnd folder.
+struct FilterLoad {
+    std::shared_ptr<const filter::Filters> filters;
+    std::vector<std::string> errors;  // the lines skipped, as "file:line: message"
+    internal::FolderVersion version;  // the Ehnd folder as read
+    bool read = true;                 // false when the Ehnd folder cannot be read
+};
+
+// The filters of snap and of the Ehnd folder dir (none when empty).
+FilterLoad LoadFilters(const dict::Snapshot* snap, const std::string& dir) {
+    FilterLoad out;
+    out.version = internal::FolderVersionOf(dir);
+    std::vector<filter::Source> sources;
+    std::vector<filter::Error> errors;
+    for (const dict::File& f : snap ? snap->PlainFiles() : kNoFiles) {
+        if (f.layer != dict::FileLayer::PreFilter && f.layer != dict::FileLayer::PostFilter) continue;
+        const auto kind = f.layer == dict::FileLayer::PreFilter ? filter::Source::Kind::PreFilter
+                                                                 : filter::Source::Kind::PostFilter;
+        sources.push_back({kind, f.name, std::string(dict::internal::WithoutHeader(f.text)), true});
+    }
+    out.read = dir.empty() || filter::ReadEhndFolder(dir, sources, errors);
+    out.filters = filter::Build(sources, errors);
+    for (const filter::Error& e : errors) out.errors.push_back(e.file + ":" + std::to_string(e.line) + ": " + e.message);
+    return out;
+}
 
 }  // namespace
 
@@ -50,9 +80,13 @@ struct Access {
     // dictionary file after userErrors kept it from loading; a failed r leaves the
     // dictionaries as they are. e.mu_ is held.
     static bool Finish(Engine& e, std::uint64_t ticket, const FileVersion& version, dict::LoadResult r, bool bare,
-                       std::vector<dict::LoadError> userErrors) {
+                       std::vector<dict::LoadError> userErrors, FilterLoad filters) {
         if (ticket < e.current_) return Loaded(r);
         UserWatch& w = *e.watch_;
+        if (!Loaded(r)) {
+            w.ehnd.failed = std::move(filters.version);
+            w.ehnd.hasFailed = true;
+        }
         if (!Loaded(r) || bare) {
             w.watch.failed = version;
             w.watch.hasFailed = true;
@@ -70,7 +104,21 @@ struct Access {
         e.current_ = ticket;
         e.snapshot_ = std::move(r.snapshot);
         e.generated_ = NewGenerated(*e.snapshot_);
+        e.filters_ = std::move(filters.filters);
+        e.filterErrors_ = std::move(filters.errors);
+        w.ehnd.loaded = std::move(filters.version);
+        w.ehnd.hasFailed = false;
         return true;
+    }
+
+    // The filters of r, the outcome of a load with the Ehnd folder dir.
+    static FilterLoad FiltersOf(const dict::LoadResult& r, const std::string& dir) {
+        if (!Loaded(r)) {
+            FilterLoad failed;
+            failed.version = FolderVersionOf(dir);
+            return failed;
+        }
+        return LoadFilters(r.snapshot.get(), dir);
     }
 
     // Loads dirs and userFile and makes them current unless a load started later already
@@ -79,9 +127,11 @@ struct Access {
     static bool Load(Engine& e, const std::vector<std::string>& dirs, bool verify, const std::string& userFile,
                      bool open) {
         std::uint64_t ticket;
+        std::string ehnd;
         {
             std::lock_guard<std::mutex> lock(e.mu_);
             ticket = ++e.loads_;
+            ehnd = e.ehndDir_;
         }
         const bool cacheWrite = e.cacheWrite_ == CacheWrite::Sync;
         const FileVersion version = VersionOf(userFile);
@@ -96,8 +146,9 @@ struct Access {
                 bare = true;
             }
         }
+        FilterLoad filters = FiltersOf(r, ehnd);
         std::lock_guard<std::mutex> lock(e.mu_);
-        if (!Finish(e, ticket, version, std::move(r), bare, std::move(userErrors))) return false;
+        if (!Finish(e, ticket, version, std::move(r), bare, std::move(userErrors), std::move(filters))) return false;
         if (open) {
             e.dirs_ = dirs;
             e.verifyDicts_ = verify;
@@ -106,29 +157,32 @@ struct Access {
         return true;
     }
 
-    // Starts a background reload when the user dictionary file is due at now; e.mu_ is
-    // held.
+    // Starts a background reload when the user dictionary file or the Ehnd folder is due
+    // at now; e.mu_ is held.
     static bool StartReload(const Engine& e, std::chrono::steady_clock::time_point now,
                             std::chrono::steady_clock::duration interval) {
         UserWatch& w = *e.watch_;
+        if (!w.automatic || w.detached || w.running || !e.snapshot_) return false;
         FileVersion found;
-        if (!w.automatic || w.detached || w.running || !e.snapshot_ || e.userFile_.empty() ||
-            !w.watch.Due(e.userFile_, now, interval, found)) {
-            return false;
-        }
+        FolderVersion foundEhnd;
+        const bool user = !e.userFile_.empty() && w.watch.Due(e.userFile_, now, interval, found);
+        const bool ehnd = !e.ehndDir_.empty() && w.ehnd.Due(e.ehndDir_, now, interval, foundEhnd);
+        if (!user && !ehnd) return false;
         w.worker.Join();
         const std::uint64_t ticket = ++e.loads_;
         // The thread reaches the engine only through target, which the engine clears
         // before it goes; it never needs the engine to wait for it.
         w.running = w.worker.Start([target = w.target, ticket, dirs = e.dirs_, verify = e.verifyDicts_,
-                                    file = e.userFile_, cacheWrite = e.cacheWrite_ == CacheWrite::Sync] {
+                                    file = e.userFile_, ehndDir = e.ehndDir_,
+                                    cacheWrite = e.cacheWrite_ == CacheWrite::Sync] {
             const FileVersion version = VersionOf(file);
             dict::LoadResult r = dict::LoadFolders(dirs, {}, verify, cacheWrite, file);
+            FilterLoad filters = FiltersOf(r, ehndDir);
             std::lock_guard<std::mutex> owner(target->mu);
             if (!target->engine) return;
             Engine& engine = *target->engine;
             std::lock_guard<std::mutex> lock(engine.mu_);
-            Finish(engine, ticket, version, std::move(r), false, {});
+            Finish(engine, ticket, version, std::move(r), false, {}, std::move(filters));
             engine.watch_->running = false;
             engine.watch_->done.notify_all();
         });
@@ -137,12 +191,14 @@ struct Access {
 
     // Takes the engine's current dictionaries into a session that holds others.
     static void Refresh(const Engine& e, std::shared_ptr<const dict::Snapshot>& snap,
-                        std::shared_ptr<Generated>& generated, std::unique_ptr<SessionState>& state) {
+                        std::shared_ptr<Generated>& generated, std::shared_ptr<const filter::Filters>& filters,
+                        std::unique_ptr<SessionState>& state) {
         std::lock_guard<std::mutex> lock(e.mu_);
         StartReload(e, std::chrono::steady_clock::now(), kCheckInterval);
-        if (snap == e.snapshot_) return;
+        if (snap == e.snapshot_ && filters == e.filters_) return;
         snap = e.snapshot_;
         generated = e.generated_;
+        filters = e.filters_;
         state = std::make_unique<SessionState>();
     }
 
@@ -151,6 +207,7 @@ struct Access {
         UserWatch& w = *e.watch_;
         w.done.wait(lock, [&w] { return !w.running; });
         w.watch.next = {};
+        w.ehnd.next = {};
         if (!StartReload(e, std::chrono::steady_clock::now(), kCheckInterval)) return false;
         if (wait) w.done.wait(lock, [&w] { return !w.running; });
         return true;
@@ -162,10 +219,37 @@ struct Access {
     }
 
     static void Current(const Engine& e, std::shared_ptr<const dict::Snapshot>& snap,
-                        std::shared_ptr<Generated>& generated) {
+                        std::shared_ptr<Generated>& generated, std::shared_ptr<const filter::Filters>& filters) {
         std::lock_guard<std::mutex> lock(e.mu_);
         snap = e.snapshot_;
         generated = e.generated_;
+        filters = e.filters_;
+    }
+
+    static bool OpenEhnd(Engine& e, const std::string& dir) {
+        for (;;) {
+            std::shared_ptr<const dict::Snapshot> snap;
+            {
+                std::lock_guard<std::mutex> lock(e.mu_);
+                if (!e.snapshot_) {
+                    e.ehndDir_ = dir;
+                    return true;
+                }
+                snap = e.snapshot_;
+            }
+            FilterLoad filters = LoadFilters(snap.get(), dir);
+            if (!filters.read) return false;
+            std::lock_guard<std::mutex> lock(e.mu_);
+            if (snap != e.snapshot_) continue;
+            // Loads under way read the folder before; they are dropped when they finish.
+            e.current_ = ++e.loads_;
+            e.ehndDir_ = dir;
+            e.filters_ = std::move(filters.filters);
+            e.filterErrors_ = std::move(filters.errors);
+            e.watch_->ehnd.loaded = std::move(filters.version);
+            e.watch_->ehnd.hasFailed = false;
+            return true;
+        }
     }
 };
 
@@ -243,6 +327,18 @@ bool Engine::Reload() {
     return internal::Access::Load(*this, dirs, verify, userFile, false);
 }
 
+bool Engine::OpenEhnd(std::string_view dir) { return internal::Access::OpenEhnd(*this, std::string(dir)); }
+
+std::vector<std::string> Engine::FilterErrors() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return filterErrors_;
+}
+
+std::shared_ptr<const filter::Filters> Engine::Filters() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return filters_;
+}
+
 bool Engine::loaded() const {
     std::lock_guard<std::mutex> lock(mu_);
     return snapshot_ != nullptr;
@@ -259,17 +355,19 @@ Session::Session(const Engine& engine, bool reference)
     std::lock_guard<std::mutex> lock(engine.mu_);
     snapshot_ = engine.snapshot_;
     generated_ = engine.generated_;
+    filters_ = engine.filters_;
 }
 
 Session::~Session() = default;
 
 std::string Session::Translate(std::string_view text) {
-    if (engine_.watch_->automatic) internal::Access::Refresh(engine_, snapshot_, generated_, state_);
+    if (engine_.watch_->automatic) internal::Access::Refresh(engine_, snapshot_, generated_, filters_, state_);
     if (!snapshot_) return {};
     std::vector<std::string> lines;
     for (const std::string_view line : text::Lines(text)) lines.emplace_back(line);
     internal::TranslationOptions options;
     options.reference = reference_;
+    options.filters = filters_.get();
     const std::vector<std::string> translated =
         internal::TranslateDocument(*snapshot_, *generated_, lines, state_->memory, {}, options);
     std::string out;
@@ -285,6 +383,7 @@ void Session::Reset() {
     state_ = std::make_unique<internal::SessionState>();
     snapshot_ = engine_.snapshot_;
     generated_ = engine_.generated_;
+    filters_ = engine_.filters_;
 }
 
 namespace internal {
@@ -292,10 +391,12 @@ namespace internal {
 std::string TranslateRaw(const Engine& e, std::string_view line) {
     std::shared_ptr<const dict::Snapshot> snap;
     std::shared_ptr<Generated> generated;
-    Access::Current(e, snap, generated);
+    std::shared_ptr<const filter::Filters> filters;
+    Access::Current(e, snap, generated, filters);
     if (!snap) return {};
     TranslationOptions options;
     options.reference = Access::Reference(e);
+    options.filters = filters.get();
     return TranslateRawLine(*snap, *generated, line, {}, options);
 }
 

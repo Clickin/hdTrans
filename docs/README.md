@@ -8,6 +8,7 @@
 | [build.md](build.md) | 요구 사항, CMake 프리셋, Windows·WebAssembly 빌드, 빌드 옵션, CI |
 | [testing.md](testing.md) | 단위 테스트, 예제 문서, 단계 기록, 자체 기준선, 엔드투엔드 테스트, 환경 변수 |
 | [dictionaries.md](dictionaries.md) | `dicts/` 구성, 파일 머리줄과 계층, 열 파일, 사용자 사전 형식, 캐시 |
+| [ehnd-compat.md](ehnd-compat.md) | Ehnd 필터·SkipLayer·사용자 사전 형식과 적용 순서, hdTrans 필터 파일 |
 | [api.md](api.md) | CLI 옵션, C API, J2K 함수, WebAssembly, C++ API |
 | [web.md](web.md) | 웹 데모(`web/`) 빌드·확인·배포 |
 

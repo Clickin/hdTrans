@@ -29,6 +29,7 @@ std::atomic<unsigned> g_waitingAdmins{0};
 std::uint64_t g_generation = 0;
 std::vector<std::string> g_dirs;
 std::string g_userFile;
+std::string g_ehnd;
 std::unique_ptr<hdTrans::Engine> g_engine;
 std::unique_ptr<hdTrans::Session> g_session;
 
@@ -136,8 +137,11 @@ int hdTrans_Initialize(const char* dirs) {
         generation = g_generation;
     }
     auto paths = SplitNul(dirs);
-    std::string userFile = hdTrans::dict::UserFile(ModuleDir());
+    const std::string dir = ModuleDir();
+    std::string userFile = hdTrans::dict::UserFile(dir);
+    std::string ehnd = hdTrans::dict::EhndFolder(dir);
     auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, kUserReload);
+    e->OpenEhnd(ehnd);
     if (!e->Open(paths, false, userFile)) return -1;
     AdminLock lock;
     if (generation != g_generation) return -1;
@@ -146,6 +150,7 @@ int hdTrans_Initialize(const char* dirs) {
     g_session = std::make_unique<hdTrans::Session>(*g_engine);
     g_dirs = std::move(paths);
     g_userFile = std::move(userFile);
+    g_ehnd = std::move(ehnd);
     ++g_generation;
     return 0;
 }
@@ -157,6 +162,7 @@ void hdTrans_Terminate(void) {
     g_engine.reset();
     g_dirs.clear();
     g_userFile.clear();
+    g_ehnd.clear();
 }
 
 int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
@@ -177,15 +183,17 @@ int hdTrans_Reset(void) {
 int hdTrans_Reload(void) {
     std::uint64_t generation;
     std::vector<std::string> dirs;
-    std::string userFile;
+    std::string userFile, ehnd;
     {
         AdminLock lock;
         if (!g_engine) return -1;
         generation = g_generation;
         dirs = g_dirs;
         userFile = g_userFile;
+        ehnd = g_ehnd;
     }
     auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, kUserReload);
+    e->OpenEhnd(ehnd);
     // A userdict.tsv that does not load keeps the dictionaries loaded before.
     if (!e->Open(dirs, false, userFile) || !e->UserFileError().empty()) return -1;
     AdminLock lock;
@@ -202,6 +210,24 @@ int hdTrans_UserDictError(char** out, size_t* outn) {
     g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
     if (!g_engine) return -1;
     return Copy(g_engine->UserFileError(), out, outn);
+}
+
+int hdTrans_OpenEhnd(const char* dir) {
+    AdminLock lock;
+    if (!g_engine) return -1;
+    const std::string d = dir ? dir : "";
+    if (!g_engine->OpenEhnd(d)) return -1;
+    g_ehnd = d;
+    return 0;
+}
+
+int hdTrans_FilterErrors(char** out, size_t* outn) {
+    std::unique_lock<std::mutex> lock(g_mutex);
+    g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
+    if (!g_engine) return -1;
+    std::string s;
+    for (const std::string& e : g_engine->FilterErrors()) s += (s.empty() ? "" : "\n") + e;
+    return Copy(s, out, outn);
 }
 
 void hdTrans_FreeMem(void* p) { std::free(p); }
