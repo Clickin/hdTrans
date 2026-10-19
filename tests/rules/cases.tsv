@@ -149,7 +149,7 @@ L952	お金のない学生が多い。	돈이 없는 학생이 많다.	current	l
 L952	風のない日の海は静かだ。	바람이 없는 날의 바다는 조용하다.	current	local
 L975	この部屋を会議室とする。	이 방을 회의실로 한다.	current	local
 L975	来月の一日を休みとします。	내달의 하루를 휴일로 합니다.	current	local
-L975	友人とする相談です。	친구로 하는 상담입니다.	current	local
+L975	友人とする相談です。	친구와 하는 상담입니다.	current	local
 L975	象徴とされる	상징으로 여겨진다	current	local
 L1007	今日は早く帰りたいです。	오늘은 빨리 돌아가고 싶습니다.	current	local
 L1007	今日は天気がとても良いですね。	오늘은 날씨가 매우 좋네요.	current	local
@@ -174,7 +174,7 @@ L1075	学生の時よく走った。	학생때 잘 달렸다.	current	local
 L1111	箱の内にある。	상자의 안에 있다.	fix	local
 L1115	今日は5月3日です。	오늘은 5월 3일입니다.	current	local
 L1115	旅行は三日で終わった。	여행은 3일에 끝났다.	current	local
-L1116	同じ年に生まれた。	같은 나이에 태어났다.	current	local
+L1116	同じ年に生まれた。	같은 해에 태어났다.	current	local
 L1117	結婚して二十年になります。	결혼해 20년이 됩니다.	current	local
 L1117	十年記念のパーティーを開く。	10년 기념의 파티를 연다.	current	local
 L1140	何の用ですか。	무슨용무입니까.	current	local
@@ -234,7 +234,7 @@ L1778	台風による被害が大きかった。	태풍에 의한 피해가 컸�
 L1778	先生に対する態度を改めなさい。	선생님에 대한 태도를 고치세요.	current	local-ending
 L1810	「え、あれ？」	「어, 어?」	current	local
 L1810	「ああ、あれ」	「아, 어」	current	local
-L1810	彼の名前はあれ？	그의 이름은 어?	current	local
+L1810	彼の名前はあれ？	그의 이름은 저것?	current	local
 L1832	それ嘘じゃん。	그것거짓말야.	current	local
 L1832	今日は休みじゃん。	오늘은 휴일야.	current	local
 L1840	ひが昇る。	히가 오른다.	current	local
@@ -383,7 +383,7 @@ L2476	おかしなことを言うね。	이상한 것을 말하는군.	current	l
 L2486	私の姉は看護師です。	나의 언니는 간호사입니다.	current	local
 L2486	あちらが駅の入口です。	저쪽이 역의 입구입니다.	current	local
 L2528	友人といる。	친구와 있다.	current	local
-L2568	先生に本を読んでいただいた。	선생님에게 책을 읽어 주었다.	current	local
+L2568	先生に本を読んでいただいた。	선생님이 책을 읽어 주었다.	current	local
 L2571	肉を薄く切った。	고기를 얇게 잘랐다.	current	local
 L2580	ちょっといいですか。	조금 괜찮습니까.	current	local
 L2580	明日は来なくてもいいよ。	내일은 오지 않아도 괜찮아.	current	local
@@ -618,7 +618,7 @@ L3972	わたしに手紙が届きました。	나에게 편지가 도착했습�
 L3972	これはわたしの新しい靴です。	이것은 나의 새로운 구두입니다.	current	local
 L3975	先生に宿題を出しました。	선생님에게 숙제를 냈습니다.	current	local
 L3975	母に誕生日の花を贈った。	어머니에게 생일의 꽃을 선물했다.	current	local
-L3999	その案が候補にあがった。	그 안이 후보에 갔다.	current	local
+L3999	その案が候補にあがった。	그 안이 후보에 올랐다.	current	local
 L4001	彼は話を聞かれた。	그는 이야기를 들렸다.	current	local
 L4033	先に宿題を済ませておこう。	먼저 숙제를 끝마쳐 두자.	current	local
 L4033	旅行の前に切符を買っておく。	여행앞에 표를 사 둔다.	current	local
@@ -630,7 +630,7 @@ L4083	彼は疲れの状態が続いていた。	그는 피로 상태가 계속�
 L4084	ひと通り調べた。	한 차례 조사했다.	fix	local
 L4109	一日だけで終わる。	하루에만 끝난다.	current	local
 L4116	猫も犬も走り回っている。	고양이나 개도 뛰어다니고 있다.	current	local
-L4131	三日前も寒かった。	3일전이나 추웠다.	current	local
+L4131	三日前も寒かった。	3일전에도 추웠다.	current	local
 L4131	三人も来た。	세 명도 왔다.	current	local
 L4141	分かったものの不安は残る。	안 것의 불안은 남는다.	current	local-ending
 L4150	妹は悲しそうな顔をしていた。	여동생은 슬픈 것 같은 얼굴을 하고 있었다.	current	local
@@ -671,10 +671,10 @@ L4480	私は掃除をさせられた。	나는 청소를 하도록 강요받았�
 L4541	やっと終わったって感じです。	드디어 끝났다는 느낌입니다.	current	local-ending
 L4554	勉強させられた。	공부 당했다.	current	local
 L4564	それより早く帰ろう。	그것보다 빨리 돌아가자.	current	local
-L4567	兄に車で送ってもらった。	형에게 차로 보내 주었다.	current	local
-L4567	友達に宿題を教えてもらった。	친구에게 숙제를 가르쳐 주었다.	current	local
-L4567	彼に本を読んでもらった。	그에게 책을 읽어 주었다.	current	local
-L4567	母に本を読んでもらった。	어머니에게 책을 읽어 주었다.	current	local
+L4567	兄に車で送ってもらった。	형이 차로 보내 주었다.	current	local
+L4567	友達に宿題を教えてもらった。	친구가 숙제를 가르쳐 주었다.	current	local
+L4567	彼に本を読んでもらった。	그가 책을 읽어 주었다.	current	local
+L4567	母に本を読んでもらった。	어머니가 책을 읽어 주었다.	current	local
 L4567	本を読んでもらった。	책을 읽어 주었다.	current	local
 L4577	彼はそういうのを食べる。	그는 그러한 것을 먹는다.	fix	local
 L4587	として当然だ。	로서 당연하다.	current	local

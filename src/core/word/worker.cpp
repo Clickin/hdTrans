@@ -58,6 +58,7 @@ Entry* Worker::NewEntry() {
     e->fixed = false;
     e->user = nullptr;
     e->targetChoice = {};
+    e->neighbourAssigned = false;
     return e;
 }
 

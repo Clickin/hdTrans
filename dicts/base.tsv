@@ -10171,7 +10171,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 からだけではなく	뿐만 아니라	E300			GN		jisjk:149071		
 からだつき	몸매	N110	VAcVBp		GN		jisjk:169616		-1
 からだと	에서라고 하면	I111	VPl		GN		jisjk:114754		
-からだと	(으)로부터라고 하면	I111	UMe		GN	937	jisjk:114755		
+からだと	(으)로부터라고 하면	I111	UMe	Tu	GN	937	jisjk:114755		
 からだというと	에서라고 하면	I111	VPl	Tu	GN		jisjk:114757		
 からだというと	(으)로부터라고 하면	I111	UMe	Tu	GN	939	jisjk:114758		
 からちゃ	여러번 우려낸 차	N110	VFd		GN		jisjk:169619		-1
@@ -10937,14 +10937,14 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 が	0게 	S500			GN	4829	jisjk:373825		
 があ	(이)가 &HN@	M428		TuPjVaMa	GN	1346	jisjk:118641		
 があ	(이)가 &HN@	M428		TuPjVa	GN	5017	jisjk:375138		
-があってもい	(이)가 있어도 $AF@	H7N0		Av	GN		jisjk:122174		
+があってもい	(이)가 있어도 $AF@	H7N0		AvTu	GN		jisjk:122174		
 がありすぎ	(이)가 너무 %DH@	G8U0		TuPj	GN		jisjk:346923		
 がありそう	(이)가 있을 듯 %D1@	G8U0		PjTu	GN		jisjk:265140		
 があるとなどだ	있다라고 하는 것등이다	M110			GN		jisjk:201842		
 があると表明	(이)가 있다고 표명&AV@	M419		Tu	GN		jisjk:202372		
 があると表明	(이)가 있다고 표명	M110		Tu	GN		jisjk:202373		
 があると見て、	(이)가 있다고 보고,	I110		TuPj	GN		jisjk:259460		
-があろうとも	(이)가 있어도	K110			GN		jisjk:202191		
+があろうとも	(이)가 있어도	K110		Tu	GN		jisjk:202191		
 がいあく	해롭고 악한일	N110			GN		jisjk:170987		-1
 がいえん	외원	N110	VPl		GN		jisjk:170992		-1
 がいかい	외계	N110	VPl		GN		jisjk:170994		-1
@@ -11160,19 +11160,19 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 がした	(이)가 하고 $F9@	H7U0		TuPj	GN		jisjk:356156		
 がした	(이)가 하고 $F9@	H7U0		TuPj	GN	4039	jisjk:356157		
 がしゃがしゃ	대그락대그락	E301			GN		jisjk:241		
-がしやすくな	(이)가 하기 쉬워&AL@	M428			GN		jisjk:148822		
+がしやすくな	(이)가 하기 쉬워&AL@	M428		Tu	GN		jisjk:148822		
 がしゅう	화집	N110	VBkVSw		GN		jisjk:171373		-1
 がしゅう	아집	N110	SFl		GN		jisjk:171374		-1
 がしゅん	하춘	N110	UTs		GN		jisjk:171376		-1
 がしょう	새해 축하	N110	UMe		GN		jisjk:171377		-1
 がしょう	화상	N110	VMoVHn		GN		jisjk:171378		-1
 がしんしょうたん	와신상담	N110	SFl		GN		jisjk:171383		-1
-がし易くな	(이)가 하기 쉬워&AL@	M428			GN		jisjk:148821		
+がし易くな	(이)가 하기 쉬워&AL@	M428		Tu	GN		jisjk:148821		
 がじょう	축전	N110			GN		jisjk:171384		-1
 がじょう	아성	N110	VTw		GN		jisjk:171385		-1
 がすき	(을)를 좋아%D1@	G8U0		Tu	GN		jisjk:258571		
 がすき	가 좋아%D1@	G8U0			GN		jisjk:261750		
-がすぐれ	(이)가 뛰어&A5@	M417			GN		jisjk:90635		
+がすぐれ	(이)가 뛰어&A5@	M417		Tu	GN		jisjk:90635		
 がせんし	화선지	N110	VPe		GN		jisjk:171395		-1
 がぜん	갑자기	E300			GN		jisjk:122982		
 がた	어$G8@	H7U0			GN	242	jisjk:4986		
@@ -11241,8 +11241,8 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 がっぽん	합본	N110	VBkVSw	Hd	GN		jisjk:171466		-1
 がつがつ	걸근걸근	E311			GN		jisjk:253		
 がつがつ	게걸스럽게	E300	VFd		GN	4478	jisjk:364862		
-がつぶや	(이)가 중얼거&AA@	M441			GN		jisjk:148451		
-がつま	(이)가 쌓&AJ@	M428			GN		jisjk:148306		
+がつぶや	(이)가 중얼거&AA@	M441		Tu	GN		jisjk:148451		
+がつま	(이)가 쌓&AJ@	M428		Tu	GN		jisjk:148306		
 がてら	겸	P200			GN		jisjk:266314		
 がでんいんすい	아전인수	N110	SFl		GN		jisjk:171469		-1
 がとても好き	(을)를 아주 좋아%D1@	G8U0		TuPj	GN		jisjk:2156		
@@ -11391,7 +11391,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 がん具	 완구	N110	VPeVRw		GN		jisjk:150925		
 がん手術	암수술	N110	QHP		GN		jisjk:171554		
 が下手	(이)가 서%C2@	G8U0		TuPj	GN		jisjk:139342		
-が体験でき	(을)를 체험할 수 &HN@	M417		MaPj	GN	568	jisjk:90640		
+が体験でき	(을)를 체험할 수 &HN@	M417		MaPjTu	GN	568	jisjk:90640		
 が何より好き	(을)를 좋아%D1@	G8U0		Tu	GN		jisjk:262612		
 が出来次第	가 되는 데로	I110			GN		jisjk:112271		
 が分	(을)를 &K6@	M428		Tu	GN		jisjk:260616		
@@ -11402,11 +11402,11 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 が多すぎて	(이)가 너무 많아서	E310		J1Tu	GN		jisjk:265		
 が大好き	(을)를 아주 좋아%A1@	G8U0		TuPj	GN	56	jisjk:2158		
 が如く	0 것과 같이	S500			GN		jisjk:373802		
-が完成	(이)가 완성&C6@	M429			GN		jisjk:148299		
+が完成	(이)가 완성&C6@	M429		Tu	GN		jisjk:148299		
 が少し話	(을)를 조금 이야기&AV@	M423		Tu	GN		jisjk:201723		
 が得られ	(을)를 얻을 수 &HN@	M427		MaPjTuKe	GN	1562	jisjk:148084		
-が得られていな	(을)를 얻지 못하고 $FB@	H7U0			GN		jisjk:355857		
-が得られなくな	(을)를 얻을 수 없게 &C6@	M428			GN		jisjk:148618		
+が得られていな	(을)를 얻지 못하고 $FB@	H7U0		Tu	GN		jisjk:355857		
+が得られなくな	(을)를 얻을 수 없게 &C6@	M428		Tu	GN		jisjk:148618		
 が挙げられ	(을)를 들 수 &HN@	M447		MaTuPj	GN	2399	jisjk:265791		
 が挙げられてい	(을)를 들 수 &HN@	M427		MaTuPj	GN	3855	jisjk:348340		
 が描け	(을)를 그릴 수 &HN@	M427		MaTu	GN	1973	jisjk:260558		
@@ -11416,13 +11416,13 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 が為に	기 위해	N110			GN		jisjk:150913		
 が異	(이)가 &EF@	M428		DxTu	GN		jisjk:261842		
 が知りたい方	(을) 알고 싶은 분	N110	VHn		GN		jisjk:152835		
-が終了	(이)가 종료&C6@	M429			GN		jisjk:148397		
+が終了	(이)가 종료&C6@	M429		Tu	GN		jisjk:148397		
 が苦手	에 약%E3@	G8U0		TuPj	GN		jisjk:265074		
-が行えます	(을)를 할 수가 있습니다	I110			GN		jisjk:112269		
+が行えます	(을)를 할 수가 있습니다	I110		Tu	GN		jisjk:112269		
 が行われ	(을)를 &AV@	M427		PjTu	GN		jisjk:266173		
 が行われ	(이)가 거행&C6@	M427		PjTu	GN	2517	jisjk:266313		
 が見渡せ	(을)를 바라볼 수 &HN@	M427		MaTu	GN	1693	jisjk:201604		
-が設けれ	(을)를 설치할 수 &HN@	M447		Ma	GN	1630	jisjk:148797		
+が設けれ	(을)를 설치할 수 &HN@	M447		MaTu	GN	1630	jisjk:148797		
 が読め	(을)를 읽을 수 &HN@	M427		MaTuKe	GN	2019	jisjk:262016		
 が開錠でき	(을)를 열 수 &HN@	M427		MaTu	GN	1816	jisjk:257433		
 が非常に好き	(을)를 매우 좋아%D1@	G8U0		TuPj	GN		jisjk:2161		
@@ -33088,7 +33088,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 であっても	6도	U500			GN		jisjk:343918		
 であつたかのよう	이었던 것 %B3@	G8U0			GN		jisjk:139558		
 であふれかえ	(으)로 가득 넘&AO@	M428		PjTu	GN		jisjk:142222		
-であや	(으)로 달&Ai@	M443			GN		jisjk:148468		
+であや	(으)로 달&Ai@	M443		Tu	GN		jisjk:148468		
 であり	1고	U500			GN		jisjk:342675		
 でありう	일수 &HN@	M428			GN		jisjk:142229		
 でありえ	일 수 &HN@	M427		TuPjMa	GN	1637	jisjk:148904		
@@ -33127,8 +33127,8 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 でありませんでしたよね	1지 않았었지요	U500			GN		jisjk:258209		
 でありませんでしたわ	1지 않았어요	U500			GN		jisjk:258225		
 であり得	일 수 &HN@	M427		TuPjMa	GN	1636	jisjk:148903		
-であり続け	(으)로 계속 &C6@	M427			GN		jisjk:261856		
-であり続け	(으)로 계속 &C6@	M427			GN	2008	jisjk:261857		
+であり続け	(으)로 계속 &C6@	M427		Tu	GN		jisjk:261856		
+であり続け	(으)로 계속 &C6@	M427		Tu	GN	2008	jisjk:261857		
 である	나다&A7@	M421			GN		jisjk:144573		
 である	1다	U500			GN		jisjk:363845		
 である	4	U500			GN	4355	jisjk:363846		
@@ -33287,7 +33287,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 できにくくな	생기기 어려워&AL@	M428			GN		jisjk:142344		
 できのい	잘 만들어$KL@	H7N0			GN		jisjk:137264		
 できばえ	솜씨	I110			GN		jisjk:41330		
-できめ細か	(으)로 치밀$AB@	H7N0			GN		jisjk:137267		
+できめ細か	(으)로 치밀$AB@	H7N0		Tu	GN		jisjk:137267		
 できることなのかも	할 수 있는지도	I110			GN		jisjk:118861		
 できるだけ	가능한 한	E311			GN		jisjk:783		
 できるだけ	가능한 한	N110			GN		jisjk:152859		
@@ -33347,7 +33347,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 でしたぜ	5어요	U500			GN		jisjk:258452		
 でしたぞ	5어요	U500			GN		jisjk:258451		
 でしたぞ。	(이었)어요	P210		Z2	GN		jisjk:6201		
-でしたたか	(으)로 상대하기 어%DW@	G8U0			GN		jisjk:201472		
+でしたたか	(으)로 상대하기 어%DW@	G8U0		Tu	GN		jisjk:201472		
 でしただい。	(이었)였던 거야	P210		Z2	GN		jisjk:6202		
 でしたっけ	(이었)였지	P210			GN		jisjk:6203		
 でしたって	(이었)다고	P211		Z2	GN		jisjk:6204		
@@ -33372,7 +33372,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 でして	(으)로 하고	P200			GN		jisjk:374888		
 でして	(이)라서	P200			GN	4976	jisjk:374889		
 でしの	(로) 나아&A1@	M422			GN		jisjk:142352		
-でしのぎのうま	(으)로 참을성이 $D4@	H7N0			GN		jisjk:137278		
+でしのぎのうま	(으)로 참을성이 $D4@	H7N0		Tu	GN		jisjk:137278		
 でしみじみと刻まれ	(로) 절실히 새겨&AL@	M427			GN		jisjk:142378		
 でしゃば	주제넘게 참견&AV@	M428			GN		jisjk:144663		
 でしょ	1겠죠	S500		J2	GN		jisjk:4333		
@@ -33533,12 +33533,12 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 でながらも	이면서도	P201		Z2	GN		jisjk:6250		
 でながらも	이면서도	P200		J1Z2	GN		jisjk:6251		
 でなくな	(이)가 아니게 &C6@	M428		PjTu	GN		jisjk:266414		
-でなければできな	(이)가 아니면 불가능$AB@	H7N0			GN		jisjk:137284		
+でなければできな	(이)가 아니면 불가능$AB@	H7N0		Tu	GN		jisjk:137284		
 でなければならな	(이)가 아니면 안$AF@	H7N0		TuPjAv	GN		jisjk:137291		
 でなされ	(로) 이루어&AL@	M427			GN		jisjk:142453		
 でなし	이(가) 아님	A9D0		Tu	GN		jisjk:257479		
-でなしえ	(으)로 할 수 &HN@	M447		Ma	GN	1604	jisjk:148368		
-でなし得	(으)로 할 수 &HN@	M447		Ma	GN	1602	jisjk:148366		
+でなしえ	(으)로 할 수 &HN@	M447		MaTu	GN	1604	jisjk:148368		
+でなし得	(으)로 할 수 &HN@	M447		MaTu	GN	1602	jisjk:148366		
 でにく	나오기 어$G8@	H7N0			GN		jisjk:121739		
 でね	1지 말아요	T5a0			GN		jisjk:4160		
 での	에서의	P210			GN		jisjk:265310		
@@ -33674,11 +33674,11 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 で倒れ	에서 쓰러&AL@ 	M427			GN	2914	jisjk:340424		
 で公開され	에서 공개&C6@	M427		Tu	GN		jisjk:119013		
 で分か	(으)로 밝혀&AL@	M428		Tu	GN		jisjk:142543		
-で分割	(으)로 분할&AV@	M429			GN		jisjk:148103		
+で分割	(으)로 분할&AV@	M429		Tu	GN		jisjk:148103		
 で奪	(으)로 이&A2@	M440		TuPj	GN	2243	jisjk:265113		
 で居られ	(으)로 있을 수 &HN@	M427		TuPjMaKe	GN	3814	jisjk:347000		
 で有名	(으)로 유명%A1@	G8U0		Tu	GN		jisjk:202178		
-で無ければならな	(이)가 아니면 안$AF@	H7N0			GN		jisjk:137287		
+で無ければならな	(이)가 아니면 안$AF@	H7N0		Tu	GN		jisjk:137287		
 で販売	에서 판매	N110		TuHd	GN	2032	jisjk:262201		
 で販売	(으)로 판매	N110	XXX	TuHd	GN		jisjk:263736		
 で起き	에서 일어&A5@	M4U7			GN		jisjk:260572		
@@ -33790,12 +33790,12 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 ということに	(으)로 &AV@	M429		TuPj	GN		jisjk:341077		
 ということにな	(이)라는 것이 &C6@	M428		PjTu	GN		jisjk:363231		
 というとき	(이)라고 말할 때	P220			GN		jisjk:6266		
-というところ	(이)라고 하는 곳	N110			GN		jisjk:201614		
+というところ	(이)라고 하는 곳	N110		Tu	GN		jisjk:201614		
 というの	4다는 것	S500			GN		jisjk:4352		
 というの	5다는 것	S560			GN		jisjk:4353		
 というのが	4다는 것이	S500			GN		jisjk:342532		
 というのではなくて	라는 것이 아니라	E300			GN		jisjk:149352		
-というもの	(이)라는 것	I110		Z7	GN	930	jisjk:114719		
+というもの	(이)라는 것	I110		Z7Tu	GN	930	jisjk:114719		
 というような	4다라고 하는	S500			GN		jisjk:266097		
 というように	(와)과 같이	E300		Tu	GN		jisjk:341468		
 というわけ	4다는 것	S500			GN		jisjk:264936		
@@ -33804,10 +33804,10 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 という事で	그래서	P200			GN	4667	jisjk:369685		
 という名前	(이)라는 이름	P220			GN		jisjk:6267		
 という言葉	라는 말	N110		Tu	GN		jisjk:263795		
-といえそう	(이)라고 말할 수 있을 것%D4@	G8U0			GN		jisjk:139465		
+といえそう	(이)라고 말할 수 있을 것%D4@	G8U0		Tu	GN		jisjk:139465		
 といえど	(이)라고 해도	P200		J1	GN		jisjk:344493		
 といえども	(이)라고 해도	P200			GN		jisjk:344494		
-といえなくもな	(이)라고 말할 수도 $FA@	H7N0			GN		jisjk:137308		
+といえなくもな	(이)라고 말할 수도 $FA@	H7N0		Tu	GN		jisjk:137308		
 といえば	(이)라 하면	P201			GN		jisjk:6268		
 といえば	(이)라 하면	P200		J1	GN		jisjk:6269		
 といかえ	되&J7@	M443			GN		jisjk:144901		
@@ -33818,8 +33818,8 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 といただ	추궁&J7@	M443			GN		jisjk:144926		
 といただ	규명&J7@	M443			GN		jisjk:144928		
 といっしょにな	(와) 하나가 &C6@	M428			GN		jisjk:142664		
-といったように	(와)과 같이 	E300			GN		jisjk:260069		
-といった具合	(와)과 같은 정도	E300			GN		jisjk:265818		
+といったように	(와)과 같이 	E300		Tu	GN		jisjk:260069		
+といった具合	(와)과 같은 정도	E300		Tu	GN		jisjk:265818		
 といってい	(이)라고 &AV@	M427		PjTu	GN		jisjk:142666		
 といってい	(이)라고 해도 $DE@	H7U0		PjTu	GN		jisjk:357617		
 といってしま	고 해 버&AA@	M420			GN		jisjk:148358		
@@ -34073,11 +34073,11 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 ところへ	5는데	S560			GN		jisjk:363792		
 とさせていただ	&AV@	M421			GN		jisjk:143097		
 とさせて頂	(이)라고 &AV@	M421		TuPj	GN		jisjk:143108		
-とされう	(으)로 될 수 &HN@	M428			GN		jisjk:148147		
+とされう	(으)로 될 수 &HN@	M428		Tu	GN		jisjk:148147		
 とされてい	(으)로 되어 &HN@	M427		Tu	GN		jisjk:148874		
-とされてしかるべきであ	(으)로 되어야 마땅&Mf@	M428		PjVa	GN		jisjk:148325		
-とされてはい	(으)로 되어 &HN@	M427			GN		jisjk:148250		
-とされて然るべきであ	(으)로 되어야 마땅&Mf@	M428		PjVa	GN		jisjk:148324		
+とされてしかるべきであ	(으)로 되어야 마땅&Mf@	M428		PjVaTu	GN		jisjk:148325		
+とされてはい	(으)로 되어 &HN@	M427		Tu	GN		jisjk:148250		
+とされて然るべきであ	(으)로 되어야 마땅&Mf@	M428		PjVaTu	GN		jisjk:148324		
 とされる。	고 여겨진다	A9H1			GN		jisjk:104140		
 とざ	&FQ@	M443			GN		jisjk:145229		
 としか	4다고 밖에	S500			GN		jisjk:343004		
@@ -34106,13 +34106,13 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 としてできるだけ	(로)서 가능한 한	E300			GN		jisjk:149357		
 としてではな	(으)로서가 아$A3@	H7N0		TuPj	GN		jisjk:137332		
 としてとどま	에 머&L5@	M428			GN		jisjk:143158		
-としてとらえてお	(으)로서 파악하고 &HN@	M428			GN		jisjk:143163		
+としてとらえてお	(으)로서 파악하고 &HN@	M428		Tu	GN		jisjk:143163		
 としてとらえられう	(으)로서 파악될 수 &HN@	M428		TuPj	GN		jisjk:148024		
 としてとり入れ	(로서) 받아들&AJ@	M447			GN		jisjk:148364		
-としてとり扱	(으)로서 취급&AV@	M440			GN		jisjk:143164		
-としてにらみを利かせ	(으)로서 위엄을 보&AJ@	M447			GN		jisjk:143168		
+としてとり扱	(으)로서 취급&AV@	M440		Tu	GN		jisjk:143164		
+としてにらみを利かせ	(으)로서 위엄을 보&AJ@	M447		Tu	GN		jisjk:143168		
 としての	(으)로서의	C0D1		Tu	GN		jisjk:4587		
-としてのしかか	(으)로서 압력을 &H5@	M428			GN		jisjk:143175		
+としてのしかか	(으)로서 압력을 &H5@	M428		Tu	GN		jisjk:143175		
 としては	(으)로서는	P200			GN		jisjk:201656		
 としてはかなり	(로서)는 상당히	E300		Tu	GN		jisjk:149358		
 としても	4다고 해도	S500		J1	GN		jisjk:808		
@@ -34122,7 +34122,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 としても	5다고 해도	S560			GN		jisjk:342542		
 としてもうすこし	(로서) 좀 더	E300			GN		jisjk:149360		
 としてもう少し	(로서) 좀 더	E300			GN		jisjk:149359		
-として取り入れ	(으)로서 받아들&AJ@	M447			GN		jisjk:148363		
+として取り入れ	(으)로서 받아들&AJ@	M447		Tu	GN		jisjk:148363		
 としと	나이를 &HU@	M428	UMe		GN		jisjk:145240		
 としなくてはいけな	(으)로 하지 않으면 안 $AF@	H7U0		TuAv	GN		jisjk:264344		
 としにはかてな	나이는 어쩔 수 $FA@	H7N0			GN		jisjk:137336		
@@ -34150,7 +34150,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 とするよう	(으)로 할 것 %B3@	G8U0		TuPj	GN		jisjk:266597		
 とすれば	그렇다면	E300			GN		jisjk:149621		
 とぜんたる	따분한	E0H0	SFl		GN		jisjk:123574		
-とぞんじ	(이)라고 생각&AV@	M447			GN		jisjk:260878		
+とぞんじ	(이)라고 생각&AV@	M447		Tu	GN		jisjk:260878		
 とたん	1자마자	S560			GN		jisjk:265944		
 とたんに	1자마자	S560			GN		jisjk:265945		
 とだえ	끊어&AL@	M417			GN		jisjk:91128		
@@ -34244,7 +34244,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 となえ	주창&AV@	M447			GN		jisjk:145434		
 となったとき	(이) 되었을 때	N110	UMe		GN		jisjk:152696		
 となってしま	(이)가 되어 버&AA@	M420		TuPj	GN		jisjk:143303		
-となってはい	(이)가 되고는 &HN@	M427			GN		jisjk:143308		
+となってはい	(이)가 되고는 &HN@	M427		Tu	GN		jisjk:143308		
 となみ町	토나미마치	I130	QCTVPl		GN		jisjk:311756		
 となら	(와)과 나란히 &AD@	M426		TuPj	GN		jisjk:143312		
 とならんで	(와)과 함께	E300		Tu	GN		jisjk:149364		
@@ -34269,7 +34269,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 とにかく	어쨌든	E311			GN		jisjk:821		
 とにかくね	어쨌든요	E300			GN		jisjk:149365		
 とにもかくにも	어쨌든	E311			GN		jisjk:822		
-とに区別	(와)과 구별&AV@	M429			GN		jisjk:148170		
+とに区別	(와)과 구별&AV@	M429		Tu	GN		jisjk:148170		
 とね	1자면	S500			GN		jisjk:341289		
 との	4다라는	S500			GN		jisjk:4029		
 との	5다는	S561			GN		jisjk:4030		
@@ -34304,7 +34304,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 とは	1다고는	U501			GN		jisjk:374574		
 とはいいえ	(이)라고는 할 수 &HN@	M427		MaTuPj	GN	1588	jisjk:148252		
 とはいいがた	고는 말하기 어$G8@	H7N0			GN		jisjk:138704		
-とはいいながら	(이)라고 말하면서	A9D0			GN		jisjk:347073		
+とはいいながら	(이)라고 말하면서	A9D0		Tu	GN		jisjk:347073		
 とはいい難	고는 말하기 어$G8@	H7N0			GN		jisjk:138701		
 とはいえ	4다고는 해도	S501			GN		jisjk:4357		
 とはいえ	5다고는 해도	S561			GN		jisjk:4358		
@@ -34330,7 +34330,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 とは無関係に	(와)는 관계없이	E300			GN		jisjk:149691		
 とは異なってい	(와)과는 &EF@	M427		TuPj	GN		jisjk:143351		
 とは異なり	과는 달리	I110			GN		jisjk:112902		
-とは矛盾	(와)과는 모순&C6@	M429			GN		jisjk:148293		
+とは矛盾	(와)과는 모순&C6@	M429		Tu	GN		jisjk:148293		
 とは言え	그렇지만	I110			GN		jisjk:113013		
 とは言えな	(이)라고는 할 수 $FA@	H7N0		TuPj	GN		jisjk:137349		
 とは関係がな	(와)는 관계가 $FA@	H7N0			GN		jisjk:138855		
@@ -34403,14 +34403,14 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 とみえて	5는지	S560			GN		jisjk:346626		
 とみてい	(이)라고 봐도 $DE@	H7N0		TuPj	GN		jisjk:137361		
 とみてい	(이)라고 보고 &HN@	M427		TuPj	GN		jisjk:355407		
-とみとめられ	(으)로 인정&C6@	M427			GN		jisjk:148227		
+とみとめられ	(으)로 인정&C6@	M427		Tu	GN		jisjk:148227		
 とみな	(으)로 간주&AV@	M443		TuPj	GN		jisjk:147969		
-とみなしう	(으)로 간주할 수 &C6@	M428			GN		jisjk:148119		
+とみなしう	(으)로 간주할 수 &C6@	M428		Tu	GN		jisjk:148119		
 とみに	갑자기	E300			GN		jisjk:149368		
 とみられ	(으)로 보여&AL@	M427		TuPj 	GN		jisjk:148031		
 とみんファクター	토민 팩터	I130	QIDVGt		GN		jisjk:41348		
 とみんリース	토민 리스	I130	QIDVGt		GN		jisjk:41349		
-とむじゅん	(와)과 모순&C6@	M429			GN		jisjk:148157		
+とむじゅん	(와)과 모순&C6@	M429		Tu	GN		jisjk:148157		
 とむら	조상&AV@	M430			GN		jisjk:91139		
 とむら	애도&AV@	M440	SFl		GN		jisjk:145805		
 とめ	세&AI@	M437			GN		jisjk:91140		
@@ -34481,7 +34481,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 とも考えられ	(이)라고도 생각&C6@	M427		TuPj	GN		jisjk:147975		
 とも解しう	(이)라고도 해석할 수 &HN@	M428		TuPj	GN		jisjk:148138		
 とも言	고도 말&AV@	M420			GN		jisjk:143674		
-とも言いう	(이)라고도 할 수 &HN@	M428			GN		jisjk:148359		
+とも言いう	(이)라고도 할 수 &HN@	M428		Tu	GN		jisjk:148359		
 とも言え	고도 말할 수 &HN@	M427			GN		jisjk:143687		
 とも言われ	(이)라고도 말&AV@	M427		TuPj	GN		jisjk:143696		
 とも述べ	(이)라고도 말&AV@	M427		TuPj	GN		jisjk:143715		
@@ -34740,7 +34740,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 とろりと	걸쭉&AV@	M449			GN		jisjk:143801		
 とろーり	걸쭉걸쭉	N110	UYa		GN		jisjk:268403		
 とろ火	약한 불	I110			GN		jisjk:106817		
-とわか	(이)라고 &K6@	M428			GN		jisjk:262050		
+とわか	(이)라고 &K6@	M428		Tu	GN		jisjk:262050		
 とを	(을)를	P200			GN		jisjk:202130		
 とを重ね合わせ	(을)를 거듭&AV@	M447		TuPj	GN		jisjk:143805		
 とんかしだ	둔화하기 시작&AV@	M423			GN		jisjk:143808		
@@ -34782,56 +34782,56 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 とん税	톤세	N110	VMo		BZ		jisjk:361925		
 と並び､	(와)과 나란히	E300		Tu	GN		jisjk:354526		
 と並んで	(와)과 함께	E300		TuPj	GN		jisjk:363839		
-と並行	(와)과 병행&AV@	M429			GN		jisjk:148127		
+と並行	(와)과 병행&AV@	M429		Tu	GN		jisjk:148127		
 と予想され	(으)로 예상&C6@	M427		Tu	GN		jisjk:210236		
 と争	(으)로 다&CR@	M440		Tu	GN		jisjk:264391		
 と伝えられてい	(이)라고 전하고 &HN@	M447		Tu	GN		jisjk:202677		
 と伴に	0 것과 동시에	S500			GN		jisjk:364294		
 と似	(와)과 &F8@	M427		DxPjTu	GN		jisjk:265264		
-と位置づけ	(으)로 자리매김&AV@	M427			GN		jisjk:202375		
+と位置づけ	(으)로 자리매김&AV@	M427		Tu	GN		jisjk:202375		
 と位置づけられ	(으)로 자리매김&C6@	M427		Tu	GN		jisjk:142662		
 と供述	(이)라고 공술&AV@	M429		Tu	GN		jisjk:259553		
 と信じてお	(이)라고 믿고 &HN@	M428		Tu	GN		jisjk:202584		
-と入力	(이)라고 입력	I110		Hd	GN		jisjk:106859		
+と入力	(이)라고 입력	I110		HdTu	GN		jisjk:106859		
 と共に	(와)과 함께	P210		Tu	GN		jisjk:265811		
 と共に	B(와)과 동시에	S500			GN		jisjk:347680		
 と分か	(이)라고 &K6@	M468		TuPj	GN		jisjk:343962		
-と切り離	(와)과 분리&AV@	M423			GN		jisjk:148181		
-と切り離され	(와)과 분리&C6@	M427			GN		jisjk:147972		
+と切り離	(와)과 분리&AV@	M423		Tu	GN		jisjk:148181		
+と切り離され	(와)과 분리&C6@	M427		Tu	GN		jisjk:147972		
 と判断	(이)라고 판단	N110		TuPj	GN		jisjk:259619		
 と化	화&AV@	M423		PjTu	GN		jisjk:266769		
-と受け取られ	(으)로 받아들여&AL@	M427			GN		jisjk:142703		
+と受け取られ	(으)로 받아들여&AL@	M427		Tu	GN		jisjk:142703		
 と合	(와)과 &FB@	M4U0		Tu	GN		jisjk:261767		
 と合わせ	(와)과 합&AV@	M427		TuPj	GN		jisjk:264185		
-と合致	(와)과 합치&AV@	M429			GN		jisjk:147974		
+と合致	(와)과 합치&AV@	M429		Tu	GN		jisjk:147974		
 と同じ	(와)과 %B3@	G8U0		TuPj	GN		jisjk:117001		
 と同じ	것과 %B3@	G8U0		Pj	GN	3745	jisjk:346430		
-と同一視	(와)과 동일시&AV@	M429			GN		jisjk:148180		
+と同一視	(와)과 동일시&AV@	M429		Tu	GN		jisjk:148180		
 と同時に	0 것과 동시에	S500			GN		jisjk:263162		
 と同時に	(와)과 동시에	P200			GN		jisjk:266905		
 と同時に	그와 동시에	P200			GN	4591	jisjk:366444		
 と同様	(와)과 %B3@	G8U0		PjTu	GN		jisjk:267151		
-と同筋は話してい	(이)라고 소식통은 전하고 &HN@	M427			GN		jisjk:202361		
+と同筋は話してい	(이)라고 소식통은 전하고 &HN@	M427		Tu	GN		jisjk:202361		
 と同視	(와)과 같이 &AY@	M429		TuPj	GN		jisjk:148016		
-と名付けられ	(이)라고 명명&C6@	M427		Pj	GN		jisjk:340330		
+と名付けられ	(이)라고 명명&C6@	M427		PjTu	GN		jisjk:340330		
 と呼	(이)라고 &EE@	M446		TuPj	GN		jisjk:268133		
 と呼ばれ	(으)로 불&AA@	M427		PjTu	GN		jisjk:266303		
 と命名	(이)라고 명명&AV@	M423		TuPj	GN		jisjk:268132		
 と命名いた	(이)라고 명명&AV@	M423		TuPj	GN		jisjk:268131		
 と報告	(이)라고 보고&AV@	M429		Tu	GN		jisjk:259757		
-と変わらな	(와)과 다르지 $DH@	H7U0			GN		jisjk:266969		
+と変わらな	(와)과 다르지 $DH@	H7U0		Tu	GN		jisjk:266969		
 と存じ	(으)로 &K6@	M427	UTh	PjTu	GN		jisjk:266853		
 と存じ	(으)로 생각&AV@	M427	XXXUTh	PjTu	GN		jisjk:266854		
 と当た	하고 부딪&AW@	M428	XXX	PjTu	GN		jisjk:202242		
 と当た	하고 맞&AD@	M428		PjTu	GN	2215	jisjk:264649		
 と快勝	로 쾌승	K110			GN		jisjk:104240		
-と念を押すと、	(이)라고 재확인하자,	N110		Pj	GN		jisjk:259452		
-と思いこ	(이)라고 &HA@	M415			GN		jisjk:91161		
+と念を押すと、	(이)라고 재확인하자,	N110		PjTu	GN		jisjk:259452		
+と思いこ	(이)라고 &HA@	M415		Tu	GN		jisjk:91161		
 と思いまして	2면 해서	S530			GN		jisjk:374187		
 と思われ	(이)라고 생각&C6@	M427		TuPj	GN		jisjk:260636		
 と拝察いた	(이)라고 사려&C6@	M443		Tu	GN		jisjk:262677		
 と拡大	로 확대	I110		HdPj	GN		jisjk:106816		
-と推計され	(이)라고 추계&C6@	M427			GN		jisjk:202402		
+と推計され	(이)라고 추계&C6@	M427		Tu	GN		jisjk:202402		
 と断定	(으)로 단정	I110		HdTu	GN		jisjk:106858		
 と書かれ	(이)라고 쓰여&AL@	M427		Tu	GN		jisjk:261773		
 と期待	(이)라고 기대&AV@	M429		Tu	GN		jisjk:202697		
@@ -34843,14 +34843,14 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 と申	(이)라고 &AV@	M423		PjTu	GN		jisjk:264012		
 と申	말&AV@	M423		Pj	GN	4937	jisjk:374778		
 と申しますの	(이)라는 것	P220			GN		jisjk:6275		
-と申し入れ	(이)라고 신청&AV@	M4N7			GN		jisjk:202329		
-と申し出	(이)라고 신청&AV@	M447			GN		jisjk:369732		
+と申し入れ	(이)라고 신청&AV@	M4N7		Tu	GN		jisjk:202329		
+と申し出	(이)라고 신청&AV@	M447		Tu	GN		jisjk:369732		
 と異な	(와)과 &EF@	M428		TuPj	GN		jisjk:143069		
 と異なり	(와)과 달리	E300		Tu	GN		jisjk:149633		
 と疑問視	라고 의문시	K110			GN		jisjk:118962		
 と矛盾	(와)과 모순&C6@	M429		PjTu	GN		jisjk:148156		
-と称	(으)로 칭&AV@	M439	UTs		GN		jisjk:91163		
-と称され	(이)라고 칭해&AL@	M427			GN		jisjk:148865		
+と称	(으)로 칭&AV@	M439	UTs	Tu	GN		jisjk:91163		
+と称され	(이)라고 칭해&AL@	M427		Tu	GN		jisjk:148865		
 と競	(와)과 경쟁&AV@	M420		PjTu	GN		jisjk:266352		
 と競いあえ	(와)과 서로 경쟁할 수 &HN@	M427		PjTu	GN		jisjk:366452		
 と結	(와)과 연결&AV@	M446		Tu	GN		jisjk:264342		
@@ -34858,22 +34858,22 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 と続伸	(으)로 계속 상승&AV@	M429		Tu	GN		jisjk:202323		
 と織りな	(으)로 구성&AV@	M423		PjTu	GN		jisjk:266694		
 と織りな	(와)과 구성&AV@	M423		PjTu	GN		jisjk:266695		
-と聞かれ	(이)라고 (들)&H9@	M467		Pj	GN		jisjk:340329		
+と聞かれ	(이)라고 (들)&H9@	M467		PjTu	GN		jisjk:340329		
 と胸を衝かれ	크게 충격&FD@	M427			GN		jisjk:143664		
 と落ち込	(로) 뚝 떨어&AL@	M425			GN		jisjk:142829		
-と衝突	(와)과 충돌&AV@	M429			GN		jisjk:147100		
-と見せかけ	(으)로 가장&AV@	M437			GN		jisjk:91160		
+と衝突	(와)과 충돌&AV@	M429		Tu	GN		jisjk:147100		
+と見せかけ	(으)로 가장&AV@	M437		Tu	GN		jisjk:91160		
 と見られ	(이)라고 볼 수 &HN@	M427		MaTuKe	GN	2023	jisjk:262065		
 と覚悟	로 각오	I110		HdPj	GN		jisjk:106807		
 と親し	(와)과 친해&AL@	M425		TuPj	GN		jisjk:265731		
 と親し	(을)를 즐&A2@	M4U5		TuPj	GN	2601	jisjk:266852		
-と解され	(이)라고 해석&C6@	M427			GN		jisjk:148339		
+と解され	(이)라고 해석&C6@	M427		Tu	GN		jisjk:148339		
 と解すべきでな	(로) 해석해야 할 것이 아$A3@	H7N0			GN		jisjk:138849		
 と解するよりな	고 해석할 수밖에 $FA@	H7N0			GN		jisjk:138890		
 と解せられ	(으)로 해석&C6@	M427		TuPj	GN		jisjk:148062		
 と言	(이)라고 말&AV@	M420	UTsUThUSe	PjTu	GN	4211	jisjk:362127		
 と言	(이)라고 &AV@	M420	UTsUThUSe	PjTu	GN	4212	jisjk:362128		
-と言い切	(이)라고 단언&AV@	M438	UTs		GN		jisjk:91162		
+と言い切	(이)라고 단언&AV@	M438	UTs	Tu	GN		jisjk:91162		
 と言うことにな	(이)라는 것이 &C6@	M428		TuPj	GN		jisjk:363555		
 と言う名	(이)라는 이름	P220			GN		jisjk:6276		
 と言う時	(이)라고 말할 때	P220	UMe		GN		jisjk:6277		
@@ -34881,16 +34881,16 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 と認定される	라고 인정된다	N110			GN		jisjk:103616		
 と誤解され	(으)로 오해&FD@	M427		Tu	GN		jisjk:264281		
 と警告	고 경고	I110			GN		jisjk:106830		
-と述べるにとどめたが、	(이)라고 말하는데 그쳤지만,	I110			GN		jisjk:257721		
+と述べるにとどめたが、	(이)라고 말하는데 그쳤지만,	I110		Tu	GN		jisjk:257721		
 と進言	진언&AV@	M449			GN		jisjk:261821		
 と違	(와)과 &EF@	M420		PjTuVa	GN		jisjk:265654		
 と違って	(와)과 달리	E300		TuPj	GN		jisjk:149361		
-と重複	(와)과 중복&C6@	M429			GN		jisjk:148115		
+と重複	(와)과 중복&C6@	M429		Tu	GN		jisjk:148115		
 と間違え	(으)로 잘못&K6@	M427		PjTu	GN		jisjk:265420		
 と闘	(와)과 싸&AI@	M420		TuPj	GN		jisjk:343278		
 と頭を下げ	라고 고개를 숙&AJ@	M427			GN		jisjk:260727		
-と類似	(와)과 유사&Mf@	M429		PjVa	GN		jisjk:148124		
-と類似してい	(와)과 유사&AV@	M427			GN		jisjk:148167		
+と類似	(와)과 유사&Mf@	M429		PjVaTu	GN		jisjk:148124		
+と類似してい	(와)과 유사&AV@	M427		Tu	GN		jisjk:148167		
 ど	물러&A5@	M421			GN		jisjk:146667		
 ど	비&AQ@	M421			GN		jisjk:146671		
 ど	제도&AV@	M449	UCl		GN		jisjk:146693		
@@ -36318,7 +36318,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 にあたると	에 해당한다고	P210		Tu	GN		jisjk:202196		
 にあっては	에 있어서는	E300		TuPj	GN		jisjk:149418		
 にあてられてお	에 해당&C6@	M428			GN		jisjk:144902		
-にあまえ	(을)를 받아들&AJ@	M417	UTs	Pj	GN		jisjk:91195		
+にあまえ	(을)를 받아들&AJ@	M417	UTs	PjTu	GN		jisjk:91195		
 にあやか	(을)를 &F8@	M428		PjTu	GN		jisjk:268190		
 にありつ	(을)를 얻게 &C6@	M4U1		PjTu	GN		jisjk:369548		
 にあるとされ	에 있다고 &AV@	M427			GN		jisjk:144905		
@@ -36399,7 +36399,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 にがて	서%C2@	G8U0			GN		jisjk:143140		
 にがにがし	불쾌$AB@	H7N0	SFl		GN		jisjk:121930		
 にがり	간수	I110			GN		jisjk:106608		
-にきがつ	(을)를 알아차&AA@	M421			GN		jisjk:148277		
+にきがつ	(을)를 알아차&AA@	M421		Tu	GN		jisjk:148277		
 にきび	여드름	I110	VBp		GN		jisjk:41415		
 にきびができ	여드름이 생&A2@	M427	QHP		GN		jisjk:145074		
 にぎ	&CK@	M438			GN		jisjk:91199		
@@ -36487,7 +36487,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 にじみ方	스미는 방식	N110			GN		jisjk:348017		
 にすえ	(으)로 자리&FK@	M447		TuPj	GN		jisjk:145199		
 にすぎな	에 지나지 $DH@	H7U0		TuPjAvJs	GN	3917	jisjk:351418		
-にすぐれ	(이)가 뛰어&A5@	M417			GN		jisjk:91207		
+にすぐれ	(이)가 뛰어&A5@	M417		Tu	GN		jisjk:91207		
 にすることができ	(으)로 할 수 &HN@	M427		MaTuPj	GN	1944	jisjk:259882		
 にするときに	(으)로 할 경우에	E310		Tu	GN		jisjk:259849		
 にせ	가짜	N110		Z6	GN		jisjk:341621		
@@ -36522,7 +36522,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 にだんかい	2단계	N110	VPl		GN		jisjk:161238		
 にちがいあ	것이 틀림&M9@	M428		PjMa	GN		jisjk:268345		
 にちがいな	(이)가 틀림$FA@	H7U0	XXX	PjTu	GN	2784	jisjk:267731		
-にちがい無	(이)가 틀림$FA@	H7U0		Pj	GN		jisjk:268347		
+にちがい無	(이)가 틀림$FA@	H7U0		PjTu	GN		jisjk:268347		
 にちなんで	(을)를 기념하여	A9H1		TuPj	GN		jisjk:104072		
 にちゃつ	끈적거&AA@	M411			GN		jisjk:91212		
 にちりん	니치린	N130	QPN		GN		jisjk:367260		
@@ -36655,7 +36655,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 にはいずれも	에는 모두	E300			GN		jisjk:149428		
 にはいた	에는 &ME@	M428			GN		jisjk:145449		
 にはいられな	견딜 수 $FA@	H7U0		Pj	GN	5063	jisjk:375310		
-にはき替え	(으)로 갈아&HM@	M447			GN		jisjk:148335		
+にはき替え	(으)로 갈아&HM@	M447		Tu	GN		jisjk:148335		
 にはげ	에 돌진&AV@	M425		TuPj	GN		jisjk:341043		
 にはこだわ	에는 구애&C6@	M428			GN		jisjk:145457		
 にはさまれ	에 끼워&AL@	M427			GN		jisjk:145463		
@@ -36664,7 +36664,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 にはじま	부터 시작&C6@	M428		Tu	GN	3571	jisjk:344354		
 にはためらいがあ	에는 망설임이 &HN@	M428			GN		jisjk:145478		
 にはならな	(은)는 되지 $DH@	H7U0		TuPjAvJs	GN		jisjk:358761		
-にはならないと	(은)는 되지 않는다고 &AV@	M429			GN		jisjk:148089		
+にはならないと	(은)는 되지 않는다고 &AV@	M429		Tu	GN		jisjk:148089		
 にはなりえな	(이)가 될 수 $FA@	H7N0		TuPj	GN		jisjk:137508		
 にはなりきれていな	(이)가 되지 못$AB@	H7N0		TuPj	GN		jisjk:137509		
 にはなりたくな	(으)로는 되고 싶지 $D7@	H7N0		TuPj	GN		jisjk:137510		
@@ -36694,7 +36694,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 にべもな	쌀쌀$AB@	H7N0	SFl		GN		jisjk:122071		
 にほう	에게 던&AL@	M428			GN		jisjk:260723		
 にほかならな	(와)과 다름$FA@	H7N0		TuPj	GN		jisjk:137516		
-にほころびが出	(이)가 벌어&AL@	M427			GN		jisjk:148474		
+にほころびが出	(이)가 벌어&AL@	M427		Tu	GN		jisjk:148474		
 にほん	일본	N110			IT		jisjk:260054		
 にほんけい	일본형	N110			GN		jisjk:159745		
 にほんこく	일본	N110	VPl		GN		jisjk:161697		
@@ -36704,7 +36704,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 にまさ	보다 뛰어&Mr@	M428		TuPjVa	GN		jisjk:201711		
 にまつわ	에 관련&C6@	M428		PjTu	GN		jisjk:267667		
 にまみれ	투성이가 &C6@	M417		Dx	GN		jisjk:91217		
-にまわされ	(으)로 돌려&AL@	M417			GN		jisjk:91218		
+にまわされ	(으)로 돌려&AL@	M417		Tu	GN		jisjk:91218		
 にみそめられ	(이)가 반&AV@	M427		Tu	GN		jisjk:264270		
 にみち	로 가득 &AN@	M427			GN		jisjk:201588		
 にむか	(으)로 향&AV@	M420		PjTu	GN		jisjk:266360		
@@ -36874,7 +36874,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に仕留め	(으)로 &FK@	M427		PjTu	GN		jisjk:266246		
 に他ならな	(와)과 다름$FA@	H7N0		TuPj	GN		jisjk:137515		
 に付いて少しふれ	에 관하여 조금 언급&AV@	M427			GN		jisjk:148735		
-に付きまとわれ	(이)가 따라다&A7@	M417	VHn		GN		jisjk:91252		
+に付きまとわれ	(이)가 따라다&A7@	M417	VHn	Tu	GN		jisjk:91252		
 に付き物	에 항상 붙어 다니는 것	N110			GN		jisjk:151593		
 に代わ	에 대신&AV@	M428		TuPj	GN		jisjk:145039		
 に任せるしかな	 것에 맡길 수 밖에 $FA@	H7N0			GN		jisjk:137517		
@@ -36893,7 +36893,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に係	(와)과 관련&C6@	M428		TuPj	GN		jisjk:145017		
 に係わ	(와)과 관계&C6@	M428		TuPj	GN		jisjk:145012		
 に係わ	에 관계&C6@	M428		TuPj	GN	4311	jisjk:363434		
-に保持	(으)로 유지&AV@	M429			GN		jisjk:148139		
+に保持	(으)로 유지&AV@	M429		Tu	GN		jisjk:148139		
 に値	에 적합&Mf@	M429		TuPjVa	GN		jisjk:267376		
 に優れ	(이)가 뛰어&A5@	M417		PjTu	GN		jisjk:91267		
 に優れてい	(이)가 뛰어&Mr@	M427		PjTuVa	GN		jisjk:266466		
@@ -36908,7 +36908,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に出会	(을)를 만&A5@	M420		TuPj	GN		jisjk:342579		
 に分かれ	(으)로 나누어&AL@	M427		DxPjTu	GN	2659	jisjk:267129		
 に分け	(으)로 나&C4@	M447		TuPj	GN	1553	jisjk:147866		
-に分解	(으)로 분해&AV@	M449			GN		jisjk:260375		
+に分解	(으)로 분해&AV@	M449		Tu	GN		jisjk:260375		
 に分離	로 분리	I110		Hd	GN		jisjk:106869		
 に分類	(으)로 분류&AV@	M449		PjTu	GN		jisjk:266455		
 に切り替え	(으)로 전환&AV@	M447		TuPj	GN		jisjk:266305		
@@ -36946,7 +36946,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に基づ	에 근거&AV@	M421		TuPj	GN		jisjk:147509		
 に塗れ	투성이가 &C6@	M417			GN		jisjk:91242		
 に増や	(으)로 늘&AA@	M423		TuPj	GN		jisjk:264422		
-に変	(으)로 변&AV@	M418			GN		jisjk:91248		
+に変	(으)로 변&AV@	M418		Tu	GN		jisjk:91248		
 に変わ	(으)로 바&CW@	M428		Tu	GN		jisjk:202090		
 に変わってい	(으)로 바뀌어&A1@	M430		Tu	GN		jisjk:91249		
 に変わってい	(으)로 바뀌어&A1@	M421		Tu	GN		jisjk:202092		
@@ -36957,7 +36957,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に大別され	(으)로 대별&C6@	M427		TuPj	GN		jisjk:147135		
 に始ま	에 시작&AV@	M428		Tu	GN		jisjk:202169		
 に嫌気がさ	에게 진저리가 &A5@	M423		Tu	GN		jisjk:263466		
-に安心していただ	(이)가 안심&AV@	M421			GN		jisjk:144919		
+に安心していただ	(이)가 안심&AV@	M421		Tu	GN		jisjk:144919		
 に宛て	 앞으로 보&A6@	M447			GN		jisjk:147603		
 に寄	에 &E2@	M418		Tu	GN		jisjk:91236		
 に寄	에 치우&AO@	M418	VTpUDr		GN		jisjk:91237		
@@ -37007,12 +37007,12 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に思いを馳せようと	(을)를 생각하려고	P230			GN		jisjk:266540		
 に思いを馳（は）せようと	(을) 생각하게 하려고 &AV@	M449			GN		jisjk:145003		
 に恵まれ	(을)를 타고&A5@	M417	VHn	PjTuXj	GN		jisjk:91279		
-に恵まれ	(이)가 풍부&AV@	M417			GN		jisjk:91280		
+に恵まれ	(이)가 풍부&AV@	M417		Tu	GN		jisjk:91280		
 に想定	(으)로 상정&AV@	M429		Tu	GN		jisjk:257339		
 に惹かれ	에 매료&C6@	M427		TuPj	GN		jisjk:343284		
 に慣れ	에 익숙&AV@	M427		DxTuPj	GN		jisjk:265033		
 に成功	에 성공&AV@	M429		TuPj	GN		jisjk:264427		
-に戯れ	(을)를 희롱&AV@	M417			GN		jisjk:91282		
+に戯れ	(을)를 희롱&AV@	M417		Tu	GN		jisjk:91282		
 に戻って	(으)로 돌아&AH@	E4U;		PjTu	GN		jisjk:265953		
 に戻ってから	에 돌아와서	N110		Tu	GN		jisjk:152787		
 に打ち上げられ	에 밀려&AH@	M427		TuPj	GN		jisjk:266324		
@@ -37026,7 +37026,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に控え	에 앞&C7@	M437	UMe	Tu	GN		jisjk:91233		
 に控え	에 메모해 &C7@	M437	VSwUTs	Tu	GN		jisjk:263562		
 に推進	(으)로 추진&AV@	M429		Tu	GN		jisjk:262671		
-に換価	(으)로 환가&AV@	M429			GN		jisjk:148121		
+に換価	(으)로 환가&AV@	M429		Tu	GN		jisjk:148121		
 に換算	(으)로 환산&AV@	M429		TuPj	GN		jisjk:148039		
 に揺れ	에 흔들&AA@	M427		Tu	GN		jisjk:202262		
 に支えられ	에 의지&AV@	M427		TuPj	GN		jisjk:266925		
@@ -37050,7 +37050,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に止ま	에 그&AO@	M428		TuPj	GN		jisjk:145279		
 に止ま	에서 멈&CL@	M428		TuPj	GN	3742	jisjk:346418		
 に死なれ	(이)가 돌아가&AE@	M427		TuPj	GN		jisjk:265343		
-に死に後れ	(을)를 여의고 살아&F4@	M417	VHn		GN		jisjk:91256		
+に死に後れ	(을)를 여의고 살아&F4@	M417	VHn	Tu	GN		jisjk:91256		
 に残ってい	에 남아 &HN@	M427		TuPj	GN		jisjk:145397		
 に比べ	에 비&AV@	M437		TuPj	GN		jisjk:91253		
 に比べ	에 비해	E311		PjTu	GN		jisjk:265152		
@@ -37077,7 +37077,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に渡ってはい	에 이르고는 &HN@	M427			GN		jisjk:147542		
 に満ち	(으)로 가득 &AN@	M427		PjTuDx	GN		jisjk:201590		
 に照らしやむを得な	에 비추어 부득이$AB@	H7N0			GN		jisjk:138866		
-に甘え	(을)를 받아들&AJ@	Q427	UTs		GN		jisjk:91229		
+に甘え	(을)를 받아들&AJ@	Q427	UTs	Tu	GN		jisjk:91229		
 に生まれ	에서 태어&A5@	M427		Tu	GN	1847	jisjk:257643		
 に生まれ	(으)로 태어&A5@	M427	XXX	TuPj	GN		jisjk:268364		
 に生まれ	에 태어&A5@	M427		TuPj	GN	3569	jisjk:344346		
@@ -37109,8 +37109,8 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に繰り下げ	(으)로 늦&CL@	M427		Tu	GN		jisjk:263772		
 に置き換えられ	(으)로 옮겨&AL@	M427		TuPj	GN		jisjk:342283		
 に翻訳され	(으)로 번역&C6@	M427		Tu	GN		jisjk:262174		
-に背	(을)를 거역&AV@	M411	VHnUTs		GN		jisjk:91246		
-に背	(을)를 등&AL@	M411			GN		jisjk:91247		
+に背	(을)를 거역&AV@	M411	VHnUTs	Tu	GN		jisjk:91246		
+に背	(을)를 등&AL@	M411		Tu	GN		jisjk:91247		
 に自動変換	(으)로 자동변환 &AV@	M469		TuPj	GN		jisjk:343525		
 に至	에 &ME@	M428		TuPj	GN	1515	jisjk:144941		
 に興味深	에 관심이 $D4@	H7U0		TuPj	GN		jisjk:342313		
@@ -37120,7 +37120,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に行われ	에 행해&AL@	M427		Tu	GN	1788	jisjk:202411		
 に見え	(으)로 보&AJ@	M427		PjTu	GN		jisjk:265433		
 に見え	에 보&AJ@	M427		PjTu	GN	4873	jisjk:373982		
-に見せかけ	(으)로 가장&AV@	M437			GN		jisjk:91230		
+に見せかけ	(으)로 가장&AV@	M437		Tu	GN		jisjk:91230		
 に見られ	(으)로 보여&AL@	M427		TuPj	GN		jisjk:268247		
 に覚えられ	에게 암송되어&AL@	M427		TuPj	GN		jisjk:265676		
 に託	(을)를 빙자&AV@	M419		TuPj	GN		jisjk:91275		
@@ -37140,9 +37140,9 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に跳ね返	(으)로 되돌아&AH@	M428		Tu	GN		jisjk:202268		
 に踏み切	(을)를 단행&AV@	M448		Tu	GN	1934	jisjk:259500		
 に転じ	(으)로 변&AV@	M417		TuPj	GN		jisjk:91271		
-に転勤にな	(으)로 전근&AV@	M428			GN		jisjk:263528		
+に転勤にな	(으)로 전근&AV@	M428		Tu	GN		jisjk:263528		
 に転向	(으)로 전향&AV@	M429		TuPj	GN		jisjk:267437		
-に迎え入れられ	(이)가 맞아&CJ@	M417			GN		jisjk:91266		
+に迎え入れられ	(이)가 맞아&CJ@	M417		Tu	GN		jisjk:91266		
 に追いつ	(을)를 따라 &FK@	M421		TuPj	GN		jisjk:202239		
 に追いつ	에 따라 &FK@	M421		TuPj	GN	2842	jisjk:268289		
 に追いつかれ	에 따라 잡&AW@	M427		PjTu	GN		jisjk:268292		
@@ -37195,11 +37195,11 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 に際して	에 즈음하여	E300	UMe	TuPj	GN		jisjk:149422		
 に際しての	에 즈음한	N110			GN		jisjk:151584		
 に際しては	에 즈음해서는	E311		Tu	GN		jisjk:1012		
-に雇	(으)로 고용&AV@	M430			GN		jisjk:91231		
+に雇	(으)로 고용&AV@	M430		Tu	GN		jisjk:91231		
 に難くな	데 어렵지 $D7@	H7N0			GN		jisjk:138872		
 に面	에 접&AV@	M429		TuPj	GN		jisjk:202123		
 に飛び入り	에 나타&A5@	M429			GN		jisjk:264954		
-に騒がれ	(으)로 떠들썩&AV@	M417			GN		jisjk:91257		
+に騒がれ	(으)로 떠들썩&AV@	M417		Tu	GN		jisjk:91257		
 ぬ	칠&AV@	M438			GN		jisjk:116439		
 ぬ	1지 않다	S581			GN	1603	jisjk:148367		
 ぬ	1지 않을	S581			GN	1978	jisjk:260653		
@@ -37472,7 +37472,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 のあげくに	끝에	N110			GN		jisjk:151633		
 のあらゆる	의 모든	E0H0		Tu	GN		jisjk:150046		
 のありうべき	(이) 있을 수 있는	E0H0			GN		jisjk:150288		
-のあり得	(이)가 있을 수 &HN@	M427			GN		jisjk:148005		
+のあり得	(이)가 있을 수 &HN@	M427		Tu	GN		jisjk:148005		
 のあり方	의 본연의 자세	M110		Tu	GN		jisjk:151634		
 のある日	인 어느 날	N110		Tu	GN	4167	jisjk:360147		
 のいずれかが	중 한쪽이	P200			GN		jisjk:358283		
@@ -37634,7 +37634,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 のために	(을)를 위해서	P200		Tu	GN	3879	jisjk:349877		
 のために	때문에	P200			GN	4604	jisjk:367409		
 のためにな	에게 도움이 &C6@	M428		PjTu	GN		jisjk:266522		
-のために盡く	(을)를 위해 애&AF@	M413			GN		jisjk:91307		
+のために盡く	(을)를 위해 애&AF@	M413		Tu	GN		jisjk:91307		
 のための	(을)를 위한	P201			GN		jisjk:6306		
 のためのもっとも	(을) 위한 가장	E300			GN		jisjk:149450		
 のたりのたり	너울너울	E311			GN		jisjk:1035		
@@ -37724,7 +37724,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 のではなく、	0 것이 아니라,	S500			GN		jisjk:260116		
 のではなくて	0 것이 아니라	S500			GN		jisjk:264451		
 のでは無いか	0 것은 아닐까	S500			GN		jisjk:343040		
-のとおり	(와)과 %B3@	G8U0			GN		jisjk:2241		
+のとおり	(와)과 %B3@	G8U0		Tu	GN		jisjk:2241		
 のとおり	대로	P210			GN	1983	jisjk:260712		
 のとおりです	대로입니다	G110			GN	2063	jisjk:262907		
 のとおりに	대로	P200			GN		jisjk:341010		
@@ -37734,7 +37734,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 のとは	의것 과는	N110		Tu	GN		jisjk:201892		
 のとばっちりを食	에 연루&C6@	M420			GN		jisjk:147871		
 のとらえ方	의 파악방법	N110			GN		jisjk:152743		
-のとりう	(이)가 취할 수 &HN@	M428			GN		jisjk:148231		
+のとりう	(이)가 취할 수 &HN@	M428		Tu	GN		jisjk:148231		
 のと引き換えに	 것과 교환으로	N110			GN		jisjk:152789		
 のど	목	N110			GN		jisjk:114744		
 のどか	한가%A3@	G8U0			GN		jisjk:2242		
@@ -37830,7 +37830,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 のみ	6서만	S570			GN		jisjk:4396		
 のみ	뿐	P200			GN	221	jisjk:4397		
 のみ	만	P211	XXX		GN	2995	jisjk:341042		
-のみえ	(이)가 보&AJ@	M417			GN		jisjk:91311		
+のみえ	(이)가 보&AJ@	M417		Tu	GN		jisjk:91311		
 のみこ	삼&AQ@	M435	VBp		GN		jisjk:91312		
 のみこ	이해&AV@	M435			GN		jisjk:91313		
 のみしか	밖에	P200			GN		jisjk:364298		
@@ -37929,7 +37929,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 の一つ	의 하나	N110		TuPj	GN		jisjk:261838		
 の一途をたど	의 일로를 &J1@	M428			GN		jisjk:147736		
 の上前をはね	의 몫을 가로&Ca@	M447			GN		jisjk:147754		
-の上手	(이)가 능숙%A1@	G8U0			GN		jisjk:2246		
+の上手	(이)가 능숙%A1@	G8U0		Tu	GN		jisjk:2246		
 の上空	상공	N110	VPl		GN		jisjk:257592		
 の上部	의 상부	N110		Tu	GN		jisjk:202432		
 の下で	아래에서	I111			GN		jisjk:106292		
@@ -37937,7 +37937,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 の不手際	의 서투름	N110			GN		jisjk:152764		
 の不振が響	의 부진이 영향을 &CJ@	M421			GN		jisjk:147913		
 の世相を抉	의 세태를 파헤&AO@	M448			GN		jisjk:147835		
-の世話	(을)를 돌보는 것	N110			GN		jisjk:201888		
+の世話	(을)를 돌보는 것	N110		Tu	GN		jisjk:201888		
 の世話を	(을)를 돌&AY@	M419		TuPj	GN		jisjk:147837		
 の中から	중에서	P200			GN		jisjk:265197		
 の中から	안에서	P200			GN	2365	jisjk:265640		
@@ -38000,13 +38000,13 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 の区切りと	의 단락으로 &AV@	M439			GN		jisjk:147782		
 の区別が付	의 구별이 &A1@	M421			GN		jisjk:147786		
 の十分な説明	의 충분한 설명	N110			GN		jisjk:152717		
-の占め	(이)가 차지&AV@	M437			GN		jisjk:91320		
+の占め	(이)가 차지&AV@	M437		Tu	GN		jisjk:91320		
 の占有をな	의 점유를 &AV@	M443			GN		jisjk:147970		
 の原案を練	의 원안을 다&H7@	M448			GN		jisjk:147796		
 の双肩にかかってい	에게 달려 &HN@	M427			GN		jisjk:147840		
 の収拾がつかな	의 수습이 어$G8@	H7N0			GN		jisjk:137545		
 の取りまとめ	의 종합정리	N110			GN		jisjk:151665		
-の取り出しを	(을)를 꺼&A6@	M429			GN		jisjk:148123		
+の取り出しを	(을)를 꺼&A6@	M429		Tu	GN		jisjk:148123		
 の取り扱い	의 취급	N110			GN		jisjk:151661		
 の取り決め	의 결정	N110			GN		jisjk:151662		
 の取り調べ	의 취조	N110			GN		jisjk:151664		
@@ -38014,7 +38014,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 の取扱い	취급	P200		Ha	GN		jisjk:363252		
 の口座に付け替え	의 계좌로 대체&AV@	M447			GN		jisjk:147798		
 の口火を切	의 말을 꺼&A6@	M448			GN		jisjk:147783		
-の合致であ	(이)가 일치&AV@	M428			GN		jisjk:148216		
+の合致であ	(이)가 일치&AV@	M428		Tu	GN		jisjk:148216		
 の合間	사이	I110	VPl		GN		jisjk:41462		
 の名義によ	의 명의에 의&AV@	M428			GN		jisjk:148200		
 の向こう	너머	K130	VPl	Pj	GN		jisjk:6320		
@@ -38044,12 +38044,12 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 の如く	(와) 같이	E300			GN		jisjk:149445		
 の妨げにな	의 방해가 &C6@	M428			GN		jisjk:147807		
 の妨げになってい	의 방해가 되어 &HN@	M427			GN		jisjk:147806		
-の定めるところによ	(이)가 정하는 바에 의&AV@	M428			GN		jisjk:148210		
+の定めるところによ	(이)가 정하는 바에 의&AV@	M428		Tu	GN		jisjk:148210		
 の家族にあて	의 가족 앞으로 보&A6@	M447			GN		jisjk:147772		
 の容疑がかけられ	의 용의를 &FD@	M427			GN		jisjk:147948		
 の宿割りを	의 숙소를 배당&AV@	M419			GN		jisjk:147820		
 の対策が打たれ	의 대책이 강구&C6@	M427			GN		jisjk:147847		
-の小さ	(이)가 $DA@	H7U0			GN		jisjk:5251		
+の小さ	(이)가 $DA@	H7U0		Tu	GN		jisjk:5251		
 の少な	(이)가 $FC@	H7U0		Tu	GN		jisjk:5252		
 の巧みな	의 교묘한	E0H0			GN		jisjk:150052		
 の差し替え	의 교체	N110			GN		jisjk:151657		
@@ -38073,7 +38073,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 の心に響かなくな	의 마음에 감동을 주지 못&AV@	M428			GN		jisjk:147799		
 の心中を探	의 심중을 살&CM@	M428			GN		jisjk:147827		
 の心情を汲	의 심정을 헤아&AA@	M425			GN		jisjk:147826		
-の必要	(이)가 필요%A1@	G8U0			GN		jisjk:2248		
+の必要	(이)가 필요%A1@	G8U0		Tu	GN		jisjk:2248		
 の応援に回	의 응원하러 돌아다&A7@	M428			GN		jisjk:147762		
 の恨みを買	의 원한을 &AX@	M440			GN		jisjk:147751		
 の息がかか	의 후원을 &FD@	M428			GN		jisjk:147733		
@@ -38220,7 +38220,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 の調べによ	의 조사에 의&AV@	M428		Tu	GN		jisjk:259990		
 の調整にかか	의 조정에 착수&AV@	M428			GN		jisjk:147854		
 の調整はつ	의 조정은 끝&A5@	M421			GN		jisjk:147855		
-の警備に当た	(을)를 경비&AV@	M448			GN		jisjk:147789		
+の警備に当た	(을)를 경비&AV@	M448		Tu	GN		jisjk:147789		
 の貧困に	의 빈곤에	E300			GN		jisjk:149456		
 の責に任	의 책임을 &AL@	M42:			GN		jisjk:148009		
 の責に任ずべき	의 책임을 져야 하는	E0H0			GN		jisjk:150313		
@@ -38240,7 +38240,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 の途に就	 길에 &E6@	M421			GN		jisjk:147869		
 の途上にあ	의 도상에 &HN@	M428			GN		jisjk:147867		
 の通り	대로%D4@	G8U0			GN	63	jisjk:2247		
-の通り	(와)과 %B3@	G8U0			GN		jisjk:358444		
+の通り	(와)과 %B3@	G8U0		Tu	GN		jisjk:358444		
 の通り魔	의 괴한	N110			GN		jisjk:151660		
 の連れ	의 일행	I110	VHn	Tu	GN		jisjk:41457		
 の遅れが	의 지연이	N110			GN		jisjk:151642		
@@ -40108,7 +40108,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 への河童	개의치 %EG@	G8U0		AvJs	GN		jisjk:373515		
 へは	에게는	P201	VHn		GN	313	jisjk:6333		
 へは	에는	P201	XXXVPl		GN		jisjk:6334		
-へはい	(으)로 들어&A1@	M418			GN		jisjk:91455		
+へはい	(으)로 들어&A1@	M418		Tu	GN		jisjk:91455		
 へば	녹초가 &C6@	M428			GN		jisjk:343713		
 へばりつ	달라 &HC@	M421		Dx	GN		jisjk:263144		
 へばり付	달라&HC@	M411		Dx	GN		jisjk:91456		
@@ -44526,11 +44526,11 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 をい	(을)를 말&AV@	M440		TuPj	GN		jisjk:358289		
 をきら	(을)를 싫어&AV@	M4U0		PjTu	GN		jisjk:351113		
 をさせていただ	(을)를 &AV@	M441		PjTu	GN		jisjk:264484		
-をされてい	(을)를 하고 &HN@	M447			GN		jisjk:264412		
-をされてい	(을)를 하고 &HN@	M447		Pj	GN		jisjk:264413		
+をされてい	(을)를 하고 &HN@	M447		Tu	GN		jisjk:264412		
+をされてい	(을)를 하고 &HN@	M447		PjTu	GN		jisjk:264413		
 をしがちで	(을)를 하기 쉽고	A0D1		Tu	GN		jisjk:90256		
-をしたとい	(을)를 했다고 &AV@	M420			GN		jisjk:148196		
-をしているのみであ	(을)를 하고 있을 뿐&Ac@	M428			GN		jisjk:148329		
+をしたとい	(을)를 했다고 &AV@	M420		Tu	GN		jisjk:148196		
+をしているのみであ	(을)를 하고 있을 뿐&Ac@	M428		Tu	GN		jisjk:148329		
 をしてお	(을)를 하고 &HN@	M428		TuPj	GN		jisjk:356739		
 をしてきたと	(을) 해 왔다고	E300			GN		jisjk:149598		
 をしてまい	(을)를 하고 &HN@	M448		Tu	GN		jisjk:262440		
@@ -44538,7 +44538,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 をするとともに	(을) 하는 동시에	E300			GN		jisjk:149600		
 をするとは	(을)를 하리라고는	E300		Tu	GN		jisjk:149601		
 をすると共に	(을) 하는 동시에	E300			GN		jisjk:149599		
-をそまつに	(을)를 소홀히 &AV@	M449			GN		jisjk:114645		
+をそまつに	(을)를 소홀히 &AV@	M449		Tu	GN		jisjk:114645		
 をと	(을)를 이라고	P200			GN		jisjk:369278		
 をともに	(을)를 함께	E300		Tu	GN		jisjk:149602		
 をなかりし	(을)를 없앤	C0D1		Tu	GN		jisjk:4631		
@@ -44546,37 +44546,37 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 をはじめ	(을)를 시작&AV@	M447		TuPj	GN	3897	jisjk:350917		
 をはじめから	(을) 처음부터	N110			GN		jisjk:152785		
 をはじめと	(을)를 시작으로 &AV@	E419		TuPj	GN		jisjk:91590		
-をはずれ	(을)를 벗어&A5@	M447			GN		jisjk:148659		
+をはずれ	(을)를 벗어&A5@	M447		Tu	GN		jisjk:148659		
 をはた	(을)를 다&AV@	M443		Tu	GN		jisjk:148028		
-をばつ印と	(을)를 X표시로 &AV@	M429			GN		jisjk:148407		
+をばつ印と	(을)를 X표시로 &AV@	M429		Tu	GN		jisjk:148407		
 をひ	에 걸&AA@	M421		Tu	GN	956	jisjk:114870		
-をふされ	(이)가 붙여&AL@	M427			GN		jisjk:148219		
+をふされ	(이)가 붙여&AL@	M427		Tu	GN		jisjk:148219		
 をぶつけられ	(이)가 부딪&AW@	M427		TuPj	GN		jisjk:349346		
 をへだて	(을)를 사이에 &C7@	M447		TuPj	GN		jisjk:358425		
 をほめられ	(을)를 칭찬&FD@	M427		TuPj	GN		jisjk:342033		
 をま	(을)를 더&AV@	M443		PjTu	GN		jisjk:340399		
 をみかけ	(을)를 발견&AV@	M427		Tu	GN		jisjk:202115		
 をも	도	P210			GN		jisjk:118074		
-をもたら	(을)를 가져&AH@	M443			GN		jisjk:148328		
+をもたら	(을)를 가져&AH@	M443		Tu	GN		jisjk:148328		
 をもたらすと考え	(을)를 초래한다고 생각&AV@	M427		Tu	GN		jisjk:201969		
 をもち、	(을)를 갖고,	N110		Tu	GN		jisjk:257931		
-をもちい	(을)를 사용&AV@	M448			GN		jisjk:148701		
+をもちい	(을)를 사용&AV@	M448		Tu	GN		jisjk:148701		
 をもちまして	(을)를 기하여 	I110		TuPj	GN		jisjk:262711		
 をもってい	(을)를 갖고 &HN@	M447		PjTu	GN		jisjk:148570		
-をもつことにな	(을)를 갖게 &C6@	M428			GN		jisjk:148356		
-をもつとい	(을)를 갖는다고 &AV@	M420			GN		jisjk:148399		
-をもつにとどま	(을)를 갖는데 그&AO@	M428			GN		jisjk:148341		
-をもつようにな	(을)를 갖게 &C6@	M428			GN		jisjk:148347		
-をももたら	(을)를 초래&AV@	M423			GN		jisjk:148241		
+をもつことにな	(을)를 갖게 &C6@	M428		Tu	GN		jisjk:148356		
+をもつとい	(을)를 갖는다고 &AV@	M420		Tu	GN		jisjk:148399		
+をもつにとどま	(을)를 갖는데 그&AO@	M428		Tu	GN		jisjk:148341		
+をもつようにな	(을)를 갖게 &C6@	M428		Tu	GN		jisjk:148347		
+をももたら	(을)를 초래&AV@	M423		Tu	GN		jisjk:148241		
 をもら	(을)를 &FD@	M420		Tu	GN		jisjk:148337		
 をやって欲し	(을) 했으면 $AB@	H7N0			GN		jisjk:138471		
 をやりきれな	(을) 할 수 $FA@	H7N0			GN		jisjk:138474		
-をやりつく	(을)를 다 해&A6@	M443			GN		jisjk:148757		
-をやり尽く	(을)를 다 해&A6@	M443			GN		jisjk:148756		
+をやりつく	(을)를 다 해&A6@	M443		Tu	GN		jisjk:148757		
+をやり尽く	(을)를 다 해&A6@	M443		Tu	GN		jisjk:148756		
 をやるせなく	(을) 안타깝게	E300			GN		jisjk:149603		
 をよそに	(을)를 뒷전으로	E310		J1Tu	GN		jisjk:1399		
 を介しての	(을) 통한	E0H0			GN		jisjk:150317		
-を付され	(이)가 붙여&AL@	M427			GN		jisjk:148218		
+を付され	(이)가 붙여&AL@	M427		Tu	GN		jisjk:148218		
 を以って	(으)로	P250			GN		jisjk:364351		
 を以て	(으)로	P250			GN		jisjk:364350		
 を共にされ	(을)를 함께 하&AE@	M427		Tu	GN		jisjk:262876		
@@ -44586,40 +44586,40 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 を前にして	(을)를 앞두고	E300		Tu	GN	3799	jisjk:346796		
 を問わず	(을)를 불문하고	N110		PjTu	GN		jisjk:151929		
 を土台に	(을)를 토대로	E300		Tu	GN		jisjk:202137		
-を基本に	(을)를 기본으로	E300			GN		jisjk:149698		
+を基本に	(을)를 기본으로	E300		Tu	GN		jisjk:149698		
 を堪能	(을)를 즐&A2@	M429		PjTu	GN		jisjk:266751		
 を始め	(을)를 시작&AV@	M427		PjTu	GN		jisjk:375095		
 を嫌	(을)를 싫어&AV@	M440		TuPj	GN		jisjk:264284		
 を嫌いにな	(을)를 싫어하게 &C6@	M428		TuPj	GN		jisjk:347933		
 を完結	(을)를 완결&AV@	M429		Tu	GN		jisjk:148154		
 を承知で	(을)를 알면서	E300		TuPj	GN		jisjk:357497		
-を担保に差し人れ	(을)를 담보로 집어&H5@	M447			GN		jisjk:148253		
+を担保に差し人れ	(을)를 담보로 집어&H5@	M447		Tu	GN		jisjk:148253		
 を招く恐れ	(을)를 부를 우려	K110		TuPj	GN		jisjk:260797		
 を控え	(을)를 앞에 두고	E300		TuPj	GN		jisjk:359227		
 を控えて	(을)를 앞에 두고	E300		PjTu	GN		jisjk:359258		
-を断たれ	(이)가 끊어&AL@	M427			GN		jisjk:148174		
+を断たれ	(이)가 끊어&AL@	M427		Tu	GN		jisjk:148174		
 を果	을 다&AV@	M443			GN		jisjk:148027		
-を気にされ	(을)를 걱정하&AE@	M447			GN		jisjk:262628		
+を気にされ	(을)를 걱정하&AE@	M447		Tu	GN		jisjk:262628		
 を生じかねな	(이) 생길 지도 $C4@	H7N0			GN		jisjk:138676		
 を痛めつけ	(을)를 아프게 &AV@	M427		TuPj	GN		jisjk:347113		
-を目の当たりに	(을)를 &AY@	M429			GN		jisjk:148177		
-を社長と	(을)를 사장으로 &AV@	M429			GN		jisjk:148507		
+を目の当たりに	(을)를 &AY@	M429		Tu	GN		jisjk:148177		
+を社長と	(을)를 사장으로 &AV@	M429		Tu	GN		jisjk:148507		
 を立て	(을)를 세&AI@	M427		Tu	GN		jisjk:201970		
-を粗末に	(을)를 소홀히 &AV@	M449			GN		jisjk:114646		
-を組み付け	(을)를 조립&AV@	M447			GN		jisjk:148566		
-を組付け	(을)를 조립&AV@	M447			GN		jisjk:148567		
+を粗末に	(을)를 소홀히 &AV@	M449		Tu	GN		jisjk:114646		
+を組み付け	(을)를 조립&AV@	M447		Tu	GN		jisjk:148566		
+を組付け	(을)를 조립&AV@	M447		Tu	GN		jisjk:148567		
 を経	(을)를 거&AO@	M447		PjTu	GN		jisjk:369329		
 を聞かれ	(을)를 질문&FD@	M427		Tu	GN		jisjk:263536		
-を行い得な	(을)를 할 수 $FA@	H7N0		Pj	GN		jisjk:138468		
+を行い得な	(을)를 할 수 $FA@	H7N0		PjTu	GN		jisjk:138468		
 を行うための	(을)를 행하기 위한	I110		TuPj	GN		jisjk:260132		
 を見かけ	(이)가 보&AJ@	M427		Tu	GN		jisjk:201893		
-を観	(을)를 &AY@	M437			GN		jisjk:369530		
+を観	(을)를 &AY@	M437		Tu	GN		jisjk:369530		
 を託され	(을)를 맡게 &C6@	M427		PjTu	GN		jisjk:266642		
 を読まれ	(을)를 읽으&AE@	M427		TuPj	GN		jisjk:342320		
 を通じ	(을)를 통해	E310		Tu	GN		jisjk:262113		
 を通じて	(을)를 통해서	E310		J1Tu	GN		jisjk:1400		
-を通り抜け	(을)를  빠져 나&A1@	M447			GN		jisjk:142856		
-を限度と	(을)를 한도로 &AV@	M429			GN		jisjk:148405		
+を通り抜け	(을)를  빠져 나&A1@	M447		Tu	GN		jisjk:142856		
+を限度と	(을)를 한도로 &AV@	M429		Tu	GN		jisjk:148405		
 を除	(을)를 제외&AV@	M421		Tu	GN		jisjk:259604		
 を頂き	(을)를 받음	I110		Tu	GN		jisjk:264476		
 を食べられ	(을)를 먹을 수 &HN@	M427	XXX	TuPjMa	GN	3788	jisjk:346618		
@@ -122804,7 +122804,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 佑月	유즈키	K130	QPN	Wa	GN		jisjk:266061		
 佑規	유우키	N130	QPN	Wb	GN		jisjk:117984		
 体	몸	N110	XXXVBp		GN		jisjk:115989		
-体	체	N110		Z7On	GN		jisjk:115990		
+体	체	N110		Z7OnCt	GN		jisjk:115990		
 体	실행&AV@	M439			GN		jisjk:139131		
 体が効かな	몸이 말을 듣지 $D7@	H7N0	QHP		GN		jisjk:122116		
 体が続かな	몸이 견디지 못$AB@	H7N0			GN		jisjk:122119		
@@ -135024,7 +135024,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 分け隔て	차별대우	I110		Hd	GN		jisjk:71247		
 分ごろ	분쯤	I110	UMe	Ct	GN		jisjk:71250		
 分の	분의	N111		Tu	GN	926	jisjk:114690		
-分の	분의	N111	XXX		GN	3539	jisjk:344204		
+分の	분의	N111	XXX	Tu	GN	3539	jisjk:344204		
 分のうち	몫 중	N110			GN		jisjk:160255		
 分べん室	분만실	N110	QHPVBl		GN		jisjk:154786		
 分らな	$C4@	H7U0		Av	GN	3308	jisjk:342647		
@@ -148403,7 +148403,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 厳正中立	엄정중립	I110			GN		jisjk:108493		
 厳漢明	엄한명	N130	QPN		GN		jisjk:208529		
 厳然	엄연%A1@	G8L0			GN		jisjk:3361		
-厳然	엄연	N110	SFl		GN		jisjk:179402		
+厳然	엄연	N110	SFl	Tr	GN		jisjk:179402		
 厳然たる	엄연한	E0H0			GN		jisjk:149846		
 厳然と	엄연히	E300			GN		jisjk:123059		
 厳父	엄부	N110	VHnVQm		GN		jisjk:29094		
@@ -157054,7 +157054,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 唐黍	수수	N110	QAL		GN		jisjk:18711		
 唖	벙어리	N110	VHnXXX		GN		jisjk:115438		
 唖	아	N110		On	GN		jisjk:258240		
-唖然	아연	N110	VSn		GN		jisjk:28310		
+唖然	아연	N110	VSn	Tr	GN		jisjk:28310		
 唖然	아연하게	E300			GN		jisjk:122738		
 唖然とな	아연해&AL@	M428	SFl		GN		jisjk:140102		
 唖鈴	아령	N110	VRw		GN		jisjk:28309		
@@ -163726,7 +163726,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 堀麦水	호리 바쿠스이	N130	VHn		GN		jisjk:221313		
 堂	도우	N130	QCTVPl		GN		jisjk:312693		
 堂	당	N110	XXX	On	GN		jisjk:340763		
-堂々	당당	N110			GN		jisjk:116540		
+堂々	당당	N110		Tr	GN		jisjk:116540		
 堂々たる	당당한	E0H0			GN		jisjk:150013		
 堂々と	당당&AV@	E429			GN		jisjk:116541		
 堂々と	당당히	E300			GN		jisjk:143840		
@@ -179170,7 +179170,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 安積疎水	아사카 소스이	N110	VPl		GN		jisjk:227134		
 安積艮斎	아사카 곤사이	N110	VHn		GN		jisjk:227133		
 安穏	안온%A1@	G8L0			GN		jisjk:3319		
-安穏	안온	N110			GN		jisjk:3320		
+安穏	안온	N110		Tr	GN		jisjk:3320		
 安立	안류우	N130	QCTVPl		GN		jisjk:271256		
 安竜得	안용득	N130	QPN		GN		jisjk:208421		
 安竜福	안용복	N130	QPN		GN		jisjk:208422		
@@ -198336,7 +198336,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 平瀬智行	히라세 토모유키	N130	QPN		SO		jisjk:372318		
 平瀬町	히라세쵸	N130	QCTVPl		GN		jisjk:325047		
 平瀬町	히라세마치	N130	QCTVPl		GN		jisjk:325048		
-平然	태연	N110			GN		jisjk:37598		
+平然	태연	N110		Tr	GN		jisjk:37598		
 平然たる	태연한	E0H0	SFl		GN		jisjk:123644		
 平然と	태연하게	I110			GN		jisjk:264170		
 平然として	태연하게	I110			GN		jisjk:346269		
@@ -207879,7 +207879,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 恋隠	코이카쿠시	N130	QCTVPl		GN		jisjk:292057		
 恋風	연정	N110			GN		jisjk:20327		
 恍惚	황홀%A1@	G8L0			GN		jisjk:3955		
-恍惚	황홀	N110	UFl		GN		jisjk:3956		
+恍惚	황홀	N110	UFl	Tr	GN		jisjk:3956		
 恍惚感	황홀감	I110	UFl		GN		jisjk:89690		
 恐	무$GE@	H7U0			GN		jisjk:5376		
 恐し	무$GE@	H7U0			GN		jisjk:5377		
@@ -208469,7 +208469,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 悠悠たる	유유한	C0D1			GN		jisjk:4731		
 悠悠と	유유히	E311			GN		jisjk:1821		
 悠悠自適	유유자적	N110	SFl	Hd	GN		jisjk:156001		
-悠然	유연	N110			GN		jisjk:30669		
+悠然	유연	N110		Tr	GN		jisjk:30669		
 悠紀	유키	N110	VPl		GN		jisjk:254765		
 悠紀雄	유키오	N130	QPN	Wb	GN		jisjk:346515		
 悠長	느긋%A1@	G8L0			GN		jisjk:3475		
@@ -209008,7 +209008,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 惨劇	참극	N110			GN		jisjk:35293		
 惨変	참변	N110			GN		jisjk:35297		
 惨害	참해	N110			GN		jisjk:35303		
-惨憺	참담	N110			GN		jisjk:35294		
+惨憺	참담	N110		Tr	GN		jisjk:35294		
 惨敗	참패	N110		Hd	GN		jisjk:35302		
 惨死	참사	N110		Hd	GN		jisjk:35299		
 惨殺	참살	N110		Hd	GN		jisjk:35300		
@@ -209252,7 +209252,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 意趣返し	보복	N110	SFl	Hd	GN		jisjk:125458		
 意馬心猿	욕정을 억누르지 못함	N110	UTsUCl		GN		jisjk:126129		
 愕	나$AG@	H7M0			GN		jisjk:116473		
-愕然	아연실색	N110			GN		jisjk:101625		
+愕然	아연실색	N110		Tr	GN		jisjk:101625		
 愕臭	악취	N110			GN		jisjk:265697		
 愚	저	N110	SFlVHn		GN		jisjk:176883		
 愚	우	N110		On	GN		jisjk:259678		
@@ -210204,7 +210204,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 憩が丘	이코이가오카	N130	QCTVPl		GN		jisjk:271883		
 憩町	이코이쵸	N130	QCTVPl		GN		jisjk:271884		
 憬れ	동경&AV@	M417			GN		jisjk:91881		
-憮然	낙담	N110	UFl		GN		jisjk:99602		
+憮然	낙담	N110	UFl	Tr	GN		jisjk:99602		
 憮然たる	무연한	E0H0	SFl		GN		jisjk:123642		
 憲一郎	켄이치로우	N130	QPN	Wb	GN		jisjk:356415		
 憲七郎	켄시치로우	N130	QPN	Wb	GN		jisjk:354033		
@@ -219111,7 +219111,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 整流回路	정류회로	N110	VEl		GN		jisjk:238832		
 整流子	정류자	N110	VEl		GN		jisjk:238834		
 整流管	정류관	N110	VEl		GN		jisjk:238833		
-整然	정연	N110			GN		jisjk:197685		
+整然	정연	N110		Tr	GN		jisjk:197685		
 整然と	정연&L4@	M429			GN		jisjk:139972		
 整然と	정연하게	E300			GN		jisjk:149233		
 整版	정판	N110		Hd	GN		jisjk:33224		
@@ -219957,7 +219957,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 断を下	결단을 내&AA@	M443			GN		jisjk:139736		
 断トツ	월등	K110			GN		jisjk:268116		
 断トツ	월등%A1@	G8U0			GN		jisjk:268118		
-断乎	단호	N110			GN		jisjk:18595		
+断乎	단호	N110		Tr	GN		jisjk:18595		
 断乳	단유	N110		Hd	GN		jisjk:242449		
 断交	단교	N110		Hd	GN		jisjk:18572		
 断切	&Hk@	M447			GN		jisjk:139618		
@@ -231735,7 +231735,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 期首商品棚卸高	기초상품 재고액	N110			BZ		jisjk:363419		
 期首固定資産	기초 고정자산	N110	VMo		BZ		jisjk:356085		
 期首期末平均	기초 기말 평균	N110			BZ		jisjk:348430		
-朦朧	몽롱	N110			GN		jisjk:21988		
+朦朧	몽롱	N110		Tr	GN		jisjk:21988		
 朦朧と	몽롱해&AL@	M429			GN		jisjk:342893		
 朦朧状態	몽롱 상태	N110			GN		jisjk:253626		
 朧	희미%A1@	G8U0			GN		jisjk:2749		
@@ -251597,7 +251597,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 殺人罪	살인죄	N110	ULw		GN		jisjk:232574		
 殺人鬼	살인귀	I110	VHn		GN		jisjk:72426		
 殺伐	살벌%A1@	G8L0			GN		jisjk:3163		
-殺伐	살벌	N110			GN		jisjk:3164		
+殺伐	살벌	N110		Tr	GN		jisjk:3164		
 殺傷	살상	N110		Hd	GN		jisjk:25518		
 殺像	살상	N110			GN		jisjk:25519		
 殺処分	도살 처분	N110			BZ		jisjk:354623		
@@ -258514,7 +258514,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 泰澄石層	태징석층	N110	VPl		GN		jisjk:163278		
 泰澄石層	태징석층	N110	VPl		GN		jisjk:163279		
 泰然	태연%A1@	G8U0			GN		jisjk:3821		
-泰然	태연	N110			GN		jisjk:3822		
+泰然	태연	N110		Tr	GN		jisjk:3822		
 泰然と	태연하게	E300			GN		jisjk:149280		
 泰然自若	태연자약%A1@	G8U0			GN		jisjk:3823		
 泰然自若	태연자약	I110		Hd	GN		jisjk:3824		
@@ -264124,7 +264124,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 港陽	코우요우	N130	QCTVPl		GN		jisjk:292791		
 游	헤엄&AO@	M412			GN		jisjk:94321		
 渾沌	혼돈	N110	UFl		GN		jisjk:39357		
-渾然	혼연	N110	UFl		GN		jisjk:203639		
+渾然	혼연	N110	UFl	Tr	GN		jisjk:203639		
 渾身	혼신	N110			GN		jisjk:39358		
 湊	미나토	N130	QCTVPl		GN		jisjk:331321		
 湊ハマ	미나토 하마	I130	VGt		PN		jisjk:84265		
@@ -269630,7 +269630,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 燗番	요리집에서 술 데우는 사람	N110	VHn		GN		jisjk:230190		
 燗発	난발	N110			GN		jisjk:20010		
 燗酒	데운 술	N110	VFd		GN		jisjk:170304		
-燦然	찬연	N110			GN		jisjk:35245		
+燦然	찬연	N110		Tr	GN		jisjk:35245		
 燦然と	찬연히	E300	SFl		GN		jisjk:123159		
 燦燦と	찬란히	E300	SFl		GN		jisjk:123157		
 燦爛たる	찬란한	E0H0			GN		jisjk:123495		
@@ -278340,6 +278340,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 発	출발&AV@	M459	VTpUDrVPl		GN		jisjk:92984		
 発	폭로&A6@	M441	ULw		GN		jisjk:138313		
 発	출발&AV@	M424			GN		jisjk:341025		
+発	발	N110		Ct	GN		rootfix:1		
 発がん	발암	N110	QHP		GN		jisjk:154059		
 発がん性	발암성	N110			GN		jisjk:350975		
 発き出	들추어&A6@	M443			GN		jisjk:138311		
@@ -286153,7 +286154,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 確信	확신	N110	UThUFl	MiHd	BZ		jisjk:39633		
 確因	확인	N110			GN		jisjk:39636		
 確固	확고%A1@	G8L0			GN		jisjk:3943		
-確固	확고	N110			GN		jisjk:3944		
+確固	확고	N110		Tr	GN		jisjk:3944		
 確固たる	확고한	C0D1			GN		jisjk:4790		
 確固と	확고히 &AV@	G439			GN		jisjk:96043		
 確固とした	확고한	C0D1			GN		jisjk:4791		
@@ -290632,7 +290633,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 種部	타네베	N130	QPN	Wa	GN		jisjk:11550		
 種里町	타네사토마치	N130	QCTVPl		GN		jisjk:307280		
 種間雑種	종간잡종	N110	VPt		GN		jisjk:234831		
-種類	종류	N110			GN		jisjk:33854		
+種類	종류	N110		Ct	GN		jisjk:33854		
 種類分け	종류구분	N110			BZ		jisjk:352605		
 種類別	종류별	N110			GN		jisjk:190342		
 種馬	종마	N110			GN		jisjk:33855		
@@ -306649,7 +306650,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 自信	자신	N110		Hd	GN		jisjk:31926		
 自信をつけ	자신을 가&AL@	M447			GN		jisjk:136493		
 自信感	자신감	I110	UFl		GN		jisjk:82099		
-自信満々	자신 만만	N110			GN		jisjk:193572		
+自信満々	자신 만만	N110		Tr	GN		jisjk:193572		
 自信満々	자신만만%A1@	G8U0			GN		jisjk:364425		
 自信満満	자신 만만	N110		Dd	GN		jisjk:193571		
 自修	자수	N110		Hd	GN		jisjk:31921		
@@ -313994,7 +313995,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 蒼海	오오미	N130	QPN	Wa	GN		jisjk:12384		
 蒼海	소오카이	N130	QPN	Wb	GN		jisjk:12385		
 蒼海	창해	N110	VPl		GN		jisjk:344774		
-蒼然	창연	N110	VPl		GN		jisjk:200287		
+蒼然	창연	N110	VPl	Tr	GN		jisjk:200287		
 蒼生	국민	N110	VHn		GN		jisjk:200268		
 蒼白	창백	N110			GN		jisjk:35355		
 蒼白	창백$AB@	H7U0			GN		jisjk:119442		
@@ -331398,7 +331399,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 超極細繊維	초극세 섬유	N110			BZ		jisjk:360089		
 超水平線レーダー	초수평선 레이더	N110	VPe		GN		jisjk:243291		
 超流動	초유동	N110			GN		jisjk:243447		
-超然	초연	N110			GN		jisjk:35959		
+超然	초연	N110		Tr	GN		jisjk:35959		
 超然たる	초연한	C0D1			GN		jisjk:4767		
 超然としてい	초연&AV@	M427			GN		jisjk:140172		
 超然としている	초연한	C0D1			GN		jisjk:4768		
@@ -340068,7 +340069,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 釈明状	해명장	I110			GN		jisjk:74277		
 釈氏	세키시	N130	QPN	Wa	GN		jisjk:8641		
 釈泉寺	샤쿠센지	N130	QCTVPl		GN		jisjk:300466		
-釈然	석연	N110			GN		jisjk:26214		
+釈然	석연	N110		Tr	GN		jisjk:26214		
 釈然としな	석연치 $DH@	H7U0			GN		jisjk:116885		
 釈種	샤쿠슈	N130	QPN	Wa	GN		jisjk:8642		
 釈義	석의	N110		Hd	GN		jisjk:188798		
@@ -347033,7 +347034,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 閑所	한적한 곳	N110	VPl		GN		jisjk:170354		
 閑所	한적한 곳	N110	VPl		GN		jisjk:170430		
 閑散	한산%A1@	G8L0			GN		jisjk:3904		
-閑散	한산	N110			GN		jisjk:3905		
+閑散	한산	N110		Tr	GN		jisjk:3905		
 閑文字	쓸데없는 말	N110	UTs		GN		jisjk:170862		
 閑日	한가한 날	N110	UMe		GN		jisjk:170415		
 閑日月	한가한 세월	I110			GN		jisjk:88506		
@@ -360568,7 +360569,7 @@ ttt	ttt-exam-data	K110			GN		jisjk:201744
 鬱気	우울한 기분	N110	UFl		GN		jisjk:30304		
 鬱積	울적	N110	UFl	Hd	GN		jisjk:203674		
 鬱蒼	울창%A1@	G8L0			GN		jisjk:3451		
-鬱蒼	울창	N110	VPtVPl		GN		jisjk:126922		
+鬱蒼	울창	N110	VPtVPl	Tr	GN		jisjk:126922		
 鬱陵	울릉	N110	VPl		GN		jisjk:126958		
 鬱陵島	울릉도	N130	VPl		GN		jisjk:375758		
 鬱陶し	음울$AB@	H7U0			GN		jisjk:5837		

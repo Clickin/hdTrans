@@ -109,13 +109,18 @@ void Item::SetDirectIndex(int i, Selection source) {
 }
 
 void Item::SetRuleContext(bool global, int number) {
-    if (w) w->ruleChoice = number < 0 ? Selection{} : Selection{global ? Provenance::GlobalRule : Provenance::LocalRule, number};
+    if (!w) return;
+    w->ruleChoice = number < 0 ? Selection{} : Selection{global ? Provenance::GlobalRule : Provenance::LocalRule, number};
+    w->ruleItem = number < 0 ? nullptr : this;
 }
 
 void Item::AssignEntrySurface(int i, std::string_view s, Selection source) {
     if (Entry* e = group->At(i)) {
         if (e->dst != s) {
-            if (w && w->ruleChoice.layer != Provenance::None) source = w->ruleChoice;
+            if (w && w->ruleChoice.layer != Provenance::None) {
+                source = w->ruleChoice;
+                e->neighbourAssigned = w->ruleItem != this;
+            }
             e->targetChoice = source;
             if (i == selected) choice = source;
         }
