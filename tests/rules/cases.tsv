@@ -111,9 +111,9 @@ L479	苦労は一時です。	고생은 1시입니다.	current	local
 L481	一体何匹いるのか。	일체 몇 마리 있는 것인가.	current	local
 L512	あたしが先に行くよ。	내가 먼저 가.	current	local
 L512	あたしの好きな色は青だよ。	내가 좋아하는 색은 파랑이야.	current	local
-L524	マッチ一本を擦る。	매치 한 개를 문지른다.	current	local
+L524	マッチ一本を擦る。	성냥 한 개를 문지른다.	current	local
 L537	基本は一通り学んだ。	기본은 대충 배웠다.	current	local
-L542	資料を持って来いと命令した。	자료를 안성마춤이라고 명령했다.	current	local
+L542	資料を持って来いと命令した。	자료를 가져와라고 명령했다.	current	local
 L543	壁にきれいな絵が飾ってある。	벽에 예쁜 그림이 장식해 있다.	current	local
 L543	窓は開けてあるので風が通る。	창은 열어 있으므로 바람이 통과한다.	current	local
 L546	誕生日に妹に本を買ってあげた。	생일에 여동생에게 책을 사 주었다.	current	local
@@ -131,7 +131,7 @@ L728	パンを焼いた。	빵을 구웠다.	current	local
 L729	子供が受けられる授業です。	아이를 받게 되는 수업입니다.	current	local
 L737	試合で勝った。	시합에서 이겼다.	current	local
 L758	彼は人に安心を与えられる能力がある。	그는 사람에게 안심이 주어지는 능력이 있다.	current	local
-L777	孤児を引き取った。	고아를 인수했다.	current	local
+L777	孤児を引き取った。	고아를 맡았다.	current	local
 L809	この町で知られている。	이 마을로 알려져 있다.	current	local
 L817	振り返っても誰もいない。	돌아봐도 아무도 없다.	current	local
 L916	今日は三時で仕事が終わる。	오늘은 3시에 일이 끝난다.	current	local
@@ -384,7 +384,7 @@ L2486	私の姉は看護師です。	나의 언니는 간호사입니다.	curren
 L2486	あちらが駅の入口です。	저쪽이 역의 입구입니다.	current	local
 L2528	友人といる。	친구라고 있다.	current	local
 L2568	先生に本を読んでいただいた。	선생님에게 책을 읽어 주었다.	current	local
-L2571	肉を薄く切った。	고기를 싱겁게 잘랐다.	current	local
+L2571	肉を薄く切った。	고기를 얇게 잘랐다.	current	local
 L2580	ちょっといいですか。	조금 괜찮습니까.	current	local
 L2580	明日は来なくてもいいよ。	내일은 오지 않아도 괜찮아.	current	local
 L2581	冷蔵庫には何もなかった。	냉장고에는 아무것도 없었다.	current	local
@@ -408,8 +408,8 @@ L2682	読んでおり、書いている。	읽고 있어 쓰고 있다.	current	
 L2684	母について行く。	어머니를 대해 간다.	current	local
 L2688	私には信じられない話だ。	나에게는 믿을 수 없는 이야기다.	current	local
 L2688	お金さえない毎日だった。	돈조차 없는 매일이었다.	current	local
-L2692	病院にかかった。	병원에 걸렸다.	current	local
-L2692	仕事にかかった。	일에 걸렸다.	current	local
+L2692	病院にかかった。	병원에서 진료받았다.	current	local
+L2692	仕事にかかった。	일에 착수했다.	current	local
 L2716	私にできる仕事です。	나가 할 수 있는 일입니다.	current	local
 L2738	初心に立ち返って頑張ろう。	초심으로 되돌아와 노력하자.	current	local
 L2738	あの子はきっと美人に育つよ。	그 아이는 분명 미인으로 자라.	current	local
@@ -637,7 +637,7 @@ L4150	妹は悲しそうな顔をしていた。	여동생은 슬픈 것 같은 
 L4150	あの子は不思議な目をしている。	그 아이는 이상한 눈을 하고 있다.	current	local
 L4162	彼はまだ宿題を終えていない。	그는 아직 숙제를 끝내지 않았다.	current	local
 L4162	雨は朝からまだ止んでいない。	비는 아침부터 아직 그치지 않았다.	current	local
-L4191	彼は電車に間に合った。	그는 전철에 시간이 맞았다.	current	local
+L4191	彼は電車に間に合った。	그는 전철에 늦지 않았다.	current	local
 L4202	会議において決めた。	회의에 대해 결정했다.	current	local
 L4209	はい、了解です。	네, 알겠습니다.	current	local
 L4209	その件、了解です。	그 건, 알겠습니다.	current	local
@@ -657,7 +657,7 @@ L4353	そんなこと知らなかったなあ。	그런 일 몰랐다.	current	l
 L4353	今日は何も食べられなかったなあ。	오늘은 아무것도 먹을 수 없었다.	current	local
 L4356	子供みたいに大声で笑った。	아이같이 큰 소리로 웃었다.	current	local-ending
 L4356	具体的に説明してください。	구체적으로 설명해 주세요.	current	local-ending
-L4378	本日をもって閉店する。	오늘로서 폐점한다.	current	local
+L4378	本日をもって閉店する。	오늘로써 폐점한다.	current	local
 L4398	姉と同じ部屋で寝ている。	언니와 같은 방에서 자고 있다.	current	local
 L4398	兄と同じ色のシャツを買った。	형과 같은 색의 셔츠를 샀다.	current	local
 L4421	人生ってそんなものさ。	인생은 그런 것이야.	current	local
