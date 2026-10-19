@@ -53,3 +53,17 @@ dict:顔を横に背け	顔を横に背けた。	얼굴을 옆으로 돌렸다.	
 dict:顔を横に背け	命令に背いた。	명령 을 거역했다.	keep	defaults
 dict:我に返	我に返った。	제 정신을 차렸다.	fix	defaults
 dict:我に返	我に返る。	제 정신을 차린다.	keep	defaults
+sense:離れる	その場を離れた。	그 자리를 떠났다.	fix	senses
+sense:離れる	二人は離れていた。	두 사람은 떨어져 있었다.	keep	senses
+sense:覚える	無力感を覚えた。	무력감을 느꼈다.	fix	senses
+sense:覚える	単語を覚えた。	단어를 배웠다.	keep	senses
+sense:早まる	鼓動が早まった。	고동이 빨라졌다.	fix	senses
+sense:早まる	判断が早まった。	판단이 성급하게 굴었다.	keep	senses
+sense:許される	入学を許された。	입학이 허락되었다.	fix	senses
+sense:許される	罪を許された。	죄가 용서되었다.	keep	senses
+sense:取り上げられる	切り札を取り上げられた。	비장의 카드를 빼앗겼다.	fix	senses
+sense:取り上げられる	ニュースで取り上げられた。	뉴스로 다루어졌다.	keep	senses
+sense:触れる	犬に触れていた。	개에게 손을 대고 있었다.	fix	senses
+sense:触れる	法律に触れた。	법률에 저촉되었다.	keep	senses
+sense:寄せ付け	人を寄せ付けない。	사람을 접근시키지 않는다.	fix	senses
+sense:寄せ付け	人が近付かない。	사람이 가까워지지 않는다.	keep	senses

@@ -47,3 +47,27 @@ dict:石	石で城を作った。	돌로 성을 만들었다.	fix	defaults
 dict:石	石を拾った。	돌을 주웠다.	keep	defaults
 dict:殿下たち	殿下たち、黙った。	전하들, 입을 다물었다.	fix	defaults
 dict:殿下たち	殿下が来た。	전하가 왔다.	keep	defaults
+sense:金	金と銀がある。	금과은이 있다.	fix	senses
+sense:金	金を払う。	돈을 지불한다.	keep	senses
+sense:弁	友人の弁だ。	친구의 말이다.	fix	senses
+sense:弁	弁護士が来た。	변호사가 왔다.	keep	senses
+sense:受け身	受け身を取った。	낙법을 취했다.	fix	senses
+sense:受け身	受け身の文だ。	수동의 문장이다.	keep	senses
+sense:花形	花色花形が美しい。	꽃의 색깔 꽃 모양이 아름답다.	fix	senses
+sense:花形	花形の俳優だ。	인기의 배우다.	keep	senses
+sense:柄	刀の柄を握った。	칼의 자루를 잡았다.	fix	senses
+sense:柄	花柄の服だ。	꽃무늬의 옷이다.	keep	senses
+sense:旨み	結婚は旨みが大きい。	결혼은 이점이 크다.	fix	senses
+sense:旨み	肉の旨みがある。	고기의 감칠맛이 있다.	keep	senses
+sense:東部	東部に住む。	동부에 산다.	fix	senses
+sense:東部	東部市場前駅に行く。	도부시조마에역에 간다.	keep	senses
+sense:クワ	クワを持った。	괭이를 가졌다.	fix	senses
+sense:クワ	クワ・トイネ公国だ。	쿠와 트이네 공국이다.	keep	senses
+sense:クワ	一本のクワだ。	한 개의 괭이다.	fix	senses
+sense:クワ	クワ・トイネから来た。	쿠와 트이네로부터 왔다.	keep	senses
+sense:クワ	クワは良い農具だ。	괭이는 좋은 농구다.	fix	senses
+sense:クワ	クワ・トイネ公国がある。	쿠와 트이네 공국이 있다.	keep	senses
+sense:年代	幼稚園に通う年代だ。	유치원에 다니는 나이대다.	fix	senses
+sense:年代	古い年代の品だ。	오래된 연대의 물건이다.	keep	senses
+sense:才	経営の才がある。	경영의 재능이 있다.	fix	senses
+sense:才	十才だ。	열살이다.	keep	senses
