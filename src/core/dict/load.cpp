@@ -583,9 +583,9 @@ bool SnapshotLoader::BuildBase(const std::vector<std::size_t>& baseFiles) {
 bool SnapshotLoader::BuildNames(const std::vector<std::size_t>& nameFiles) {
     Snapshot& s = *snap;
     internal::Layer names(false);
-    std::size_t rows = 0;
-    for (const std::size_t i : nameFiles) rows += RowBound(files[i]);
-    names.Rows().reserve(rows);
+    std::size_t bound = 0;
+    for (const std::size_t i : nameFiles) bound += RowBound(files[i]);
+    names.Rows().reserve(bound);
     for (const std::size_t i : nameFiles) {
         const std::size_t start = names.Rows().size();
         std::vector<uint32_t> replacing;
