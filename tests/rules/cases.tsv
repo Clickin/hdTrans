@@ -128,11 +128,11 @@ L578	電車に乗り遅れてしまう。	전철에 놓쳐 버린다.	current	lo
 L632	看板を壁に掲げる。	간판을 벽으로 내건다.	current	local
 L658	彼はいつも気をつけます。	그는 언제나 조심하겠습니다.	current	local
 L728	パンを焼いた。	빵을 구웠다.	current	local
-L729	子供が受けられる授業です。	아이를 받게 되는 수업입니다.	current	local
+L729	子供が受けられる授業です。	아이가 받을 수 있는 수업입니다.	current	local
 L737	試合で勝った。	시합에서 우수했다.	current	local
-L758	彼は人に安心を与えられる能力がある。	그는 사람에게 안심이 주어지는 능력이 있다.	current	local
+L758	彼は人に安心を与えられる能力がある。	그는 사람에게 안심을 줄 수 있는 능력이 있다.	current	local
 L777	孤児を引き取った。	고아를 인수했다.	current	local
-L809	この町で知られている。	이 마을로 알려져 있다.	current	local
+L809	この町で知られている。	이 마을에서 알려져 있다.	current	local
 L817	振り返っても誰もいない。	되돌아 보고 아무도 없다.	current	local
 L916	今日は三時で仕事が終わる。	오늘은 3시에 일이 끝난다.	current	local
 L925	駅前の店で靴を買った。	역 앞의 가게에서 구두를 샀다.	current	local
@@ -202,7 +202,7 @@ L1295	だって仕方ないでしょう。	왜냐하면 어쩔 수 없을 것입
 L1295	だってそう思ったんだもの。	왜냐하면 그렇게 생각한걸.	current	local
 L1303	このペンは私のと同じです。	이 펜은 나의 것과 같습니다.	current	local
 L1303	兄のを借りて学校へ行った。	형의 것을 빌려 학교에 갔다.	current	local
-L1312	彼が笑える理由は分からない。	그가 웃기는 이유는 모른다.	current	local
+L1312	彼が笑える理由は分からない。	그가 웃을 수 있는 이유는 모른다.	current	local
 L1317	食事の時の話は面白かった。	식사때의 이야기는 재미있었다.	current	local
 L1317	ベッドの下の箱を探している。	침대아래의 상자를 찾고 있다.	current	local
 L1318	明日はどこに行くの？	내일은 어디에 가는 거야?	current	local-ending
@@ -214,7 +214,7 @@ L1339	この問題はそんなに難しくない。	이 문제는 그렇게 어�
 L1345	彼は三キロ泳ぐことができる。	그는 3킬로 헤엄칠 수가 있다.	current	local
 L1345	私は日本語を話すことができます。	나는 일본어를 할 수가 있습니다.	current	local
 L1401	仕事はもうきつい。	일은 이제 꼭 낀다.	current	local
-L1498	新聞に取り上げられた。	신문으로 다루어졌다.	current	local
+L1498	新聞に取り上げられた。	신문에서 다루어졌다.	current	local
 L1499	どうしよう、財布を忘れた。	어떻게 하지, 지갑을 잊었다.	current	local
 L1499	どうしようか、今日の夕飯。	어떻게 하지, 오늘의 저녁밥.	current	local
 L1525	水は冷えると氷となる。	물은 차가워지면 얼음이 된다.	current	local
@@ -302,7 +302,7 @@ L2087	私の妹は大学生です。	나의 여동생은 대학생입니다.	cur
 L2087	私に連絡をください。	나에게 연락을 주세요.	current	local
 L2090	彼が歌うのを聞いて、感動した。	그가 노래하는 것을 들어, 감동했다.	current	local-ending
 L2090	雨が降るのを待ってから出かけた。	비가 오는 것을 기다리고 나서 나갔다.	current	local-ending
-L2096	彼にはよくしてもらった。	그에게는 잘 받았다.	current	local
+L2096	彼にはよくしてもらった。	그에게는 잘 대접받았다.	current	local
 L2098	祖父はとても親切だった。	조부는 매우 친절했다.	current	local-ending
 L2098	昨日の試験は意外と簡単だった。	어제의 시험은 의외로 간단했다.	current	local-ending
 L2103	三日先の予定です。	3일앞의 예정입니다.	current	local
@@ -355,7 +355,7 @@ L2340	犯人は彼の弟か？	범인은 그의 남동생인가?	current	local
 L2340	明日は日曜日か？	내일은 일요일인가?	current	local
 L2342	誰が来るのか分からない。	누가 오는지 모른다.	current	local-ending
 L2342	明日は晴れるのか気になる。	내일은 개이는지 마음이 생긴다.	current	local-ending
-L2345	私に聞かれました。	나가 물었습니다.	current	local
+L2345	私に聞かれました。	내가 물었습니다.	current	local
 L2362	この子は漢字が書けるようになった。	이 아이는 한자를 쓸 수 있게 되었다.	current	local
 L2373	必ず頑張る、と先生に約束した。	반드시 노력한다, 라고 선생님에게 약속했다.	current	local
 L2373	早く帰りたい、と弟がつぶやいた。	빨리 돌아가고 싶다, 라고 남동생이 중얼거렸다.	current	local
@@ -600,7 +600,7 @@ L3860	ここは猫が寝たところです。	여기는 고양이가 잤습니�
 L3860	帰ったところですね。	돌아갔이군요.	current	local-ending
 L3874	早く行かないと遅れるからな。	빨리 가지 않으면 늦기 때문.	current	local-ending
 L3874	毎日練習しているからだと思う。	매일 연습하고 있기 때문이라고 생각한다.	current	local-ending
-L3893	財布がとられた。	지갑이 취해졌다.	current	local
+L3893	財布がとられた。	지갑이 빼앗겼다.	current	local
 L3925	彼女は毎日よく働く人です。	그녀는 매일 잘 일하는 사람입니다.	current	local
 L3925	その帽子、よく似合っているね。	그 모자, 잘 어울리고 있군요.	current	local
 L3926	冬は日が短くなる。	겨울은 날이 짧아진다.	current	local
