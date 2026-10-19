@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <iterator>
 #include <unordered_map>
 
 #include "core/dict/layer.h"

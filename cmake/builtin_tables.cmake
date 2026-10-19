@@ -11,7 +11,8 @@
 #     files of RULE_DIR in name order, as RuleLines(), and each file's name and lines as
 #     RuleFiles() (core/engine/rules.h)
 
-# Sets VAR to the initializer of a std::string_view array holding the lines of the file at path.
+# Sets VAR to the initializer of a std::string_view array holding the lines of the file at path,
+# as ""sv literals: GCC counts the length of a plain literal against its constexpr limit.
 function(hdtrans_literal_lines path var)
     file(READ "${path}" text)
     if(text STREQUAL "")
@@ -21,15 +22,15 @@ function(hdtrans_literal_lines path var)
     string(REPLACE "\"" "\\\"" text "${text}")
     string(REPLACE "\t" "\\t" text "${text}")
     string(REPLACE "\r" "\\r" text "${text}")
-    set(end "\",\n")
+    set(end "\"sv,\n")
     string(LENGTH "${text}" size)
     math(EXPR last "${size} - 1")
     string(SUBSTRING "${text}" ${last} 1 tail)
     if(tail STREQUAL "\n")
         string(SUBSTRING "${text}" 0 ${last} text)
-        set(end "\\n\",\n")
+        set(end "\\n\"sv,\n")
     endif()
-    string(REPLACE "\n" "\\n\",\n    \"" text "${text}")
+    string(REPLACE "\n" "\\n\"sv,\n    \"" text "${text}")
     set(${var} "{\n    \"${text}${end}}" PARENT_SCOPE)
 endfunction()
 
@@ -65,7 +66,8 @@ if(DEFINED RULE_DIR)
     endforeach()
     file(WRITE "${OUT}" "// Generated table; do not edit.\n#include <span>\n#include <string_view>\n\n"
         "#include \"core/engine/rules.h\"\n\nnamespace hdTrans::internal {\n\nnamespace {\n\n"
-        "constexpr std::string_view kLines[] = {\n    \"rules 1 ${locals} ${globals}\\n\",\n${body}};\n\n"
+        "using namespace std::string_view_literals;\n\n"
+        "constexpr std::string_view kLines[] = {\n    \"rules 1 ${locals} ${globals}\\n\"sv,\n${body}};\n\n"
         "constexpr RuleFile kFiles[] = {\n${table}};\n\n}  // namespace\n\n"
         "std::span<const std::string_view> RuleLines() { return kLines; }\n\n"
         "std::span<const RuleFile> RuleFiles() { return kFiles; }\n\n}  // namespace hdTrans::internal\n")
@@ -75,14 +77,14 @@ endif()
 if(DEFINED FILE)
     hdtrans_literal_lines("${FILE}" lines)
     file(WRITE "${OUT}" "// Generated table; do not edit.\n#include <span>\n#include <string_view>\n\n"
-        "#include \"${HEADER}\"\n\nnamespace ${NAMESPACE} {\n\nnamespace {\n\n"
+        "#include \"${HEADER}\"\n\nnamespace ${NAMESPACE} {\n\nnamespace {\n\nusing namespace std::string_view_literals;\n\n"
         "constexpr std::string_view kLines[] = ${lines};\n\n}  // namespace\n\n"
         "std::span<const std::string_view> ${ACCESSOR}() { return kLines; }\n\n}  // namespace ${NAMESPACE}\n")
     return()
 endif()
 
 file(GLOB files LIST_DIRECTORIES false "${DIR}/*.tsv")
-set(out "// Generated table; do not edit.\n#include \"core/dict/builtin.h\"\n\nnamespace hdTrans::dict::internal {\n\nnamespace {\n\n")
+set(out "// Generated table; do not edit.\n#include \"core/dict/builtin.h\"\n\nnamespace hdTrans::dict::internal {\n\nnamespace {\n\nusing namespace std::string_view_literals;\n\n")
 set(entries "")
 foreach(path IN LISTS files)
     get_filename_component(name "${path}" NAME)
