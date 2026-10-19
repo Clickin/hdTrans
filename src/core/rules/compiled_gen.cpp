@@ -235,12 +235,19 @@ bool RuleL24([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "501561"sv));
 }
 
-// # 두 단어 뒤의 표기가 まで로 시작하면 とても를 부정 강조 부사 '도저히'로 고른다. (미발동: rare-context)
-// # [의심] 부정 조건 없이 두 단어 뒤의 まで만 보고 '도저히'를 고른다; 자체 예문 とても遠くまで歩いた가 실제로 '도저히 먼 곳까지 걸었다'가 되었다.
+// # まで 앞의 とても는 뒤 동사가 긍정 과거형이면 매우로 옮기고, 그 밖에는 도저히로 고른다.
 // local 25
+//     src[+2] starts "まで" and (end.src[+3] == "た" or end.src[+3] == "だ" or end.src[+3] == "いた" or end.src[+3] == "いだ" or end.src[+3] == "った" or end.src[+3] == "んだ" or end.src[+3] == "ました") and ko := "매우"
 //     src[+2] starts "まで"
 bool RuleL25([[maybe_unused]] Item* p) {
-    return SrcEq(p, 2, "Lまで"sv);
+    return (SrcEq(p, 2, "Lまで"sv) && (GobiSrcEq(p, 3, "た"sv) ||
+           GobiSrcEq(p, 3, "だ"sv) ||
+           GobiSrcEq(p, 3, "いた"sv) ||
+           GobiSrcEq(p, 3, "いだ"sv) ||
+           GobiSrcEq(p, 3, "った"sv) ||
+           GobiSrcEq(p, 3, "んだ"sv) ||
+           GobiSrcEq(p, 3, "ました"sv)) && DstSet(p, 0, "매우"sv)) ||
+           SrcEq(p, 2, "Lまで"sv);
 }
 
 // # とても는 뒤에 楽し 형용사가 오면 정말로 고른다.
@@ -4495,12 +4502,11 @@ bool RuleL476([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "500"sv) && GobiDstSet(p, -1, "8"sv));
 }
 
-// # 原野는 두 단어 뒤 동사가 발화·사고·지각 계열 조건이나 UMv 계열 검사에 맞으면 고유명사 하라노로 고른다. (미발동: rare-word)
-// # [오류] A-=의 UMv는 사전 의미 코드로는 쓰이지만 계열표에 없어 이동 대안이 항상 거짓이며 나머지 계열만 작동한다.
+// # 原野는 두 단어 뒤 동사가 발화·사고·지각 계열이면 하라노로 고른다.
 // local 477
-//     pos[+2] is 4** and sem[+2] under UTs|UTh|URc|UMv
+//     pos[+2] is 4** and sem[+2] under UTs|UTh|URc
 bool RuleL477([[maybe_unused]] Item* p) {
-    return (PumsaEq(p, 2, "4**"sv) && AttrMinusEq(p, 2, "UTsUThURcUMv"sv));
+    return (PumsaEq(p, 2, "4**"sv) && AttrMinusEq(p, 2, "UTsUThURc"sv));
 }
 
 // # 조사 に 바로 뒤에서 応募를 응모로 고르고 に를 에로 바꾼다. (미발동: rare-context)
@@ -4759,14 +4765,12 @@ bool RuleG110([[maybe_unused]] Item* p) {
     return (PumsaEq(p, 0, "1**"sv) && GramMinusEq(p, 0, "Z7"sv) && GramMinusEq(p, -1, "NdNj"sv));
 }
 
-// # 쉼표로 나열된 이름 목록에서 이웃 이름과 쉼표의 배치를 확인하여 이름용 명사 후보를 고른다.
+// # 쉼표로 나열된 이름 목록에서 앞뒤 이름과 쉼표를 확인하여 이름용 명사 후보를 고른다.
 // global 1030 stem pos 1 prio 120
 //     gram has On and ko[-1] == "," and gram[-2] has On and ko[-3] == ","
 //     gram has On and ko[+1] == "," and gram[+2] has On and ko[+3] == ","
-//     gram has On and ko[+1] == "," and gram[+2] has On and ko[+3] == ","
 bool RuleG120([[maybe_unused]] Item* p) {
     return (GramEq(p, 0, "On"sv) && DstEq(p, -1, ","sv) && GramEq(p, -2, "On"sv) && DstEq(p, -3, ","sv)) ||
-           (GramEq(p, 0, "On"sv) && DstEq(p, 1, ","sv) && GramEq(p, 2, "On"sv) && DstEq(p, 3, ","sv)) ||
            (GramEq(p, 0, "On"sv) && DstEq(p, 1, ","sv) && GramEq(p, 2, "On"sv) && DstEq(p, 3, ","sv));
 }
 
@@ -4988,7 +4992,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL22, 0x63fee27b17126605ull},
     {RuleL23, 0x6ffe0676f8a46367ull},
     {RuleL24, 0x997bd6d403455375ull},
-    {RuleL25, 0xac5367147057260cull},
+    {RuleL25, 0x7487fb2bd36b6d41ull},
     {RuleL26, 0x3585dfd78286f36full},
     {RuleL27, 0x4bec2880dc8f978bull},
     {RuleL28, 0x76d0ff42f7b2666aull},
@@ -5440,7 +5444,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL474, 0x4b9514b4d32b32c7ull},
     {RuleL475, 0xfacf015950f3962bull},
     {RuleL476, 0x0d1cd18363d9210aull},
-    {RuleL477, 0x971a31032300f9feull},
+    {RuleL477, 0xa695b6095e0f722eull},
     {RuleL478, 0x8d2a1afb408f028eull},
     {RuleL479, 0xebc6a53ec1da5a13ull},
     {RuleL480, 0x32524d6f56e8c0e7ull},
@@ -5477,7 +5481,7 @@ constexpr CompiledRule kGlobal[] = {
     {RuleG90, 0xf785d9c5b40f546dull},
     {RuleG100, 0x3069c872ac4b68a8ull},
     {RuleG110, 0xb07ac6a5914ffa49ull},
-    {RuleG120, 0x35a4d8366150cc24ull},
+    {RuleG120, 0xbc2cb445fafca77dull},
     {RuleG130, 0x60209eb785257c06ull},
     {RuleG140, 0xef64f925c202219dull},
     {RuleG150, 0x2405743392f641fcull},

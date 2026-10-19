@@ -1,3 +1,3 @@
 # FNV-1a 64 of `hdrulec dump src/core/rules`, the rules program in run order; ctest rules.identity
 # fails when the program changes. After a meant change: hdrulec dump src/core/rules -hash
-6c69123e2213a82c
+9b70f73402bc4e6f
