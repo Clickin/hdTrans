@@ -1,0 +1,33 @@
+# CG-lite rules over the misread decisions (tools/misread/cg.py): tier, action, target, condition, note.
+# kana sound runs with a small tsu
+1	SELECT	snd	sc=K tsu=e	tsu: katakana word ending in ッ is a sound
+1	SELECT	t=하	s=は tsu=b pos2=P2	tsu: は after っ is laughter
+2	SELECT	t=	s=と、 tsu=b	tsu: っと、 is an interjection tail
+2	SELECT	snd	sc=H n=1 tsu=a b=H !pos2=P2	tsu: one kana before っ in a kana run is a sound
+# a word next to a mask symbol
+1	SELECT	snd	sc=K b={○,●,◯,×,＊,■,□,◎,〇,△,▲}	mask: katakana after a mask symbol is a sound
+1	SELECT	snd	sc=K a={○,●,◯,×,＊,■,□,◎,〇,△,▲}	mask: katakana before a mask symbol is a sound
+2	SELECT	snd	sc=H b={○,●,◯,×,＊,■,□,◎,〇,△,▲}	mask: kana after a mask symbol is a sound
+# line-initial discourse words
+1	SELECT	t=과연	s=さすがに {ls,b=「,b=『,b=（}	ls: さすがに
+1	SELECT	t=마침	s=ちょうど {ls,b=「,b=『,b=（}	ls: ちょうど
+1	SELECT	t=그렇다면	s=だったら {ls,b=「,b=『,b=（}	ls: だったら
+1	SELECT	t=그렇다고는\s해도	s=とはいえ {ls,b=「,b=『,b=（}	ls: とはいえ
+1	SELECT	t=그런데	s=ところで {ls,b=「,b=『,b=（}	ls: ところで
+2	SELECT	t=무려	s=何と {ls,b=「,b=『,b=（} !ns={い,言}*	ls: 何と
+2	SELECT	t=뭔가	st=なんか|무슨 {ls,b=「,b=『,b=（}	ls: なんか
+2	SELECT	t=야	st=おう|왕 sc=H	ls: answer おう
+# の
+3	SELECT	t=인	s=の ps={妹,姉,弟,兄,娘,息子,友人,親友,幼馴染,婚約者,母,父,妻,夫,主治医,部下,侍女,従者,叔父,叔母,祖父,祖母,孫,姪,甥,兄上,姉上,父上,母上,先輩,後輩,同僚,上司,師匠,弟子,恋人,長女,次女,長男,次男,三男,姉さん,兄さん,姉様,兄様,執事,メイド} a=K	no: apposition of a relation and a name
+2	SELECT	t=	st=の|의 a={!,！,?,？,」,。,_}	no: sentence-final の
+2	SELECT	t=것	st=の|의 ns={だ,です,では,だが,か}*	no: nominaliser before a copula
+# sense cases
+2	SELECT	t=(이)라고	st=と|(와)과 b={？,?,！,!,…}	sense: quoting と after ?, ! or …
+2	SELECT	t=(이)라고	st=と|(와)과 ns={言,思,考,叫,呟,答,告げ,名乗,聞い}*	sense: quoting と before a verb of saying
+2	SELECT	t=앞	st=前|전 ps=の ns={に,で,へ}*	sense: の前に is in front
+2	SELECT	t=쪽	s=側 ps=同じ	sense: 同じ側
+2	SELECT	t=공식	s=公 ns=の	sense: 公の
+2	SELECT	t=매달&AA@	s=掴ま ps=に	sense: に掴まる
+3	SELECT	t=모양	s=様 ps={この,その,あの}	sense: この様
+# fillers
+2	SELECT	t=	st=ん|응 b={H,C,、} !a={?,？}	filler: explanatory ん

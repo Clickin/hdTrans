@@ -1,4 +1,5 @@
 #include "core/word/flush.h"
+#include "core/word/cg.h"
 #include "core/word/misread.h"
 #include "core/word/select.h"
 
@@ -56,6 +57,7 @@ void Flush(Flusher& f) {
     }
     if (f.w.settings.text) VerbNegative(f);
     if (f.w.settings.text && f.w.settings.improvements.misreadFilter) FilterMisreads(f);
+    if (f.w.settings.text && (f.w.settings.improvements.cgRules || f.w.settings.improvements.cgLearned)) FilterCg(f);
 }
 
 }  // namespace hdTrans::word

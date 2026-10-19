@@ -36,7 +36,9 @@ struct SessionSenses;
     X(tailLengthCheck, false)         /* Measure the matched tail rather than the whole record. */ \
     X(preparedNextToken, false)       /* Canonicalize lookahead token text before lookup. */ \
     X(forwardTerminal, false)         /* Visit terminal-form candidates from left to right. */ \
-    X(misreadFilter, false)           /* Replace a chosen candidate the misread model scores as a misreading. */
+    X(misreadFilter, false)           /* Replace a chosen candidate the misread model scores as a misreading. */ \
+    X(cgRules, false)                 /* Run the hand CG-lite rules over the misread decisions. */ \
+    X(cgLearned, false)               /* Run the learned CG-lite rules over the misread decisions. */
 
 struct Improvements {
 #define HDTRANS_IMPROVEMENT_FIELD(name, defaultValue) bool name = defaultValue;

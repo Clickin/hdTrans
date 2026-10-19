@@ -15,6 +15,7 @@
 //   -stages DIR           write stage records (also HDTRANS_DRIVER_DUMP)
 //   -select-shadow        score shortest targets without changing the translation
 //   -misread              replace candidates the misread model scores as misreadings
+//   -cg / -cg-learned     run the hand / learned CG-lite rules over the misread decisions
 //   -in FILE              read the input from FILE
 #include <cstdint>
 #include <cstdio>
@@ -162,6 +163,8 @@ int main(int argc, char** argv) {
     bool why = false;
     bool selectShadow = false;
     bool misread = false;
+    bool cg = false;
+    bool cgLearned = false;
     bool reference = false;
     bool verifyDicts = false;
     bool compileDicts = false;
@@ -182,8 +185,10 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
         else if (!std::strcmp(a, "-misread")) misread = true;
+        else if (!std::strcmp(a, "-cg")) cg = true;
+        else if (!std::strcmp(a, "-cg-learned")) cgLearned = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-misread] [-stages DIR] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-misread] [-cg] [-cg-learned] [-stages DIR] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
@@ -280,6 +285,8 @@ int main(int argc, char** argv) {
     options.reference = reference;
     options.filters = filters.get();
     options.wordImprovements.misreadFilter = misread;
+    options.wordImprovements.cgRules = cg;
+    options.wordImprovements.cgLearned = cgLearned;
     if (selectShadow) {
         options.shadowScorers = diagnosticScorers;
         options.selectShadow = true;

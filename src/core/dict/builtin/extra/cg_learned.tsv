@@ -1,0 +1,34 @@
+# learned REMOVE-chosen rules (tools/misread/cg.py learn -min-works 2: net >= 3, precision >= 0.8, fixes from two works); note: fixed/broken/changed on train
+10	SELECT	!chosen	kept st=ん|응 split=a	E1 14/3/17
+10	SELECT	!chosen	kept st=前|전 ps=の	E2 11/1/13
+10	SELECT	!chosen	kept st=わ|원	E3 7/0/8
+10	SELECT	!chosen t=	kept s=い np=N1	E4 6/0/6
+10	SELECT	!chosen t=나이	kept b=H np=P2	E5 6/0/6
+10	SELECT	!chosen	kept st=それに|게다가 split=b	E6 5/0/5
+10	SELECT	!chosen t=	kept s=い pp=M4	E7 5/0/5
+10	SELECT	!chosen	kept st=入|접어&L4@	E8 4/0/4
+10	SELECT	!chosen	kept st=名|명 a=H	E9 4/0/4
+10	SELECT	!chosen	kept st=でも|에서도 ns=見	E10 4/0/4
+10	SELECT	!chosen	kept st=だけ|만큼 split=a	E11 4/0/4
+10	SELECT	!chosen t=	kept st=の|의 a=!	E12 4/0/4
+10	SELECT	!chosen	kept st=|1고 b=「	E13 5/1/6
+10	SELECT	!chosen	kept st=同じく|같은	E14 3/0/3
+10	SELECT	!chosen	kept st=なんで|이니까	E15 3/0/3
+10	SELECT	!chosen	kept st=戻|돌아&AH@ np=H7	E16 3/0/3
+10	SELECT	!chosen	kept st=ら|들 pp=H7	E17 3/0/3
+10	SELECT	!chosen	kept st=は|(은)는 ps=は	E18 3/0/3
+10	SELECT	!chosen t=쪽으로	kept st=の方へ|에	E19 3/0/3
+10	SELECT	!chosen	kept st=なんだ|(이)야 pp=P2	E20 3/0/3
+10	SELECT	!chosen	kept st=さ|(이)야 pp=N1	E21 3/0/3
+10	SELECT	!chosen	kept st=え|네 pp=N1	E22 3/0/3
+10	SELECT	!chosen t=얼버무&AA@	kept pos2=M4	E23 3/0/3
+10	SELECT	!chosen t=같이	kept st=共に|모두 np=M4	E24 3/0/3
+10	SELECT	!chosen t=구조	kept st=作り|만들기 b=H	E25 3/0/3
+10	SELECT	!chosen t=에게	kept st=に|에 ps=国王	E26 3/0/3
+10	SELECT	!chosen t=같은\s건	kept st=なんか|어쩐지 np=H7	E27 3/0/3
+10	SELECT	!chosen t=1기\s위해	kept st=ため|1기\s(위해)때문에 a=H	E28 3/0/3
+10	SELECT	!chosen t=2라	kept st=|3\s수\s있는 np=N1	E29 3/0/3
+10	SELECT	!chosen t=것\s%B3@	kept pp=N1 split=b	E30 3/0/3
+10	SELECT	!chosen t=흔&L4@	kept pos2=M4 b=H	E31 3/0/3
+10	SELECT	!chosen	kept st=戻|돌아&AH@ a=C	E32 4/1/5
+10	SELECT	!chosen t=	kept st=こと|일 b=C	E33 4/1/5
