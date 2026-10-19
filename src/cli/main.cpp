@@ -2,8 +2,9 @@
 // whole input is one session unless -each or -raw is given.
 //   -dicts DIR[,DIR...]   dictionary folders in load order (default: dicts next to the
 //                         executable, else dicts in the current directory)
-//   -userdict FILE        user dictionary file (default: userdict.tsv next to the
-//                         executable; empty for none)
+//   -userdict FILE        user dictionary file, which must load (default: userdict.tsv
+//                         next to the executable, left out with a warning when it does not
+//                         load; empty for none)
 //   -each                 a new session for every line
 //   -raw                  translate each line with the word pipeline only
 //   -reference            disable translation improvements
@@ -237,14 +238,14 @@ int main(int argc, char** argv) {
 
     hdTrans::Engine engine(reference);
     if (!engine.Open(folders, verifyDicts, userFile)) {
-        std::error_code ec;
-        const bool user = !userFile.empty() &&
-                          std::filesystem::exists(std::u8string(reinterpret_cast<const char8_t*>(userFile.data()),
-                                                                userFile.size()),
-                                                  ec);
-        std::fprintf(stderr, "hdtrans: no dictionary loaded from %s%s%s\n", dicts.c_str(),
-                     user ? " with the user dictionary " : "", user ? userFile.c_str() : "");
+        std::fprintf(stderr, "hdtrans: no dictionary loaded from %s\n", dicts.c_str());
         return 1;
+    }
+    if (const std::string error = engine.UserFileError(); !error.empty()) {
+        // A user dictionary named with -userdict must load; the default one is optional.
+        std::fprintf(stderr, "hdtrans: %suser dictionary not loaded:\n%s\n", userFileArg ? "" : "warning: ",
+                     error.c_str());
+        if (userFileArg) return 1;
     }
 
     std::string input;

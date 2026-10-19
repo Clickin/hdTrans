@@ -101,6 +101,24 @@ int Copy(const std::string& s, char** out, size_t* outn) {
 
 }  // namespace
 
+#if defined(_WIN32) && defined(HDTRANS_BUILD_DLL)
+// Nothing waits under the loader lock: at process exit (reserved set) the engine is left to
+// the OS; on FreeLibrary no reload thread runs here any more (each holds a module reference)
+// and the engine is released without waiting for one.
+BOOL WINAPI DllMain(HINSTANCE /*module*/, DWORD reason, LPVOID reserved) {
+    if (reason != DLL_PROCESS_DETACH) return TRUE;
+    if (reserved) {
+        static_cast<void>(g_session.release());
+        static_cast<void>(g_engine.release());
+        return TRUE;
+    }
+    g_session.reset();
+    if (g_engine) g_engine->DetachReload();
+    g_engine.reset();
+    return TRUE;
+}
+#endif
+
 extern "C" {
 
 int hdTrans_Initialize(const char* dirs) {
@@ -152,7 +170,8 @@ int hdTrans_Reload(void) {
         userFile = g_userFile;
     }
     auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
-    if (!e->Open(dirs, false, userFile)) return -1;
+    // A userdict.tsv that does not load keeps the dictionaries loaded before.
+    if (!e->Open(dirs, false, userFile) || !e->UserFileError().empty()) return -1;
     AdminLock lock;
     if (generation != g_generation) return -1;
     g_session.reset();
@@ -160,6 +179,13 @@ int hdTrans_Reload(void) {
     g_session = std::make_unique<hdTrans::Session>(*g_engine);
     ++g_generation;
     return 0;
+}
+
+int hdTrans_UserDictError(char** out, size_t* outn) {
+    std::unique_lock<std::mutex> lock(g_mutex);
+    g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
+    if (!g_engine) return -1;
+    return Copy(g_engine->UserFileError(), out, outn);
 }
 
 void hdTrans_FreeMem(void* p) { std::free(p); }

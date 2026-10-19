@@ -138,7 +138,10 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
   `#! layer=user`여야 합니다. 다른 머리줄은 이 파일 이름을 담은 오류로 불러오기를 실패시킵니다.
 - 일반 파일이면 마지막 사용자 사전(같은 키·품사의 앞 항목을 대신함)이고, 열 파일이면 `user` 계층 열
   사전입니다. 열 형식은 캐시 없이 읽습니다.
-- 컴파일되지 않는 줄이 있으면 불러오기가 실패합니다(`hdTrans_Initialize`·`J2K_Initialize` 실패).
+- 불러오지 못하면(컴파일되지 않는 줄, 잘못된 머리줄) 이 파일만 빼고 사전 폴더로 시작하며, 이유를
+  기억합니다. `hdTrans_Initialize`·`J2K_Initialize`는 이 때문에 실패하지 않습니다. 이유는 CLI가 표준
+  오류에 경고로, C API는 `hdTrans_UserDictError`로, `J2KEngine.dll`은 디버거 출력(`OutputDebugString`)으로
+  알립니다. CLI에 `-userdict FILE`로 직접 준 파일은 불러오지 못하면 실패합니다.
 - 불러온 뒤에는 파일을 열어 두지 않습니다(Windows에서도 읽는 동안 쓰기·이름 바꾸기·삭제를 허용).
   프로그램이 실행 중일 때 편집기로 저장해도 됩니다.
 
@@ -148,8 +151,9 @@ key	ko	pos	sem	gram	dict	rule	flags	prio	reading	id
 - 바뀌었으면 사전 폴더와 함께 백그라운드에서 다시 불러오고, 준비되면 한 번에 바꿉니다. 그동안의
   번역은 이전 사전을 씁니다. 바뀐 사전을 처음 쓰는 세션은 그때까지의 문맥 기억을 지웁니다.
 - 새 파일을 불러오지 못하면 이전 사전을 그대로 쓰고, 파일이 다시 바뀔 때까지 그 판을 다시 시도하지
-  않습니다.
-- `J2K_ReloadUserDict`와 `hdTrans_Reload`는 바로 다시 불러옵니다.
+  않습니다. 시작할 때 읽지 못한 파일도 고쳐 저장하면 이렇게 반영됩니다.
+- `J2K_ReloadUserDict`와 `hdTrans_Reload`는 바로 다시 불러옵니다. 이때 `userdict.tsv`를 불러오지 못하면
+  이전 사전을 그대로 씁니다.
 
 ### 사용자 사전 쓰기
 

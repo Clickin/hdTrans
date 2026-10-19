@@ -132,3 +132,78 @@ HD_TEST(UserFileReload) {
     HD_REQUIRE(Write(user, "猫\t냥이\n"));
     HD_CHECK(!internal::CheckUserFile(manual));
 }
+
+// A user dictionary file that does not load is left out by Open, which still succeeds,
+// and is loaded once it is fixed.
+HD_TEST(UserFileBrokenAtOpen) {
+    TempFolder temp;
+    const auto user = temp.path / "userdict.tsv";
+    HD_REQUIRE(Write(user, "# comment\n猫\n"));
+    for (const UserReload mode : {UserReload::Off, UserReload::Auto}) {
+        Engine engine(false, CacheWrite::Off, mode);
+        HD_REQUIRE(engine.Open({Fixture()}, false, user.string()));
+        HD_REQUIRE(engine.Dictionaries() != nullptr);
+        HD_CHECK(engine.Dictionaries()->PlainFiles().empty());
+        HD_CHECK_EQ(engine.UserFileError(), user.string() + ":2: empty KR");
+        HD_CHECK(!internal::CheckUserFile(engine));
+    }
+    Engine engine(false, CacheWrite::Off, UserReload::Auto);
+    HD_REQUIRE(engine.Open({Fixture()}, false, user.string()));
+    Session session(engine);
+    HD_CHECK(session.Translate("猫").find("고양이") == std::string::npos);
+    HD_REQUIRE(Write(user, "猫\t고양이\n"));
+    HD_CHECK(internal::CheckUserFile(engine));
+    HD_CHECK(engine.UserFileError().empty());
+    HD_CHECK(session.Translate("猫").find("고양이") != std::string::npos);
+    // A failed explicit Reload keeps the dictionaries and reports the file.
+    HD_REQUIRE(Write(user, "猫\t고양이\textra\tcolumns\tmore\n"));
+    const auto good = engine.Dictionaries();
+    HD_CHECK(!engine.Reload());
+    HD_CHECK(engine.Dictionaries() == good);
+    HD_CHECK(engine.UserFileError().find(user.string() + ":1: ") == 0);
+
+    // Folders that do not load still fail Open.
+    Engine broken(false, CacheWrite::Off);
+    HD_CHECK(!broken.Open({(temp.path / "missing").string()}, false, user.string()));
+    HD_CHECK(!broken.loaded());
+}
+
+// Destroying an engine during a reload: by default it waits for the reload; after
+// DetachReload it does not, and the reload finishes on its own.
+HD_TEST(UserFileReloadOutlivesEngine) {
+    TempFolder temp;
+    const auto user = temp.path / "userdict.tsv";
+    std::string big;
+    for (int i = 0; i < 300000; i++) big += "猫" + std::to_string(i) + "\t고양이\n";
+    HD_REQUIRE(Write(user, "猫\t고양이\n"));
+    HD_REQUIRE(internal::RunningReloads() == 0);
+
+    std::chrono::steady_clock::duration loadTime{};
+    {
+        Engine engine(false, CacheWrite::Off, UserReload::Auto);
+        HD_REQUIRE(engine.Open({Fixture()}, false, user.string()));
+        HD_REQUIRE(Write(user, big));
+        const auto start = std::chrono::steady_clock::now();
+        HD_CHECK(internal::CheckUserFile(engine));
+        loadTime = std::chrono::steady_clock::now() - start;
+        HD_REQUIRE(Write(user, "猫\t냥이\n"));
+        HD_CHECK(internal::StartUserFileCheck(engine));
+    }
+    HD_CHECK_EQ(internal::RunningReloads(), 0);
+
+    HD_REQUIRE(Write(user, "猫\t고양이\n"));
+    std::chrono::steady_clock::duration destroyTime{};
+    {
+        auto engine = std::make_unique<Engine>(false, CacheWrite::Off, UserReload::Auto);
+        HD_REQUIRE(engine->Open({Fixture()}, false, user.string()));
+        HD_REQUIRE(Write(user, big));
+        HD_CHECK(internal::StartUserFileCheck(*engine));
+        const auto start = std::chrono::steady_clock::now();
+        engine->DetachReload();
+        engine.reset();
+        destroyTime = std::chrono::steady_clock::now() - start;
+    }
+    HD_CHECK(destroyTime < loadTime / 4);
+    for (int i = 0; i < 3000 && internal::RunningReloads() > 0; i++) std::this_thread::sleep_for(10ms);
+    HD_CHECK_EQ(internal::RunningReloads(), 0);
+}

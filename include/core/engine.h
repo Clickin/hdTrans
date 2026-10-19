@@ -36,13 +36,14 @@ public:
     // Reference mode disables translation improvements. Sessions inherit it.
     explicit Engine(bool reference = false, CacheWrite cacheWrite = CacheWrite::Sync,
                     UserReload userReload = UserReload::Off);
-    // Waits for a background reload.
+    // Waits for a background reload, unless DetachReload was called.
     ~Engine();
     Engine(const Engine&) = delete;
     Engine& operator=(const Engine&) = delete;
 
     // Loads the folders in order, later folders overriding earlier ones, then the user
-    // dictionary file userFile (none when empty or missing). Returns false when no
+    // dictionary file userFile (none when empty or missing). A user dictionary file that
+    // does not load is left out (UserFileError says why). Returns false when no
     // dictionary could be loaded; the dictionaries loaded before stay.
     bool Open(const std::vector<std::string>& dirs, bool verifyDicts = false, std::string_view userFile = {});
 
@@ -53,6 +54,14 @@ public:
     bool Reload();
 
     bool loaded() const;
+
+    // Why the last version of the user dictionary file that was read did not load, one
+    // line per error; empty when it loaded or there is none.
+    std::string UserFileError() const;
+
+    // Stops automatic reloads and lets a running one finish on its own, so that the
+    // destructor does not wait for it; for a library being unloaded.
+    void DetachReload();
 
     // The current dictionaries; null before a successful Open.
     std::shared_ptr<const dict::Snapshot> Dictionaries() const;
@@ -68,9 +77,9 @@ private:
     std::string userFile_;
     std::shared_ptr<const dict::Snapshot> snapshot_;
     std::shared_ptr<internal::Generated> generated_;  // the marker families made on snapshot_
-    std::uint64_t loads_ = 0;    // loads started
-    std::uint64_t current_ = 0;  // the load that made snapshot_
-    std::unique_ptr<internal::UserWatch> watch_;  // with UserReload::Auto
+    mutable std::uint64_t loads_ = 0;  // loads started
+    std::uint64_t current_ = 0;        // the load that made snapshot_
+    std::unique_ptr<internal::UserWatch> watch_;  // the user dictionary file state
 };
 
 // A translation with memory: names and other context found in earlier text of the

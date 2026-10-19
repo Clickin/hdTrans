@@ -90,7 +90,29 @@ std::string ModuleDir() {
     return Utf8FromWide(slash == std::wstring::npos ? L"." : dir.substr(0, slash));
 }
 
+// Writes why userdict.tsv did not load, if it did not, to the debugger output.
+void LogUserFileError(const hdTrans::Engine& e) {
+    const std::string error = e.UserFileError();
+    if (!error.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: userdict.tsv not loaded:\n" + error + "\n").c_str());
+}
+
 }  // namespace
+
+// Nothing waits under the loader lock: at process exit (reserved set) the engine is left to
+// the OS; on FreeLibrary no reload thread runs here any more (each holds a module reference)
+// and the engine is released without waiting for one.
+BOOL WINAPI DllMain(HINSTANCE /*module*/, DWORD reason, LPVOID reserved) {
+    if (reason != DLL_PROCESS_DETACH) return TRUE;
+    if (reserved) {
+        static_cast<void>(g_session.release());
+        static_cast<void>(g_engine.release());
+        return TRUE;
+    }
+    g_session.reset();
+    if (g_engine) g_engine->DetachReload();
+    g_engine.reset();
+    return TRUE;
+}
 
 extern "C" {
 
@@ -107,6 +129,7 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
     std::string userFile = hdTrans::dict::UserFile(dir);
     auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
     if (!e->Open(dirs, false, userFile)) return 0;
+    LogUserFileError(*e);
     AdminLock lock;
     if (generation != g_generation) return 0;
     g_engine = std::move(e);
@@ -168,7 +191,10 @@ void __stdcall J2K_ReloadUserDict() {
         userFile = g_userFile;
     }
     auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    // A userdict.tsv that does not load keeps the dictionaries loaded before.
     if (!e->Open(dirs, false, userFile)) return;
+    LogUserFileError(*e);
+    if (!e->UserFileError().empty()) return;
     AdminLock lock;
     if (generation != g_generation) return;
     g_session.reset();

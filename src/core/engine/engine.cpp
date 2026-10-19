@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
+#include <string>
 
 #include "core/dict/snapshot.h"
 #include "core/engine/driver.h"
@@ -19,24 +20,11 @@ namespace {
 
 constexpr std::chrono::seconds kCheckInterval{1};
 
+bool Loaded(const dict::LoadResult& r) { return r.snapshot && r.snapshot->HasDictionary(); }
+
 }  // namespace
 
 namespace internal {
-
-FileVersion VersionOf(std::string_view utf8Path) {
-    FileVersion v;
-    v.present = !utf8Path.empty() && dict::internal::ReadStamp(utf8Path, v.stamp);
-    if (!v.present) v.stamp = {};
-    return v;
-}
-
-bool FileWatch::Due(std::string_view path, std::chrono::steady_clock::time_point now,
-                    std::chrono::steady_clock::duration interval, FileVersion& found) {
-    if (now < next) return false;
-    next = now + interval;
-    found = VersionOf(path);
-    return found != loaded && !(hasFailed && found == failed);
-}
 
 struct SessionState {
     Memory memory;
@@ -57,8 +45,37 @@ std::shared_ptr<Generated> NewGenerated(const dict::Snapshot& snap) {
 struct Access {
     static bool Reference(const Engine& e) { return e.reference_; }
 
+    // Makes r, the load number ticket that read version of the user dictionary file,
+    // current unless a later load already is. With bare, r was loaded without the user
+    // dictionary file after userErrors kept it from loading; a failed r leaves the
+    // dictionaries as they are. e.mu_ is held.
+    static bool Finish(Engine& e, std::uint64_t ticket, const FileVersion& version, dict::LoadResult r, bool bare,
+                       std::vector<dict::LoadError> userErrors) {
+        if (ticket < e.current_) return Loaded(r);
+        UserWatch& w = *e.watch_;
+        if (!Loaded(r) || bare) {
+            w.watch.failed = version;
+            w.watch.hasFailed = true;
+            w.errors.clear();
+            for (dict::LoadError& error : bare ? userErrors : r.errors) {
+                if (error.kind != dict::LoadErrorKind::UnknownPos) w.errors.push_back(std::move(error));
+            }
+            if (!Loaded(r)) return false;
+            w.watch.loaded = {};
+        } else {
+            w.watch.loaded = version;
+            w.watch.hasFailed = false;
+            w.errors.clear();
+        }
+        e.current_ = ticket;
+        e.snapshot_ = std::move(r.snapshot);
+        e.generated_ = NewGenerated(*e.snapshot_);
+        return true;
+    }
+
     // Loads dirs and userFile and makes them current unless a load started later already
-    // did; with open, they become the engine's folders and user dictionary file.
+    // did. With open, a user dictionary file that keeps the folders from loading is left
+    // out, and on success dirs and userFile become the engine's.
     static bool Load(Engine& e, const std::vector<std::string>& dirs, bool verify, const std::string& userFile,
                      bool open) {
         std::uint64_t ticket;
@@ -66,32 +83,25 @@ struct Access {
             std::lock_guard<std::mutex> lock(e.mu_);
             ticket = ++e.loads_;
         }
+        const bool cacheWrite = e.cacheWrite_ == CacheWrite::Sync;
         const FileVersion version = VersionOf(userFile);
-        dict::LoadResult r = dict::LoadFolders(dirs, {}, verify, e.cacheWrite_ == CacheWrite::Sync, userFile);
-        const bool ok = r.snapshot && r.snapshot->HasDictionary();
-        std::lock_guard<std::mutex> lock(e.mu_);
-        if (ticket < e.current_) return ok;
-        UserWatch* w = e.watch_.get();
-        if (!ok) {
-            if (w) {
-                w->watch.failed = version;
-                w->watch.hasFailed = true;
-                w->errors = std::move(r.errors);
+        dict::LoadResult r = dict::LoadFolders(dirs, {}, verify, cacheWrite, userFile);
+        std::vector<dict::LoadError> userErrors;
+        bool bare = false;
+        if (!Loaded(r) && open && !userFile.empty()) {
+            dict::LoadResult folders = dict::LoadFolders(dirs, {}, verify, cacheWrite);
+            if (Loaded(folders)) {
+                userErrors = std::move(r.errors);
+                r = std::move(folders);
+                bare = true;
             }
-            return false;
         }
-        e.current_ = ticket;
+        std::lock_guard<std::mutex> lock(e.mu_);
+        if (!Finish(e, ticket, version, std::move(r), bare, std::move(userErrors))) return false;
         if (open) {
             e.dirs_ = dirs;
             e.verifyDicts_ = verify;
             e.userFile_ = userFile;
-        }
-        e.snapshot_ = std::move(r.snapshot);
-        e.generated_ = NewGenerated(*e.snapshot_);
-        if (w) {
-            w->watch.loaded = version;
-            w->watch.hasFailed = false;
-            w->errors.clear();
         }
         return true;
     }
@@ -100,20 +110,29 @@ struct Access {
     // held.
     static bool StartReload(const Engine& e, std::chrono::steady_clock::time_point now,
                             std::chrono::steady_clock::duration interval) {
-        UserWatch* w = e.watch_.get();
+        UserWatch& w = *e.watch_;
         FileVersion found;
-        if (!w || w->running || !e.snapshot_ || e.userFile_.empty() || !w->watch.Due(e.userFile_, now, interval, found)) {
+        if (!w.automatic || w.detached || w.running || !e.snapshot_ || e.userFile_.empty() ||
+            !w.watch.Due(e.userFile_, now, interval, found)) {
             return false;
         }
-        if (w->worker.joinable()) w->worker.join();
-        w->running = true;
-        w->worker = std::thread([w, dirs = e.dirs_, verify = e.verifyDicts_, file = e.userFile_] {
-            Load(*w->owner, dirs, verify, file, false);
-            std::lock_guard<std::mutex> lock(w->owner->mu_);
-            w->running = false;
-            w->done.notify_all();
+        w.worker.Join();
+        const std::uint64_t ticket = ++e.loads_;
+        // The thread reaches the engine only through target, which the engine clears
+        // before it goes; it never needs the engine to wait for it.
+        w.running = w.worker.Start([target = w.target, ticket, dirs = e.dirs_, verify = e.verifyDicts_,
+                                    file = e.userFile_, cacheWrite = e.cacheWrite_ == CacheWrite::Sync] {
+            const FileVersion version = VersionOf(file);
+            dict::LoadResult r = dict::LoadFolders(dirs, {}, verify, cacheWrite, file);
+            std::lock_guard<std::mutex> owner(target->mu);
+            if (!target->engine) return;
+            Engine& engine = *target->engine;
+            std::lock_guard<std::mutex> lock(engine.mu_);
+            Finish(engine, ticket, version, std::move(r), false, {});
+            engine.watch_->running = false;
+            engine.watch_->done.notify_all();
         });
-        return true;
+        return w.running;
     }
 
     // Takes the engine's current dictionaries into a session that holds others.
@@ -127,20 +146,19 @@ struct Access {
         state = std::make_unique<SessionState>();
     }
 
-    static bool CheckNow(const Engine& e) {
+    static bool CheckNow(const Engine& e, bool wait) {
         std::unique_lock<std::mutex> lock(e.mu_);
-        UserWatch* w = e.watch_.get();
-        if (!w) return false;
-        w->done.wait(lock, [w] { return !w->running; });
-        w->watch.next = {};
+        UserWatch& w = *e.watch_;
+        w.done.wait(lock, [&w] { return !w.running; });
+        w.watch.next = {};
         if (!StartReload(e, std::chrono::steady_clock::now(), kCheckInterval)) return false;
-        w->done.wait(lock, [w] { return !w->running; });
+        if (wait) w.done.wait(lock, [&w] { return !w.running; });
         return true;
     }
 
     static std::vector<dict::LoadError> Errors(const Engine& e) {
         std::lock_guard<std::mutex> lock(e.mu_);
-        return e.watch_ ? e.watch_->errors : std::vector<dict::LoadError>();
+        return e.watch_->errors;
     }
 
     static void Current(const Engine& e, std::shared_ptr<const dict::Snapshot>& snap,
@@ -152,22 +170,58 @@ struct Access {
 };
 
 
-bool CheckUserFile(const Engine& e) { return Access::CheckNow(e); }
+bool CheckUserFile(const Engine& e) { return Access::CheckNow(e, true); }
+
+bool StartUserFileCheck(const Engine& e) { return Access::CheckNow(e, false); }
 
 std::vector<dict::LoadError> UserFileErrors(const Engine& e) { return Access::Errors(e); }
+
+// The text of a load error.
+std::string ErrorText(const dict::LoadError& e) {
+    std::string s = e.file;
+    if (e.line > 0) s += ":" + std::to_string(e.line);
+    s += ": ";
+    if (!e.message.empty()) return s + e.message;
+    switch (e.kind) {
+    case dict::LoadErrorKind::Folder: return s + "cannot list the folder";
+    case dict::LoadErrorKind::Read: return s + "cannot read the file";
+    case dict::LoadErrorKind::Tsv: return s + "malformed line";
+    default: return s + "does not load";
+    }
+}
 
 }  // namespace internal
 
 Engine::Engine(bool reference, CacheWrite cacheWrite, UserReload userReload)
-    : reference_(reference), cacheWrite_(cacheWrite) {
-    if (userReload == UserReload::Auto) {
-        watch_ = std::make_unique<internal::UserWatch>();
-        watch_->owner = this;
-    }
+    : reference_(reference), cacheWrite_(cacheWrite), watch_(std::make_unique<internal::UserWatch>()) {
+    watch_->automatic = userReload == UserReload::Auto;
+    watch_->target->engine = this;
 }
 
 Engine::~Engine() {
-    if (watch_ && watch_->worker.joinable()) watch_->worker.join();
+    {
+        std::lock_guard<std::mutex> lock(watch_->target->mu);
+        watch_->target->engine = nullptr;
+    }
+    watch_->worker.Join();
+}
+
+void Engine::DetachReload() {
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        watch_->detached = true;
+        watch_->worker.Detach();
+    }
+    std::lock_guard<std::mutex> lock(watch_->target->mu);
+    watch_->target->engine = nullptr;
+}
+
+std::string Engine::UserFileError() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    std::string s;
+    for (const dict::LoadError& e : watch_->errors) s += (s.empty() ? "" : "\n") + internal::ErrorText(e);
+    if (s.empty() && watch_->watch.hasFailed) s = userFile_ + ": does not load";
+    return s;
 }
 
 bool Engine::Open(const std::vector<std::string>& dirs, bool verifyDicts, std::string_view userFile) {
@@ -210,7 +264,7 @@ Session::Session(const Engine& engine, bool reference)
 Session::~Session() = default;
 
 std::string Session::Translate(std::string_view text) {
-    if (engine_.watch_) internal::Access::Refresh(engine_, snapshot_, generated_, state_);
+    if (engine_.watch_->automatic) internal::Access::Refresh(engine_, snapshot_, generated_, state_);
     if (!snapshot_) return {};
     std::vector<std::string> lines;
     for (const std::string_view line : text::Lines(text)) lines.emplace_back(line);
