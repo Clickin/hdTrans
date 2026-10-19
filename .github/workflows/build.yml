@@ -30,12 +30,30 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up MSVC for Ninja
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: ${{ matrix.preset == 'windows-x86' && 'amd64_x86' || 'x64' }}
+        shell: pwsh
+        env:
+          MSVC_ARCH: ${{ matrix.preset == 'windows-x86' && 'amd64_x86' || 'x64' }}
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products '*' -property installationPath
+          if ($LASTEXITCODE -ne 0 -or !$vs) { throw 'Visual Studio installation not found' }
+          $before = @{}
+          Get-ChildItem Env: | ForEach-Object { $before[$_.Name] = $_.Value }
+          $command = "`"$vs\VC\Auxiliary\Build\vcvarsall.bat`" $env:MSVC_ARCH >nul && set"
+          $environment = & $env:ComSpec /d /s /c $command
+          if ($LASTEXITCODE -ne 0) { throw 'vcvarsall failed' }
+          foreach ($line in $environment) {
+            $separator = $line.IndexOf('=')
+            if ($separator -le 0) { continue }
+            $name = $line.Substring(0, $separator)
+            $value = $line.Substring($separator + 1)
+            if (!$before.ContainsKey($name) -or $before[$name] -cne $value) {
+              "$name=$value" >> $env:GITHUB_ENV
+            }
+          }
       - name: Set up Emscripten
         if: matrix.preset == 'wasm'
         uses: mymindstorm/setup-emsdk@v16
@@ -43,13 +61,13 @@ jobs:
           version: 4.0.22
       - name: Set up Node for the WASM smoke test
         if: matrix.preset == 'wasm'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
       - name: Set up sccache
         uses: mozilla-actions/sccache-action@v0.0.11
       - name: Restore compiler cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.SCCACHE_DIR }}
           key: sccache-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-${{ hashFiles('CMakeLists.txt', 'CMakePresets.json') }}-${{ github.run_id }}
@@ -110,7 +128,7 @@ jobs:
           sccache --show-stats 2>&1 | tee "build/${{ matrix.preset }}/sccache.log"
           sccache --stop-server
       - name: Upload CLI and libraries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hdtrans-${{ matrix.preset }}
           overwrite: true
@@ -130,7 +148,7 @@ jobs:
             build/${{ matrix.preset }}/hdTransEngine.wasm
       - name: Upload test and compiler-cache logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-log-${{ matrix.preset }}
           overwrite: true
