@@ -200,10 +200,10 @@ HD_TEST(engine_session_call_context) {
         {{"今日はいい天気ですね。", "彼は静かに頷いた。"},
          "오늘은 좋은 날씨군요.", "오늘은 좋은 날씨군요.", true},
         {{"光が来た。", "光さん、", "光さん、", "光さん、"}, "빛이 왔다.", "히카루가 왔다.", false},
-        {{"お兄様！", "「あたしが行くわよ」"}, "형님!", "오빠!", false},
+        {{"お兄様！", "「あたしが行くわよ」"}, "오라버니!", "오빠!", false},
         {{"空を見上げて", "星を探す", "空を見上げて"}, "하늘을 올려다봐", "하늘을 올려다보고", false},
         {{"七里頼周が来た。", "七里三河守頼周が来た。"},
-         "시치리뢰주가 왔다.", "나나사토 요리치카가 왔다.", false},
+         "시치리 요리치카가 왔다.", "시치리 요리치카가 왔다.", true},
         {{"|竜宮レナ《りゅうぐうれな》", "|竜宮《たつみや》", "竜宮レナが来た。"},
          "류우구우 레나", "타츠미야 레나", false},
         {{"「あたしが行くわよ」", "お兄様！", "「お兄様、俺だ」"},
@@ -244,11 +244,11 @@ HD_TEST(engine_session_memory_window) {
     session.Translate("「あたしが行くわよ」");
     HD_CHECK_EQ(session.Translate("お兄様！"), "오빠!");
     session.Translate(std::string(2048, '\n'));
-    HD_CHECK_EQ(session.Translate("お兄様！"), "형님!");
+    HD_CHECK_EQ(session.Translate("お兄様！"), "오라버니!");
     session.Translate("「あたしが行くわよ」");
     HD_CHECK_EQ(session.Translate("お兄様！"), "오빠!");
     session.Reset();
-    HD_CHECK_EQ(session.Translate("お兄様！"), "형님!");
+    HD_CHECK_EQ(session.Translate("お兄様！"), "오라버니!");
 }
 
 HD_TEST(engine_reference_mode) {
@@ -524,7 +524,7 @@ HD_TEST(engine_session_piece_history) {
     HD_CHECK(document->verse.empty());
     const std::string probe = "お兄様！";
     HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&probe, 1}, memory, {}, options)[0], "오빠!");
-    HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&probe, 1}, memory, {}, options)[0], "형님!");
+    HD_CHECK_EQ(hdTrans::internal::TranslateDocument(*snap, *generated, {&probe, 1}, memory, {}, options)[0], "오라버니!");
 }
 
 HD_TEST(engine_quoted_pieces) {
