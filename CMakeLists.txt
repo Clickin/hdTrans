@@ -93,8 +93,9 @@ if(EMSCRIPTEN)
     set_target_properties(hdtrans_wasm PROPERTIES OUTPUT_NAME hdTransEngine)
     target_link_libraries(hdtrans_wasm PRIVATE hdtrans)
     target_link_options(hdtrans_wasm PRIVATE
-        -sMODULARIZE=1 -sEXPORT_ES6=1 -sALLOW_MEMORY_GROWTH=1 -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,UTF8ToString,stringToUTF8,lengthBytesUTF8
-        -sEXPORTED_FUNCTIONS=_hdTrans_Load,_hdTrans_Translate,_hdTrans_FreeMem,_hdTrans_Version,_malloc,_free)
+        --no-entry -sMODULARIZE=1 -sEXPORT_ES6=1 -sALLOW_MEMORY_GROWTH=1 -sFORCE_FILESYSTEM=1
+        -sEXPORTED_RUNTIME_METHODS=FS,ccall,cwrap,UTF8ToString,stringToUTF8,lengthBytesUTF8,getValue
+        -sEXPORTED_FUNCTIONS=_hdTrans_Load,_hdTrans_Initialize,_hdTrans_Terminate,_hdTrans_Translate,_hdTrans_Reload,_hdTrans_FreeMem,_hdTrans_Version,_malloc,_free)
 elseif(WIN32)
     add_library(hdtrans_dll SHARED src/cshared/hdtrans_c.cpp src/cshared/hdtrans.def)
     set_target_properties(hdtrans_dll PROPERTIES OUTPUT_NAME hdTransEngine PREFIX "")
