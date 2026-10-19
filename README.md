@@ -63,7 +63,17 @@ macOS, Linux 판에는 명령줄 프로그램만 있습니다([명령줄 사용�
 
 ## 라이선스
 
-[AGPL-3.0-or-later](LICENSE). 외부 라이브러리: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt)
+[AGPL-3.0-or-later](LICENSE)
+
+## 서드파티 라이선스
+
+| 라이브러리 | 라이선스 |
+|---|---|
+| [PCRE2](https://github.com/PCRE2Project/pcre2) 10.49 | BSD-3-Clause (PCRE2 exception) |
+| [SLJIT](https://github.com/zherczeg/sljit) (PCRE2에 포함) | BSD-2-Clause |
+| [libyaml](https://github.com/yaml/libyaml) 0.2.5 | MIT |
+
+원문: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt)
 
 ## 개발자용
 
