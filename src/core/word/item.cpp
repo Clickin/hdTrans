@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "core/word/item.h"
 
 #include "core/text/utf8.h"

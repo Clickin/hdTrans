@@ -1,5 +1,6 @@
 #include "core/dict/layer.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>

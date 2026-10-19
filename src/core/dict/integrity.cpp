@@ -1,5 +1,6 @@
 #include "core/dict/integrity.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <bit>
 #include <cstring>

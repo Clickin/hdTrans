@@ -1,5 +1,6 @@
 #include "core/output/inflect.h"
 
+#include <cstdint>
 #include <algorithm>
 
 #include "core/text/hangul.h"

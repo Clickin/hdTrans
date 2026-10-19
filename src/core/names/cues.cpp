@@ -579,7 +579,7 @@ std::string Registry::HonorificRun(std::string_view line, const Run& run) {
             }
         }
         if (h.empty() || Flags(t).records > 0) return "";
-        t.resize(t.size() - h.size());
+        t.erase(t.size() - h.size());
         end -= h.size();
         rest = line.substr(end);
     }

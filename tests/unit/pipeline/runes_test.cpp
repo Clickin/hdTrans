@@ -1,5 +1,6 @@
 #include "core/pipeline/runes.h"
 
+#include <cstdint>
 #include <string_view>
 
 #include "hdtest.h"

@@ -1,5 +1,6 @@
 #include "core/tokenizer/tokenize.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <cstring>
 
