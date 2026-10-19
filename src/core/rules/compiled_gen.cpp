@@ -331,12 +331,11 @@ bool RuleL34([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "1**"sv) && AttrEq(p, -1, "VHn"sv));
 }
 
-// # はっきり를 다음 단어의 코드에 따라 분명히로 고르려 한다. (미발동: impossible)
-// # [오류] P+1은 숫자로 시작하는 품사 코드인데 UTs·USe는 의미 코드여서 일치하지 않는다.
+// # はっきり는 뒤 단어가 사고·언어 또는 시각 의미 코드이면 분명히로 고른다.
 // local 35
-//     pos[+1] is UTs|USe
+//     sem[+1] has UTs|USe
 bool RuleL35([[maybe_unused]] Item* p) {
-    return PumsaEq(p, 1, "UTsUSe"sv);
+    return AttrEq(p, 1, "UTsUSe"sv);
 }
 
 // # 가나 표기·의성어·의태어·소리. 형식: docs/rules.md, 실행 순서: docs/architecture.md.
@@ -610,20 +609,17 @@ bool RuleL68([[maybe_unused]] Item* p) {
            PumsaEq(p, -1, "1**"sv);
 }
 
-// # よう의 '같다' 후보를 정해진 형용사·형용동사 어미나 동사 어미 뒤에서 선택한다.
-// # [의심] 넷째 분기의 M-1== "4 \xb0\xcd"는 어미 품사 검사에 활용형 숫자와 CP949 문자열을 넣은 것으로, 5로 시작하는 어미 코드와 일치할 수 없다
+// # よう의 같다 후보를 지정된 형용사·형용동사 어미나 동사 어미 뒤에서 고른다.
 // local 69
 //     pos[-1] is 8** and end.src[-1] == "だった" and end.ko[-1] == "5던 것"
 //     pos[-1] is 7** and end.src[-1] == "かった" and end.ko[-1] == "5던 것"
 //     pos[-1] is 8** and end.src[-1] == "な" and end.ko[-1] == "4 것"
-//     pos[-1] is 7** and end.src[-1] == "い" and end.pos[-1] is "4 \xB0\xCD"
 //     pos[-1] is 4** and end.pos[-1] is 50*|56*
 //     pos[-1] is 4** and end.src[-1] == "まいりました"
 bool RuleL69([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "8**"sv) && GobiSrcEq(p, -1, "だった"sv) && GobiDstEq(p, -1, "5던 것"sv)) ||
            (PumsaEq(p, -1, "7**"sv) && GobiSrcEq(p, -1, "かった"sv) && GobiDstEq(p, -1, "5던 것"sv)) ||
            (PumsaEq(p, -1, "8**"sv) && GobiSrcEq(p, -1, "な"sv) && GobiDstEq(p, -1, "4 것"sv)) ||
-           (PumsaEq(p, -1, "7**"sv) && GobiSrcEq(p, -1, "い"sv) && GobiPumsaEq(p, -1, "4 \260\315"sv)) ||
            (PumsaEq(p, -1, "4**"sv) && GobiPumsaEq(p, -1, "50*56*"sv)) ||
            (PumsaEq(p, -1, "4**"sv) && GobiSrcEq(p, -1, "まいりました"sv));
 }
@@ -4494,18 +4490,18 @@ bool RuleL478([[maybe_unused]] Item* p) {
     return (SrcEq(p, -1, "に"sv) && PumsaEq(p, -1, "2**"sv) && DstSet(p, -1, "에"sv));
 }
 
-// # 一時는 분·오전·오후·반시각 문맥이나 です 앞에서 시각 의미의 '1시'를 고른다.
-// # [의심] です만으로 시각을 확정해 일시적이라는 뜻도 1시가 된다; 자작문 苦労は一時です。 → 고생은 1시입니다.; -why: 一時 LocalRule 479.
+// # 一時는 분·오전·오후·반시각 또는 현재 시각을 말하는 今は·時刻は 뒤의 です 앞에서 1시로 고른다.
 // local 479
 //     pos[+1] is 1** and gram[+1] has Nj|Nd and src[+2] == "分"
 //     (src[-1] == "午前" or src[-1] == "午後")
-//     src[+1] == "です"
+//     src[+1] == "です" and src[-1] == "は" and (src[-2] == "今" or src[-2] == "時刻")
 //     src[+1] == "半"
 bool RuleL479([[maybe_unused]] Item* p) {
     return (PumsaEq(p, 1, "1**"sv) && GramEq(p, 1, "NjNd"sv) && SrcEq(p, 2, "分"sv)) ||
            (SrcEq(p, -1, "午前"sv) ||
            SrcEq(p, -1, "午後"sv)) ||
-           SrcEq(p, 1, "です"sv) ||
+           (SrcEq(p, 1, "です"sv) && SrcEq(p, -1, "は"sv) && (SrcEq(p, -2, "今"sv) ||
+           SrcEq(p, -2, "時刻"sv))) ||
            SrcEq(p, 1, "半"sv);
 }
 
@@ -4516,12 +4512,11 @@ bool RuleL480([[maybe_unused]] Item* p) {
     return SrcEq(p, 1, "でも"sv);
 }
 
-// # 一体는 다음 말에 숫자 문법 코드 Nj·Nd가 있으면 ‘일체’를 고른다.
-// # [의심] 뒤의 숫자 코드만 보고 의문 강조 부사도 일체로 오독한다; 자작 一体何匹いるのか。 → 일체 몇 마리 있는 것인가.; -why 발췌: 一体 LocalRule 481 일체이며 여기서는 도대체가 맞다.
+// # 一体는 何를 제외한 수사 앞에서 일체로 고르고 의문 수량 강조에는 적용하지 않는다.
 // local 481
-//     gram[+1] has Nj|Nd
+//     gram[+1] has Nj|Nd and src[+1] != "何"
 bool RuleL481([[maybe_unused]] Item* p) {
-    return GramEq(p, 1, "NjNd"sv);
+    return (GramEq(p, 1, "NjNd"sv) && SrcNe(p, 1, "何"sv));
 }
 
 // # 日新 앞말이 숫자 문법 코드를 갖지 않으면 닛신을 고른다. (미발동: rare-word)
@@ -4982,7 +4977,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL32, 0xea10be5a4020d4d7ull},
     {RuleL33, 0x44f9f9d9f01180aeull},
     {RuleL34, 0xe07b424218efef2dull},
-    {RuleL35, 0xbd93813e73af6417ull},
+    {RuleL35, 0x2585dad18f97f75aull},
     {RuleL36, 0x141ffbaf7c8b8ed5ull},
     {RuleL37, 0xb998f48905d463ddull},
     {RuleL38, 0x34c656eacfbd88a0ull},
@@ -5016,7 +5011,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL66, 0x6fbe657463f4cafcull},
     {RuleL67, 0x22f8ca20895b391dull},
     {RuleL68, 0xef82ebb6707bde90ull},
-    {RuleL69, 0x36799fdc5b054a50ull},
+    {RuleL69, 0x2f066365431199e0ull},
     {RuleL70, 0x959781bbf950809cull},
     {RuleL71, 0x921504b148faf3e8ull},
     {RuleL72, 0xd81770f12c95d607ull},
@@ -5426,9 +5421,9 @@ constexpr CompiledRule kLocal[] = {
     {RuleL476, 0x0d1cd18363d9210aull},
     {RuleL477, 0x971a31032300f9feull},
     {RuleL478, 0x8d2a1afb408f028eull},
-    {RuleL479, 0xebc6a53ec1da5a13ull},
+    {RuleL479, 0x15a8e9dcc5eef46cull},
     {RuleL480, 0x32524d6f56e8c0e7ull},
-    {RuleL481, 0xb038df1cddb97212ull},
+    {RuleL481, 0x72d6571d8cf8cd01ull},
     {RuleL482, 0xf0a70be002eb44a3ull},
     {RuleL483, 0x734ca090329b7fdbull},
     {RuleL484, 0x3ee8daff0dd97033ull},
