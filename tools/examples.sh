@@ -1,10 +1,10 @@
 #!/bin/sh
 # Translates each examples/<case>.ja.txt as one document into build/examples/<case>.ko.txt and
-# diffs it against examples/<case>.ko.txt; the listing examples/list.txt must match the counts.
+# diffs it against examples/<case>.ko.txt.
 #   tools/examples.sh CLI DICTS [--accept]
-# --accept copies the outputs over examples/*.ko.txt and refreshes the counts in list.txt.
-# <case>.want.ko.txt is the correct translation of a case the engine still gets wrong; its lines
-# that the output matches are counted and reported, never failed on. An empty DICTS skips (77).
+# The first line of each input is a `#` description of the case; it is not translated and is
+# copied as the first line of the output. --accept copies the outputs over examples/*.ko.txt.
+# An empty DICTS skips (77).
 set -eu
 LC_ALL=C; export LC_ALL
 [ $# -ge 2 ] || { echo "usage: tools/examples.sh CLI DICTS [--accept]" >&2; exit 2; }
@@ -14,36 +14,21 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 src=$here/examples
 out=$here/build/examples
 mkdir -p "$out"
-: > "$out/list.txt"
-status=0 good=0 total=0
+status=0
 for ja in "$src"/*.ja.txt; do
     name=${ja##*/}; name=${name%.ja.txt}
     ko=$out/$name.ko.txt
-    "$cli" -dicts "$dicts" -in "$ja" > "$ko" || { echo "$name: CLI failed" >&2; exit 1; }
+    body=$out/$name.body.ja.txt
+    head -n 1 "$ja" | grep -q '^#' || { echo "$name: first line is not a # description" >&2; exit 2; }
+    tail -n +2 "$ja" > "$body"
+    { head -n 1 "$ja"; "$cli" -dicts "$dicts" -in "$body"; } > "$ko" ||
+        { echo "$name: CLI failed" >&2; exit 1; }
+    rm "$body"
     if [ "$accept" = --accept ]; then
         cp "$ko" "$src/$name.ko.txt"
     elif ! diff "$src/$name.ko.txt" "$ko"; then
         echo "$name: output differs from examples/$name.ko.txt"
         status=1
     fi
-    want=$src/$name.want.ko.txt
-    [ -f "$want" ] || want=$ko
-    set -- $(awk 'NR == FNR { w[FNR] = $0; n = FNR; next } (FNR in w) && w[FNR] == $0 { ok++ }
-        END { print ok + 0, n + 0 }' "$want" "$ko")
-    if [ "$want" != "$ko" ]; then
-        echo "want $name: $1/$2"
-        good=$((good + $1)) total=$((total + $2))
-    fi
-    lines=$(awk 'END { print NR }' "$ja")
-    awk -F '\t' -v name="$name" -v lines="$lines" -v ok="$1" -v n="$2" '
-        $1 == name { d = $4 } END { printf "%s\t%s줄\twant %s/%s\t%s\n", name, lines, ok, n, d }
-    ' "$src/list.txt" >> "$out/list.txt"
 done
-if [ "$accept" = --accept ]; then
-    cp "$out/list.txt" "$src/list.txt"
-elif ! diff "$src/list.txt" "$out/list.txt"; then
-    echo "examples/list.txt is out of date (run with --accept)"
-    status=1
-fi
-echo "want: $good/$total correct"
 exit $status

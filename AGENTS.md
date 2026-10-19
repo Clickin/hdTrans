@@ -17,6 +17,8 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
 - CI uses Ninja and sccache; sccache is optional and not required by local presets.
 - Unit tests use small local fixtures, not external expectation sets or dictionary totals.
 - `tools/snapshot.sh` records built-CLI outputs; `tools/compare.sh` reports baseline changes.
+- `tools/fetch-syosetu.sh` and `tools/e2e.sh` compare two builds on the public web-novel
+  chapters named by `tests/e2e/`; chapter text and its translations are never committed.
   A translation behaviour change needs its own commit with the reason.
 - C++20. Library and DLLs are built without exceptions and RTTI; errors are return
   values. Each DLL links the CRT statically and is a single file.
