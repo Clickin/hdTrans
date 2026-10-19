@@ -57,9 +57,18 @@ bool InKanjiCompound(const Item* it) {
            (noun(next) && it->start + it->length == next->start && afterKanji);
 }
 
+// Whether s is a quotation mark or a corner bracket.
+bool IsQuoteMark(std::string_view s) {
+    for (const std::string_view q : {"“", "”", "「", "」", "『", "』", "\"", "'", "‘", "’"}) {
+        if (s == q) return true;
+    }
+    return false;
+}
+
 // Whether a trigger of sense s stands on its side of it: for Before and After within the
-// window, with no clause boundary and no other predicate in between. A sense with no
-// triggers applies always, but for a one-kanji key not inside a kanji compound.
+// window (a quotation mark counts but does not stop it), with no clause boundary and no
+// other predicate in between. A sense with no triggers applies always, but for a one-kanji
+// key not inside a kanji compound.
 bool Triggered(Flusher& f, const Item* it, const userdict::Sense& s) {
     if (s.triggers.empty()) return text::RuneCount(s.key) != 1 || !InKanjiCompound(it);
     if (s.side == userdict::Side::Sentence) {
@@ -71,6 +80,7 @@ bool Triggered(Flusher& f, const Item* it, const userdict::Sense& s) {
     const Item* x = it;
     for (int n = 0; n < kSenseWindow; n++) {
         x = s.side == userdict::Side::After ? x->next : x->prev;
+        if (x != nullptr && IsQuoteMark(x->group->surface)) continue;
         if (x == nullptr || x->selected < 0) return false;
         if (IsAny(x, s.triggers)) return true;
         const char cls = At(x->Code(x->selected), 0);
