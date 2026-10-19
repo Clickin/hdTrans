@@ -36,6 +36,27 @@ README.md is for users; developer documentation is in docs/ (index: docs/README.
   values. Each DLL links the CRT statically and is a single file.
 - Warnings are errors; fix the code, not the flags.
 
+## Fixing a translation
+- Follow docs/contributing.md: reproduce with a short sentence, `-why` to see which layer and
+  rule chose each word, fix data first (dictionary rows and their pos/sem/gram codes,
+  docs/codes.md), then rules (src/core/rules/<file>.txt), engine code last.
+- Every fix gets a fix test and a keep test: `#test` lines under the rule or rows in
+  tests/rules/cases/<file>.tsv. Edit only your own rules' rows of tests/rules/cases.tsv.
+- After a rule edit: `hdrulec lint`, `hdrulec dump src/core/rules -hash > src/core/rules/program.hash`,
+  `hdrulec cpp src/core/rules -local 0-499 -globals -o src/core/rules/compiled_gen.cpp`.
+- Run ctest with `HDTRANS_DICTS` set and `HOME` pointing at a fresh temporary folder (the
+  dictionary cache is per user; parallel builds must not share it).
+- Judge behaviour changes against a build of a fixed commit in its own git worktree, never
+  against a moving main: tools/e2e-pairs.py, then tools/judge.py with claude-sonnet-5-5 on
+  all changed lines and gpt-6.1-sol `--effort high` on those Sonnet calls worse or same.
+  Revert or narrow a change behind any line both call worse. Report the development and
+  held-out chapters separately (docs/testing.md).
+- Precision first: target wrong or ambiguous output only; a default translation change
+  affects every use of the key, so check its other uses first. Loanword transliterations
+  count as correct.
+- Never merge Ehnd or other external user dictionaries into dicts/; they are an opt-in
+  feature (docs/ehnd-compat.md). No provenance columns or comments on dictionary rows.
+
 ## Source rules
 - Standard library only, and PCRE2 in src/core/filter only. UTF-8 `std::string` internally. Shift-JIS and CP949 exist only
   at the `J2K_*` boundary, converted by the OS; the engine has no code-page tables.

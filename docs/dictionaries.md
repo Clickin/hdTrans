@@ -15,6 +15,9 @@
 | `names-places.tsv` | `names` | 일본 지명: 역·노선·도도부현·시정촌·명소 |
 | `kana.tsv` | `kana` | 한자 단어의 히라가나 표기 |
 
+`pos`·`sem`·`gram` 열의 코드 뜻과 예는 [codes.md](codes.md), 사전 행을 고쳐 오역을 바로잡는 방법은
+[contributing.md](contributing.md#사전-행-고치기)에 있습니다.
+
 이 밖에 어미(`endings.tsv`), 구(`phrases.tsv`), 문형(`patterns.tsv`), 의미(`senses.tsv`) 표는 엔진에
 내장되어 있어 따로 둘 필요가 없습니다.
 

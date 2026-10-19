@@ -221,6 +221,8 @@ G 번호 품사키 규칙번호 어간 본문
 
 ## 코드 체계
 
+모든 코드의 뜻·사전 행 수·규칙 수·예는 [codes.md](codes.md)(`tools/code-glossary.py`가 생성)에 있습니다.
+
 ### 품사 코드 (P, M)
 
 사전 `pos` 열은 `글자 + 3바이트`이고, 규칙은 뒤 3바이트를 봅니다. 첫 바이트(부류 숫자,
@@ -311,15 +313,26 @@ TSV로 씁니다. 지역 규칙은 `L 번호`, 전역 규칙은 `G PRIO`와 품�
 
 ## 규칙 고치기
 
-1. `src/core/rules/`의 주제 파일에서 해당 줄을 고칩니다. 지역 규칙을 새로 쓰면 다음 번호를 쓰고 사전 행의
-   `rule` 열에 그 번호를 적습니다. 전역 규칙은 돌아야 할 자리의 PRIO를 줍니다.
-2. 다시 빌드합니다. 빌드가 `rules_gen.cpp`를 새로 만듭니다. `hdrulec lint src/core/rules -dicts dicts`가
-   진단을 `파일:줄:열`로 보입니다. 번역이 바뀌는 수정이면 `hdrulec dump src/core/rules -hash`로
-   `src/core/rules/program.hash`를 새로 씁니다(ctest `rules.identity`).
-3. `ctest`(단위 테스트가 규칙을 불러 보고, `tests/unit/word/rule_edit_test.cpp`가 줄 하나를 고쳐 번역이
-   바뀌는지 봄, `rules.cases`가 `tests/rules/cases.tsv`의 사례를 확인함), `tools/examples.sh`, `tools/e2e.sh`로
-   바뀐 번역을 확인합니다. 고친 규칙마다 `fix`·`keep` 사례를 `tests/rules/cases.tsv`에 더합니다([testing.md](testing.md)). 번역이 바뀌는 수정은
-   이유를 적은 따로의 커밋으로 둡니다.
+오역 하나를 진단부터 커밋까지 고치는 전체 순서와 판단 기준은 [contributing.md](contributing.md)에 있습니다. 규칙만의 요점:
+
+1. `-why`로 그 단어를 고른 규칙(`particles.txt:L1276`)을 찾고, 주제 파일에서 그 줄을 고칩니다. 지역 규칙을 새로
+   쓰면 다음 번호를 쓰고 사전 행의 `rule` 열에 그 번호를 적습니다. 전역 규칙은 돌아야 할 자리의 PRIO를 줍니다.
+   규칙 위 한국어 주석도 함께 고칩니다.
+2. 고친 문맥(fix)과 바뀌면 안 되는 문맥(keep)을 규칙 아래 `#test` 줄이나 `tests/rules/cases/<파일>.tsv`에 남깁니다.
+3. 검사하고 생성 파일을 다시 만듭니다.
+
+   ```sh
+   build/mac/hdrulec lint src/core/rules -dicts dicts 2>&1 | tail -1
+   build/mac/hdrulec dump src/core/rules -hash > src/core/rules/program.hash
+   build/mac/hdrulec cpp src/core/rules -local 0-499 -globals -o src/core/rules/compiled_gen.cpp
+   ```
+
+4. `HDTRANS_DICTS`를 주고 전체 `ctest`를 돌립니다. `rules.cases`(공용 750행)가 깨지면 내가 고친 규칙의 행만
+   새 출력으로 고칩니다. 그 밖의 행이 깨지면 다른 규칙에 영향을 준 것이므로 조건을 다시 봅니다.
+5. 웹소설 챕터로 바뀐 줄을 판정합니다([testing.md](testing.md#변경-판정-e2e--모델-판정)). 번역이 바뀌는 수정은
+   이유와 판정 숫자를 적은 따로의 커밋으로 둡니다.
+
+규칙이 쓰는 코드(`VRw`, `UTh`, `Hd`, `Tu` …)의 뜻과 예는 [codes.md](codes.md)에 있습니다.
 
 ## 규칙 테스트
 
