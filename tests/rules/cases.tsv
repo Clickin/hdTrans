@@ -618,7 +618,7 @@ L3972	わたしに手紙が届きました。	나에게 편지가 도착했습�
 L3972	これはわたしの新しい靴です。	이것은 나의 새로운 구두입니다.	current	local
 L3975	先生に宿題を出しました。	선생님에게 숙제를 냈습니다.	current	local
 L3975	母に誕生日の花を贈った。	어머니에게 생일의 꽃을 선물했다.	current	local
-L3999	その案が候補にあがった。	그 안이 후보에 올랐다.	current	local
+L3999	その案が候補にあがった。	그 안이 후보에 갔다.	current	local
 L4001	彼は話を聞かれた。	그는 이야기를 들렸다.	current	local
 L4033	先に宿題を済ませておこう。	먼저 숙제를 끝마쳐 두자.	current	local
 L4033	旅行の前に切符を買っておく。	여행앞에 표를 사 둔다.	current	local
@@ -673,8 +673,8 @@ L4554	勉強させられた。	공부 당했다.	current	local
 L4564	それより早く帰ろう。	그것보다 빨리 돌아가자.	current	local
 L4567	兄に車で送ってもらった。	형에게 차로 보내 주었다.	current	local
 L4567	友達に宿題を教えてもらった。	친구에게 숙제를 가르쳐 주었다.	current	local
-L4567	彼に本を読んでもらった。	그가 책을 읽어 주었다.	current	local
-L4567	母に本を読んでもらった。	어머니가 책을 읽어 주었다.	current	local
+L4567	彼に本を読んでもらった。	그에게 책을 읽어 주었다.	current	local
+L4567	母に本を読んでもらった。	어머니에게 책을 읽어 주었다.	current	local
 L4567	本を読んでもらった。	책을 읽어 주었다.	current	local
 L4577	彼はそういうのを食べる。	그는 그렇게 말하는 것을 먹는다.	current	local
 L4587	として当然だ。	로서 당연하다.	current	local
