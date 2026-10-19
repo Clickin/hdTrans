@@ -14,7 +14,7 @@ HD_TEST(word_improvements_defaults_and_reference) {
     using hdTrans::word::Settings;
     constexpr std::string_view defaultOn[] = {
         "extraBuiltin", "literalCleanup", "imperativeEu", "causativePassive", "exclamationNa", "dialectForms",
-        "expandedGroups", "semanticAlternatives", "nonterminalBoundary",
+        "expandedGroups", "semanticAlternatives", "nonterminalBoundary", "cgRules",
     };
     const Improvements defaults;
     const Improvements reference = Improvements::Reference();

@@ -17,7 +17,7 @@ hdTrans는 하나의 정적 라이브러리(`hdTransCore`)와 그 위의 얇은 
 각 줄 뒤에 `\n`을 붙입니다.
 
 ```
-hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-cg] [-cg-learned] [-stages DIR] [-in FILE]
+hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -compile-snapshot FILE | -no-cache] [-why] [-select-shadow] [-misread] [-no-cg] [-cg-learned] [-stages DIR] [-in FILE]
 ```
 
 | 옵션 | 설명 |
@@ -36,7 +36,8 @@ hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference
 | `-why` | 단어 선택과 shadow 점수를 표준 오류에 씀 |
 | `-select-shadow` | 번역은 바꾸지 않고 가장 짧은 대상(`shortest-target`)으로 점수를 매김. `-why`에 나타남 |
 | `-misread` | 오독 필터(`misreadFilter`)를 켬: 모델이 오독으로 점수를 매긴 선택 후보를 대안으로 바꿈 ([misread-classifier.md](misread-classifier.md)) |
-| `-cg`, `-cg-learned` | CG-lite 규칙(`cgRules`·`cgLearned`)을 켬: 손 규칙·학습 규칙이 오독 결정의 후보를 지우거나 고름 |
+| `-no-cg` | CG-lite 손 규칙(`cgRules`, 기본 켬)을 끔: 오독 결정의 후보를 지우거나 고르는 규칙표 |
+| `-cg-learned` | 학습 규칙(`cgLearned`, 기본 끔)도 켬 |
 | `-stages DIR` | 단계 기록을 DIR에 씀 ([testing.md](testing.md#한-입력-살펴보기-단계-기록--stages)) |
 
 종료 코드: 0 성공, 1 사전을 못 불러옴·입력 읽기 실패·캐시 오류, 2 알 수 없는 옵션(사용법 출력).

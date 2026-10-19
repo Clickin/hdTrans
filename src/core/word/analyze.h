@@ -37,7 +37,7 @@ struct SessionSenses;
     X(preparedNextToken, false)       /* Canonicalize lookahead token text before lookup. */ \
     X(forwardTerminal, false)         /* Visit terminal-form candidates from left to right. */ \
     X(misreadFilter, false)           /* Replace a chosen candidate the misread model scores as a misreading. */ \
-    X(cgRules, false)                 /* Run the hand CG-lite rules over the misread decisions. */ \
+    X(cgRules, true)                  /* Run the hand CG-lite rules over the misread decisions. */ \
     X(cgLearned, false)               /* Run the learned CG-lite rules over the misread decisions. */
 
 struct Improvements {
