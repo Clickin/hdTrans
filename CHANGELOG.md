@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/sokcuri/hdTrans/compare/v0.1.1...v0.2.0) (2026-10-19)
+
+
+### Features
+
+* **dict:** improve lexical entries and colloquial endings ([#5](https://github.com/sokcuri/hdTrans/issues/5)) ([85bd376](https://github.com/sokcuri/hdTrans/commit/85bd376e6f5352e7610ee7b370b1fc01bfc7eb5b))
+* **release:** publish lexical improvements and compatibility coverage as 0.2.0 ([a18f722](https://github.com/sokcuri/hdTrans/commit/a18f722bd670a78ee0c8873349458f8d745dc7b9))
+
 ## 0.1.1 (2026-10-19)
 
 
