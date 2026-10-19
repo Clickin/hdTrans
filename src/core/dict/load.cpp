@@ -1,9 +1,11 @@
+#include <cstdint>
 #include <algorithm>
 #include <cstdio>
 #include <filesystem>
 #include <iterator>
 #include <system_error>
 #include <unordered_set>
+#include <vector>
 
 #include "core/dict/builtin.h"
 #include "core/dict/integrity.h"
@@ -88,12 +90,12 @@ bool ReadFile(const std::filesystem::path& path, std::string& out, bool* column 
     std::error_code ec;
     const auto size = std::filesystem::file_size(path, ec);
     if (!ec) out.reserve(static_cast<std::size_t>(size));
-    char buf[1 << 16];
+    std::vector<char> buf(1 << 16);
     bool ok = true;
     for (;;) {
-        const std::size_t n = std::fread(buf, 1, sizeof buf, f);
-        out.append(buf, n);
-        if (n < sizeof buf) {
+        const std::size_t n = std::fread(buf.data(), 1, buf.size(), f);
+        out.append(buf.data(), n);
+        if (n < buf.size()) {
             ok = std::ferror(f) == 0;
             break;
         }

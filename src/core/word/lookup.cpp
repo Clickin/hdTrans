@@ -1,4 +1,5 @@
 // Dictionary lookups of the word stage and the filters on their candidates.
+#include <cstdint>
 #include <algorithm>
 
 #include "core/text/utf8.h"

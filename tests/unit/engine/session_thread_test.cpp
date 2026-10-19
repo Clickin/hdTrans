@@ -1,6 +1,7 @@
 // Sessions of one Engine translating on several threads at once, with a Reload while they
 // translate. Every thread must produce the same output for the same text, and the output
 // must match a single-threaded run.
+#include <cstdint>
 #include <algorithm>
 #include <atomic>
 #include <chrono>

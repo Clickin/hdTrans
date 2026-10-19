@@ -1,5 +1,6 @@
 #include "core/dict/trie.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <bit>
 #include <limits>

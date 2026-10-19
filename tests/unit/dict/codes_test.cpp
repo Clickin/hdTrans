@@ -1,6 +1,7 @@
 #include "core/dict/codes.h"
 #include "core/dict/dict.h"
 
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <string>

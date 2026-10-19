@@ -1,5 +1,6 @@
 #include "core/userdict/userdict.h"
 
+#include <cstdint>
 #include <charconv>
 #include <set>
 

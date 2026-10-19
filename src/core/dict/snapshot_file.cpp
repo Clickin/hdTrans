@@ -1,6 +1,7 @@
 #include "core/dict/snapshot_file.h"
 #include "dictionary_ids.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -231,7 +232,7 @@ bool HashFile(std::string_view name, Digest& out) {
     std::FILE* f = internal::OpenShared(PathOf(name));
     if (!f) return false;
     internal::Sha256 hash;
-    std::array<std::byte, 64 * 1024> buf;
+    std::vector<std::byte> buf(64 * 1024);
     bool ok = true;
     for (;;) {
         const auto n = std::fread(buf.data(), 1, buf.size(), f);

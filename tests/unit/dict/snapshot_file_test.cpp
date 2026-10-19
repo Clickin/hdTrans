@@ -1,5 +1,6 @@
 #include "core/dict/snapshot_file.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <array>
 #include <barrier>
@@ -114,6 +115,28 @@ struct TempFolder {
     }
 };
 
+struct ScopedCurrentPath {
+    std::filesystem::path previous;
+    bool changed = false;
+
+    explicit ScopedCurrentPath(const std::filesystem::path& path) {
+        std::error_code ec;
+        previous = std::filesystem::current_path(ec);
+        if (!ec) {
+            std::filesystem::current_path(path, ec);
+            changed = !ec;
+        }
+        HD_CHECK(changed);
+    }
+
+    ~ScopedCurrentPath() {
+        if (!changed) return;
+        std::error_code ec;
+        std::filesystem::current_path(previous, ec);
+        HD_CHECK(!ec);
+    }
+};
+
 struct CacheTestEnvironment {
     TempFolder storage;
     ScopedEnvironment cache{"HDTRANS_CACHE_DIR", storage.File("cache").c_str()};
@@ -167,7 +190,7 @@ HD_TEST(SnapshotFileRoundTrip) {
     for (bool extra : {false, true}) {
         HD_CHECK_EQ(loaded.snapshot->Plain(extra).Entries().size(), editable.snapshot->Plain(extra).Entries().size());
         HD_CHECK_EQ(loaded.snapshot->TextPlain(extra).Entries().size(), editable.snapshot->TextPlain(extra).Entries().size());
-        for (const auto pair : {std::pair{&loaded.snapshot->Plain(extra), &editable.snapshot->Plain(extra)},
+        for (const auto& pair : {std::pair{&loaded.snapshot->Plain(extra), &editable.snapshot->Plain(extra)},
                                 std::pair{&loaded.snapshot->TextPlain(extra), &editable.snapshot->TextPlain(extra)}}) {
             const auto& a = pair.first->Entries();
             const auto& b = pair.second->Entries();
@@ -342,6 +365,8 @@ HD_TEST(SnapshotCachePathNormalization) {
 HD_TEST(SnapshotCacheFolderAliases) {
     CacheTestEnvironment environment;
     TempFolder temp;
+    ScopedCurrentPath current(temp.path);
+    HD_REQUIRE(current.changed);
     const auto dict = temp.path / "DictAlias";
     std::error_code ec;
     HD_REQUIRE(std::filesystem::create_directory(dict, ec) && !ec);
@@ -489,6 +514,8 @@ HD_TEST(SnapshotCacheEnvironmentOverride) {
 HD_TEST(SnapshotRelativeCacheOverrideDisablesCaching) {
     CacheTestEnvironment environment;
     TempFolder temp;
+    ScopedCurrentPath current(temp.path);
+    HD_REQUIRE(current.changed);
     const auto cache = temp.path / "relative-cache";
     std::error_code ec;
     const auto relative = cache.lexically_relative(std::filesystem::current_path(ec));
@@ -738,7 +765,7 @@ void CheckPlainCompilation(const hdTrans::dict::Snapshot& actual, const hdTrans:
         HD_CHECK(std::tie(a.folder, a.name, a.text) == std::tie(b.folder, b.name, b.text));
     }
     for (bool extra : {false, true}) {
-        for (const auto pair : {std::pair{&actual.Plain(extra), &expected.Plain(extra)},
+        for (const auto& pair : {std::pair{&actual.Plain(extra), &expected.Plain(extra)},
                                 std::pair{&actual.TextPlain(extra), &expected.TextPlain(extra)}}) {
             HD_CHECK_EQ(pair.first->Len(), pair.second->Len());
             const auto& a = pair.first->Entries();
