@@ -3,8 +3,7 @@ hdTrans
 1. 원하는 폴더에 압축을 풀면 바로 쓸 수 있습니다. 설치는 필요 없습니다.
 
 2. 텍스트나 파일은 hdTransGUI.exe 또는 hdtrans.exe로 번역합니다.
-   Linux와 macOS에서는 hdtrans를 씁니다.
-   예: echo 今日はいい天気ですね。 | hdtrans.exe
+   Linux와 macOS에서는 ./hdtrans를 씁니다.
    예: hdtrans.exe -in input.txt > output.txt
    버전 확인: hdtrans.exe -version
 
