@@ -20,6 +20,7 @@
 #include "core/pipeline/sound.h"
 #include "core/tokenizer/tokenize.h"
 #include "core/text/lines.h"
+#include "core/word/util.h"
 
 namespace hdTrans::internal {
 
@@ -107,7 +108,7 @@ word::Settings AnalysisSettings(bool text, bool verse, const TranslationOptions&
 // Translates one chunk: its tokens, the word analysis, then per sentence the resolve stage
 // and the compose stage. The sentences are appended to out with the chunk index.
 void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& lookup, const output::Pieces& chunk,
-                    int index, bool text, bool verse, Scratch& s, Generated& generated,
+                    int index, bool text, bool verse, std::string_view before, Scratch& s, Generated& generated,
                     const StageObserver& observer, const TranslationOptions& options, std::vector<output::Sentence>& out) {
     s.texts.clear();
     const std::vector<tokenizer::Piece> pieces = TokenizerPieces(chunk);
@@ -115,7 +116,8 @@ void TranslateChunk(const dict::Snapshot& snap, const dict::LookupContext& looku
     if (observer.tokens) observer.tokens(observer.context, index, s.tokens);
 
     word::Analysis analysis;
-    const word::Settings settings = AnalysisSettings(text, verse, options, s.sessionSenses);
+    word::Settings settings = AnalysisSettings(text, verse, options, s.sessionSenses);
+    settings.before = before;
     word::Analyze(s.tokens, snap, lookup, settings, s.arena, analysis);
     if (observer.analysis) observer.analysis(observer.context, index, s.tokens, analysis);
 
@@ -162,10 +164,13 @@ std::string TranslateBody(const dict::Snapshot& snap, pipeline::DocumentContext&
 
     const std::vector<pipeline::Chunk> chunks = pipeline::Segment(marked);
     std::vector<output::Sentence> sentences;
+    std::string before;
     for (std::size_t i = 0; i < chunks.size(); i++) {
         if (observer.pieces) observer.pieces(observer.context, "CH", static_cast<int>(i), chunks[i]);
-        TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, facts.verse, s, generated, observer, options,
-                       sentences);
+        TranslateChunk(snap, ctx.lookup, chunks[i], static_cast<int>(i), true, facts.verse, before, s, generated, observer,
+                       options, sentences);
+        const std::string chunkText = output::String(chunks[i]);
+        if (const std::string_view t = word::TrimRunes(chunkText, " 　"); !t.empty()) before = word::LastChar(t);
     }
     const output::Pieces cleaned = output::Cleanup(sentences);
     if (observer.cleaned) observer.cleaned(observer.context, cleaned);
@@ -256,7 +261,7 @@ std::string TranslateRawLine(const dict::Snapshot& snap, Generated& generated, s
         output::Pieces chunk;
         if (!piece.empty()) chunk.push_back({std::string(piece), output::SpanText});
         std::vector<output::Sentence> sentences;
-        TranslateChunk(snap, lookup, chunk, 0, false, false, s, generated, observer, options, sentences);
+        TranslateChunk(snap, lookup, chunk, 0, false, false, {}, s, generated, observer, options, sentences);
         output::Pieces composed;
         for (const output::Sentence& sentence : sentences) output::Append(composed, sentence.pieces);
         result += output::String(composed);
