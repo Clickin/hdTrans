@@ -1,5 +1,6 @@
 // The composer's marker rules: an item's Korean text from its entry, its ending and its
 // neighbours.
+#include <cstdint>
 #include "core/output/compose.h"
 #include "core/output/particle.h"
 #include "core/output/text.h"

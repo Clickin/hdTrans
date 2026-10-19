@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "core/tokenizer/charsets.h"
 
 #include "fnv.h"

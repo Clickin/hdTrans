@@ -1,6 +1,7 @@
 #include "core/dict/snapshot_file.h"
 #include "dictionary_ids.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <array>
 #include <atomic>

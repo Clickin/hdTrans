@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <algorithm>
 #include <cstdio>
 #include <filesystem>

@@ -1,5 +1,6 @@
 #include "core/dict/tsv.h"
 
+#include <cstdint>
 #include <bit>
 #include <cstring>
 

@@ -1,5 +1,6 @@
 #include "core/dict/mapped_file.h"
 
+#include <cstdint>
 #include <algorithm>
 #include <cerrno>
 #include <chrono>

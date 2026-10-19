@@ -1,5 +1,6 @@
 #pragma once
 // Analyze-state records for the small marker tests.
+#include <cstdint>
 #include <cstdio>
 #include <string>
 #include <string_view>
