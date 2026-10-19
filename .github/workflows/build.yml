@@ -194,12 +194,11 @@ jobs:
           path: |
             build/${{ matrix.preset }}/hdtrans-version.txt
             build/${{ matrix.preset }}/ARCH
-            build/${{ matrix.preset }}/hdtrans
+            build/${{ matrix.preset }}/hdtrans${{ runner.os == 'Windows' && '.exe' || '' }}
             build/${{ matrix.preset }}/libhdTransCore.a
             build/${{ matrix.preset }}/libhdTransEngine.so
             build/${{ matrix.preset }}/libhdTransEngine.dylib
             build/${{ matrix.preset }}/hdTransGUI.exe
-            build/${{ matrix.preset }}/hdtrans.exe
             build/${{ matrix.preset }}/hdTransCore.lib
             build/${{ matrix.preset }}/hdTransEngine.dll
             build/${{ matrix.preset }}/hdTransEngine.lib
