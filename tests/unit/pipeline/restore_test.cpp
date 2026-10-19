@@ -221,6 +221,10 @@ HD_TEST(pipeline_literal_cleanup) {
         {"몇번몇번", "몇 번몇 번"},
         {"있읍니다 했읍니다 없읍니다", "있습니다 했습니다 없습니다"},
         {"모읍니다 기웁니다 읍니다", "모읍니다 기웁니다 읍니다"},
+        {"나갈 때에 돌아왔을 때에는 하는 때에,", "나갈 때 돌아왔을 때는 하는 때,"},
+        {"그 때에 때에 달게 함대 때에 비하면", "그 때에 때에 달게 함대 때에 비하면"},
+        {"상황 때에 따라 할 때에 따라", "상황 때에 따라 할 때에 따라"},
+        {"다닐 수 있고 있어", "다닐 수 있어"},
     };
     for (const auto& c : cases) HD_CHECK_EQ(pipeline::KoreanCleanup(c.in), std::string(c.want));
     const Pieces typed{{"何度も"}, {"몇번", SpanWord}};
