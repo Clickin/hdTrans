@@ -157,7 +157,7 @@ L1009	私にも少し時間があります。	나에게도 조금 시간이 있�
 L1009	この店には安い服があります。	이 가게에는 싼 옷이 있습니다.	current	local-ending
 L1012	バスは学校へ進む。	버스는 학교에 진학한다.	current	local
 L1024	式典がすんだ。	식전이 살았다.	current	local
-L1031	あと三個食べた。	더 3개 먹었다.	current	local
+L1031	あと三個食べた。	앞으로 3개 먹었다.	current	local
 L1031	あと三日で終わる。	앞으로 3일에 끝난다.	current	local
 L1033	どうしてそんなことをしたの。	어째서 그런 일을 했어.	current	local
 L1033	そんなことより早く食べよう。	그런 일보다 빨리 먹자.	current	local
@@ -174,7 +174,7 @@ L1075	学生の時よく走った。	학생때 잘 달렸다.	current	local
 L1111	箱の内にある。	상자중에 있다.	current	local
 L1115	今日は5月3日です。	오늘은 5월 3일입니다.	current	local
 L1115	旅行は三日で終わった。	여행은 3일에 끝났다.	current	local
-L1116	同じ年に生まれた。	같은 해에 태어났다.	current	local
+L1116	同じ年に生まれた。	같은 나이에 태어났다.	current	local
 L1117	結婚して二十年になります。	결혼해 20년이 됩니다.	current	local
 L1117	十年記念のパーティーを開く。	10년 기념의 파티를 연다.	current	local
 L1140	何の用ですか。	무슨용무입니까.	current	local
