@@ -1941,11 +1941,9 @@ bool RuleL190([[maybe_unused]] Item* p) {
     return (SrcEq(p, -1, "の"sv) && SrcEq(p, -2, "いつ"sv) && DstSet(p, -1, ""sv) && DstSet(p, -2, "어느"sv));
 }
 
-// # 어미 표제 V는 忘れ 뒤의 くる, 住・付け 뒤의 いらっしゃ, 같은 동사의 반복 등에서 연결형 '-고'를 고른다.
-// # [의심] 두 번째 분기는 な의 번역을 "있지 $DH@ "와 정확히 비교하지만 이 후보는 사전에 없고 끝 공백까지 요구한다; 실제 な 후보에는 "있지 $D7@" 등이 있으며 해당 문자열의 대입 규칙도 없어 이 대안은 실행될 수 없다.
+// # 연결 어미 V는 忘れ＋くる, 住·付け＋いらっしゃ 및 같은 동사의 반복 등에서 '-고'로 잇는다.
 // local 191
 //     src == "忘れ" and src[+1] == "くる" and pos[+1] is 4**
-//     src[+1] == "な" and ko[+1] == "있지 $DH@ " and pos[+1] is 7**
 //     (src == "住" or src == "付け") and src[+1] == "いらっしゃ" and pos[+1] is 4**
 //     src == "挟" and ko == "끼&AI@" and src[-1] == "を" and pos[-1] is 2**
 //     pos[+1] is 7** and end.src[+1] == "くて" and end.ko[+1] == "6서"
@@ -1954,7 +1952,6 @@ bool RuleL190([[maybe_unused]] Item* p) {
 //     src == src[+1]
 bool RuleL191([[maybe_unused]] Item* p) {
     return (SrcEq(p, 0, "忘れ"sv) && SrcEq(p, 1, "くる"sv) && PumsaEq(p, 1, "4**"sv)) ||
-           (SrcEq(p, 1, "な"sv) && DstEq(p, 1, "있지 $DH@ "sv) && PumsaEq(p, 1, "7**"sv)) ||
            ((SrcEq(p, 0, "住"sv) ||
            SrcEq(p, 0, "付け"sv)) && SrcEq(p, 1, "いらっしゃ"sv) && PumsaEq(p, 1, "4**"sv)) ||
            (SrcEq(p, 0, "挟"sv) && DstEq(p, 0, "끼&AI@"sv) && SrcEq(p, -1, "を"sv) && PumsaEq(p, -1, "2**"sv)) ||
@@ -2751,16 +2748,13 @@ bool RuleL266([[maybe_unused]] Item* p) {
     return (GobiSrcEq(p, 0, "くて"sv) && GobiDstSet(p, 0, "6서"sv));
 }
 
-// # 辛는 음식·관련 대상 의미가 주변에 있거나 뒤에 しないで가 오면 맛을 나타내는 ‘맵다’로 고른다.
-// # [의심] 음식 의미가 전혀 없어도 しないで 앞이면 辛를 맵다로 고르는 독립 대안이 있다; 자작문 仕事を辛くしないで。 → 일을 맵게 하지 말아줘. (-why: 辛 LocalRule 267); 일을 힘들게 하지 말라는 의미를 오독한다.
+// # 辛는 음식·관련 대상 의미가 주변에 있을 때 맛을 나타내는 ‘맵다’로 고른다.
 // local 267
 //     pos[-1] is 2** and sem[-2] has VPt|VFd
 //     sem[-3] under VFd
-//     src[+1] == "しな" and end.src[+1] == "いで"
 bool RuleL267([[maybe_unused]] Item* p) {
     return (PumsaEq(p, -1, "2**"sv) && AttrEq(p, -2, "VPtVFd"sv)) ||
-           AttrMinusEq(p, -3, "VFd"sv) ||
-           (SrcEq(p, 1, "しな"sv) && GobiSrcEq(p, 1, "いで"sv));
+           AttrMinusEq(p, -3, "VFd"sv);
 }
 
 // # 사람 일반 의미코드가 없는 명사와 とは 뒤에서 言い難를 말하기 어렵다로 고르고 とは를 이라고는으로 바꾼다. (미발동: rare-context)
@@ -5154,7 +5148,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL188, 0x6df1598baaf5dd84ull},
     {RuleL189, 0x5db47ae41bcd8b28ull},
     {RuleL190, 0x5220ce1b72a4b4d1ull},
-    {RuleL191, 0xa31c7d7445e85a35ull},
+    {RuleL191, 0x4ac0f3ed4e6043e4ull},
     {RuleL192, 0xe94592d2a75aaa92ull},
     {RuleL193, 0xae55e76227f71160ull},
     {RuleL194, 0xbfcbe8239bbdce43ull},
@@ -5230,7 +5224,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL264, 0x53bf954223712ce8ull},
     {RuleL265, 0x1c842c4e602d92c6ull},
     {RuleL266, 0xa891d454df7ed39eull},
-    {RuleL267, 0xf8b83a96dcb92978ull},
+    {RuleL267, 0xcc5a01ebd286a44dull},
     {RuleL268, 0xb86131a1e95df235ull},
     {RuleL269, 0x5a9d2c6301b3344bull},
     {RuleL270, 0xcec846a9eb803db8ull},

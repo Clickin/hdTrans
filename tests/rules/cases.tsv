@@ -79,7 +79,7 @@ L241	料理をうまい方法で作った。	요리를 맛있는 방법으로 �
 L252	子供にやさしい先生です。	아이에게 좋은 선생님입니다.	current	local
 L256	あの店は安くておいしいらしい。	그 가게는 싸고 맛있는 것 같다.	current	local
 L256	隣の家の人は引っ越したらしい。	옆의 집의 사람은 이사한 것 같다.	current	local
-L267	仕事を辛くしないで。	일을 맵게 하지 말아줘.	current	local
+L267	仕事を辛くしないで。	일을 괴롭게 하지 말아줘.	current	local
 L280	友達たちと海へ行った。	친구들과 바다에 갔다.	current	local
 L280	女の人たちが笑っていた。	여자들이 웃고 있었다.	current	local
 L281	だから私は反対したんです。	그러니까 나는 반대했습니다.	current	local
@@ -156,7 +156,7 @@ L1007	今日は天気がとても良いですね。	오늘은 날씨가 매우 �
 L1009	私にも少し時間があります。	나에게도 조금 시간이 있습니다.	current	local-ending
 L1009	この店には安い服があります。	이 가게에는 싼 옷이 있습니다.	current	local-ending
 L1012	バスは学校へ進む。	버스는 학교에 진학한다.	current	local
-L1024	式典がすんだ。	식전이 살았다.	current	local
+L1024	式典がすんだ。	식전이 끝났다.	current	local
 L1031	あと三個食べた。	앞으로 3개 먹었다.	current	local
 L1031	あと三日で終わる。	앞으로 3일에 끝난다.	current	local
 L1033	どうしてそんなことをしたの。	어째서 그런 일을 했어.	current	local
@@ -410,7 +410,7 @@ L2688	私には信じられない話だ。	나에게는 믿을 수 없는 이야
 L2688	お金さえない毎日だった。	돈조차 없는 매일이었다.	current	local
 L2692	病院にかかった。	병원에 걸렸다.	current	local
 L2692	仕事にかかった。	일에 걸렸다.	current	local
-L2716	私にできる仕事です。	나가 할 수 있는 일입니다.	current	local
+L2716	私にできる仕事です。	내가 할 수 있는 일입니다.	current	local
 L2738	初心に立ち返って頑張ろう。	초심으로 되돌아와 노력하자.	current	local
 L2738	あの子はきっと美人に育つよ。	그 아이는 분명 미인으로 자라.	current	local
 L2738	友人に翻訳してもらった。	친구로 번역받았다.	current	local
@@ -475,7 +475,7 @@ L3132	私は今食べていない。	나는 지금 먹지 않았다.	current	loc
 L3132	まだ来ていない。	아직 와 있지 않다.	current	local-ending
 L3138	環境問題について作文を書いた。	환경 문제에 대해 작문을 썼다.	current	local
 L3138	この問題について皆で話し合った。	이 문제에 대해 모두가 서로 이야기했다.	current	local
-L3138	友達について来る。	친구에 대해 온다.	current	local
+L3138	友達について来る。	친구를 따라 온다.	current	local
 L3151	私は何も知らないと答えた。	나는 아무것도 모른다고 대답했다.	current	local-ending
 L3151	もう痛くないと話していた。	이제 아프지 않다고 이야기하고 있었다.	current	local-ending
 L3152	彼は約束を守らないな。	그는 약속을 지키지 않는데.	current	local
