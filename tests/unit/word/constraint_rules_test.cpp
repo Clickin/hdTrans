@@ -1,0 +1,155 @@
+// The constraint rules on the candidates of a lookup: the words they fix, and words like
+// them that they leave alone.
+#include <initializer_list>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "core/dict/snapshot.h"
+#include "core/tokenizer/token.h"
+#include "core/word/constraint_rules.h"
+#include "core/word/worker.h"
+#include "hdtest.h"
+
+using namespace hdTrans;
+
+namespace {
+
+const dict::Snapshot* Dictionary() {
+    static const dict::LoadResult loaded = dict::Load({
+        {0, "base.tsv",
+         "key\tko\tpos\tsem\tgram\tdict\tid\n"
+         "ハル\t헐\tN110\t\t\tGN\t1\n"
+         "アヤメ\t붓꽃\tN110\tVPt\t\tGN\t2\n"
+         "ネコ\t고양이\tN110\tQAA\t\tGN\t3\n"
+         "バカ\t바보\tN110\t\t\tGN\t5\n"
+         "翼\t날개\tN110\tXXXVBp\t\tGN\t6\n"
+         "翼\t츠바사\tN110\tQPN\tWb\tGN\t7\n"
+         "妹\t여동생\tN110\tVHn\t\tGN\t8\n"
+         "妹\t이모토\tN110\tQPN\tWb\tGN\t9\n"
+         "続\t계속되&AA@\tM418\t\t\tGN\t10\n"
+         "続\t츠즈키\tN130\tQPN\tWa\tGN\t11\n"
+         "太郎\t타로\tN130\tQPN\tWb\tGN\t12\n"
+         "太郎\t타로\tN130\tQCTVPl\t\tGN\t13\n"
+         "空\t하늘\tN110\tVPl\t\tGN\t14\n"
+         "空\t소라\tN130\tQPN\tWb\tGN\t15\n"
+         "君\t너\tN120\tVHn\t\tGN\t16\n"
+         "君\t군\tN110\tVHn\t\tGN\t17\n"
+         "殿\t전\tN110\t\tOn\tGN\t18\n"
+         "様\t님\tN110\t\t\tGN\t19\n"
+         "さん\t씨\tN110\t\t\tGN\t20\n"
+         "と\t(와)과\tP200\t\t\tGN\t21\n"
+         "と\t(이)라고\tP200\t\t\tGN\t22\n"
+         "が\t(이)가\tP200\t\t\tGN\t23\n"
+         "ドン\t쾅\tN110\t\t\tGN\t24\n"
+         "音\t소리\tN110\t\t\tGN\t25\n"
+         "猫\t고양이\tN110\tQAA\t\tGN\t26\n"},
+        {0, "names.tsv",
+         "#! layer=names\n"
+         "key\tko\tpos\tsem\tgram\tdict\tid\n"
+         "ハル\t하루\tN130\tQPNVHn\tWb\tGN\t31\n"
+         "アヤメ\t아야메\tN130\tQPNVHn\tWb\tGN\t32\n"
+         "ネコ\t네코\tN130\tQPNVHn\tWb\tGN\t33\n"
+         "猫\t네코\tN130\tQPNVHn\tWb\tGN\t35\n"},
+    });
+    return loaded.snapshot.get();
+}
+
+// The Korean of the records with source in the text-path lookup of query, the end of
+// surface; a name is marked with "!". before is the text before the chunk.
+std::string Senses(std::string_view surface, std::string_view query, std::string_view source,
+                   std::string_view before = {}) {
+    const dict::Snapshot* snap = Dictionary();
+    if (snap == nullptr) return "<no dictionary>";
+    tokenizer::Tokens tokens;
+    word::Arena arena;
+    word::Settings settings;
+    settings.text = true;
+    settings.before = before;
+    word::Worker w(tokens, *snap, dict::LookupContext{}, settings, arena, word::LookupObserver{});
+    w.transformSurface = surface;
+    std::string out;
+    for (const word::Record* r = w.DoLookup(query, word::kModeGeneral).records; r != nullptr; r = r->child) {
+        if (r->source != source) continue;
+        if (!out.empty()) out += " ";
+        out += r->target;
+        if (r->user != nullptr && r->user->name) out += "!";
+    }
+    return out;
+}
+
+struct Case {
+    std::string_view surface, query, source, want;
+};
+
+void CheckCases(std::initializer_list<Case> cases, std::string_view before = {}) {
+    for (const Case& c : cases) HD_CHECK_EQ(Senses(c.surface, c.query, c.source, before), std::string(c.want));
+}
+
+}  // namespace
+
+HD_TEST(constraint_rules_table) {
+    HD_CHECK_EQ(word::ConstraintRules().size(), size_t{6});
+    for (const word::ConstraintRule& r : word::ConstraintRules()) {
+        HD_CHECK(!r.id.empty());
+        HD_CHECK(!r.note.empty());
+        HD_CHECK((r.word == word::ConstraintWord::Source) == !r.source.empty());
+    }
+}
+
+// A katakana word before an honorific becomes the name layer's person reading when no sense
+// is a person and none sounds like its kana. An animal, a word the name layer lacks, a word
+// without an honorific and the inside of a katakana run stay. (A sense written as the kana
+// is left to the name layer's own addressed names.)
+HD_TEST(constraint_honorific_katakana) {
+    CheckCases({
+        {"ハル君、", "ハル君、", "ハル", "하루!"},
+        {"ハルさんが", "ハルさんが", "ハル", "하루!"},
+        {"アヤメ様", "アヤメ様", "アヤメ", "아야메!"},
+        {"ハルが", "ハルが", "ハル", "헐"},
+        {"ネコさんが", "ネコさんが", "ネコ", "고양이"},
+        {"バカさんが", "バカさんが", "バカ", "바보"},
+        {"ミハルさん", "ハルさん", "ハル", "헐"},
+    });
+}
+
+// A kanji word before くん, 君, ちゃん or たん is its name sense when it has one and no
+// person sense; before another honorific, when its other senses are places. A verb as
+// long, a person noun, a common noun before さん, a word without a name sense, a word
+// after お and a word inside a kanji run stay.
+HD_TEST(constraint_honorific_kanji) {
+    CheckCases({
+        {"翼くんが", "翼くんが", "翼", "츠바사!"},
+        {"太郎殿、", "太郎殿、", "太郎", "타로!"},
+        {"妹くんが", "妹くんが", "妹", "여동생 이모토"},
+        {"続くんだ", "続くんだ", "続", "계속되&AA@ 츠즈키"},
+        {"空さんが", "空さんが", "空", "하늘 소라"},
+        {"猫ちゃん", "猫ちゃん", "猫", "고양이"},
+        {"お空さん", "空さん", "空", "하늘 소라"},
+        {"大空くん", "空くん", "空", "하늘 소라"},
+        {"翼が", "翼が", "翼", "날개 츠바사"},
+    });
+}
+
+// 君 right after katakana is the suffix, not the pronoun; 君 elsewhere keeps both.
+HD_TEST(constraint_kimi_after_katakana) {
+    CheckCases({
+        {"バカ君が", "君が", "君", "군"},
+        {"君が", "君が", "君", "너 군"},
+        {"空君が", "君が", "君", "너 군"},
+    });
+}
+
+// と after ！ or ？ quotes, also past a space or at the start of a chunk after one; と
+// elsewhere keeps its senses.
+HD_TEST(constraint_quote_after_exclamation) {
+    CheckCases({
+        {"ドン！と音が", "と音が", "と", "(이)라고"},
+        {"ドン！　と音が", "と音が", "と", "(이)라고"},
+        {"ドンと音が", "と音が", "と", "(와)과 (이)라고"},
+        {"大事！とって", "とって", "と", "(와)과 (이)라고"},
+        {"うわ！ととと", "ととと", "と", "(와)과 (이)라고"},
+    });
+    CheckCases({{"と音が", "と音が", "と", "(이)라고"}}, "！");
+    CheckCases({{"と音が", "と音が", "と", "(와)과 (이)라고"}}, "、");
+}

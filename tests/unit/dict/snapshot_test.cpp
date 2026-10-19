@@ -543,6 +543,27 @@ HD_TEST(SnapshotCompiledPlainDictionaries) {
     HD_CHECK_EQ(bad.errors[1].message, "empty KR");
 }
 
+HD_TEST(SnapshotPlainHashComments) {
+    // "#" lines are comments in plain files, with or without a header; a "#!" first
+    // line stays the header.
+    std::vector<File> files;
+    files.push_back(MakeFile("a/base.tsv", kHeader + "犬\t견\tN110\t\t\tGN\t1\n"));
+    files.push_back(MakeFile("a/plain.tsv", "# comment\n猫\t냥이\n  # indented\n#鳥\t새\n"));
+    files.push_back(MakeFile("b/plain.tsv", "#! layer=base\n# description\n犬\t개\n"));
+    const LoadResult r = Load(files);
+    HD_REQUIRE(r.snapshot != nullptr);
+    HD_CHECK(r.errors.empty());
+    HD_CHECK_EQ(EntriesOf(r.snapshot->Plain(), 0), "猫 냥이 N110 @2.0");
+    HD_CHECK_EQ(EntriesOf(r.snapshot->Plain(), 1), "犬 개 N110 @3.0");
+
+    files[2].text = "#! base\n犬\t개\n";
+    const LoadResult bad = Load(std::move(files));
+    HD_CHECK(bad.snapshot == nullptr);
+    HD_REQUIRE(bad.errors.size() == 1);
+    HD_CHECK(bad.errors[0].kind == LoadErrorKind::Header);
+    HD_CHECK_EQ(bad.errors[0].line, 1);
+}
+
 HD_TEST(SnapshotColumnMembershipUsesContent) {
     for (const std::string name : {"names.tsv", "userdict.tsv", "readings.tsv", "kana.tsv"}) {
         const auto column = Load({MakeFile(name, kHeader + "猫\t고양이\tN110\t\t\tGN\t1\n")});

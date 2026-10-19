@@ -3,5 +3,8 @@ EXPORTS
     hdTrans_Terminate
     hdTrans_Translate
     hdTrans_Reload
+    hdTrans_UserDictError
+    hdTrans_OpenEhnd
+    hdTrans_FilterErrors
     hdTrans_FreeMem
     hdTrans_Version

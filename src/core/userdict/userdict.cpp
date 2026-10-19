@@ -266,7 +266,9 @@ using internal::Quote;
 // The entries of one line, none for a blank or comment line. Returns an error
 // message, empty on success.
 std::string ParseLine(std::string_view line, Context& ctx, std::vector<dict::UserEntry>& out) {
-    if (const std::string_view t = internal::TrimSpace(line); t.empty() || t.starts_with("//")) return {};
+    if (const std::string_view t = internal::TrimSpace(line); t.empty() || t.starts_with("//") || t.starts_with("#")) {
+        return {};
+    }
     std::vector<std::string_view> fields = internal::Split(line, '\t');
     for (std::size_t i = 0; i < fields.size(); i++) {
         if (fields[i].starts_with("//")) {

@@ -23,6 +23,8 @@ README.md is for users; developer documentation is in docs/ (index: docs/README.
 - `tools/fetch-syosetu.sh` and `tools/e2e.sh` compare two builds on the public web-novel
   chapters named by `tests/e2e/`; chapter text and its translations are never committed.
   A translation behaviour change needs its own commit with the reason.
+- `tools/detect-bad.sh` lists ill-formed Korean sequences in outputs; a pattern becomes a
+  constraint rule (`src/core/word/constraints.cpp`) only when its checked hits are all errors.
 - C++20. Library and DLLs are built without exceptions and RTTI; errors are return
   values. Each DLL links the CRT statically and is a single file.
 - Warnings are errors; fix the code, not the flags.

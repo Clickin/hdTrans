@@ -1,5 +1,6 @@
 // J2KEngine-compatible exports: Shift-JIS or UTF-16 in, CP949 or UTF-16 out.
-// Dictionaries are found next to the DLL; the path the host passes is ignored.
+// Dictionaries are found next to the DLL (dicts and userdict.tsv); the path the host
+// passes is ignored. userdict.tsv is reloaded when it changes.
 // Calls are thread-safe, not reentrant; finish all calls before unloading the DLL.
 #include <windows.h>
 
@@ -12,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "core/dict/folders.h"
 #include "core/engine.h"
 
 namespace {
@@ -43,6 +45,7 @@ std::condition_variable g_adminsDone;
 std::atomic<unsigned> g_waitingAdmins{0};
 std::uint64_t g_generation = 0;
 std::vector<std::string> g_dirs;
+std::string g_userFile;
 std::unique_ptr<hdTrans::Engine> g_engine;
 std::unique_ptr<hdTrans::Session> g_session;
 
@@ -75,23 +78,45 @@ Char* Block(const std::basic_string<Char>& s) {
     return p;
 }
 
-// <dll dir>\dicts\base, then <dll dir>\dicts\user when present.
-std::vector<std::string> DictDirs() {
+// The folder of this DLL.
+std::string ModuleDir() {
     HMODULE self = nullptr;
     GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                       reinterpret_cast<LPCWSTR>(&DictDirs), &self);
+                       reinterpret_cast<LPCWSTR>(&ModuleDir), &self);
     wchar_t path[MAX_PATH];
     const DWORD n = GetModuleFileNameW(self, path, MAX_PATH);
     std::wstring dir(path, n);
     const size_t slash = dir.find_last_of(L"\\/");
-    dir = slash == std::wstring::npos ? L"." : dir.substr(0, slash);
-    std::vector<std::string> dirs{Utf8FromWide(dir + L"\\dicts\\base")};
-    const std::wstring user = dir + L"\\dicts\\user";
-    if (GetFileAttributesW(user.c_str()) != INVALID_FILE_ATTRIBUTES) dirs.push_back(Utf8FromWide(user));
-    return dirs;
+    return Utf8FromWide(slash == std::wstring::npos ? L"." : dir.substr(0, slash));
+}
+
+// Writes why userdict.tsv did not load, if it did not, and the Ehnd lines skipped to the
+// debugger output.
+void LogLoadErrors(const hdTrans::Engine& e) {
+    const std::string error = e.UserFileError();
+    if (!error.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: userdict.tsv not loaded:\n" + error + "\n").c_str());
+    std::string skipped;
+    for (const std::string& line : e.FilterErrors()) skipped += line + "\n";
+    if (!skipped.empty()) OutputDebugStringW(WideFromUtf8("J2KEngine: Ehnd lines skipped:\n" + skipped).c_str());
 }
 
 }  // namespace
+
+// Nothing waits under the loader lock: at process exit (reserved set) the engine is left to
+// the OS; on FreeLibrary no reload thread runs here any more (each holds a module reference)
+// and the engine is released without waiting for one.
+BOOL WINAPI DllMain(HINSTANCE /*module*/, DWORD reason, LPVOID reserved) {
+    if (reason != DLL_PROCESS_DETACH) return TRUE;
+    if (reserved) {
+        static_cast<void>(g_session.release());
+        static_cast<void>(g_engine.release());
+        return TRUE;
+    }
+    g_session.reset();
+    if (g_engine) g_engine->DetachReload();
+    g_engine.reset();
+    return TRUE;
+}
 
 extern "C" {
 
@@ -103,14 +128,19 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
         if (g_engine) return 1;
         generation = g_generation;
     }
-    auto dirs = DictDirs();
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
-    if (!e->Open(dirs)) return 0;
+    const std::string dir = ModuleDir();
+    std::vector<std::string> dirs{hdTrans::dict::ShippedFolder(dir)};
+    std::string userFile = hdTrans::dict::UserFile(dir);
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    e->OpenEhnd(hdTrans::dict::EhndFolder(dir));
+    if (!e->Open(dirs, false, userFile)) return 0;
+    LogLoadErrors(*e);
     AdminLock lock;
     if (generation != g_generation) return 0;
     g_engine = std::move(e);
     g_session = std::make_unique<hdTrans::Session>(*g_engine);
     g_dirs = std::move(dirs);
+    g_userFile = std::move(userFile);
     ++g_generation;
     return 1;
 }
@@ -123,6 +153,7 @@ int __stdcall J2K_Terminate() {
     g_session.reset();
     g_engine.reset();
     g_dirs.clear();
+    g_userFile.clear();
     return 1;
 }
 
@@ -156,14 +187,20 @@ int __stdcall J2K_StopTranslation(void* /*target*/) { return 1; }
 void __stdcall J2K_ReloadUserDict() {
     std::uint64_t generation;
     std::vector<std::string> dirs;
+    std::string userFile;
     {
         AdminLock lock;
         if (!g_engine) return;
         generation = g_generation;
         dirs = g_dirs;
+        userFile = g_userFile;
     }
-    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off);
-    if (!e->Open(dirs)) return;
+    auto e = std::make_unique<hdTrans::Engine>(false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    e->OpenEhnd(hdTrans::dict::EhndFolder(ModuleDir()));
+    // A userdict.tsv that does not load keeps the dictionaries loaded before.
+    if (!e->Open(dirs, false, userFile)) return;
+    LogLoadErrors(*e);
+    if (!e->UserFileError().empty()) return;
     AdminLock lock;
     if (generation != g_generation) return;
     g_session.reset();

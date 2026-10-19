@@ -239,17 +239,23 @@ std::vector<std::string> Snapshot::PersonPlaceKeys(std::string_view text) const 
     return keys;
 }
 
-std::string Snapshot::PersonName(std::string_view key) const {
+std::string Snapshot::NameReading(std::string_view key) const {
     if (names_.Len() == 0) return {};
     std::string fan = text::FromKana(key, text::Preset::Fan);
     if (fan.empty()) return {};
-    const std::vector<Record> base = base_.Records(key);
     for (const Record& r : names_.Records(key)) {
-        if (r.codes->sem.HasPrefix("QPN") && text::SameSound(r.target, fan) &&
-            (base.empty() ||
-             std::any_of(base.begin(), base.end(), [&](const Record& b) { return text::SameSound(b.target, fan); }))) {
-            return fan;
-        }
+        if (r.codes->sem.HasPrefix("QPN") && text::SameSound(r.target, fan)) return fan;
+    }
+    return {};
+}
+
+std::string Snapshot::PersonName(std::string_view key) const {
+    const std::string fan = NameReading(key);
+    if (fan.empty()) return {};
+    const std::vector<Record> base = base_.Records(key);
+    if (base.empty() ||
+        std::any_of(base.begin(), base.end(), [&](const Record& b) { return text::SameSound(b.target, fan); })) {
+        return fan;
     }
     return {};
 }

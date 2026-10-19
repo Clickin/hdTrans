@@ -8,10 +8,19 @@
 
 namespace hdTrans::filter {
 
-// Appends the PreFilter*.txt, PostFilter*.txt, SkipLayer*.txt and UserDict*.txt files of
-// the folder dir to sources, each kind in name order compared without ASCII case, decoded
-// by EhndText. false, appending nothing, when dir cannot be listed or a file cannot be
-// read.
+// A file of an Ehnd folder: its kind, name and path.
+struct EhndFile {
+    Source::Kind kind;
+    std::string name, path;
+};
+
+// The PreFilter*.txt, PostFilter*.txt, SkipLayer*.txt and UserDict*.txt files of the
+// folder dir in load order: by kind in this order, then by name compared without ASCII
+// case. false when dir cannot be listed.
+bool EhndFiles(std::string_view dir, std::vector<EhndFile>& files);
+
+// Appends the files of the Ehnd folder dir (EhndFiles) to sources, decoded by EhndText.
+// false, appending nothing, when dir cannot be listed or a file cannot be read.
 bool ReadEhndFolder(std::string_view dir, std::vector<Source>& sources, std::vector<Error>& errors);
 
 // The UTF-8 text of the bytes of a file: UTF-16LE after its byte order mark, otherwise

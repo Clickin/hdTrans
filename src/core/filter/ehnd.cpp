@@ -90,7 +90,7 @@ std::string EhndText(std::string_view bytes) {
     return out;
 }
 
-bool ReadEhndFolder(std::string_view dir, std::vector<Source>& sources, std::vector<Error>& errors) {
+bool EhndFiles(std::string_view dir, std::vector<EhndFile>& files) {
     struct Kind {
         const char* prefix;
         Source::Kind kind;
@@ -99,30 +99,39 @@ bool ReadEhndFolder(std::string_view dir, std::vector<Source>& sources, std::vec
                                {"POSTFILTER", Source::Kind::PostFilter},
                                {"SKIPLAYER", Source::Kind::SkipLayer},
                                {"USERDICT", Source::Kind::UserDict}};
-    const std::filesystem::path path = PathOf(dir);
     std::vector<std::string> names;
     std::error_code ec;
-    for (std::filesystem::directory_iterator it(path, ec), end; !ec && it != end; it.increment(ec)) {
+    for (std::filesystem::directory_iterator it(PathOf(dir), ec), end; !ec && it != end; it.increment(ec)) {
         std::error_code fileEc;
         if (it->is_regular_file(fileEc)) names.push_back(Utf8Of(it->path().filename()));
     }
-    if (ec) {
-        errors.push_back({std::string(dir), 0, "the folder cannot be listed"});
-        return false;
-    }
+    if (ec) return false;
     std::sort(names.begin(), names.end(), [](const std::string& a, const std::string& b) { return Upper(a) < Upper(b); });
-    std::vector<Source> read;
     for (const Kind& k : kKinds) {
         for (const std::string& name : names) {
             const std::string upper = Upper(name);
-            if (!upper.starts_with(k.prefix) || !upper.ends_with(".TXT")) continue;
-            std::string bytes;
-            if (!ReadBytes(path / PathOf(name), bytes)) {
-                errors.push_back({name, 0, "the file cannot be read"});
-                return false;
+            if (upper.starts_with(k.prefix) && upper.ends_with(".TXT")) {
+                files.push_back({k.kind, name, Utf8Of(PathOf(dir) / PathOf(name))});
             }
-            read.push_back({k.kind, name, EhndText(bytes), false});
         }
+    }
+    return true;
+}
+
+bool ReadEhndFolder(std::string_view dir, std::vector<Source>& sources, std::vector<Error>& errors) {
+    std::vector<EhndFile> files;
+    if (!EhndFiles(dir, files)) {
+        errors.push_back({std::string(dir), 0, "the folder cannot be listed"});
+        return false;
+    }
+    std::vector<Source> read;
+    for (const EhndFile& f : files) {
+        std::string bytes;
+        if (!ReadBytes(PathOf(f.path), bytes)) {
+            errors.push_back({f.name, 0, "the file cannot be read"});
+            return false;
+        }
+        read.push_back({f.kind, f.name, EhndText(bytes), false});
     }
     std::move(read.begin(), read.end(), std::back_inserter(sources));
     return true;

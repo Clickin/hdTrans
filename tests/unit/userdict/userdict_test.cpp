@@ -98,6 +98,7 @@ HD_TEST(userdict_parse) {
         {"先輩\t선배\thon\tspace", "先輩 선배 N110 Ha hon @1.0"},
         {"たん\t\thon", "たん N110 Tu hon @1.0"},
         {"// comment\n\n  // indented comment\n猫\t냥이\tn\t\t// trailing", "猫 냥이 N110 @4.0"},
+        {"# comment\n  # indented comment\n#猫\t냥이\n犬\t개", "犬 개 N110 @4.0"},
         {"猫\t냥이\t// no POS", "猫 냥이 N110 @1.0"},
         {"猫\t냥이\tn\tprio=2 force final=v", "猫 냥이 N110 prio=2 final=v force @1.0"},
         {"猫\t냥이\tn\tprio=-1 hidden", "猫 냥이 N110 prio=-1 hidden @1.0"},

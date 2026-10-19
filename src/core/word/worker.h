@@ -104,6 +104,7 @@ private:
     bool PatternFits(const dict::UserEntry& u, std::string_view query) const;
     bool KanaBounded(std::string_view key, std::string_view query) const;
     bool KanaWord(const dict::UserEntry& u, std::string_view query) const;
+    void ApplyConstraints(dict::Candidates& found, std::string_view query);
     void DropBoundUtterances(Lookup& l, std::string_view query);
     void DropModalSplits(Lookup& l, std::string_view query);
     bool SplitsModal(const Record& r, std::string_view query, bool afterKa) const;

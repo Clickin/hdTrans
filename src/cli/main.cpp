@@ -1,6 +1,10 @@
 // hdtrans: reads UTF-8 from stdin (or -in FILE) and writes the translation to stdout. The
 // whole input is one session unless -each or -raw is given.
-//   -dicts DIR[,DIR...]   dictionary folders in load order (default: dicts/base next to the executable)
+//   -dicts DIR[,DIR...]   dictionary folders in load order (default: dicts next to the
+//                         executable, else dicts in the current directory)
+//   -userdict FILE        user dictionary file, which must load (default: userdict.tsv
+//                         next to the executable, left out with a warning when it does not
+//                         load; empty for none)
 //   -each                 a new session for every line
 //   -raw                  translate each line with the word pipeline only
 //   -reference            disable translation improvements
@@ -11,19 +15,27 @@
 //   -stages DIR           write stage records (also HDTRANS_DRIVER_DUMP)
 //   -select-shadow        score shortest targets without changing the translation
 //   -in FILE              read the input from FILE
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 #ifdef _WIN32
 #include <fcntl.h>
 #include <io.h>
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
 #endif
 
 #include "core/engine.h"
+#include "core/dict/folders.h"
 #include "core/dict/snapshot_file.h"
 #include "core/engine/driver.h"
 #include "core/word/select.h"
@@ -42,6 +54,38 @@ std::vector<std::string> SplitComma(const std::string& s) {
         if (comma == std::string::npos) return out;
         start = comma + 1;
     }
+}
+
+// The folder of the running executable in UTF-8; empty when unknown.
+std::string ExecutableDir() {
+    std::filesystem::path exe;
+#ifdef _WIN32
+    std::wstring path(MAX_PATH, L'\0');
+    for (;;) {
+        const DWORD n = GetModuleFileNameW(nullptr, path.data(), static_cast<DWORD>(path.size()));
+        if (n == 0) return {};
+        if (n < path.size()) {
+            path.resize(n);
+            break;
+        }
+        path.resize(path.size() * 2);
+    }
+    exe = path;
+#elif defined(__APPLE__)
+    std::uint32_t size = 0;
+    _NSGetExecutablePath(nullptr, &size);
+    std::string path(size, '\0');
+    if (_NSGetExecutablePath(path.data(), &size) != 0) return {};
+    exe = path.c_str();
+#else
+    std::error_code readError;
+    exe = std::filesystem::read_symlink("/proc/self/exe", readError);
+    if (readError) return {};
+#endif
+    std::error_code ec;
+    const std::filesystem::path canonical = std::filesystem::canonical(exe, ec);
+    const std::u8string dir = (ec ? exe : canonical).parent_path().u8string();
+    return std::string(reinterpret_cast<const char*>(dir.data()), dir.size());
 }
 
 bool ReadAll(std::FILE* f, std::string& out) {
@@ -107,9 +151,9 @@ int main(int argc, char** argv) {
     _setmode(_fileno(stdout), _O_BINARY);
     _setmode(_fileno(stderr), _O_BINARY);
 #endif
-    std::string dicts = "dicts/base";
+    std::optional<std::string> dictsArg, userFileArg;
+    std::optional<std::string> ehndArg;
     std::string inPath;
-    std::string ehnd;
     const char* dump = std::getenv("HDTRANS_DRIVER_DUMP");
     std::string stagesDir = dump ? dump : "";
     bool raw = false;
@@ -122,9 +166,10 @@ int main(int argc, char** argv) {
     bool noCache = false;
     for (int i = 1; i < argc; i++) {
         const char* a = argv[i];
-        if (!std::strcmp(a, "-dicts") && i + 1 < argc) dicts = argv[++i];
+        if (!std::strcmp(a, "-dicts") && i + 1 < argc) dictsArg = argv[++i];
+        else if (!std::strcmp(a, "-userdict") && i + 1 < argc) userFileArg = argv[++i];
         else if (!std::strcmp(a, "-in") && i + 1 < argc) inPath = argv[++i];
-        else if (!std::strcmp(a, "-ehnd") && i + 1 < argc) ehnd = argv[++i];
+        else if (!std::strcmp(a, "-ehnd") && i + 1 < argc) ehndArg = argv[++i];
         else if (!std::strcmp(a, "-stages") && i + 1 < argc) stagesDir = argv[++i];
         else if (!std::strcmp(a, "-raw")) raw = true;
         else if (!std::strcmp(a, "-each")) each = true;
@@ -135,7 +180,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(a, "-why")) why = true;
         else if (!std::strcmp(a, "-select-shadow")) selectShadow = true;
         else {
-            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-stages DIR] [-in FILE]\n"
+            std::fprintf(stderr, "usage: hdtrans [-dicts DIR,...] [-userdict FILE] [-ehnd DIR] [-each | -raw] [-reference] [-verify-dicts] [-compile-dicts | -no-cache] [-why] [-select-shadow] [-stages DIR] [-in FILE]\n"
                                  "HDTRANS_CACHE_DIR selects an absolute cache directory; empty, relative or off (case-insensitive) disables caching.\n"
                                  "HDTRANS_SNAPSHOT=off also disables caching. Default validation trusts source size, timestamps and identity.\n"
                                  "Use -verify-dicts or HDTRANS_VERIFY_DICTS=1 after edits that preserve those values.\n"
@@ -163,6 +208,9 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "hdtrans: warning: relative HDTRANS_CACHE_DIR disables dictionary caching\n");
         if (compileDicts) return 1;
     }
+    const std::string programDir = dictsArg && userFileArg ? std::string() : ExecutableDir();
+    const std::string dicts = dictsArg ? *dictsArg : hdTrans::dict::DefaultFolder(programDir);
+    const std::string userFile = userFileArg ? *userFileArg : hdTrans::dict::UserFile(programDir);
     const auto folders = SplitComma(dicts);
     if (compileDicts) {
         const auto path = hdTrans::dict::internal::SnapshotPath(folders);
@@ -191,10 +239,18 @@ int main(int argc, char** argv) {
     if (why) std::setvbuf(stderr, nullptr, _IOFBF, 1 << 16);
 
     hdTrans::Engine engine(reference);
-    if (!engine.Open(folders, verifyDicts)) {
+    if (!engine.Open(folders, verifyDicts, userFile)) {
         std::fprintf(stderr, "hdtrans: no dictionary loaded from %s\n", dicts.c_str());
         return 1;
     }
+    if (const std::string error = engine.UserFileError(); !error.empty()) {
+        // A user dictionary named with -userdict must load; the default one is optional.
+        std::fprintf(stderr, "hdtrans: %suser dictionary not loaded:\n%s\n", userFileArg ? "" : "warning: ",
+                     error.c_str());
+        if (userFileArg) return 1;
+    }
+    // Without -ehnd, an Ehnd folder next to the program is used when there is one.
+    const std::string ehnd = ehndArg ? *ehndArg : hdTrans::dict::EhndFolder(ExecutableDir());
     if (!ehnd.empty() && !engine.OpenEhnd(ehnd)) {
         std::fprintf(stderr, "hdtrans: cannot read the Ehnd folder %s\n", ehnd.c_str());
         return 1;

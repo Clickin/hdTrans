@@ -90,7 +90,8 @@ if(NOT EMSCRIPTEN)
     endif()
 
     add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp)
-    target_link_libraries(admin_priority PRIVATE hdtrans)
+    target_include_directories(admin_priority PRIVATE src)
+    target_link_libraries(admin_priority PRIVATE hdtrans ${CMAKE_DL_LIBS})
     add_test(NAME host.admin_priority COMMAND admin_priority "${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/dict/testdata/folder")
     set_tests_properties(host.admin_priority PROPERTIES TIMEOUT 60 PROCESSORS 8
         ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/admin-priority-cache")
@@ -103,20 +104,23 @@ endif()
 
 if(EMSCRIPTEN)
     add_executable(hdtrans_wasm src/wasm/main.cpp src/cshared/hdtrans_c.cpp)
+    target_include_directories(hdtrans_wasm PRIVATE src)
     set_target_properties(hdtrans_wasm PROPERTIES OUTPUT_NAME hdTransEngine)
     target_link_libraries(hdtrans_wasm PRIVATE hdtrans)
     target_link_options(hdtrans_wasm PRIVATE
         --no-entry -sMODULARIZE=1 -sEXPORT_ES6=1 -sALLOW_MEMORY_GROWTH=1 -sFORCE_FILESYSTEM=1
         -sEXPORTED_RUNTIME_METHODS=FS,ccall,cwrap,UTF8ToString,stringToUTF8,lengthBytesUTF8,getValue
-        -sEXPORTED_FUNCTIONS=_hdTrans_Load,_hdTrans_Initialize,_hdTrans_Terminate,_hdTrans_Translate,_hdTrans_Reload,_hdTrans_FreeMem,_hdTrans_Version,_malloc,_free)
+        -sEXPORTED_FUNCTIONS=_hdTrans_Load,_hdTrans_Initialize,_hdTrans_Terminate,_hdTrans_Translate,_hdTrans_Reload,_hdTrans_OpenEhnd,_hdTrans_FilterErrors,_hdTrans_FreeMem,_hdTrans_Version,_malloc,_free)
 elseif(WIN32)
     add_library(hdtrans_dll SHARED src/cshared/hdtrans_c.cpp src/cshared/hdtrans.def)
     set_target_properties(hdtrans_dll PROPERTIES OUTPUT_NAME hdTransEngine PREFIX "")
     target_compile_definitions(hdtrans_dll PRIVATE HDTRANS_BUILD_DLL)
+    target_include_directories(hdtrans_dll PRIVATE src)
     target_link_libraries(hdtrans_dll PRIVATE hdtrans)
 
     add_library(j2kengine SHARED src/j2kengine/j2kengine.cpp src/j2kengine/j2kengine.def)
     set_target_properties(j2kengine PROPERTIES OUTPUT_NAME J2KEngine PREFIX "")
+    target_include_directories(j2kengine PRIVATE src)
     target_link_libraries(j2kengine PRIVATE hdtrans)
 
     add_executable(j2k_host tests/host/j2k_host.c)
@@ -127,5 +131,6 @@ elseif(WIN32)
 else()
     add_library(hdtrans_shared SHARED src/cshared/hdtrans_c.cpp)
     set_target_properties(hdtrans_shared PROPERTIES OUTPUT_NAME hdTransEngine)
-    target_link_libraries(hdtrans_shared PRIVATE hdtrans)
+    target_include_directories(hdtrans_shared PRIVATE src)
+    target_link_libraries(hdtrans_shared PRIVATE hdtrans ${CMAKE_DL_LIBS})
 endif()

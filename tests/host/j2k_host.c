@@ -381,7 +381,7 @@ int wmain(int argc, wchar_t** argv) {
     QueryPerformanceFrequency(&g_freq);
     GetModuleFileNameW(NULL, exePath, MAX_PATH);
     SiblingPath(exePath, L"j2k_host.out.txt", outPath, MAX_PATH);
-    SiblingPath(argv[1], L"dicts\\base", dictsPath, MAX_PATH);
+    SiblingPath(argv[1], L"dicts", dictsPath, MAX_PATH);
     g_out = _wfopen(outPath, L"wb");
     Check(g_out != NULL, "open j2k_host.out.txt next to the executable");
 
@@ -409,7 +409,7 @@ int wmain(int argc, wchar_t** argv) {
     if (DirExists(dictsPath)) {
         Check(AllContainHangul(results), "every translation is non-empty and contains Hangul");
     } else {
-        printf("SKIP translation content check: no dicts\\base next to the DLL\n");
+        printf("SKIP translation content check: no dicts next to the DLL\n");
     }
     FreeResults(results);
     e.reloadUserDict();

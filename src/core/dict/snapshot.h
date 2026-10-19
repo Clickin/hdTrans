@@ -33,6 +33,10 @@
 //     numbered in order from 0; a plain line that does not compile fails the load. The
 //     layers kana, readings, prefilter and postfilter are for plain files only, the
 //     others but base for column files only.
+//   - The user dictionary file, when given and present, loads after the folders.
+//     Its header, if any, must be "#! layer=user": as a column file it joins the
+//     user dictionary, as a plain file it is the last plain dictionary. A column
+//     user dictionary file is read without the cache.
 //   - The builtin endings.tsv is a plain dictionary numbered -1, loaded before the
 //     others (their entries of an equal key and part code replace its entries); so
 //     are the builtin phrases.tsv (but its interjections in kana, which are
@@ -74,6 +78,7 @@ struct File {
     std::string name;   // the folder joined with the file name
     std::string text;
     FileLayer layer = FileLayer::Base;  // set by the load from the header
+    bool user = false;                  // the user dictionary file of the load
 };
 
 namespace internal {
@@ -167,14 +172,15 @@ struct LoadResult {
 };
 
 // Lists the *.tsv files of the folders in order, those of each folder in name order,
-// and reads them.
+// and reads them, then the user dictionary file userFile (none when empty or missing).
 LoadResult LoadFolders(const std::vector<std::string>& folders, std::string_view cacheDir = {}, bool verify = false,
-                       bool cacheWrite = true);
+                       bool cacheWrite = true, std::string_view userFile = {});
 // Loads the editable files without reading or writing a cache.
-LoadResult LoadFoldersTsv(const std::vector<std::string>& folders);
-// Finishes a new column-only snapshot with the folders' current noncolumn files.
+LoadResult LoadFoldersTsv(const std::vector<std::string>& folders, std::string_view userFile = {});
+// Finishes a new column-only snapshot with the folders' current noncolumn files and a
+// plain userFile.
 LoadResult LoadPlainFolders(std::shared_ptr<Snapshot> snapshot, const std::vector<std::string>& folders,
-                           std::vector<LoadError> errors);
+                           std::vector<LoadError> errors, std::string_view userFile = {});
 // Compiles the folders to an immutable resource; publishes only a fully validated file.
 bool CompileSnapshot(const std::vector<std::string>& folders, std::string_view outPath);
 // Loads files in load order.
@@ -238,8 +244,9 @@ public:
     // person spelling of the same sound (霧島: 기리시마 as a place, 키리시마 as a person).
     std::vector<std::string> PersonPlaceKeys(std::string_view text) const;
     // The fan reading of the katakana key when the name layer has key as a person
-    // written with that sound and the base dictionary reads key no other way; empty
-    // otherwise.
+    // written with that sound; empty otherwise.
+    std::string NameReading(std::string_view key) const;
+    // NameReading, when the base dictionary reads key no other way; empty otherwise.
     std::string PersonName(std::string_view key) const;
     // Whether a cue in the text may confirm key as a person's name and the name layer
     // has a person sense of it.

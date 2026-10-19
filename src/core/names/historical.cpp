@@ -177,10 +177,11 @@ const std::map<char32_t, std::string>& Nanori() {
 }
 
 // The given name of one to three kanji: the dictionary's given-name sense, else its kanji
-// read one by one in their name readings; "" when a kanji has none.
+// read one by one in their name readings; "" when a kanji has none and for an honorific
+// alone (太郎君 is 太郎 with 君).
 std::string GivenName(const dict::Snapshot& snap, const std::string& s) {
     const std::size_t n = text::RuneCount(s);
-    if (n == 0 || n > 3) return "";
+    if (n == 0 || n > 3 || s == "君" || s == "殿" || s == "様" || s == "氏") return "";
     for (const dict::Record& r : Records(snap, s)) {
         if (r.codes == nullptr) continue;
         if (Contains(r.codes->sem.Text(), "QPN") && Contains(r.codes->gram.Text(), "Wb") && AllHangul(r.target)) {

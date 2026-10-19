@@ -46,6 +46,9 @@ struct FileStamp {
 // Leaves stamp unchanged on failure. Empty regular files have valid stamps.
 bool ReadStamp(std::string_view utf8, FileStamp& stamp);
 
+// Opens a file for binary reading; others may write, rename or delete it meanwhile.
+std::FILE* OpenShared(const std::filesystem::path& path);
+
 // Reads a regular file smaller than 512 bytes. Leaves out unchanged on failure.
 bool ReadCacheSmall(const std::filesystem::path& path, std::string& out);
 
