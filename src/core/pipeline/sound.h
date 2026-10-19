@@ -43,7 +43,7 @@
 
 namespace hdTrans::pipeline {
 
-// The normalized line after the sound stage: WriteSounds, then RewriteCasualAdjectives;
+// The normalized line after the sound stage: CompleteCutOffs, WriteSounds, then RewriteCasualAdjectives;
 // when RewriteEmphasis changes that text, WriteSounds of the rewritten text instead.
 // Markup tags, BBCode tags, entities and ctx.markers are left as they are. The lookups
 // use ctx.lookup.
@@ -55,6 +55,12 @@ namespace internal {
 // (see the comment at the top). Invalid UTF-8 bytes are kept and read as neither kana
 // nor letters.
 std::string WriteSounds(std::string_view text, const LineContext& ctx, const dict::Snapshot& snap);
+
+// A verb cut off before a dash or an ellipsis (― — … ‥, ・・ or ーー) completed to the form
+// it starts, when the dictionary has the verb with its kanji: a part of the te form to the
+// te form (待っ―― 待って――, 書い…… 書いて……), the negative stem with な to ない
+// (行かな…… 行かない……). A stem or a fragment without kanji stays.
+std::string CompleteCutOffs(std::string_view text, const LineContext& ctx, const dict::Snapshot& snap);
 
 // The casual adjective endings -ee and -ii of -ai, -oi, -ui (うるせぇ, すげー, わりぃ,
 // 冷て～) written in full (うるさい, すごい, わるい, 冷たい) before the end of a clause or a

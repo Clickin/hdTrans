@@ -82,6 +82,7 @@ HD_TEST(pipeline_is_foreign) {
     HD_CHECK(internal::IsForeign(U'가'));
     HD_CHECK(internal::IsForeign(U'é'));
     HD_CHECK(!internal::IsForeign(U'μ'));
+    HD_CHECK(!internal::IsForeign(U'—'));
     HD_CHECK(internal::IsForeign(U'ゔ'));
     HD_CHECK(internal::IsForeign(U'\U0001F363'));
     HD_CHECK(!internal::IsForeign(U'A'));

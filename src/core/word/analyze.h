@@ -68,6 +68,9 @@ struct Settings {
     // The line of verse goes on in the next line of its document: a て form that ends it is
     // the connective 고 rather than a request.
     bool verse = false;
+    // Text path: the last character of the line's text before the chunk, white space
+    // aside; empty for the first chunk.
+    std::string_view before;
     // Empty by default; the list and its names outlive the analysis.
     std::span<const Scorer> scorers;
     std::span<const Scorer> shadowScorers;  // recorded only when selectShadow is set

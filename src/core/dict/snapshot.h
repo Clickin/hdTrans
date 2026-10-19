@@ -235,8 +235,9 @@ public:
     // person spelling of the same sound (霧島: 기리시마 as a place, 키리시마 as a person).
     std::vector<std::string> PersonPlaceKeys(std::string_view text) const;
     // The fan reading of the katakana key when the name layer has key as a person
-    // written with that sound and the base dictionary reads key no other way; empty
-    // otherwise.
+    // written with that sound; empty otherwise.
+    std::string NameReading(std::string_view key) const;
+    // NameReading, when the base dictionary reads key no other way; empty otherwise.
     std::string PersonName(std::string_view key) const;
     // Whether a cue in the text may confirm key as a person's name and the name layer
     // has a person sense of it.

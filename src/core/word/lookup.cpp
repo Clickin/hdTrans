@@ -152,6 +152,7 @@ Lookup Worker::DoLookup(std::string_view query, int mode) {
         if (arena.namesUsed == arena.names.size()) arena.names.emplace_back();
         arena.names[arena.namesUsed++].swap(found.names);
     }
+    if (mode == kModeGeneral && settings.text) ApplyConstraints(found, query);
     Lookup l;
     l.count = found.count;
     Record* last = nullptr;
@@ -459,7 +460,7 @@ bool Worker::VerbUtterance(const Record& r) const {
 bool Worker::SentenceFinal(std::string_view rest, int token, bool comma) const {
     // The punctuation that may follow a sentence-final predicate in its token, and the
     // small kana that only lengthen or stop its last sound (書くなっ, 来たぁ).
-    static constexpr std::string_view kClosing[] = {"。", "．", "！", "？", "…", "‥", "」", "』", "）", "～",
+    static constexpr std::string_view kClosing[] = {"。", "．", "！", "？", "…", "‥", "・", "」", "』", "）", "～",
                                                     "ー", "♪", "☆", "★", "／", ".", "!", "?", "っ", "ッ",
                                                     "ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ァ", "ィ", "ゥ", "ェ", "ォ"};
     auto closing = [](std::string_view t) {
