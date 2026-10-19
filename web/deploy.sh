@@ -22,7 +22,8 @@ case ${1:-deploy} in
     [ -f "$root/build/web/dist/index.html" ] || { echo "build/web/dist is missing: run node web/build.mjs" >&2; exit 1; }
     backup="$dir.bak-$(date -u +%Y%m%dT%H%M%SZ)"
     remote "set -e; if [ -d '$dir' ]; then cp -a '$dir' '$backup'; echo 'backup: $backup'; fi; mkdir -p '$dir'"
-    rsync -rlptz --delete --chmod=D755,F644 -e "$ssh" "$root/build/web/dist/" "$host:$dir/"
+    rsync -rlptz --delete -e "$ssh" "$root/build/web/dist/" "$host:$dir/"
+    remote "chmod -R a+rX '$dir'"
     echo "rollback: web/deploy.sh rollback $backup"
     ;;
   rollback)
