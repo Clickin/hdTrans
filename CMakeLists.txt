@@ -134,7 +134,10 @@ if(NOT EMSCRIPTEN)
         # Pins the word choices of the rules program: tests/rules/cases.tsv with dicts/.
         add_test(NAME rules.cases COMMAND "${HDTRANS_SH}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/rule-cases.sh"
             $<TARGET_FILE:hdtrans_cli> "${CMAKE_CURRENT_SOURCE_DIR}/dicts")
-        set_tests_properties(rules.cases PROPERTIES TIMEOUT 300
+        # One table per theme file, tests/rules/cases/<theme>.tsv, written as rules are fixed.
+        add_test(NAME rules.cases.themes COMMAND "${HDTRANS_SH}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/rule-cases.sh"
+            $<TARGET_FILE:hdtrans_cli> "${CMAKE_CURRENT_SOURCE_DIR}/dicts" "${CMAKE_CURRENT_SOURCE_DIR}/tests/rules/cases")
+        set_tests_properties(rules.cases rules.cases.themes PROPERTIES TIMEOUT 300
             ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/examples-cache")
     endif()
 

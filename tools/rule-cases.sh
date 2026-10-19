@@ -1,5 +1,5 @@
 #!/bin/sh
-# Checks the rule cases in tests/rules/cases.tsv against a built CLI.
+# Checks the rule cases in tests/rules/cases.tsv (or every table in a directory) against a built CLI.
 #   tools/rule-cases.sh CLI DICTS [CASES] [--accept]
 # CASES is a TSV with the header `rule input expected kind layer`. Every input is translated as its
 # own session (-each -why). `expected` is either the whole Korean output, or
@@ -19,11 +19,21 @@ cases=$here/tests/rules/cases.tsv accept=
 for a in "$@"; do
     if [ "$a" = --accept ]; then accept=1; else cases=$a; fi
 done
-[ -f "$cases" ] || { echo "no cases at $cases" >&2; exit 2; }
+[ -e "$cases" ] || { echo "no cases at $cases" >&2; exit 2; }
 [ -d "$dicts" ] || { echo "no dictionaries at $dicts" >&2; exit 2; }
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/hdtrans-rules.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 trap 'exit 2' HUP INT TERM
+# A directory holds one table per theme (tests/rules/cases/*.tsv); they are checked together.
+if [ -d "$cases" ]; then
+    [ -z "$accept" ] || { echo "--accept needs a single file" >&2; exit 2; }
+    first=1
+    for f in "$cases"/*.tsv; do
+        head -n 1 "$f" | grep -q '^rule	input	expected	kind	layer$' || { echo "bad header in $f" >&2; exit 2; }
+        if [ -n "$first" ]; then cat "$f"; first=; else tail -n +2 "$f"; fi
+    done > "$tmp/all.tsv"
+    cases=$tmp/all.tsv
+fi
 head -n 1 "$cases" | grep -q '^rule	input	expected	kind	layer$' || { echo "bad header in $cases" >&2; exit 2; }
 tail -n +2 "$cases" | cut -f 2 > "$tmp/in.txt"
 "$cli" -dicts "$dicts" -each -why -in "$tmp/in.txt" > "$tmp/out.txt" 2> "$tmp/why.txt" ||
