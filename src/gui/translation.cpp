@@ -78,7 +78,7 @@ std::string TranslateText(const hdTrans::Engine& engine, std::string_view text,
     if (cancelled.load(std::memory_order_relaxed)) return {};
     std::string translated;
     if (options.wholeDocument) {
-        Session session(engine);
+        Session session(engine, false, options.cg, options.misread);
         translated = session.Translate(text);
     } else {
         const auto lines = DocumentLines(text);
@@ -86,7 +86,7 @@ std::string TranslateText(const hdTrans::Engine& engine, std::string_view text,
             if (cancelled.load(std::memory_order_relaxed)) return {};
             if (i > 0) translated += '\n';
             if (!options.skipBlankLines || !lines[i].empty()) {
-                Session session(engine);
+                Session session(engine, false, options.cg, options.misread);
                 translated += session.Translate(lines[i]);
             }
             if (cancelled.load(std::memory_order_relaxed)) return {};

@@ -56,8 +56,41 @@ HD_TEST(gui_translation_defaults) {
     HD_CHECK(options.output == OutputMode::Translation);
     HD_CHECK(options.skipBlankLines);
     HD_CHECK(options.wholeDocument);
+    HD_CHECK(options.cg);
+    HD_CHECK(!options.misread);
     HD_CHECK_EQ(TranslateText(engine, "学生\nASCII\n", options, cancelled), "학생님\nASCII\n");
     HD_CHECK(!cancelled.load());
+}
+
+HD_TEST(gui_translation_session_flags) {
+    FilterFolder fixture("");
+    HD_REQUIRE(!fixture.path.empty());
+    {
+        std::ofstream dictionary(fixture.path / "base.tsv", std::ios::binary);
+        dictionary << "key\tko\tpos\tsem\tgram\tdict\trule\tid\n"
+                      "ちょうど\t꼭\tN110\tXXX\t\tGN\t0\t1\n"
+                      "ちょうど\t마침\tN110\t\t\tGN\t0\t2\n";
+        HD_REQUIRE(dictionary.good());
+    }
+    hdTrans::Engine engine(false, hdTrans::CacheWrite::Off);
+    HD_REQUIRE(engine.Open({fixture.path.string()}));
+    const std::atomic<bool> cancelled{false};
+    const std::string source = "ちょうど\nちょうど\n";
+    for (const bool wholeDocument : {false, true}) {
+        TranslationOptions options{OutputMode::Translation, true, wholeDocument};
+        HD_CHECK(options.cg);
+        HD_CHECK(!options.misread);
+        for (const bool cg : {false, true}) {
+            for (const bool misread : {false, true}) {
+                options.cg = cg;
+                options.misread = misread;
+                hdTrans::Session session(engine, false, cg, misread);
+                const std::string expected = session.Translate(source);
+                HD_CHECK_EQ(expected, cg ? "마침\n마침\n" : "꼭\n꼭\n");
+                HD_CHECK_EQ(TranslateText(engine, source, options, cancelled), expected);
+            }
+        }
+    }
 }
 
 HD_TEST(gui_translation_modes_and_line_endings) {

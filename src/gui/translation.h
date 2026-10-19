@@ -16,6 +16,8 @@ struct TranslationOptions {
     OutputMode output = OutputMode::Translation;
     bool skipBlankLines = true;
     bool wholeDocument = true;
+    bool cg = true;
+    bool misread = false;
 };
 
 // Input is UTF-8 with LF line endings. Translation keeps blank lines; in mixed modes,

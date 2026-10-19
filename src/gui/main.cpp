@@ -6,15 +6,22 @@
 #include <atomic>
 #include <climits>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <cwchar>
 #include <initializer_list>
+#include <memory>
+#include <optional>
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <thread>
+#include <vector>
 
+#include "core/config/cache.h"
+#include "core/config/config.h"
 #include "core/dict/folders.h"
 #include "core/engine.h"
 #include "frontend/module_dir.h"
@@ -42,7 +49,9 @@ struct App {
     bool selftest = false;
     bool busy = false;
     bool closing = false;
-    hdTrans::Engine engine{false, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto};
+    hdTrans::internal::Config settings;
+    hdTrans::internal::ConfigCache cache;
+    std::unique_ptr<hdTrans::Engine> engine;
     std::thread worker;
     std::atomic<bool> cancel{false};
     std::string result;
@@ -50,6 +59,13 @@ struct App {
     bool wasCancelled = false;
     fs::path inputFile;
     fs::path outputFile;
+
+    ~App() {
+        cancel = true;
+        if (worker.joinable()) worker.join();
+        engine.reset();
+        static_cast<void>(cache.Apply(std::nullopt));
+    }
 };
 
 INT_PTR CALLBACK MainProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam);
@@ -156,17 +172,41 @@ void ReportError(App& app, HWND owner, const wchar_t* message) {
     else MessageBoxW(owner, message, L"hdTrans", MB_OK | MB_ICONERROR);
 }
 
-bool LoadEngine(App& app) {
-    if (app.engine.loaded()) return true;
-    const std::string dir = hdTrans::frontend::ModuleDirectory();
+bool LoadEngine(App& app, std::string dir = {}) {
+    if (app.engine && app.engine->loaded()) return true;
+    if (dir.empty()) dir = hdTrans::frontend::ModuleDirectory();
     if (dir.empty()) {
         app.error = L"실행 파일의 위치를 찾지 못했습니다.";
         return false;
     }
-    app.engine.OpenEhnd(hdTrans::dict::EhndFolder(dir));
-    if (app.engine.Open({hdTrans::dict::ShippedFolder(dir)}, false, hdTrans::dict::UserFile(dir))) return true;
-    app.error = L"사전을 읽지 못했습니다. hdTransGUI.exe 옆에 dicts 폴더를 넣어 주세요.";
-    return false;
+    const std::string configPath = hdTrans::dict::ConfigFile(dir);
+    const auto config = hdTrans::internal::LoadConfig(configPath);
+    const std::string errors = hdTrans::internal::ConfigErrors(config, configPath);
+    if (!errors.empty()) OutputDebugStringW(Wide("hdTransGUI: " + errors + "\n").c_str());
+    app.settings = config.settings;
+    const auto& settings = app.settings;
+    if (!app.cache.Apply(settings.cache)) {
+        app.error = L"캐시 폴더 설정을 적용하지 못했습니다.";
+        return false;
+    }
+    app.engine = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
+    const auto dirs = settings.dicts.value_or(std::vector<std::string>{hdTrans::dict::ShippedFolder(dir)});
+    const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
+    app.engine->OpenEhnd(settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "");
+    if (!app.engine->Open(dirs, false, userFile)) {
+        app.error = L"사전을 읽지 못했습니다. 데이터 폴더의 dicts와 user/hdtrans.config.yaml 설정을 확인해 주세요.";
+        return false;
+    }
+    const std::string userError = app.engine->UserFileError();
+    if (!userError.empty()) OutputDebugStringW(Wide("hdTransGUI: " + userError + "\n").c_str());
+    for (const auto& line : app.engine->FilterErrors()) OutputDebugStringW(Wide("hdTransGUI: " + line + "\n").c_str());
+    return true;
+}
+
+gui::TranslationOptions ConfiguredOptions(const App& app, gui::TranslationOptions options) {
+    options.cg = app.settings.cg;
+    options.misread = app.settings.misread;
+    return options;
 }
 
 void ResetJob(App& app) {
@@ -192,7 +232,7 @@ void StartShort(App& app) {
     ResetJob(app);
     EnableShortControls(app, false);
     app.worker = std::thread([&app, source, options] {
-        if (!app.cancel && LoadEngine(app)) app.result = gui::TranslateText(app.engine, source, options, app.cancel);
+        if (!app.cancel && LoadEngine(app)) app.result = gui::TranslateText(*app.engine, source, ConfiguredOptions(app, options), app.cancel);
         app.wasCancelled = app.cancel.load();
         PostMessageW(app.main, kDone, 0, 0);
     });
@@ -299,7 +339,7 @@ void StartFileWorker(App& app) {
             if (!gui::ReadTextFile(input, text, encoding)) app.error = L"입력 파일을 읽지 못했습니다.";
             else if (LoadEngine(app) && !app.cancel) {
                 PostMessageW(app.progress, kPhase, 1, 0);
-                app.result = gui::TranslateText(app.engine, text, options, app.cancel);
+                app.result = gui::TranslateText(*app.engine, text, ConfiguredOptions(app, options), app.cancel);
                 if (!app.cancel) {
                     PostMessageW(app.progress, kPhase, 2, 0);
                     saved = SaveResult(app, output);
@@ -535,6 +575,61 @@ void NotifyClick(HWND window, int id) {
                  reinterpret_cast<LPARAM>(GetDlgItem(window, id)));
 }
 
+bool WriteFixture(const fs::path& path, std::string_view text) {
+    std::ofstream file(path, std::ios::binary);
+    file.write(text.data(), static_cast<std::streamsize>(text.size()));
+    file.close();
+    return static_cast<bool>(file);
+}
+
+bool SelfTestConfig(App& app, const fs::path& folder) {
+    const fs::path program = folder / L"설정 배치";
+    const fs::path data = program / L"HDTRANS";
+    const fs::path user = data / L"USER";
+    const fs::path config = user / L"HDTRANS.CONFIG.YAML";
+    std::error_code error;
+    for (const auto& directory : {data / L"DiCtS", data / L"別辞書", user}) {
+        fs::create_directories(directory, error);
+        if (!Check(!error, "create config fixture folder")) return false;
+    }
+    const std::string header = "key\tko\tpos\tsem\tgram\tdict\trule\tflags\tprio\treading\tid\n";
+    if (!Check(WriteFixture(data / L"DiCtS/base.tsv", header + "猫\t기본사전\tN110\t\t\tGN\t\t\t\t\t1\n") &&
+               WriteFixture(data / L"別辞書/base.tsv", header + "猫\t설정사전\tN110\t\t\tGN\t\t\t\t\t1\n") &&
+               WriteFixture(user / L"USERDICT.TSV", "犬\t기본사용자\n") &&
+               WriteFixture(user / L"custom.tsv", "犬\t사용자설정\n") &&
+               WriteFixture(config, "dicts: ../別辞書\nuserdict: custom.tsv\ncache: off\n"
+                                    "cg: false\nmisread: true\nreference: true\n"), "write config fixtures")) return false;
+    const wchar_t* initialCache = _wgetenv(L"HDTRANS_CACHE_DIR");
+    const std::optional<std::wstring> previousCache = initialCache ? std::optional<std::wstring>(initialCache) : std::nullopt;
+    app.engine.reset();
+    const std::string programDir = Utf8(program.native());
+    if (!Check(LoadEngine(app, programDir), "load nested case-insensitive config")) return false;
+    bool ok = Check(!app.settings.cg && app.settings.misread && app.settings.reference, "GUI config session settings");
+    const wchar_t* configuredCache = _wgetenv(L"HDTRANS_CACHE_DIR");
+    ok = Check(configuredCache && std::wstring(configuredCache) == L"off", "GUI config cache setting") && ok;
+    CheckRadioButton(app.main, IDC_OUTPUT_TRANSLATION, IDC_OUTPUT_SPACED, IDC_OUTPUT_TRANSLATION);
+    CheckDlgButton(app.main, IDC_WHOLE_DOCUMENT, BST_CHECKED);
+    SetDlgItemTextW(app.main, IDC_SOURCE, L"猫\r\n犬");
+    NotifyClick(app.main, IDC_TRANSLATE);
+    if (!WaitForJob(app)) return false;
+    ok = Check(app.error.empty() && ControlText(app.main, IDC_RESULT) == L"설정사전\r\n사용자설정",
+               "GUI configured dictionary and relative user path") && ok;
+    fs::remove(config, error);
+    if (!Check(!error, "remove optional config")) return false;
+    app.engine.reset();
+    if (!Check(LoadEngine(app, programDir), "load default mixed-case data layout")) return false;
+    const wchar_t* restoredCache = _wgetenv(L"HDTRANS_CACHE_DIR");
+    ok = Check(previousCache ? restoredCache && *previousCache == restoredCache : !restoredCache,
+               "GUI restores cache environment") && ok;
+    ok = Check(app.settings.cg && !app.settings.misread && !app.settings.reference, "GUI defaults without config") && ok;
+    NotifyClick(app.main, IDC_TRANSLATE);
+    if (!WaitForJob(app)) return false;
+    ok = Check(app.error.empty() && ControlText(app.main, IDC_RESULT) == L"기본사전\r\n기본사용자",
+               "GUI default dictionary and user folder") && ok;
+    app.engine.reset();
+    return ok;
+}
+
 bool SelfTest(App& app) {
     bool ok = Check(!IsWindowVisible(app.main), "hidden short translation dialog");
     SetDlgItemTextW(app.main, IDC_SOURCE, L"日本語");
@@ -579,6 +674,7 @@ bool SelfTest(App& app) {
     if (!WaitForJob(app)) return false;
     ok = Check(app.wasCancelled && gui::ReadTextFile(app.outputFile, output, encoding) && output == "unchanged", "stop preserves existing output") && ok;
     SendMessageW(app.file, WM_CLOSE, 0, 0);
+    ok = SelfTestConfig(app, folder) && ok;
     fs::remove_all(folder, error);
     return ok;
 }

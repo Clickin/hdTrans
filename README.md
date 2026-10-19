@@ -55,8 +55,9 @@ hdtrans -dicts dicts -in script.ja.txt > script.ko.txt
 ### Windows 창: `hdTransGUI.exe`
 
 `hdTransGUI.exe`에서 단문을 번역하거나, **문서 번역**으로 텍스트 파일을 번역할 수 있습니다.
-실행 파일 옆에 `dicts/` 폴더를 두세요. 사용자 사전은 같은 위치의 `userdict.tsv`를 읽으며,
-별도 엔진 DLL이나 Visual C++ 런타임 설치는 필요 없습니다.
+실행 파일 옆에 `hdTrans/dicts/`를 두세요. 사용자 사전은 `hdTrans/user/userdict.tsv`,
+설정은 `hdTrans/user/hdtrans.config.yaml`에서 엔진을 처음 불러올 때 읽습니다. `hdTrans/`가 없으면
+실행 파일이 있는 폴더를 데이터 루트로 씁니다. 별도 엔진 DLL이나 Visual C++ 런타임 설치는 필요 없습니다.
 
 문서 입력은 Shift-JIS, UTF-8(BOM 유무 무관), UTF-16LE(BOM)를 읽고, 결과는 UTF-8 BOM으로
 저장합니다. 문서 전체의 문맥을 함께 번역하며, **중단**을 누르면 현재 문서 처리 후 결과를 저장하지 않습니다.
