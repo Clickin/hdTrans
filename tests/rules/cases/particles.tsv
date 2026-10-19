@@ -1,0 +1,21 @@
+rule	input	expected	kind	layer
+L925	残りのポイントで買う。	나머지의 포인트로 산다.	fix	local
+L925	近所の店で本を買う。	이웃의 가게에서 책을 산다.	keep	local
+L3093	なんか飲みたい。	뭔가 마시고 싶다.	fix	local
+L3093	なんか静かだ。	어쩐지 조용하다.	keep	local
+L975	先生とする約束だ。	선생님과 할 약속이다.	fix	local
+L975	船を旗艦とする。	배를 기함으로 한다.	keep	local
+L975	彼を友人とする。	그를 친구로 한다.	keep	local
+L292	明日だと困る。	내일이라면 곤란하다.	fix	local
+L292	休日だと助かる。	휴일이라면 살아난다.	fix	local
+L292	本当だとしたら驚く。	사실이라고 하면 놀란다.	keep	local
+L292	嘘だと分かった。	거짓말이라고 알았다.	keep	local
+L1948	古い魔法に驚く。	낡은 마법에 놀란다.	fix	local
+L1948	別の方法にする。	다른 방법으로 한다.	keep	local
+L1865	これはなんだよ？	이것은 뭐야?	fix	local
+L1865	本物なんだよ。	진짜야.	keep	local
+L1276	秘密の作戦で敵を倒す。	비밀의 작전으로 적을 쓰러뜨린다.	fix	local
+L1276	気合で勝つ。	기합으로 이긴다.	fix	local
+L1276	決勝戦で勝った。	결승전에서 이겼다.	keep	local
+L2738	先生に翻訳してもらう。	선생님에게 번역받는다.	fix	local
+L2738	韓国語に翻訳する。	한국어로 번역한다.	keep	local

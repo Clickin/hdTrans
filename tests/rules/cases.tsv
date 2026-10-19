@@ -91,8 +91,8 @@ L289	学生だった頃の友達に会った。	학생이었던 무렵의 친구
 L291	私だって！	나래!	current	local
 L291	雨だって。	비래.	current	local
 L292	それが正しいだと信じている。	그것이 올바른이라고 믿고 있다.	current	local
-L292	雨だと困る。	비라고 곤란하다.	current	local
-L292	それだと困る。	그것이라고 곤란하다.	current	local
+L292	雨だと困る。	비라면 곤란하다.	current	local
+L292	それだと困る。	그것이라면 곤란하다.	current	local
 L292	だとしたら	라고 하면	current	local
 L295	図書館では静かにしてください。	도서관에서는 조용하게 해 주세요.	current	local
 L295	この市場では新鮮な魚が安く買える。	이 시장에서는 신선한 생선을 싸게 살 수 있다.	current	local
@@ -137,7 +137,7 @@ L817	振り返っても誰もいない。	되돌아 보고 아무도 없다.	cur
 L916	今日は三時で仕事が終わる。	오늘은 3시에 일이 끝난다.	current	local
 L925	駅前の店で靴を買った。	역 앞의 가게에서 구두를 샀다.	current	local
 L925	会議で来月の予定が決まった。	회의에서 내달의 예정이 정해졌다.	current	local
-L925	ポイントで買った。	포인트에서 샀다.	current	local
+L925	ポイントで買った。	포인트로 샀다.	current	local
 L925	コンビニで買った。	편의점에서 샀다.	current	local
 L932	忘れた傘を取りに戻った。	잊은 우산을 취하러 돌아왔다.	current	local-ending
 L932	駅前の店へ本を買いに行く。	역 앞의 가게에 책을 사러 간다.	current	local-ending
@@ -149,7 +149,7 @@ L952	お金のない学生が多い。	돈이 없는 학생이 많다.	current	l
 L952	風のない日の海は静かだ。	바람이 없는 날의 바다는 조용하다.	current	local
 L975	この部屋を会議室とする。	이 방을 회의실로 한다.	current	local
 L975	来月の一日を休みとします。	내달의 하루를 휴일로 합니다.	current	local
-L975	友人とする相談です。	친구로 하는 상담입니다.	current	local
+L975	友人とする相談です。	친구와 하는 상담입니다.	current	local
 L975	象徴とされる	상징으로 여겨진다	current	local
 L1007	今日は早く帰りたいです。	오늘은 빨리 돌아가고 싶습니다.	current	local
 L1007	今日は天気がとても良いですね。	오늘은 날씨가 매우 좋네요.	current	local
@@ -193,7 +193,7 @@ L1247	小さな声で言った。	작은 목소리로 말했다.	current	local
 L1247	友達と英語で話す。	친구와 영어로 한다.	current	local
 L1276	決勝戦で勝ったので嬉しい。	결승전에서 이겼으므로 기쁘다.	current	local
 L1276	ワールドカップで優勝した。	월드컵에서 우승했다.	current	local
-L1276	作戦で敵を倒した。	작전에서 적을 쓰러뜨렸다.	current	local
+L1276	作戦で敵を倒した。	작전으로 적을 쓰러뜨렸다.	current	local
 L1276	決勝戦で負けた。	결승전에서 졌다.	current	local
 L1286	この問題を解決する方法がまだ見つからない。	이 문제를 해결할 방법이 아직 발견되지 않는다.	current	local-ending
 L1287	明日は雨が降るようだ。	내일은 비가 오는 것 같다.	current	local-ending
@@ -240,7 +240,7 @@ L1832	今日は休みじゃん。	오늘은 휴일야.	current	local
 L1840	ひが昇る。	히가 오른다.	current	local
 L1865	実はこれが私の宝物なんだよ。	실은 이것이 나의 보물이야.	current	local
 L1865	あいつはいつもああなんだよ。	저녀석은 언제나 아야.	current	local
-L1865	それはなんだよ？	그것은이야?	current	local
+L1865	それはなんだよ？	그것은 뭐야?	current	local
 L1865	本当なんだよ。	사실이야.	current	local
 L1869	第5章を読み終えました。	제5장을 다 읽었습니다.	current	local
 L1869	これは第2の人生の始まりだ。	이것은 제2의 인생의 시작이다.	current	local
@@ -260,8 +260,8 @@ L1942	まだ宿題をやってない。	아직 숙제를 하지 않다.	current	
 L1942	朝から何も食べてないんだ。	아침부터 아무것도 먹지 않다.	current	local-ending
 L1948	この計画は来月に移します。	이 계획은 내달로 옮깁니다.	current	local
 L1948	お客様に合わせた方法に仕立てます。	손님에 맞춘 방법으로 짓습니다.	current	local
-L1948	憲法に違反する。	헌법으로 위반한다.	current	local
-L1948	魔法に驚いた。	마법으로 놀랐다.	current	local
+L1948	憲法に違反する。	헌법에 위반한다.	current	local
+L1948	魔法に驚いた。	마법에 놀랐다.	current	local
 L1948	この方法にする。	이 방법으로 한다.	current	local
 L1951	弟が部屋で歌を歌ってる。	남동생이 방에서 노래를 부르고 있다.	current	local-ending
 L1951	猫がソファの上で寝てる。	고양이가 소파 위에서 자고 있다.	current	local-ending
@@ -413,7 +413,7 @@ L2692	仕事にかかった。	일에 걸렸다.	current	local
 L2716	私にできる仕事です。	나가 할 수 있는 일입니다.	current	local
 L2738	初心に立ち返って頑張ろう。	초심으로 되돌아와 노력하자.	current	local
 L2738	あの子はきっと美人に育つよ。	그 아이는 분명 미인으로 자라.	current	local
-L2738	友人に翻訳してもらった。	친구로 번역받았다.	current	local
+L2738	友人に翻訳してもらった。	친구에게 번역받았다.	current	local
 L2738	日本語に翻訳する。	일본어로 번역한다.	current	local
 L2741	来月から大阪で働くことになった。	내달부터 오사카에서 일하게 되었다.	current	local-ending
 L2741	急に出張に行くことになってしまった。	갑자기 출장하러 가게 되어 버렸다.	current	local-ending
@@ -466,7 +466,7 @@ L3059	「ん？　どうかした？」	「응? 어떻게든 했어?」	current	
 L3059	「ん？　もう一回言って？」	「응? 다시 한번 말해?」	current	local
 L3093	なんか寒いね。	어쩐지 춥네.	current	local
 L3093	今日は、なんか眠い。	오늘은, 어쩐지 졸리다.	current	local
-L3093	なんか食べたい。	어쩐지 먹고 싶다.	current	local
+L3093	なんか食べたい。	뭔가 먹고 싶다.	current	local
 L3093	なんか変だ。	어쩐지 이상하다.	current	local
 L3094	パンを、どうぞ運んでください。	빵을, 드세요 옮겨 주세요.	current	local
 L3131	値段より品質で選びます。	가격보다 품질로 선택합니다.	current	local

@@ -2962,17 +2962,16 @@ bool RuleL291([[maybe_unused]] Item* p) {
     return GramEq(p, 0, "Ow"sv);
 }
 
-// # 뒤에 동사나 발화·인식 관련 표현 등이 오면 'だと'를 인용 조사 '(이)라고'로 고른다.
-// # [의심] 조건의 だと와 인용의 だと를 다음 동사가 있다는 이유만으로 구분하지 않는다. 자작 예 雨だと困る。 → 비라고 곤란하다.; -why: だと LocalRule 292 (이)라고. 여기서는 비가 오면 곤란하다는 조건이다.
+// # だとは 발화·인식 등의 문맥에서 ‘(이)라고’를 고르되, 바로 뒤의 困る·助かる는 조건형으로 남긴다.
 // local 292
-//     pos[+1] is 4**
+//     pos[+1] is 4** and src[+1] != "困" and src[+1] != "助か"
 //     src[+1] == "指摘" and pos[+1] is 1**
 //     pos[+1] is 1** and (sem[+1] has UTs or sem[+1] has UTh or sem[+1] has UMn or sem[+1] has USe)
 //     pos[+3] is 4** and (sem[+3] has UTs or sem[+3] has UTh or sem[+3] has UMn or sem[+3] has USe)
 //     (sem[+2] has UTs or sem[+2] has UTh or sem[+2] has UMn or sem[+2] has USe)
 //     (src[+1] == "いえなくもな" or src[+1] == "言えなくもな") and pos[+1] is 7**
 bool RuleL292([[maybe_unused]] Item* p) {
-    return PumsaEq(p, 1, "4**"sv) ||
+    return (PumsaEq(p, 1, "4**"sv) && SrcNe(p, 1, "困"sv) && SrcNe(p, 1, "助か"sv)) ||
            (SrcEq(p, 1, "指摘"sv) && PumsaEq(p, 1, "1**"sv)) ||
            (PumsaEq(p, 1, "1**"sv) && (AttrEq(p, 1, "UTs"sv) ||
            AttrEq(p, 1, "UTh"sv) ||
@@ -5255,7 +5254,7 @@ constexpr CompiledRule kLocal[] = {
     {RuleL289, 0xe001ca47a1fc05e3ull},
     {RuleL290, 0x776fffbb4c9d28f4ull},
     {RuleL291, 0xb747d68e1139e4eeull},
-    {RuleL292, 0xc9c98f5917035c56ull},
+    {RuleL292, 0xf0693e0ae0c0e714ull},
     {RuleL293, 0x98cae8e9e12b4685ull},
     {RuleL294, 0x748132045f1d0a1cull},
     {RuleL295, 0x486c352d7016a6b0ull},
