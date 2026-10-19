@@ -20,6 +20,25 @@ cd "$tmp/other"
 printf 'dicts: ../settings/second\nuserdict: ""\nehnd: ""\ncache: off\n' > "$tmp/bin/hdtrans.config.yaml"
 "$cli" -in "$tmp/input" > "$tmp/out"
 [ "$(cat "$tmp/out")" = 야옹이 ]
+mkdir -p "$tmp/bin/Ehnd"
+printf '야옹이\t흰고양이\t1\t0\n' > "$tmp/bin/Ehnd/PostFilter_test.txt"
+printf 'dicts: ../settings/second\nuserdict: ""\ncache: off\n' > "$tmp/bin/hdtrans.config.yaml"
+"$cli" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 야옹이 ]
+printf 'ehnd: true\n' >> "$tmp/bin/hdtrans.config.yaml"
+"$cli" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 흰고양이 ]
+printf 'ehnd: false\n' >> "$tmp/bin/hdtrans.config.yaml"
+"$cli" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 야옹이 ]
+"$cli" -ehnd "$tmp/bin/Ehnd" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 흰고양이 ]
+printf 'dicts: second\nuserdict: ""\ncache: off\nehnd: true\n' > "$tmp/settings/custom.yaml"
+"$cli" -config "$tmp/settings/custom.yaml" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 흰고양이 ]
+rm "$tmp/bin/hdtrans.config.yaml"
+"$cli" -dicts "$tmp/settings/second" -userdict "" -in "$tmp/input" > "$tmp/out"
+[ "$(cat "$tmp/out")" = 야옹이 ]
 printf 'dicts: [first, second]\nunknown: value\ncg: wrong\nuserdict: ""\nehnd: ""\ncache: off\n' > "$tmp/settings/custom.yaml"
 "$cli" -config "$tmp/settings/custom.yaml" -in "$tmp/input" > "$tmp/out" 2> "$tmp/errors"
 [ "$(cat "$tmp/out")" = 야옹이 ]

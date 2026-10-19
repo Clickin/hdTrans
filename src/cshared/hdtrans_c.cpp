@@ -32,7 +32,6 @@ std::atomic<unsigned> g_waitingAdmins{0};
 std::uint64_t g_generation = 0;
 std::vector<std::string> g_dirs;
 std::optional<std::string> g_ehnd;
-std::string g_defaultEhnd;
 std::string g_configErrors;
 hdTrans::internal::ConfigCache g_cache;
 std::unique_ptr<hdTrans::Engine> g_engine;
@@ -149,8 +148,7 @@ int hdTrans_Initialize(const char* dirs) {
     const auto requestedPaths = paths;
     if (paths.empty() && settings.dicts) paths = *settings.dicts;
     const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
-    const std::string defaultEhnd = hdTrans::dict::EhndFolder(dir);
-    const std::string ehnd = settings.ehnd.value_or(defaultEhnd);
+    const std::string ehnd = settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "";
     {
         AdminLock lock;
         if (generation != g_generation || !g_cache.Apply(settings.cache)) return -1;
@@ -165,7 +163,6 @@ int hdTrans_Initialize(const char* dirs) {
     g_session = std::make_unique<hdTrans::Session>(*g_engine, false, settings.cg, settings.misread);
     g_dirs = requestedPaths;
     g_ehnd.reset();
-    g_defaultEhnd = defaultEhnd;
     g_configErrors = hdTrans::internal::ConfigErrors(config, configPath);
     ++g_generation;
     return 0;
@@ -178,7 +175,6 @@ void hdTrans_Terminate(void) {
     g_engine.reset();
     g_dirs.clear();
     g_ehnd.reset();
-    g_defaultEhnd.clear();
     g_configErrors.clear();
     static_cast<void>(g_cache.Apply(std::nullopt));
 }
@@ -202,14 +198,12 @@ int hdTrans_Reload(void) {
     std::uint64_t generation;
     std::vector<std::string> dirs;
     std::optional<std::string> ehndOverride;
-    std::string defaultEhnd;
     {
         AdminLock lock;
         if (!g_engine) return -1;
         generation = g_generation;
         dirs = g_dirs;
         ehndOverride = g_ehnd;
-        defaultEhnd = g_defaultEhnd;
     }
     const std::string dir = ModuleDir();
     const std::string configPath = hdTrans::internal::ConfigPath(dir);
@@ -217,7 +211,8 @@ int hdTrans_Reload(void) {
     const auto& settings = config.settings;
     if (dirs.empty() && settings.dicts) dirs = *settings.dicts;
     const std::string userFile = settings.userdict.value_or(hdTrans::dict::UserFile(dir));
-    const std::string ehnd = ehndOverride.value_or(settings.ehnd.value_or(defaultEhnd));
+    const std::string configuredEhnd = settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "";
+    const std::string ehnd = ehndOverride.value_or(configuredEhnd);
     {
         AdminLock lock;
         if (generation != g_generation || !g_cache.Apply(settings.cache)) return -1;

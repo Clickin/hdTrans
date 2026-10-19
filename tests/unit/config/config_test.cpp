@@ -94,6 +94,7 @@ HD_TEST(ConfigEmptyAndMissing) {
         HD_CHECK(!result.settings.dicts);
         HD_CHECK(!result.settings.userdict);
         HD_CHECK(!result.settings.ehnd);
+        HD_CHECK(!result.settings.useEhnd);
         HD_CHECK(!result.settings.cache);
         HD_CHECK(result.settings.cg);
         HD_CHECK(!result.settings.misread);
@@ -150,4 +151,26 @@ HD_TEST(ConfigSyntaxAndDocuments) {
     const auto alias = file.Load("userdict: &path user.tsv\nehnd: *path\ncg: false\n");
     HD_REQUIRE(alias.diagnostics.size() == 1);
     HD_CHECK(!alias.settings.cg);
+}
+
+HD_TEST(ConfigEhndSwitch) {
+    TempConfig file;
+    const struct Case { const char* yaml; bool enabled; const char* path; } cases[] = {
+        {"ehnd: true\n", true, nullptr},
+        {"ehnd: false\n", false, nullptr},
+        {"ehnd: Ehnd\n", true, "Ehnd"},
+        {"ehnd: 'true'\n", true, "true"},
+        {"ehnd: true\nehnd: false\n", false, nullptr},
+        {"ehnd: true\nehnd: custom\n", true, "custom"},
+        {"ehnd: custom\nehnd: true\n", true, nullptr},
+    };
+    for (const auto& test : cases) {
+        const auto result = file.Load(test.yaml);
+        HD_CHECK(result.diagnostics.empty());
+        HD_CHECK_EQ(result.settings.useEhnd, test.enabled);
+        if (test.path) {
+            HD_REQUIRE(result.settings.ehnd);
+            HD_CHECK_EQ(*result.settings.ehnd, file.Resolve(test.path));
+        } else HD_CHECK(!result.settings.ehnd);
+    }
 }

@@ -118,15 +118,28 @@ public:
             else { Error("dicts: expected a path or list of paths"); valid = false; }
             if (valid) result_.settings.dicts = std::move(paths);
         } else if (key == "userdict" || key == "ehnd" || key == "cache") {
+            if (key == "ehnd" && Type() == YAML_SCALAR_EVENT && ScalarKind(event_) == Kind::Bool) {
+                const std::string enabled = Lower(Scalar(event_));
+                if (enabled != "true" && enabled != "false") {
+                    Error("ehnd: expected a path or boolean (true or false)");
+                    return true;
+                }
+                result_.settings.ehnd.reset();
+                result_.settings.useEhnd = enabled == "true";
+                return true;
+            }
             std::string path;
             if (key == "cache" && Type() == YAML_SCALAR_EVENT && ScalarKind(event_) == Kind::String &&
                 Lower(Scalar(event_)) == "off") path = "off";
             else if (!Path(path, base)) {
-                Error(key + ": expected a path" + (key == "cache" ? " or off" : ""));
+                Error(key + ": expected a path" + (key == "cache" ? " or off" : key == "ehnd" ? " or boolean" : ""));
                 return Skip();
             }
             if (key == "userdict") result_.settings.userdict = std::move(path);
-            else if (key == "ehnd") result_.settings.ehnd = std::move(path);
+            else if (key == "ehnd") {
+                result_.settings.ehnd = std::move(path);
+                result_.settings.useEhnd = !result_.settings.ehnd->empty();
+            }
             else result_.settings.cache = std::move(path);
         } else if (key == "cg" || key == "misread" || key == "reference") {
             if (Type() != YAML_SCALAR_EVENT || ScalarKind(event_) != Kind::Bool ||

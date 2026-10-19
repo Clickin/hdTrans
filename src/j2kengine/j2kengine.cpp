@@ -152,7 +152,7 @@ int __stdcall J2K_Initialize(char* /*dicPath*/) {
         }
     }
     auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
-    e->OpenEhnd(settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)));
+    e->OpenEhnd(settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "");
     if (!e->Open(dirs, false, userFile)) return 0;
     LogLoadErrors(*e);
     AdminLock lock;
@@ -222,7 +222,7 @@ void __stdcall J2K_ReloadUserDict() {
         }
     }
     auto e = std::make_unique<hdTrans::Engine>(settings.reference, hdTrans::CacheWrite::Off, hdTrans::UserReload::Auto);
-    e->OpenEhnd(settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)));
+    e->OpenEhnd(settings.useEhnd ? settings.ehnd.value_or(hdTrans::dict::EhndFolder(dir)) : "");
     // A userdict.tsv that does not load keeps the dictionaries loaded before.
     if (!e->Open(dirs, false, userFile)) return;
     LogLoadErrors(*e);

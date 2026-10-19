@@ -12,6 +12,7 @@ struct Config {
     std::optional<std::vector<std::string>> dicts;
     std::optional<std::string> userdict;
     std::optional<std::string> ehnd;
+    bool useEhnd = false;
     std::optional<std::string> cache;
     bool cg = true;
     bool misread = false;

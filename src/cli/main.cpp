@@ -354,8 +354,7 @@ int main(int argc, char** argv) {
                      error.c_str());
         if (userFileArg) return 1;
     }
-    // Without -ehnd, an Ehnd folder next to the program is used when there is one.
-    const std::string ehnd = ehndArg ? *ehndArg : hdTrans::dict::EhndFolder(programDir);
+    const std::string ehnd = ehndArg ? *ehndArg : config.settings.useEhnd ? hdTrans::dict::EhndFolder(programDir) : "";
     if (!ehnd.empty() && !engine.OpenEhnd(ehnd)) {
         std::fprintf(stderr, "hdtrans: cannot read the Ehnd folder %s\n", ehnd.c_str());
         return 1;
