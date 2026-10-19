@@ -126,7 +126,7 @@ if(NOT EMSCRIPTEN)
 
     add_executable(hdtrans_tests ${HDTRANS_TEST_SOURCES})
     target_include_directories(hdtrans_tests PRIVATE tests/unit src)
-    target_link_libraries(hdtrans_tests PRIVATE hdtrans hdtrans_gui_support)
+    target_link_libraries(hdtrans_tests PRIVATE hdtrans_gui_support)
     enable_testing()
     add_test(NAME unit COMMAND hdtrans_tests)
     if(UNIX)
