@@ -69,9 +69,9 @@ macOS, Linux 판에는 명령줄 프로그램만 있습니다([명령줄 사용�
 
 | 라이브러리 | 라이선스 |
 |---|---|
-| [PCRE2](https://github.com/PCRE2Project/pcre2) 10.49 | BSD-3-Clause (PCRE2 exception) |
-| [SLJIT](https://github.com/zherczeg/sljit) (PCRE2에 포함) | BSD-2-Clause |
-| [libyaml](https://github.com/yaml/libyaml) 0.2.5 | MIT |
+| [PCRE2](https://github.com/PCRE2Project/pcre2) 10.49 | [BSD-3-Clause (PCRE2 exception)](third_party/pcre2/LICENCE.md) |
+| [SLJIT](https://github.com/zherczeg/sljit) (PCRE2에 포함) | [BSD-2-Clause](third_party/pcre2/deps/sljit/LICENSE) |
+| [libyaml](https://github.com/yaml/libyaml) 0.2.5 | [MIT](third_party/libyaml/License) |
 
 원문: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt)
 
