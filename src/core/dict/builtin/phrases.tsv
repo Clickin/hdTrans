@@ -338,6 +338,10 @@
 わずかも	조금도	adv
 わずかながら	약간이나마	adv
 さもありそうな	그럴듯한	phrase
+気持ちよさそうに	기분 좋은 듯이	adv
+気持ち良さそうに	기분 좋은 듯이	adv
+よさそうに	좋은 듯이	adv
+良さそうに	좋은 듯이	adv
 やむにやまれず	어쩔 수 없이	adv
 やむをえず	부득이	adv
 やむなき	부득이한	phrase
@@ -1004,6 +1008,7 @@
 // Imperatives that are also the stem of an ichidan verb (落ち着ける).
 落ち着け	진정해	intj
 左様でございます	그렇습니다	phrase
+その通りにございます	그렇습니다	phrase
 左様でございますか	그렇습니까	phrase
 何でございましょう	무슨 일이십니까	phrase
 家家臣	가문 가신	n
