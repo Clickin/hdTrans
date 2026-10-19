@@ -8,7 +8,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $here = Split-Path $PSScriptRoot -Parent
-if (-not $Build) { $Build = Join-Path $here 'build/msvc-x86' }
+if (-not $Build) { $Build = Join-Path $here 'build/windows-x86/Release' }
 if (-not $Golden) { $Golden = Join-Path $here '../hdtrans-golden' }
 if (-not $Dicts) { $Dicts = Join-Path $here '../dicts/base' }
 

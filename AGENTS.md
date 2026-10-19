@@ -4,12 +4,13 @@ One static library and thin front ends: CLI, `hdTransEngine.dll` (C API), `J2KEn
 (J2K_* exports for hosts that load that DLL), WebAssembly. No dependencies.
 
 ## Build and test
-- CMake presets (CMakePresets.json): `mac` / `linux` build the library, CLI and unit
-  tests with clang or gcc; `msvc-x86` / `msvc-x64` build them and the two DLLs with
-  MSVC inside a `vcvarsall` environment (`tools/build.ps1` sets one up);
+- CMake presets (CMakePresets.json): `mac` / `linux` build the static/shared libraries,
+  CLI and tests with clang or gcc; `windows-x86` / `windows-x64` build them and
+  J2KEngine.dll with Visual Studio 2022. `tools/build.ps1` also selects newer installed
+  Visual Studio versions. Windows Release binaries are under `build/<preset>/Release`.
   `wasm` is run as `emcmake cmake --preset wasm`.
 - `cmake --preset mac && cmake --build --preset mac && ctest --preset mac` is the
-  development loop. The DLLs are the product and are built with MSVC.
+  development loop; substitute any native platform's preset for `mac`.
 - `tools/golden.sh` runs the CLI on the expectation sets of `$HDTRANS_GOLDEN` and diffs;
   a change that alters any expected line is a behaviour change and needs its own commit
   with the reason.

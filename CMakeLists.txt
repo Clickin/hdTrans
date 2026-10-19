@@ -1,5 +1,5 @@
-# Static engine library, CLI and unit tests on any C++20 compiler; hdTransEngine.dll (C API) and
-# J2KEngine.dll (J2K_* exports) with MSVC; the wasm module with Emscripten. Presets: CMakePresets.json.
+# Static/shared engine libraries, CLI and unit tests on any C++20 compiler;
+# J2KEngine.dll (J2K_* exports) on Windows; WebAssembly with Emscripten. Presets: CMakePresets.json.
 cmake_minimum_required(VERSION 3.25)
 project(hdtrans LANGUAGES CXX)
 if(WIN32)
@@ -49,6 +49,10 @@ set_target_properties(hdtrans PROPERTIES OUTPUT_NAME hdTransCore COMPILE_PDB_NAM
 target_include_directories(hdtrans PUBLIC include PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}")
 
 if(NOT EMSCRIPTEN)
+    set_target_properties(hdtrans PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    find_package(Threads REQUIRED)
+    target_link_libraries(hdtrans PUBLIC Threads::Threads)
+
     add_executable(hdtrans_cli src/cli/main.cpp)
     target_include_directories(hdtrans_cli PRIVATE src)
     target_link_libraries(hdtrans_cli PRIVATE hdtrans)
@@ -61,9 +65,8 @@ if(NOT EMSCRIPTEN)
     enable_testing()
     add_test(NAME unit COMMAND hdtrans_tests)
 
-    find_package(Threads REQUIRED)
     add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp)
-    target_link_libraries(admin_priority PRIVATE hdtrans Threads::Threads)
+    target_link_libraries(admin_priority PRIVATE hdtrans)
     add_test(NAME host.admin_priority COMMAND admin_priority "${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/dict/testdata/folder")
     set_tests_properties(host.admin_priority PROPERTIES TIMEOUT 60
         ENVIRONMENT "HDTRANS_CACHE_DIR=${CMAKE_CURRENT_BINARY_DIR}/admin-priority-cache")
