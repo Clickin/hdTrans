@@ -22,6 +22,8 @@ https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두
 - 문서 방식은 입력 전체를 한 세션으로(`hdtrans`와 같음), 줄 단위는 줄마다 새 세션으로(`hdtrans -each`와
   같음) 번역합니다. 번역 전에 `reset()`으로 세션을 비웁니다.
 - 페이지 아래 버전 줄은 빌드한 커밋의 날짜(Asia/Seoul, `yyyy-MM-dd HH:mm:ss`)와 짧은 해시입니다.
+- WASM과 사전 캐시도 manifest의 크기와 SHA-256을 검사합니다. 맞지 않는 항목은 지우고 다시 받아
+  검사하며, 다운로드 실패 시 손상된 캐시를 쓰지 않습니다.
 
 ## 빌드
 
@@ -61,6 +63,12 @@ node web/check.mjs http://127.0.0.1:8000/ INPUT want.txt 20
 같은지, 긴 입력의 진행 막대, 사용자 사전, 이름 표 편집과 붙여 넣기가 번역을 바꾸는지, 버전 줄을
 확인하고, 번역 API가 없는지(`POST /api/translate`가 404) 봅니다(`http.server`는 501로 답해 이 항목만
 실패합니다). `CHROME`으로 Chrome 경로를, `SHOT`으로 화면 저장 경로를 줍니다.
+
+캐시 무결성은 실제 Cache Storage의 내용과 길이를 바꾸고, 다운로드를 차단해 확인합니다.
+
+```sh
+BOUNDARY=cache node web/check.mjs http://127.0.0.1:8000/
+```
 
 ## 배포
 
