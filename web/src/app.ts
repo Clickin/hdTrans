@@ -32,29 +32,37 @@ const cacheName = 'hdtrans-assets';
 const mb = (n: number) => (n / 1e6).toFixed(1);
 let ready = false;
 
-src.value = localStorage.getItem('hdtrans.src') ?? '';
+function stored(key: string, value?: string): string | null {
+  try {
+    if (value === undefined) return localStorage.getItem(key);
+    localStorage.setItem(key, value);
+  } catch {}
+  return null;
+}
+
+src.value = stored('hdtrans.src') ?? '';
 src.addEventListener('input', () => {
-  localStorage.setItem('hdtrans.src', src.value);
+  stored('hdtrans.src', src.value);
   schedule();
 });
 const editor = (key: string, placeholders: string[]) => {
   const g = grid($(key), ['일본어', '한국어', '품사', '옵션'], placeholders, key + '.tsv', (text) => {
-    localStorage.setItem('hdtrans.' + key, text);
+    stored('hdtrans.' + key, text);
     schedule();
   });
-  g.text = localStorage.getItem('hdtrans.' + key) ?? '';
+  g.text = stored('hdtrans.' + key) ?? '';
   return g;
 };
 const userdict = editor('userdict', ['手伝う', '돕다', 'v:ㅂ', '']);
 const names = editor('names', ['春香', '하루카', 'name', '']);
-const savedMode = localStorage.getItem('hdtrans.mode');
-if (savedMode) (document.querySelector(`input[name=mode][value=${savedMode}]`) as HTMLInputElement).checked = true;
-document.querySelectorAll('input[name=mode]').forEach((el) =>
+const savedMode = stored('hdtrans.mode');
+document.querySelectorAll<HTMLInputElement>('input[name=mode]').forEach((el) => {
+  if (el.value === savedMode) el.checked = true;
   el.addEventListener('change', () => {
-    localStorage.setItem('hdtrans.mode', mode());
+    stored('hdtrans.mode', mode());
     schedule();
-  }),
-);
+  });
+});
 const mode = () => (document.querySelector('input[name=mode]:checked') as HTMLInputElement).value;
 
 /** Returns the text of the example file. */

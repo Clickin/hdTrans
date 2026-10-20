@@ -24,6 +24,8 @@ https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두
 - 페이지 아래 버전 줄은 빌드한 커밋의 날짜(Asia/Seoul, `yyyy-MM-dd HH:mm:ss`)와 짧은 해시입니다.
 - WASM과 사전 캐시도 manifest의 크기와 SHA-256을 검사합니다. 맞지 않는 항목은 지우고 다시 받아
   검사하며, 다운로드 실패 시 손상된 캐시를 쓰지 않습니다.
+- 저장된 방식이 현재 라디오 선택지와 맞지 않으면 기본 문서 방식을 씁니다. 브라우저 저장소를
+  사용할 수 없어도 번역은 계속되지만, 입력과 설정 변경은 다음 방문에 남지 않습니다.
 
 ## 빌드
 
@@ -68,6 +70,7 @@ node web/check.mjs http://127.0.0.1:8000/ INPUT want.txt 20
 
 ```sh
 BOUNDARY=cache node web/check.mjs http://127.0.0.1:8000/
+BOUNDARY=storage node web/check.mjs http://127.0.0.1:8000/
 ```
 
 ## 배포
