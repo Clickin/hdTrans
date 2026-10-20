@@ -191,16 +191,19 @@ async function sha256(b: Uint8Array): Promise<string> {
 }
 
 /**
- * Returns the bytes of a, from the cache or downloaded (and then checked
- * against its hash and cached). progress gets the bytes read so far.
+ * Returns the bytes of a, verified against its size and hash on cache hits
+ * and downloads. progress gets the bytes read so far.
  */
 async function asset(cache: Cache | undefined, a: Asset, progress: (n: number) => void): Promise<Uint8Array> {
   const url = new URL(a.path, location.href);
   const hit = await cache?.match(url);
   if (hit) {
     const b = new Uint8Array(await hit.arrayBuffer());
-    progress(b.length);
-    return b;
+    if (b.length === a.size && (await sha256(b)) === a.sha256) {
+      progress(b.length);
+      return b;
+    }
+    await cache?.delete(url);
   }
   const res = await fetch(url);
   if (!res.ok || !res.body) throw new Error(`${a.name}: HTTP ${res.status}`);
