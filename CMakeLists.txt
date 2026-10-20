@@ -186,6 +186,16 @@ if(NOT EMSCRIPTEN)
     endif()
     set_tests_properties(host.config PROPERTIES ENVIRONMENT "HDTRANS_CACHE_DIR=off")
 
+    add_executable(capi_host tests/host/capi.cpp)
+    target_include_directories(capi_host PRIVATE include)
+    target_link_libraries(capi_host PRIVATE hdtrans_shared)
+    target_compile_definitions(capi_host PRIVATE HDTRANS_USE_DLL)
+    foreach(case null-text empty null-empty embedded-nul translate-out translate-size user-out user-size filter-out filter-size)
+        add_test(NAME host.capi.${case} COMMAND capi_host ${case}
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/dict/testdata/folder")
+        set_tests_properties(host.capi.${case} PROPERTIES ENVIRONMENT "HDTRANS_CACHE_DIR=off")
+    endforeach()
+
     add_executable(admin_priority tests/host/admin_priority.cpp src/cshared/hdtrans_c.cpp src/frontend/module_dir.cpp)
     target_include_directories(admin_priority PRIVATE src)
     target_link_libraries(admin_priority PRIVATE hdtrans ${CMAKE_DL_LIBS})
