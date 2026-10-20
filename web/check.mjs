@@ -23,12 +23,13 @@ import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const [url, inputFile, expectedFile, count = '20'] = process.argv.slice(2);
-if (!expectedFile) {
-  console.error('usage: node check.mjs URL INPUT EXPECTED [LINES]');
+const boundary = process.env.BOUNDARY;
+if (!url || (!expectedFile && !boundary)) {
+  console.error('usage: node check.mjs URL INPUT EXPECTED [LINES], or BOUNDARY=cache node check.mjs URL');
   process.exit(2);
 }
-const input = readFileSync(inputFile, 'utf8').split('\n').slice(0, Number(count)).join('\n');
-const expected = readFileSync(expectedFile, 'utf8').replace(/\n$/, '');
+const input = inputFile ? readFileSync(inputFile, 'utf8').split('\n').slice(0, Number(count)).join('\n') : '';
+const expected = expectedFile ? readFileSync(expectedFile, 'utf8').replace(/\n$/, '') : '';
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 const profile = mkdtempSync(join(tmpdir(), 'hdtrans-check-'));
@@ -218,8 +219,60 @@ async function progressCheck() {
   console.log(`progress: ${ok ? 'ok    ' : 'FAILED'} bar shown during a ${all.split('\n').length}-line translation and hidden after (${r.info})`);
 }
 
+async function cacheCheck() {
+  await visit('cache seed');
+  const assets = await evaluate(`fetch('manifest.json').then(r => r.json()).then(m => [m.wasm, m.dict.snapshot])`);
+  await send('Network.setCacheDisabled', { cacheDisabled: true });
+  await send('Network.setBlockedURLs', { urls: assets.map(a => new URL(a.path, url).href) });
+  await visit('valid cached assets, downloads blocked');
+  await send('Network.setBlockedURLs', { urls: [] });
+  for (const a of assets) {
+    for (const damage of ['content', 'length', 'offline']) {
+      await evaluate(`(async () => {
+        const cache = await caches.open('hdtrans-assets');
+        const url = new URL(${JSON.stringify(a.path)}, location.href);
+        const b = new Uint8Array(await (await cache.match(url)).arrayBuffer());
+        if (${damage !== 'length'}) b[0] ^= 255;
+        await cache.put(url, new Response(${damage === 'length' ? 'b.subarray(0, b.length - 1)' : 'b'}));
+      })()`);
+      if (damage === 'offline') {
+        await send('Network.setBlockedURLs', { urls: [new URL(a.path, url).href] });
+      }
+      try {
+        if (damage === 'offline') {
+          await send('Page.navigate', { url });
+          await until(`document.readyState !== 'loading' && document.body.dataset.engine`);
+          const rejected = await evaluate(`(async () =>
+            document.body.dataset.engine === 'error' &&
+            !(await (await caches.open('hdtrans-assets')).match(new URL(${JSON.stringify(a.path)}, location.href))))()`);
+          if (!rejected) throw new Error('corrupt entry retained after failed download');
+        } else {
+          await visit(`${a.name}: corrupt ${damage}`);
+          const hash = await evaluate(`(async () => {
+            const cache = await caches.open('hdtrans-assets');
+            const b = await (await cache.match(new URL(${JSON.stringify(a.path)}, location.href))).arrayBuffer();
+            return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', b)),
+              x => x.toString(16).padStart(2, '0')).join('');
+          })()`);
+          if (hash !== a.sha256) throw new Error('cache was not repaired with verified bytes');
+        }
+        console.log(`cache: ok ${a.name} ${damage}`);
+      } catch (err) {
+        failed = true;
+        console.log(`cache: FAILED ${a.name} ${damage}: ${err.message}`);
+      }
+      await send('Network.setBlockedURLs', { urls: [] });
+      await evaluate(`caches.open('hdtrans-assets').then(c => c.delete(new URL(${JSON.stringify(a.path)}, location.href)))`);
+      await visit('restore clean cache');
+    }
+  }
+}
+
 let failed = false;
 try {
+  if (boundary === 'cache') {
+    await cacheCheck();
+  } else {
   let wasReady;
   await visit(1, async (ready) => (wasReady = ready));
   await earlyCheck('first-visit sample translated when the engine became ready', wasReady);
@@ -249,6 +302,7 @@ try {
     await type(typed);
   });
   await earlyCheck('text typed during the load translated when the engine became ready', wasReady);
+  }
 } catch (err) {
   console.log('error:', err.message);
   failed = true;
