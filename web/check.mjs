@@ -25,7 +25,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const [url, inputFile, expectedFile, count = '20'] = process.argv.slice(2);
 const boundary = process.env.BOUNDARY;
 if (!url || (!expectedFile && !boundary)) {
-  console.error('usage: node check.mjs URL INPUT EXPECTED [LINES], or BOUNDARY=cache node check.mjs URL');
+  console.error('usage: node check.mjs URL INPUT EXPECTED [LINES], or BOUNDARY=cache|etag node check.mjs URL');
   process.exit(2);
 }
 const input = inputFile ? readFileSync(inputFile, 'utf8').split('\n').slice(0, Number(count)).join('\n') : '';
@@ -50,6 +50,7 @@ let id = 0;
 const waiting = new Map();
 let bytes = 0;
 let requests = 0;
+const traffic = [];
 ws.addEventListener('message', (ev) => {
   const m = JSON.parse(ev.data);
   if (m.id && waiting.has(m.id)) {
@@ -58,6 +59,10 @@ ws.addEventListener('message', (ev) => {
   } else if (m.method === 'Network.loadingFinished') {
     bytes += m.params.encodedDataLength;
     requests++;
+  } else if (m.method === 'Network.requestWillBeSent') {
+    traffic.push({ request: m.params.request });
+  } else if (m.method === 'Network.responseReceived') {
+    traffic.push({ response: m.params.response });
   }
 });
 const send = (method, params = {}) =>
@@ -268,10 +273,68 @@ async function cacheCheck() {
   }
 }
 
+async function etagCheck() {
+  await send('Network.setCacheDisabled', { cacheDisabled: true });
+  await visit('ETag seed');
+  const assets = await evaluate(`fetch('manifest.json').then(r => r.json()).then(m => [m.wasm, m.dict.snapshot])`);
+  const check = (ok, message) => {
+    failed ||= !ok;
+    console.log(`etag: ${ok ? 'ok' : 'FAILED'} ${message}`);
+  };
+  for (const a of assets) {
+    const tag = await evaluate(`caches.open('hdtrans-assets').then(c => c.match(new URL(${JSON.stringify(a.path)}, location.href))).then(r => r.headers.get('etag'))`);
+    check(!!tag, `${a.name}: retain downloaded ETag`);
+    await evaluate(`(async () => {
+      const url = new URL(${JSON.stringify(a.path)}, location.href);
+      const response = await fetch(url, {cache: 'no-store'});
+      if (!response.headers.get('etag')) throw new Error('ETag-capable server required');
+      await (await caches.open('hdtrans-assets')).put(url, response);
+    })()`);
+  }
+  for (const scenario of ['unchanged', 'stale-tag', 'corrupt-with-valid-tag']) {
+    if (scenario !== 'unchanged') {
+      for (const a of assets) {
+        await evaluate(`(async () => {
+          const cache = await caches.open('hdtrans-assets');
+          const url = new URL(${JSON.stringify(a.path)}, location.href);
+          const response = await cache.match(url);
+          const headers = new Headers(response.headers);
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          if (${scenario === 'stale-tag'}) headers.set('etag', '"stale-validator"');
+          else bytes[0] ^= 255;
+          await cache.put(url, new Response(bytes, {headers}));
+        })()`);
+      }
+    }
+    traffic.length = 0;
+    await visit(`ETag ${scenario}`);
+    for (const a of assets) {
+      const address = new URL(a.path, url).href;
+      const request = traffic.find(e => e.request?.url === address)?.request;
+      const response = traffic.find(e => e.response?.url === address)?.response;
+      const conditional = request && Object.entries(request.headers).find(([key]) => key.toLowerCase() === 'if-none-match')?.[1];
+      check(scenario === 'corrupt-with-valid-tag' ? !!request && !conditional : !!conditional,
+        `${a.name}: ${scenario} conditional request policy`);
+      check(response?.status === (scenario === 'unchanged' ? 304 : 200),
+        `${a.name}: ${scenario} response status ${response?.status}`);
+      const valid = await evaluate(`(async () => {
+        const response = await (await caches.open('hdtrans-assets')).match(new URL(${JSON.stringify(a.path)}, location.href));
+        const b = await response.arrayBuffer();
+        const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', b)), x => x.toString(16).padStart(2, '0')).join('');
+        return b.byteLength === ${a.size} && hash === ${JSON.stringify(a.sha256)} &&
+          !!response.headers.get('etag') && response.headers.get('etag') !== '"stale-validator"';
+      })()`);
+      check(valid, `${a.name}: ${scenario} verified bytes and current validator`);
+    }
+  }
+}
+
 let failed = false;
 try {
   if (boundary === 'cache') {
     await cacheCheck();
+  } else if (boundary === 'etag') {
+    await etagCheck();
   } else {
   let wasReady;
   await visit(1, async (ready) => (wasReady = ready));
