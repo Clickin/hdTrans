@@ -128,6 +128,10 @@ UTF-8 BOM으로 저장합니다. 문서 전체를 한 번에 번역하므로 문
 | `void hdTrans_FreeMem(void* p)` | `hdTrans_Translate`가 돌려준 버퍼 해제 |
 | `const char* hdTrans_Version(void)` | 라이브러리 버전 문자열 |
 
+버퍼를 돌려주는 세 함수는 `out`과 `outn`이 NULL이면 -1을 반환합니다. `hdTrans_Translate`의
+`text`는 `n == 0`일 때만 NULL을 허용합니다. 출력 버퍼 할당 실패도 -1이며, 실패 시 호출자의
+출력 포인터와 길이는 바꾸지 않습니다.
+
 ```c
 #include "core/hdtrans.h"
 

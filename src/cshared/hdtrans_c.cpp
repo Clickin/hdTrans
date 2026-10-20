@@ -145,10 +145,11 @@ void hdTrans_Terminate(void) {
 }
 
 int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn) {
+    if ((!text && n != 0) || !out || !outn) return -1;
     std::unique_lock<std::mutex> lock(g_mutex);
     g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
     if (!g_session) return -1;
-    return Copy(g_session->Translate(std::string_view(text, n)), out, outn);
+    return Copy(g_session->Translate(std::string_view(text ? text : "", n)), out, outn);
 }
 
 int hdTrans_Reset(void) {
@@ -200,6 +201,7 @@ int hdTrans_Reload(void) {
 }
 
 int hdTrans_UserDictError(char** out, size_t* outn) {
+    if (!out || !outn) return -1;
     std::unique_lock<std::mutex> lock(g_mutex);
     g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
     if (!g_engine) return -1;
@@ -219,6 +221,7 @@ int hdTrans_OpenEhnd(const char* dir) {
 }
 
 int hdTrans_FilterErrors(char** out, size_t* outn) {
+    if (!out || !outn) return -1;
     std::unique_lock<std::mutex> lock(g_mutex);
     g_adminsDone.wait(lock, [] { return g_waitingAdmins == 0; });
     if (!g_engine) return -1;

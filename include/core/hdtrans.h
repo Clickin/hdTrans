@@ -34,7 +34,9 @@ HDTRANS_API void hdTrans_Terminate(void);
 
 /* Translates text[0..n), one or more "\n"-separated lines, in the process session.
  * Writes a NUL-terminated UTF-8 buffer to *out and its length (without the NUL) to
- * *outn. Returns 0, or -1 when uninitialized or terminated. */
+ * *outn. NULL text is accepted only when n is zero. out and outn must be non-NULL.
+ * Returns 0, or -1 for invalid arguments, when uninitialized or terminated, or
+ * when the output buffer cannot be allocated. Failure leaves output parameters unchanged. */
 HDTRANS_API int hdTrans_Translate(const char* text, size_t n, char** out, size_t* outn);
 
 /* Forgets the names and context the session learned from earlier text, so that the next
@@ -48,7 +50,8 @@ HDTRANS_API int hdTrans_Reload(void);
 
 /* Writes config diagnostics and user dictionary errors, one line per error, as
  * a buffer like hdTrans_Translate does; empty when there are none. Returns 0,
- * or -1 when uninitialized or terminated. */
+ * or -1 when uninitialized or terminated, out or outn is NULL, or output allocation
+ * fails. Failure leaves output parameters unchanged. */
 HDTRANS_API int hdTrans_UserDictError(char** out, size_t* outn);
 
 /* Takes the filters and user dictionary of the Ehnd folder dir (UTF-8; NULL or empty
@@ -58,7 +61,8 @@ HDTRANS_API int hdTrans_OpenEhnd(const char* dir);
 
 /* Writes the lines of the filter files and of the Ehnd folder that were skipped, as
  * "file:line: message" lines, as a buffer like hdTrans_Translate does. Returns 0, or -1
- * when uninitialized or terminated. */
+ * when uninitialized or terminated, out or outn is NULL, or output allocation fails.
+ * Failure leaves output parameters unchanged. */
 HDTRANS_API int hdTrans_FilterErrors(char** out, size_t* outn);
 
 HDTRANS_API void hdTrans_FreeMem(void* p);
