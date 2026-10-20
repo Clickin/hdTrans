@@ -25,7 +25,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 const [url, inputFile, expectedFile, count = '20'] = process.argv.slice(2);
 const boundary = process.env.BOUNDARY;
 if (!url || (!expectedFile && !boundary)) {
-  console.error('usage: node check.mjs URL INPUT EXPECTED [LINES], or BOUNDARY=cache|etag node check.mjs URL');
+  console.error('usage: node check.mjs URL INPUT EXPECTED [LINES], or BOUNDARY=cache|etag|storage node check.mjs URL');
   process.exit(2);
 }
 const input = inputFile ? readFileSync(inputFile, 'utf8').split('\n').slice(0, Number(count)).join('\n') : '';
@@ -329,12 +329,70 @@ async function etagCheck() {
   }
 }
 
+async function storageCheck() {
+  for (const [saved, expected, fault] of [
+    ['line', 'line', ''],
+    ['unsupported', 'document', ''],
+    [']', 'document', ''],
+    ['line', 'document', 'missing-radio'],
+    ['line', 'document', 'denied'],
+    ['line', 'line', 'full'],
+  ]) {
+    const script = await send('Page.addScriptToEvaluateOnNewDocument', { source: `
+      addEventListener('error', e => window.startupError = e.message);
+      localStorage.clear();
+      localStorage.setItem('hdtrans.mode', ${JSON.stringify(saved)});
+      if (${fault === 'missing-radio'}) {
+        new MutationObserver(() => document.querySelector('input[value=line]')?.remove())
+          .observe(document, {childList: true, subtree: true});
+      }
+      if (${fault === 'denied'}) {
+        Object.defineProperty(window, 'localStorage', {get() {throw new DOMException('Storage denied', 'SecurityError');}});
+      }
+      if (${fault === 'full'}) {
+        Storage.prototype.setItem = () => {throw new DOMException('Storage full', 'QuotaExceededError');};
+      }
+    ` });
+    try {
+      await send('Page.navigate', { url });
+      await until(`document.readyState !== 'loading' && (window.startupError || document.body.dataset.engine)`);
+      const state = await evaluate(`({
+        error: window.startupError, engine: document.body.dataset.engine,
+        mode: document.querySelector('input[name=mode]:checked')?.value
+      })`);
+      if (state.error || state.engine !== 'ready' || state.mode !== expected) {
+        throw new Error(JSON.stringify(state));
+      }
+      await evaluate(`(() => {
+        document.getElementById('out').dataset.done = '0';
+        const src = document.getElementById('src');
+        src.value = '猫が好きです。';
+        src.dispatchEvent(new Event('input'));
+      })()`);
+      await until(`window.startupError || document.getElementById('out').dataset.done === '1'`);
+      const error = await evaluate('window.startupError');
+      if (error) throw new Error(error);
+      if (await evaluate(`document.getElementById('out').value`) !== '고양이를 좋아합니다.') {
+        throw new Error('storage failure interrupted translation');
+      }
+      console.log(`storage: ok ${JSON.stringify(saved)} ${fault}`);
+    } catch (err) {
+      failed = true;
+      console.log(`storage: FAILED ${JSON.stringify(saved)} ${fault}: ${err.message}`);
+    } finally {
+      await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: script.identifier });
+    }
+  }
+}
+
 let failed = false;
 try {
   if (boundary === 'cache') {
     await cacheCheck();
   } else if (boundary === 'etag') {
     await etagCheck();
+  } else if (boundary === 'storage') {
+    await storageCheck();
   } else {
   let wasReady;
   await visit(1, async (ready) => (wasReady = ready));
