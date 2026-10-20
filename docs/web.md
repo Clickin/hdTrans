@@ -29,6 +29,8 @@ https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두
   `200`은 응답의 크기와 SHA-256을 다시 검사한 뒤 새 ETag와 함께 저장합니다. ETag는 무결성 검사를
   대체하지 않습니다. 네트워크 연결 실패 시에는 검증된 정상 캐시만 사용합니다. ETag가 없는 기존
   캐시나 서버에서는 크기와 SHA-256 검사를 유지합니다.
+- 저장된 방식이 현재 라디오 선택지와 맞지 않으면 기본 문서 방식을 씁니다. 브라우저 저장소를
+  사용할 수 없어도 번역은 계속되지만, 입력과 설정 변경은 다음 방문에 남지 않습니다.
 
 ## 빌드
 
@@ -96,6 +98,7 @@ node web/check.mjs http://127.0.0.1:8000/ INPUT want.txt 20
 ```sh
 BOUNDARY=cache node web/check.mjs http://127.0.0.1:8000/
 BOUNDARY=etag node web/check.mjs http://127.0.0.1:8000/   # ETag를 제공하는 서버 필요
+BOUNDARY=storage node web/check.mjs http://127.0.0.1:8000/
 ```
 
 ## 배포
