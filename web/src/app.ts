@@ -197,15 +197,27 @@ async function sha256(b: Uint8Array): Promise<string> {
 async function asset(cache: Cache | undefined, a: Asset, progress: (n: number) => void): Promise<Uint8Array> {
   const url = new URL(a.path, location.href);
   const hit = await cache?.match(url);
+  let res: Response | undefined;
   if (hit) {
     const b = new Uint8Array(await hit.arrayBuffer());
     if (b.length === a.size && (await sha256(b)) === a.sha256) {
-      progress(b.length);
-      return b;
+      const etag = hit.headers.get('etag');
+      if (etag) {
+        try {
+          res = await fetch(url, { headers: { 'If-None-Match': etag }, cache: 'no-store' });
+        } catch {
+          // Verified cached bytes remain usable when the network is unavailable.
+        }
+      }
+      if (!res || res.status === 304) {
+        progress(b.length);
+        return b;
+      }
+    } else {
+      await cache?.delete(url);
     }
-    await cache?.delete(url);
   }
-  const res = await fetch(url);
+  res ??= await fetch(url);
   if (!res.ok || !res.body) throw new Error(`${a.name}: HTTP ${res.status}`);
   const b = new Uint8Array(a.size);
   let n = 0;
@@ -219,9 +231,10 @@ async function asset(cache: Cache | undefined, a: Asset, progress: (n: number) =
     progress(n);
   }
   if (n !== a.size || (await sha256(b)) !== a.sha256) throw new Error(`${a.name}: content does not match the manifest`);
-  await cache
-    ?.put(url, new Response(b as BufferSource, { headers: { 'content-type': res.headers.get('content-type') ?? '' } }))
-    .catch(() => {});
+  const headers = new Headers({ 'content-type': res.headers.get('content-type') ?? '' });
+  const etag = res.headers.get('etag');
+  if (etag) headers.set('etag', etag);
+  await cache?.put(url, new Response(b as BufferSource, { headers })).catch(() => {});
   return b;
 }
 

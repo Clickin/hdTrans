@@ -25,6 +25,10 @@ https://trans.kuri.kr 의 웹 데모는 `web/`에 있습니다. 번역은 모두
 - 페이지 아래 버전 줄은 빌드한 커밋의 날짜(Asia/Seoul, `yyyy-MM-dd HH:mm:ss`)와 짧은 해시입니다.
 - WASM과 사전 캐시도 manifest의 크기와 SHA-256을 검사합니다. 맞지 않는 항목은 지우고 다시 받아
   검사하며, 다운로드 실패 시 손상된 캐시를 쓰지 않습니다.
+- 검증된 캐시에 ETag가 있으면 `If-None-Match`로 서버에 재검증합니다. `304`는 검증된 캐시를 쓰고,
+  `200`은 응답의 크기와 SHA-256을 다시 검사한 뒤 새 ETag와 함께 저장합니다. ETag는 무결성 검사를
+  대체하지 않습니다. 네트워크 연결 실패 시에는 검증된 정상 캐시만 사용합니다. ETag가 없는 기존
+  캐시나 서버에서는 크기와 SHA-256 검사를 유지합니다.
 
 ## 빌드
 
@@ -91,6 +95,7 @@ node web/check.mjs http://127.0.0.1:8000/ INPUT want.txt 20
 
 ```sh
 BOUNDARY=cache node web/check.mjs http://127.0.0.1:8000/
+BOUNDARY=etag node web/check.mjs http://127.0.0.1:8000/   # ETag를 제공하는 서버 필요
 ```
 
 ## 배포
